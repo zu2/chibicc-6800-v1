@@ -16,6 +16,7 @@ tmp4:	.word	0
 	.export _putc
 	.export _getc
 	.export _print
+	.export _cpu_counter
 	.code
 start:
 	sts exitsp
