@@ -50,7 +50,10 @@ _print:
 	staa $fefc;
 	stab $fefd;
 	rts
-
+_cpu_counter:
+	staa $fefb;
+	rts
+;
 	.bss
 exitsp:
 	.word 0
