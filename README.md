@@ -13,7 +13,14 @@ After compilation, the generated code is very slow and large.
 I've only just started reading the original chibicc code, 
 so there are probably many bugs and inaccuracies I added.
 
-Below is the original README.md.
+Fuzix-BinTools is required to assemble and link compiled objects.
+For testing, we use emu6800 from Fuzix-Compiler-Kit.
+
+- https://github.com/EtchedPixels/Fuzix-Bintools
+- https://github.com/EtchedPixels/Fuzix-Compiler-Kit
+
+
+Below is Rui's original README.md.
 
 # chibicc: A Small C Compiler
 
