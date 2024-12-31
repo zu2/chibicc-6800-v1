@@ -281,7 +281,7 @@ static void store(Type *ty) {
 
   println("; store ty->size=%d, %s %d",ty->size,__FILE__,__LINE__);
   if (ty->size == 1){
-    println("\tstab 0,x\n");
+    println("\tstab 0,x");
   }else if (ty->size == 2){
     println("\tstab 1,x");
     println("\tstaa 0,x");
@@ -339,7 +339,8 @@ static int getTypeId(Type *ty) {
 }
 
 // The table for type casts
-static char i32i8[] = "movsbl %al, %eax";
+static char i32i8[] = "clra\n\tasrb\n\trolb\n\tsbca #0";
+//static char i32i8[] = "movsbl %al, %eax";
 static char i32u8[] = "movzbl %al, %eax";
 static char i32i16[] = "movswl %ax, %eax";
 static char i32u16[] = "movzwl %ax, %eax";
@@ -436,7 +437,7 @@ static void cast(Type *from, Type *to) {
   int t1 = getTypeId(from);
   int t2 = getTypeId(to);
   if (cast_table[t1][t2])
-    println("  %s", cast_table[t1][t2]);
+    println("\t%s", cast_table[t1][t2]);
 }
 
 // Structs or unions equal or smaller than 16 bytes are passed
@@ -1063,10 +1064,16 @@ static void gen_expr(Node *node) {
       println("  movzx %%al, %%eax");
       return;
     case TY_CHAR:
-      if (node->ty->is_unsigned)
-        println("  movzbl %%al, %%eax");
-      else
-        println("  movsbl %%al, %%eax");
+      if (node->ty->is_unsigned){
+	  println("\tclra");
+//        println("  movzbl %%al, %%eax");
+      }else{
+	  println("\tclra");
+	  println("\tasrb");
+	  println("\trolb");
+	  println("\tsbca #0");
+//        println("  movsbl %%al, %%eax");
+      }
       return;
     case TY_SHORT:
       if (node->ty->is_unsigned)
