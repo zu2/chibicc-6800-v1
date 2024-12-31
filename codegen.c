@@ -819,8 +819,11 @@ static void gen_expr(Node *node) {
       println("  fchs");
       return;
     }
+    println("\tnega");
+    println("\tnegb");
+    println("\tsbca #0");
 
-    println("  neg %%rax");
+//    println("  neg %%rax");
     return;
   case ND_VAR:
     gen_addr(node);
