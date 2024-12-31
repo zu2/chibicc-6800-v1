@@ -339,8 +339,8 @@ static int getTypeId(Type *ty) {
 }
 
 // The table for type casts
-static char i32i8[] = "clra\n\tasrb\n\trolb\n\tsbca #0";
-//static char i32i8[] = "movsbl %al, %eax";
+static char i16i8[] = "clra\n\tasrb\n\trolb\n\tsbca #0";
+static char i32i8[] = "movsbl %al, %eax";
 static char i32u8[] = "movzbl %al, %eax";
 static char i32i16[] = "movswl %ax, %eax";
 static char i32u16[] = "movzwl %ax, %eax";
@@ -409,7 +409,7 @@ static char f80f64[] = "fstpl -8(%rsp); movsd -8(%rsp), %xmm0";
 static char *cast_table[][11] = {
   // i8   i16     i32     i64     u8     u16     u32     u64     f32     f64     f80
   {NULL,  NULL,   NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i8
-  {i32i8, NULL,   NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i16
+  {i16i8, NULL,   NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i16
   {i32i8, i32i16, NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i32
   {i32i8, i32i16, NULL,   NULL,   i32u8, i32u16, NULL,   NULL,   i64f32, i64f64, i64f80}, // i64
 
