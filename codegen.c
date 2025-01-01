@@ -343,7 +343,7 @@ static char i16i8[] = "clra\n\tasrb\n\trolb\n\tsbca #0";
 static char i32i8[] = "movsbl %al, %eax";
 static char i32u8[] = "movzbl %al, %eax";
 static char i32i16[] = "movswl %ax, %eax";
-static char i32u16[] = "movzwl %ax, %eax";
+static char i32u16[] = "; movzwl %ax, %eax XXX " __FILE__;
 static char i32f32[] = "cvtsi2ssl %eax, %xmm0";
 static char i32i64[] = "movsxd %eax, %rax";
 static char i32f64[] = "cvtsi2sdl %eax, %xmm0";
@@ -1669,7 +1669,7 @@ static void emit_data(Obj *prog) {
 
       println(";  .type %s, @object", var->name);
       println(";  .size %s, %d", var->name, var->ty->size);
-      println("%s:", var->name);
+      println("_%s:", var->name);
 
       Relocation *rel = var->rel;
       int pos = 0;

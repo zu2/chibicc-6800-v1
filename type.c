@@ -4,18 +4,18 @@ Type *ty_void = &(Type){TY_VOID, 1, 1};
 Type *ty_bool = &(Type){TY_BOOL, 1, 1};
 
 Type *ty_char = &(Type){TY_CHAR, 1, 1};
-Type *ty_short = &(Type){TY_SHORT, 2, 2};
-Type *ty_int = &(Type){TY_INT, 2, 2};
-Type *ty_long = &(Type){TY_LONG, 4, 4};
+Type *ty_short = &(Type){TY_SHORT, 2, 1};
+Type *ty_int = &(Type){TY_INT, 2, 1};
+Type *ty_long = &(Type){TY_LONG, 4, 1};
 
 Type *ty_uchar = &(Type){TY_CHAR, 1, 1, true};
-Type *ty_ushort = &(Type){TY_SHORT, 2, 2, true};
-Type *ty_uint = &(Type){TY_INT, 2, 2, true};
-Type *ty_ulong = &(Type){TY_LONG, 4, 4, true};
+Type *ty_ushort = &(Type){TY_SHORT, 2, 1, true};
+Type *ty_uint = &(Type){TY_INT, 2, 1, true};
+Type *ty_ulong = &(Type){TY_LONG, 4, 1, true};
 
-Type *ty_float = &(Type){TY_FLOAT, 4, 4};
-Type *ty_double = &(Type){TY_DOUBLE, 4, 4};
-Type *ty_ldouble = &(Type){TY_LDOUBLE, 4, 4};
+Type *ty_float = &(Type){TY_FLOAT, 4, 1};
+Type *ty_double = &(Type){TY_DOUBLE, 4, 1};
+Type *ty_ldouble = &(Type){TY_LDOUBLE, 4, 1};
 
 static Type *new_type(TypeKind kind, int size, int align) {
   Type *ty = calloc(1, sizeof(Type));
