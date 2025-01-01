@@ -6,6 +6,12 @@ OPT=
 s=$(basename $1 .c)
 echo  "compiling:" $s
 ../chibicc $OPT -S $s.c
+err=$?
+if [ $err -ne 0 ] ; then
+	echo $?
+	rm -f $s.o $s.s $s.bin
+	exit 0;
+fi
 as6800 $s.s
 ld6800 -v -b -C256 -Z0 -m $s.map -o $s.bin ../crt0.o $s.o ../libc/libc.a
 echo emu6800 -d 6800 $s.bin $s.map
