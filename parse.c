@@ -215,6 +215,20 @@ static Node *new_num(int64_t val, Token *tok) {
   return node;
 }
 
+static Node *new_uint(int64_t val, Token *tok) {
+  Node *node = new_node(ND_NUM, tok);
+  node->val = val;
+  node->ty = ty_uint;
+  return node;
+}
+
+static Node *new_int(int64_t val, Token *tok) {
+  Node *node = new_node(ND_NUM, tok);
+  node->val = val;
+  node->ty = ty_int;
+  return node;
+}
+
 static Node *new_long(int64_t val, Token *tok) {
   Node *node = new_node(ND_NUM, tok);
   node->val = val;
@@ -2382,8 +2396,12 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
   }
 
   // ptr + num
-  rhs = new_binary(ND_MUL, rhs, new_long(lhs->ty->base->size, tok), tok);
-  return new_binary(ND_ADD, lhs, rhs, tok);
+  if (lhs->ty->base && is_integer(rhs->ty)) {
+    rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
+    Node *new = new_binary(ND_ADD, lhs, rhs, tok);
+    new->ty = ty_int;
+    return new;
+  }
 }
 
 // Like `+`, `-` is overloaded for the pointer type.
@@ -2406,17 +2424,16 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
 
   // ptr - num
   if (lhs->ty->base && is_integer(rhs->ty)) {
-    rhs = new_binary(ND_MUL, rhs, new_long(lhs->ty->base->size, tok), tok);
-    add_type(rhs);
-    Node *node = new_binary(ND_SUB, lhs, rhs, tok);
-    node->ty = lhs->ty;
-    return node;
+    rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
+    Node *new = new_binary(ND_SUB, lhs, rhs, tok);
+    new->ty = ty_int;
+    return new;
   }
 
   // ptr - ptr, which returns how many elements are between the two.
   if (lhs->ty->base && rhs->ty->base) {
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
-    node->ty = ty_long;
+    node->ty = ty_int;
     return new_binary(ND_DIV, node, new_num(lhs->ty->base->size, tok), tok);
   }
 
@@ -3020,7 +3037,8 @@ static Node *primary(Token **rest, Token *tok) {
       return new_binary(ND_COMMA, lhs, rhs, tok);
     }
 
-    return new_ulong(ty->size, start);
+//    return new_ulong(ty->size, start);
+    return new_uint(ty->size, start);
   }
 
   if (equal(tok, "sizeof")) {
@@ -3028,19 +3046,22 @@ static Node *primary(Token **rest, Token *tok) {
     add_type(node);
     if (node->ty->kind == TY_VLA)
       return new_var_node(node->ty->vla_size, tok);
-    return new_ulong(node->ty->size, tok);
+    return new_uint(node->ty->size, tok);
+//    return new_ulong(node->ty->size, tok);
   }
 
   if (equal(tok, "_Alignof") && equal(tok->next, "(") && is_typename(tok->next->next)) {
     Type *ty = typename(&tok, tok->next->next);
     *rest = skip(tok, ")");
-    return new_ulong(ty->align, tok);
+    return new_uint(ty->align, tok);
+//    return new_ulong(ty->align, tok);
   }
 
   if (equal(tok, "_Alignof")) {
     Node *node = unary(rest, tok->next);
     add_type(node);
-    return new_ulong(node->ty->align, tok);
+    return new_uint(node->ty->align, tok);
+//    return new_ulong(node->ty->align, tok);
   }
 
   if (equal(tok, "_Generic"))
