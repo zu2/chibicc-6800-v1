@@ -949,27 +949,36 @@ static void gen_expr(Node *node) {
     println("\tclrb");
     println("L_end_%d:", c);
     println("\tclra");
-//    println("  je L_false_%d", c);
-//    println("  mov $1, %%rax");
-//    println("  jmp L_end_%d", c);
-//    println("L_false_%d:", c);
-//    println("  mov $0, %%rax");
-//    println("L_end_%d:", c);
+//  println("  je L_false_%d", c);
+//  println("  mov $1, %%rax");
+//  println("  jmp L_end_%d", c);
+//  println("L_false_%d:", c);
+//  println("  mov $0, %%rax");
+//  println("L_end_%d:", c);
     return;
   }
   case ND_LOGOR: {
     int c = count();
     gen_expr(node->lhs);
     cmp_zero(node->lhs->ty);
-    println("  jne .L.true.%d", c);
+    println("\tjne L_true_%d", c);
+//  println("  jne .L.true.%d", c);
     gen_expr(node->rhs);
     cmp_zero(node->rhs->ty);
-    println("  jne .L.true.%d", c);
-    println("  mov $0, %%rax");
-    println("  jmp .L.end.%d", c);
-    println(".L.true.%d:", c);
-    println("  mov $1, %%rax");
-    println(".L.end.%d:", c);
+    println("\tjne L_true_%d", c);
+    println("\tclrb");
+    println("\tbra L_end_%d", c);
+    println("\tclrb");
+    println("L_true_%d:", c);
+    println("\tldab #1");
+    println("L_end_%d:", c);
+    println("\tclra");
+//  println("  jne .L.true.%d", c);
+//  println("  mov $0, %%rax");
+//  println("  jmp .L.end.%d", c);
+//  println(".L.true.%d:", c);
+//  println("  mov $1, %%rax");
+//  println(".L.end.%d:", c);
     return;
   }
   case ND_FUNCALL: {
