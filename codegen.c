@@ -938,15 +938,23 @@ static void gen_expr(Node *node) {
     int c = count();
     gen_expr(node->lhs);
     cmp_zero(node->lhs->ty);
-    println("  je L_false_%d", c);
+    println("\tjeq L_false_%d", c);
+//  println("  je L_false_%d", c);
     gen_expr(node->rhs);
     cmp_zero(node->rhs->ty);
-    println("  je L_false_%d", c);
-    println("  mov $1, %%rax");
-    println("  jmp L_end_%d", c);
+    println("\tbeq L_false_%d", c);
+    println("\tldab #1");
+    println("\tbra L_end_%d", c);
     println("L_false_%d:", c);
-    println("  mov $0, %%rax");
+    println("\tclrb");
     println("L_end_%d:", c);
+    println("\tclra");
+//    println("  je L_false_%d", c);
+//    println("  mov $1, %%rax");
+//    println("  jmp L_end_%d", c);
+//    println("L_false_%d:", c);
+//    println("  mov $0, %%rax");
+//    println("L_end_%d:", c);
     return;
   }
   case ND_LOGOR: {
