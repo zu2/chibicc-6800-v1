@@ -341,9 +341,9 @@ static int getTypeId(Type *ty) {
 // The table for type casts
 static char i16i8[] = "clra\n\tasrb\n\trolb\n\tsbca #0";
 static char i32i8[] = "movsbl %al, %eax";
-static char i32u8[] = "movzbl %al, %eax";
-static char i32i16[] = "movswl %ax, %eax";
-static char i32u16[] = "; movzwl %ax, %eax XXX " __FILE__;
+static char i32u8[] = "; movzbl %al, %eax XXX i32u8 " __FILE__;
+static char i32i16[] = "; movswl %ax, %eax XXX i32i16 " __FILE__;
+static char i32u16[] = "; movzwl %ax, %eax XXX i32u16" __FILE__;
 static char i32f32[] = "cvtsi2ssl %eax, %xmm0";
 static char i32i64[] = "movsxd %eax, %rax";
 static char i32f64[] = "cvtsi2sdl %eax, %xmm0";
@@ -1278,7 +1278,7 @@ static void gen_expr(Node *node) {
     return;
   case ND_DIV:
     if (node->ty->is_unsigned) {
-      println("\tcall __div16x16u");
+      println("\tjsr __div16x16u");
     }else{
       println("\tjsr __div16x16s");
     }
@@ -1288,7 +1288,7 @@ static void gen_expr(Node *node) {
     return;
   case ND_MOD:
     if (node->ty->is_unsigned) {
-      println("\tcall __tosmod16u");
+      println("\tjsr __rem16x16u");
     }else{
       println("\tjsr __rem16x16s");
     }
