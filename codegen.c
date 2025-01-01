@@ -308,7 +308,9 @@ static void cmp_zero(Type *ty) {
     return;
   }
 
-  if (is_integer(ty) && ty->size <= 2){
+  if (is_integer(ty) && ty->size == 1){
+    printf("\ttstb");
+  }else if (is_integer(ty) && ty->size <= 2){
     println("\taba");
     println("\tadca #0");
   }else{
@@ -924,15 +926,26 @@ static void gen_expr(Node *node) {
     println("L_end_%d:", c);
     return;
   }
-  case ND_NOT:
+  case ND_NOT: {
     gen_expr(node->lhs);
     cmp_zero(node->lhs->ty);
-    println("  sete %%al");
-    println("  movzx %%al, %%rax");
+    int c = count();
+    println("\tbeq L_false_%d", c);
+    println("\tclrb");
+    println("\tbra L_end_%d", c);
+    println("L_false_%d:", c);
+    println("\tldab #1");
+    println("L_end_%d:", c);
+    println("\tclra");
+//  println("  sete %%al");
+//  println("  movzx %%al, %%rax");
     return;
+  }
   case ND_BITNOT:
     gen_expr(node->lhs);
-    println("  not %%rax");
+    println("\tcomb");
+    println("\tcoma");
+//  println("  not %%rax");
     return;
   case ND_LOGAND: {
     int c = count();
