@@ -210,7 +210,9 @@ static void gen_addr(Node *node) {
     return;
   case ND_MEMBER:
     gen_addr(node->lhs);
-    println("  add $%d, %%rax", node->member->offset);
+    println("\taddb #<%d",node->member->offset);
+    println("\tadca #>%d",node->member->offset);
+//    println("  add $%d, %%rax", node->member->offset);
     return;
   case ND_FUNCALL:
     if (node->ret_buffer) {
