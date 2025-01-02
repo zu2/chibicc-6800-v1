@@ -1590,7 +1590,8 @@ static void gen_stmt(Node *node) {
       }
     }
 
-    println("\tjmp L_return_%s", current_fn->name);
+    println("\tjmp L_return_%d", current_fn->function_no);
+//    println("\tjmp L_return_%s", current_fn->name);
     return;
   case ND_EXPR_STMT:
     gen_expr(node->lhs);
@@ -1874,6 +1875,7 @@ static void emit_text(Obj *prog) {
 //    println("\t.type %s, @function", fn->name);
     println("_%s:", fn->name);
     current_fn = fn;
+    current_fn->function_no = count();
 
     // Prologue
     println("; function prologue emit_text %s %d",__FILE__,__LINE__);
@@ -1996,7 +1998,8 @@ static void emit_text(Obj *prog) {
     }
 
     // Epilogue
-    println("L_return_%s:", fn->name);
+    println("L_return_%d:", fn->function_no);
+//    println("L_return_%s:", fn->name);
     println("\tstab @tmp1+1");
     println("\tstaa @tmp1");
     println("\tldab @bp+1");
