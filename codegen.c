@@ -522,12 +522,10 @@ static void push_struct(Type *ty) {
   }
 }
 
-Node *pushed_args = NULL;
-
-static void push_args2(Node *args, bool first_pass) {
+static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   if (!args)
     return;
-  push_args2(args->next, first_pass);
+  push_args2(args->next, first_pass,last_pushed_arg);
   println("; push_args2 args=%d, %s %d",args!=NULL,__FILE__,__LINE__);
   println("; push_args2 first_pass=%d, args->pass_by_stack=%d, %s %d",first_pass,args->pass_by_stack,__FILE__,__LINE__);
 
@@ -566,13 +564,13 @@ static void push_args2(Node *args, bool first_pass) {
   case TY_CHAR: {
     println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
       push1();
-      pushed_args = args;
+      *last_pushed_arg = *args;
     }
     break;
   default: {
       println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
       push();
-      pushed_args = args;
+      *last_pushed_arg = *args;
     }
     break;
   }
@@ -597,7 +595,7 @@ static void push_args2(Node *args, bool first_pass) {
 //
 // - If a function is variadic, set the number of floating-point type
 //   arguments to RAX.
-static int push_args(Node *node) {
+static int push_args(Node *node, Node *last_pushed_arg) {
   int stack = 0, gp = 0, fp = 0;
 
   println("; push_args %s %d",__FILE__,__LINE__);
@@ -656,7 +654,7 @@ static int push_args(Node *node) {
       println("; push_args gp=%d, GP_MAX=%d, %s %d",gp,GP_MAX,__FILE__,__LINE__);
       if (gp++ >= GP_MAX) {	// all argument pass via stack
         arg->pass_by_stack = true;
-        stack+=2;
+        stack+=arg->ty->size;
       }
     }
   }
@@ -667,8 +665,8 @@ static int push_args(Node *node) {
     stack++;
   }
 #endif
-  push_args2(node->args, true);
-  push_args2(node->args, false);
+  push_args2(node->args, true,   last_pushed_arg);
+  push_args2(node->args, false,  last_pushed_arg);
 
   // If the return type is a large struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument.
@@ -1046,8 +1044,8 @@ static void gen_expr(Node *node) {
       return;
     }
 
-    pushed_args = NULL;
-    int stack_args = push_args(node);
+    Node *last_pushed_arg = calloc(1,sizeof(Node));
+    int stack_args = push_args(node, last_pushed_arg);
     println(";↑stack_args=%d  gen_expr %s %d",stack_args,__FILE__,__LINE__);
     println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
     gen_expr(node->lhs);
@@ -1115,7 +1113,7 @@ static void gen_expr(Node *node) {
 	// Even though there is only one register variable,
 	// I'll leave the original description here in case I change my mind.
         if (gp < GP_MAX){
-            pop_arg(pushed_args);
+            pop_arg(last_pushed_arg);
 //          pop(argreg64[gp++]);
 	    gp++;
 	}
@@ -1863,7 +1861,6 @@ static void emit_text(Obj *prog) {
 
     // Prologue
     println("; function prologue emit_text %s %d",__FILE__,__LINE__);
-//    println("  push %%rbp");
 //    println("  push %%rbp");
 //    println("  mov %%rsp, %%rbp");
 //    println("  sub $%d, %%rsp", fn->stack_size);
