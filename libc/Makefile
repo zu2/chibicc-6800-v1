@@ -5,7 +5,8 @@ all: libc.a
 
 OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o \
 	__cmp16.o __shift16.o \
-	__load.o
+	__load.o \
+	__long.o
 
 .s.o:
 	as6800 $<

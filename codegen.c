@@ -54,6 +54,16 @@ static void pop(char *arg) {
   depth-=2;
 }
 
+static void pushl(void) {
+  println("\tjsr __lpush");
+  depth+=4;
+}
+
+static void popl() {
+  println("\tjsr __lpop");
+  depth-=4;
+}
+
 static void pushf(void) {
   println("  sub $8, %%rsp");
   println("  movsd %%xmm0, (%%rsp)");
@@ -126,7 +136,9 @@ static void gen_addr(Node *node) {
 
     // Local variable
     if (node->var->is_local) {
-//        println("; load var->name=%.*s, size=%d, %s %d", node->var->ty->name->len, node->var->ty->name->loc, node->var->ty->size, __FILE__, __LINE__ ); // XXX
+        if(node->var->ty && node->var->ty->name && node->var->name){
+          println("; load var->name=%s, size=%d, offset=%d, %s %d", node->var->name, node->var->ty->size, node->var->offset, __FILE__, __LINE__ ); // XXX
+        }
 	println("\tldab @bp+1");
 	println("\tldaa @bp");
 	println("\taddb #<%d",node->var->offset);
@@ -280,7 +292,8 @@ static void load(Type *ty) {
     println("\tjsr __load16	; AccAB = (AccAB)");
 //  println("  %swl (%%rax), %%eax", insn);
   }else if (ty->size == 4)
-    println("  movsxd (%%rax), %%rax");
+    println("\tjsr __load32	; @long = (AccAB)");
+//    println("  movsxd (%%rax), %%rax");
   else
     println("  mov (%%rax), %%rax");
 }
@@ -318,9 +331,10 @@ static void store(Type *ty) {
   }else if (ty->size == 2){
     println("\tstab 1,x");
     println("\tstaa 0,x");
-  }else if (ty->size == 4)
-    println("  mov %%eax, (%%rdi)");
-  else
+  }else if (ty->size == 4){
+    println("\tjsr __lstorex   ; store @long to (0-3,x)");
+//  println("  mov %%eax, (%%rdi)");
+  }else
     println("  mov %%rax, (%%rdi)");
 }
 
@@ -347,7 +361,7 @@ static void cmp_zero(Type *ty) {
     println("\taba");
     println("\tadca #0");
   }else{
-    println("  cmp $0, %%rax");
+    println("\tjsr __lzero");
   }
 }
 
@@ -382,7 +396,7 @@ static char i16f64[] = "; i16f64 " __FILE__;
 static char i16f80[] = "; i16f80 " __FILE__;
 static char i32i8[] = "movsbl %al, %eax";
 static char i32u8[] = "; movzbl %al, %eax XXX i32u8 " __FILE__;
-static char i32i16[] = "; movswl %ax, %eax XXX i32i16 " __FILE__;
+static char i32i16[] = "jsr __32to16";
 static char i32u16[] = "; movzwl %ax, %eax XXX i32u16" __FILE__;
 static char i32f32[] = "cvtsi2ssl %eax, %xmm0";
 static char i32i64[] = "movsxd %eax, %rax";
@@ -852,9 +866,21 @@ static void gen_expr(Node *node) {
       return;
     }
     case TY_CHAR:
+      println("\tldab #<%u", (uint16_t)node->val);
+      return;
     case TY_INT:
       println("\tldab #<%u", (uint16_t)node->val);
       println("\tldaa #>%u", (uint16_t)node->val);
+      return;
+    case TY_LONG:
+      int c = count();
+      println("\tldx #_LC_%d",c);	// long constant
+      println("\tjsr __lloadx");
+      println("\t.data");
+      println("_LC_%d:",c);
+      println("\t.word %u",(uint16_t)((node->val>>16)&0x0ffff));
+      println("\t.word %u",(uint16_t)(node->val&0x0ffff));
+      println("\t.code");
       return;
     }
     error_tok(node->tok, "gen_expr: not implemented yet token");
@@ -1314,6 +1340,141 @@ static void gen_expr(Node *node) {
 
     error_tok(node->tok, "invalid expression");
   }
+  case TY_LONG: {
+    println("; call gen_expr(node->rhs) %s %d",__FILE__,__LINE__);
+    gen_expr(node->rhs);
+    pushl();
+    println("; call gen_expr(node->lhs) %s %d",__FILE__,__LINE__);
+    gen_expr(node->lhs);
+    println("; end call");
+
+    switch (node->kind) {
+    case ND_ADD:
+      println("\tjsr __laddtos	; @long += TOS, pull TOS");
+      depth -= 4;
+      return;
+    case ND_SUB:
+      println("\tjsr __lsubtos  ; @long = TOS - @long, pull TOS");
+      depth -= 4;
+      return;
+    case ND_MUL:
+      println("; XXX __lmultos ; @long *= TOS, pull TOS");
+//  println("  imul %s, %s", di, ax);
+      depth -= 4;
+      return;
+    case ND_DIV:
+      println("; XXX __ldivtos (u/s)");
+//      if (node->ty->is_unsigned) {
+//        println("\tjsr __div16x16u");
+//      }else{
+//        println("\tjsr __div16x16s");
+//      }
+      depth -= 4;
+      return;
+    case ND_MOD:
+      println("; XXX __lremtos (u/s)");
+//      if (node->ty->is_unsigned) {
+//        println("\tjsr __rem16x16u");
+//      }else{
+//        println("\tjsr __rem16x16s");
+//      }
+//      println("\tins");
+//      println("\tins");
+      depth -= 4;
+      return;
+    case ND_BITAND:
+//    println("  and %s, %s", di, ax);
+      println("\ttsx");
+      println("\tandb 1,x");
+      println("\tanda 0,x");
+      println("\tins");
+      println("\tins");
+      depth -= 4;
+      return;
+    case ND_BITOR:
+//    println("  or %s, %s", di, ax);
+      println("\ttsx");
+      println("\torab 1,x");
+      println("\toraa 0,x");
+      println("\tins");
+      println("\tins");
+      depth -= 4;
+      return;
+    case ND_BITXOR:
+//    println("  xor %s, %s", di, ax);
+      println("\ttsx");
+      println("\teorb 1,x");
+      println("\teora 0,x");
+      println("\tins");
+      println("\tins");
+      depth -= 4;
+      return;
+  case ND_EQ:
+  case ND_NE:
+  case ND_LT:
+  case ND_LE:
+  case ND_GT:
+  case ND_GE:
+      println("\ttsx");
+      println("\tsubb 1,x");
+      println("\tsbca 0,x");
+      println("\tins");
+      println("\tins");
+      if (node->kind == ND_EQ) {
+        println("\tjsr __eq16");
+      } else if (node->kind == ND_NE) {
+        println("\tjsr __ne16");
+      } else if (node->kind == ND_LT) {
+        if (node->lhs->ty->is_unsigned)
+          println("\tjsr __lt16u");
+        else
+          println("\tjsr __lt16s");
+      } else if (node->kind == ND_LE) {
+        if (node->lhs->ty->is_unsigned)
+          println("\tjsr __le16u");
+        else
+          println("\tjsr __le16s");
+      } else if (node->kind == ND_GT) {
+        if (node->lhs->ty->is_unsigned)
+          println("\tjsr __gt16u");
+        else
+          println("\tjsr __gt16s");
+      } else if (node->kind == ND_GE) {
+        if (node->lhs->ty->is_unsigned)
+          println("\tjsr __ge16u");
+        else
+          println("\tjsr __ge16s");
+      }
+
+//    println("  movzb %%al, %%rax");
+      depth -= 4;
+      return;
+    case ND_SHL:
+      println("\tjsr __shl16");
+      println("\tins");
+      println("\tins");
+//    println("  mov %%rdi, %%rcx");
+//    println("  shl %%cl, %s", ax);
+      depth -= 4;
+      return;
+    case ND_SHR:
+//    println("  mov %%rdi, %%rcx");
+      if (node->lhs->ty->is_unsigned){
+        println("\tjsr __shr16u");
+        println("\tins");
+        println("\tins");
+//      println("  shr %%cl, %s", ax);
+      }else{
+        println("\tjsr __shr16s");
+        println("\tins");
+        println("\tins");
+//      println("  sar %%cl, %s", ax);
+      }
+      depth -= 4;
+      return;
+    }
+    error_tok(node->tok, "TY_LONG: invalid expression");
+  }
   }
   println("; call gen_expr(node->rhs) %s %d",__FILE__,__LINE__);
   gen_expr(node->rhs);
@@ -1325,7 +1486,7 @@ static void gen_expr(Node *node) {
 
   char *ax, *di, *dx;
 
-  assert(node->lhs->ty->kind != TY_LONG);
+//  assert(node->lhs->ty->kind != TY_LONG);
   if (node->lhs->ty->kind == TY_LONG || node->lhs->ty->base) {
     ax = "%rax";
     di = "%rdi";
