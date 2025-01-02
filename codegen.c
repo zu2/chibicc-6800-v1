@@ -375,6 +375,11 @@ static int getTypeId(Type *ty) {
 
 // The table for type casts
 static char i16i8[] = "clra\n\tasrb\n\trolb\n\tsbca #0";
+static char i16u8[] = "clra";
+static char i16i64[] = "; i16i64 " __FILE__;
+static char i16f32[] = "; i16f32 " __FILE__;
+static char i16f64[] = "; i16f64 " __FILE__;
+static char i16f80[] = "; i16f80 " __FILE__;
 static char i32i8[] = "movsbl %al, %eax";
 static char i32u8[] = "; movzbl %al, %eax XXX i32u8 " __FILE__;
 static char i32i16[] = "; movswl %ax, %eax XXX i32i16 " __FILE__;
@@ -389,6 +394,8 @@ static char u32i64[] = "mov %eax, %eax";
 static char u32f64[] = "mov %eax, %eax; cvtsi2sdq %rax, %xmm0";
 static char u32f80[] = "mov %eax, %eax; mov %rax, -8(%rsp); fildll -8(%rsp)";
 
+static char i64i32[] = "; i64i32 " __FILE__;
+static char i64u32[] = "; i64u32 " __FILE__;
 static char i64f32[] = "cvtsi2ssq %rax, %xmm0";
 static char i64f64[] = "cvtsi2sdq %rax, %xmm0";
 static char i64f80[] = "movq %rax, -8(%rsp); fildll -8(%rsp)";
@@ -443,15 +450,15 @@ static char f80f64[] = "fstpl -8(%rsp); movsd -8(%rsp), %xmm0";
 
 static char *cast_table[][11] = {
   // i8   i16     i32     i64     u8     u16     u32     u64     f32     f64     f80
-  {NULL,  NULL,   NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i8
-  {i16i8, NULL,   NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i16
+  {NULL,  NULL,   NULL,   i16i64, i16u8, NULL  , NULL,   i16i64, i16f32, i16f64, i16f80}, // i8
+  {i16i8, NULL,   NULL,   i16i64, i16u8, NULL  , NULL,   i16i64, i16f32, i16f64, i16f80}, // i16
   {i32i8, i32i16, NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i32
-  {i32i8, i32i16, NULL,   NULL,   i32u8, i32u16, NULL,   NULL,   i64f32, i64f64, i64f80}, // i64
+  {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   i64f32, i64f64, i64f80}, // i64
 
-  {i32i8, NULL,   NULL,   i32i64, NULL,  NULL,   NULL,   i32i64, i32f32, i32f64, i32f80}, // u8
-  {i32i8, i32i16, NULL,   i32i64, i32u8, NULL,   NULL,   i32i64, i32f32, i32f64, i32f80}, // u16
+  {i16i8, NULL,   NULL,   i16i64, NULL,  NULL,   NULL,   i16i64, i16f32, i16f64, i16f80}, // u8
+  {i16i8, NULL,   NULL,   i16i64, i16u8, NULL,   NULL,   i16i64, i16f32, i16f64, i16f80}, // u16
   {i32i8, i32i16, NULL,   u32i64, i32u8, i32u16, NULL,   u32i64, u32f32, u32f64, u32f80}, // u32
-  {i32i8, i32i16, NULL,   NULL,   i32u8, i32u16, NULL,   NULL,   u64f32, u64f64, u64f80}, // u64
+  {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   u64f32, u64f64, u64f80}, // u64
 
   {f32i8, f32i16, f32i32, f32i64, f32u8, f32u16, f32u32, f32u64, NULL,   f32f64, f32f80}, // f32
   {f64i8, f64i16, f64i32, f64i64, f64u8, f64u16, f64u32, f64u64, f64f32, NULL,   f64f80}, // f64
@@ -464,8 +471,15 @@ static void cast(Type *from, Type *to) {
 
   if (to->kind == TY_BOOL) {
     cmp_zero(from);
-    println("  setne %%al");
-    println("  movzx %%al, %%eax");
+    int c = count();
+    println("\tbeq L_false_%d", c);
+    println("\tclrb");
+    println("\tbra L_end_%d", c);
+    println("L_false_%d:", c);
+    println("\tldab #1");
+    println("L_end_%d:", c);
+//  println("  setne %%al");
+//  println("  movzx %%al, %%eax");
     return;
   }
 
