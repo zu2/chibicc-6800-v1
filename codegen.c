@@ -28,13 +28,25 @@ static int count(void) {
   return i++;
 }
 
+static void push1(void) {	// push char parameter
+  println("; push1 %s %d",__FILE__,__LINE__);
+  println("\tpshb");
+  depth+=1;
+}
+
 static void push(void) {
+  println("; push() %s %d",__FILE__,__LINE__);
 //  println("  push %%rax");
   println("\tpshb");
   println("\tpsha");
   depth+=2;
 }
 
+static void pop1(char *arg) {
+  println("; pop(%s) %s %d",arg,__FILE__,__LINE__);
+  println("\tpulb");
+  depth-=1;
+}
 static void pop(char *arg) {
   println("; pop(%s) %s %d",arg,__FILE__,__LINE__);
   println("\tpula");
@@ -60,6 +72,25 @@ int align_to(int n, int align) {
   return n;	// 6800 has no alignment restrictions.
 //  return (n + align - 1) / align * align;
 }
+
+static void pop_arg(Node *args)
+{
+  if(!args)
+	  return;
+
+  switch(args->ty->kind){
+  case TY_CHAR:	pop1("recover pushed args 1");
+		break;
+  case TY_SHORT:
+  case TY_INT:
+  case TY_PTR:	pop("recover pushed args 2");
+		break;
+  default:
+	error_tok(args->tok, "pop_arg fails ty->kind=%d",args->ty->kind);
+	break;
+  }
+}
+
 
 static char *reg_dx(int sz) {
   switch (sz) {
@@ -309,7 +340,7 @@ static void cmp_zero(Type *ty) {
   }
 
   if (is_integer(ty) && ty->size == 1){
-    printf("\ttstb");
+    println("\ttstb");
   }else if (is_integer(ty) && ty->size <= 2){
     println("\taba");
     println("\tadca #0");
@@ -491,6 +522,8 @@ static void push_struct(Type *ty) {
   }
 }
 
+Node *pushed_args = NULL;
+
 static void push_args2(Node *args, bool first_pass) {
   if (!args)
     return;
@@ -503,6 +536,8 @@ static void push_args2(Node *args, bool first_pass) {
   println("; push_args2 call gen_expr %s %d",__FILE__,__LINE__);
   gen_expr(args);
   println("; push_args2 end  gen_expr %s %d",__FILE__,__LINE__);
+  println("; push_args2 args->ty->kind=%d", args->ty->kind);
+  println("; push_args2 TY_CHAR=%d args->ty->kind=%d", TY_CHAR, args->ty->kind);
 
   switch (args->ty->kind) {
   case TY_STRUCT:
@@ -528,9 +563,18 @@ static void push_args2(Node *args, bool first_pass) {
     depth += 2;
     break;
 #endif
-  default:
-    println("; push_args2 call push() by default %s %d",__FILE__,__LINE__);
-    push();
+  case TY_CHAR: {
+    println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
+      push1();
+      pushed_args = args;
+    }
+    break;
+  default: {
+      println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
+      push();
+      pushed_args = args;
+    }
+    break;
   }
 }
 
@@ -1002,6 +1046,7 @@ static void gen_expr(Node *node) {
       return;
     }
 
+    pushed_args = NULL;
     int stack_args = push_args(node);
     println(";↑stack_args=%d  gen_expr %s %d",stack_args,__FILE__,__LINE__);
     println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
@@ -1067,8 +1112,13 @@ static void gen_expr(Node *node) {
         break;
 #endif
       default:
-        if (gp < GP_MAX)
-          pop(argreg64[gp++]);
+	// Even though there is only one register variable,
+	// I'll leave the original description here in case I change my mind.
+        if (gp < GP_MAX){
+            pop_arg(pushed_args);
+//          pop(argreg64[gp++]);
+	    gp++;
+	}
       }
     }
     println("\tjsr 0,x");
@@ -1668,7 +1718,7 @@ static void emit_data(Obj *prog) {
       continue;
 
     if (!var->is_static)
-      println("\t.export %s", var->name);
+      println("\t.export _%s", var->name);
 
     int align = (var->ty->kind == TY_ARRAY && var->ty->size >= 16)
       ? MAX(16, var->align) : var->align;
@@ -1676,16 +1726,19 @@ static void emit_data(Obj *prog) {
     // Common symbol
     if (opt_fcommon && var->is_tentative) {
         println(";  .comm %s, %d, %d", var->name, var->ty->size, align);
+	println("_%s:",var->name);
 	switch(var->ty->size){
-	case 1:	println("\t.byte 0");
+	case 1: println("\t.byte 0");
 		break;
 	case 2:	println("\t.word 0");
 		break;
 	case 4:	println("\t.word 0");
 		println("\t.word 0");
 		break;
-	default:assert(var->ty->size < 8);	// XXX
+	default:println("\t.blkb %d",var->ty->size);
 		break;
+//	default:assert(var->ty->size < 8);	// XXX
+//		break;
 	}
       continue;
     }
@@ -1960,6 +2013,8 @@ static void emit_text(Obj *prog) {
 
 void codegen(Obj *prog, FILE *out) {
   output_file = out;
+
+  println("\t.setcpu 6800");
 
   File **files = get_input_files();
   for (int i = 0; files[i]; i++)
