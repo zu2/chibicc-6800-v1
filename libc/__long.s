@@ -7,6 +7,7 @@
 	.export __store32x
 	.export __push32
 	.export __pop32
+	.export __neg32
 	.export __add32x
 	.export __sub32x
 	.export __add32tos
@@ -78,7 +79,7 @@ __store32x:
 	stab 0,x
 	rts
 ;
-;	__lpush		push @long
+;	__push32	push @long
 ;
 __push32:
 	tsx
@@ -95,7 +96,7 @@ __push32:
 	pshb
 	jmp 0,x
 ;
-;	__lpop		pul @long
+;	__pop32		pul @long
 ;
 __pop32:
 	tsx
@@ -111,7 +112,24 @@ __pop32:
 	ldx @tmp1
 	jmp 0,x
 ;
-;	__laddx		@long += (0-3,x)
+;	__neg32		negate 32bit long
+;
+__neg32:
+	com @long
+	com @long+1
+	com @long+2
+	com @long+3
+	ldx @long+2
+	inx
+	stx @long+2
+	bne __neg32_ret
+	ldx @long
+	inx
+	stx @long
+__neg32_ret:
+	rts
+;
+;	__add32x	@long += (0-3,x)
 ;
 __add32x:
 	ldab 3,x
@@ -128,7 +146,7 @@ __add32x:
 	stab @long
 	rts
 ;
-;	__lsubx		@long -= (0-3,x)
+;	__sub32x	@long -= (0-3,x)
 ;
 __sub32x:
 	ldab @long+3
@@ -298,8 +316,8 @@ __s8to32_1:
 	staa	@long
 	rts
 __s16to32:
-	stab	@long+3
 	ldx	#0
+	stab	@long+3
 	staa	@long+2
 	bpl	__s16to32_1
 	dex

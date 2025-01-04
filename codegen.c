@@ -388,16 +388,25 @@ static int getTypeId(Type *ty) {
 }
 
 // The table for type casts
-static char i16i8[] = "clra\n\tasrb\n\trolb\n\tsbca #0";
-static char i16u8[] = "clra";
+static char i8i32[]  = "jsr __s8to32";
+static char i8u32[]  = "jsr __s8to32";
+static char u8i32[]  = "jsr __u8to32";
+static char u8u32[]  = "jsr __u8to32";
+static char i16i32[] = "jsr __s16to32";
+static char i16u32[] = "jsr __s16to32";
+static char u16i32[] = "jsr __u16to32";
+static char u16u32[] = "jsr __u16to32";
+
+static char i16i8[] = "; cast i16i8";
+static char i16u8[] = "; cast i16u8";
 static char i16i64[] = "; i16i64 " __FILE__;
 static char i16f32[] = "; i16f32 " __FILE__;
 static char i16f64[] = "; i16f64 " __FILE__;
 static char i16f80[] = "; i16f80 " __FILE__;
-static char i32i8[] = "movsbl %al, %eax";
-static char i32u8[] = "; movzbl %al, %eax XXX i32u8 " __FILE__;
-static char i32i16[] = "jsr __32to16";
-static char i32u16[] = "; movzwl %ax, %eax XXX i32u16" __FILE__;
+static char i32i8[] = "ldab @long+3";
+static char i32u8[] = "ldab @long+3";
+static char i32i16[] = "ldab @long+3\n\tldaa @long+2";
+static char i32u16[] = "ldab @long+3\n\tldaa @long+2";
 static char i32f32[] = "cvtsi2ssl %eax, %xmm0";
 static char i32i64[] = "movsxd %eax, %rax";
 static char i32f64[] = "cvtsi2sdl %eax, %xmm0";
@@ -462,15 +471,16 @@ static char f80u64[] = FROM_F80_1 "fistpq" FROM_F80_2 "mov -24(%rsp), %rax";
 static char f80f32[] = "fstps -8(%rsp); movss -8(%rsp), %xmm0";
 static char f80f64[] = "fstpl -8(%rsp); movsd -8(%rsp), %xmm0";
 
+// ex. i32i16: i32->i16
 static char *cast_table[][11] = {
   // i8   i16     i32     i64     u8     u16     u32     u64     f32     f64     f80
-  {NULL,  NULL,   NULL,   i16i64, i16u8, NULL  , NULL,   i16i64, i16f32, i16f64, i16f80}, // i8
-  {i16i8, NULL,   NULL,   i16i64, i16u8, NULL  , NULL,   i16i64, i16f32, i16f64, i16f80}, // i16
+  {NULL,  NULL,   i8i32,  i16i64, NULL,  NULL,   i8u32,  i16i64, i16f32, i16f64, i16f80}, // i8
+  {i16i8, NULL,   i16i32, i16i64, i16u8, NULL,   i16u32, i16i64, i16f32, i16f64, i16f80}, // i16
   {i32i8, i32i16, NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   i64f32, i64f64, i64f80}, // i64
 
-  {i16i8, NULL,   NULL,   i16i64, NULL,  NULL,   NULL,   i16i64, i16f32, i16f64, i16f80}, // u8
-  {i16i8, NULL,   NULL,   i16i64, i16u8, NULL,   NULL,   i16i64, i16f32, i16f64, i16f80}, // u16
+  {i16i8, NULL,   u8i32,  i16i64, NULL,  NULL,   u8u32,  i16i64, i16f32, i16f64, i16f80}, // u8
+  {i16i8, NULL,   u16i32, i16i64, i16u8, NULL,   u16i32, i16i64, i16f32, i16f64, i16f80}, // u16
   {i32i8, i32i16, NULL,   u32i64, i32u8, i32u16, NULL,   u32i64, u32f32, u32f64, u32f80}, // u32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   u64f32, u64f64, u64f80}, // u64
 
@@ -499,6 +509,7 @@ static void cast(Type *from, Type *to) {
 
   int t1 = getTypeId(from);
   int t2 = getTypeId(to);
+  println("; cast t1:%d, t2:%d",t1,t2);
   if (cast_table[t1][t2])
     println("\t%s", cast_table[t1][t2]);
 }
@@ -878,7 +889,7 @@ static void gen_expr(Node *node) {
       return;
     case TY_LONG:
       int c = count();
-      println("\tjsr __load32i		; load 32bit immediate");
+      println("\tjsr __load32i		; load 32bit immediate #%u",node->val);
       println("\t.word %u",(uint16_t)((node->val>>16)&0x0ffff));
       println("\t.word %u",(uint16_t)(node->val&0x0ffff));
       return;
@@ -905,6 +916,8 @@ static void gen_expr(Node *node) {
     case TY_LDOUBLE:
       println("  fchs");
       return;
+    case TY_LONG:
+      println("\tjsr __neg32");
     }
     println("\tnega");
     println("\tnegb");
