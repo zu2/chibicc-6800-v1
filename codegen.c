@@ -918,6 +918,10 @@ static void gen_expr(Node *node) {
       return;
     case TY_LONG:
       println("\tjsr __neg32");
+      return;
+    case TY_CHAR:
+      println("\tnega");
+      return;
     }
     println("\tnega");
     println("\tnegb");
