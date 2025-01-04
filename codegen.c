@@ -55,12 +55,12 @@ static void pop(char *arg) {
 }
 
 static void pushl(void) {
-  println("\tjsr __lpush");
+  println("\tjsr __push32");
   depth+=4;
 }
 
 static void popl() {
-  println("\tjsr __lpop");
+  println("\tjsr __pop32");
   depth-=4;
 }
 
@@ -332,7 +332,7 @@ static void store(Type *ty) {
     println("\tstab 1,x");
     println("\tstaa 0,x");
   }else if (ty->size == 4){
-    println("\tjsr __lstorex   ; store @long to (0-3,x)");
+    println("\tjsr __store32x   ; store @long to (0-3,x)");
 //  println("  mov %%eax, (%%rdi)");
   }else
     println("  mov %%rax, (%%rdi)");
@@ -361,7 +361,7 @@ static void cmp_zero(Type *ty) {
     println("\taba");
     println("\tadca #0");
   }else{
-    println("\tjsr __lzero");
+    println("\tjsr __iszero32");
   }
 }
 
@@ -573,7 +573,6 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   case TY_FLOAT:
   case TY_DOUBLE:
   case TY_LDOUBLE:
-  case TY_LONG:
 	  println("; push_args2 push XXX");
 	  break;
 #if 0
@@ -595,6 +594,11 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
       push1();
       *last_pushed_arg = *args;
+    }
+    break;
+  case TY_LONG:{
+      println("\tjsr __push32");
+      depth+=4;
     }
     break;
   default: {
@@ -874,13 +878,9 @@ static void gen_expr(Node *node) {
       return;
     case TY_LONG:
       int c = count();
-      println("\tldx #_LC_%d",c);	// long constant
-      println("\tjsr __lloadx");
-      println("\t.data");
-      println("_LC_%d:",c);
+      println("\tjsr __load32i		; load 32bit immediate");
       println("\t.word %u",(uint16_t)((node->val>>16)&0x0ffff));
       println("\t.word %u",(uint16_t)(node->val&0x0ffff));
-      println("\t.code");
       return;
     }
     error_tok(node->tok, "gen_expr: not implemented yet token");
@@ -1350,20 +1350,20 @@ static void gen_expr(Node *node) {
 
     switch (node->kind) {
     case ND_ADD:
-      println("\tjsr __laddtos	; @long += TOS, pull TOS");
+      println("\tjsr __add32tos	; @long += TOS, pull TOS");
       depth -= 4;
       return;
     case ND_SUB:
-      println("\tjsr __lsubtos  ; @long = TOS - @long, pull TOS");
+      println("\tjsr __sub32tos  ; @long = TOS - @long, pull TOS");
       depth -= 4;
       return;
     case ND_MUL:
-      println("; XXX __lmultos ; @long *= TOS, pull TOS");
+      println("\tjsr __mul32tos ; @long *= TOS, pull TOS");
 //  println("  imul %s, %s", di, ax);
       depth -= 4;
       return;
     case ND_DIV:
-      println("; XXX __ldivtos (u/s)");
+      println("; XXX __div32tos (u/s)");
 //      if (node->ty->is_unsigned) {
 //        println("\tjsr __div16x16u");
 //      }else{
@@ -1372,7 +1372,7 @@ static void gen_expr(Node *node) {
       depth -= 4;
       return;
     case ND_MOD:
-      println("; XXX __lremtos (u/s)");
+      println("; XXX __rem32tos (u/s)");
 //      if (node->ty->is_unsigned) {
 //        println("\tjsr __rem16x16u");
 //      }else{
@@ -1383,30 +1383,18 @@ static void gen_expr(Node *node) {
       depth -= 4;
       return;
     case ND_BITAND:
+      println("\tjsr __and32tos");
 //    println("  and %s, %s", di, ax);
-      println("\ttsx");
-      println("\tandb 1,x");
-      println("\tanda 0,x");
-      println("\tins");
-      println("\tins");
       depth -= 4;
       return;
     case ND_BITOR:
+      println("\tjsr __or32tos");
 //    println("  or %s, %s", di, ax);
-      println("\ttsx");
-      println("\torab 1,x");
-      println("\toraa 0,x");
-      println("\tins");
-      println("\tins");
       depth -= 4;
       return;
     case ND_BITXOR:
+      println("\tjsr __xor32tos");
 //    println("  xor %s, %s", di, ax);
-      println("\ttsx");
-      println("\teorb 1,x");
-      println("\teora 0,x");
-      println("\tins");
-      println("\tins");
       depth -= 4;
       return;
   case ND_EQ:
@@ -1415,42 +1403,40 @@ static void gen_expr(Node *node) {
   case ND_LE:
   case ND_GT:
   case ND_GE:
-      println("\ttsx");
-      println("\tsubb 1,x");
-      println("\tsbca 0,x");
-      println("\tins");
-      println("\tins");
+      // Since push in the order is rhs -> lhs, the conditions are reversed.
+      // Should I change the name?
       if (node->kind == ND_EQ) {
-        println("\tjsr __eq16");
+        println("\tjsr __eq32");
       } else if (node->kind == ND_NE) {
-        println("\tjsr __ne16");
+        println("\tjsr __ne32");
       } else if (node->kind == ND_LT) {
         if (node->lhs->ty->is_unsigned)
-          println("\tjsr __lt16u");
+          println("\tjsr __gt32u");
         else
-          println("\tjsr __lt16s");
+          println("\tjsr __gt32s");
       } else if (node->kind == ND_LE) {
         if (node->lhs->ty->is_unsigned)
-          println("\tjsr __le16u");
+          println("\tjsr __ge32u");
         else
-          println("\tjsr __le16s");
+          println("\tjsr __ge32s");
       } else if (node->kind == ND_GT) {
         if (node->lhs->ty->is_unsigned)
-          println("\tjsr __gt16u");
+          println("\tjsr __lt32u");
         else
-          println("\tjsr __gt16s");
+          println("\tjsr __lt32s");
       } else if (node->kind == ND_GE) {
         if (node->lhs->ty->is_unsigned)
-          println("\tjsr __ge16u");
+          println("\tjsr __le32u");
         else
-          println("\tjsr __ge16s");
+          println("\tjsr __le32s");
       }
-
 //    println("  movzb %%al, %%rax");
       depth -= 4;
       return;
     case ND_SHL:
-      println("\tjsr __shl16");
+      // Since push in the order is rhs -> lhs, 
+      // The shift count is in TOS, and @long is shifted, it's good.
+      println("\tjsr __shl32");
       println("\tins");
       println("\tins");
 //    println("  mov %%rdi, %%rcx");
@@ -1460,12 +1446,12 @@ static void gen_expr(Node *node) {
     case ND_SHR:
 //    println("  mov %%rdi, %%rcx");
       if (node->lhs->ty->is_unsigned){
-        println("\tjsr __shr16u");
+        println("\tjsr __shr32u");
         println("\tins");
         println("\tins");
 //      println("  shr %%cl, %s", ax);
       }else{
-        println("\tjsr __shr16s");
+        println("\tjsr __shr32s");
         println("\tins");
         println("\tins");
 //      println("  sar %%cl, %s", ax);
@@ -1581,6 +1567,7 @@ static void gen_expr(Node *node) {
     println("\tsbca 0,x");
     println("\tins");
     println("\tins");
+    depth -= 2;
     if (node->kind == ND_EQ) {
       println("\tjsr __eq16");
     } else if (node->kind == ND_NE) {
@@ -1606,13 +1593,13 @@ static void gen_expr(Node *node) {
       else
         println("\tjsr __ge16s");
     }
-
 //    println("  movzb %%al, %%rax");
     return;
   case ND_SHL:
     println("\tjsr __shl16");
     println("\tins");
     println("\tins");
+    depth -= 2;
 //    println("  mov %%rdi, %%rcx");
 //    println("  shl %%cl, %s", ax);
     return;
@@ -1629,6 +1616,7 @@ static void gen_expr(Node *node) {
       println("\tins");
 //      println("  sar %%cl, %s", ax);
     }
+    depth -= 2;
     return;
   }
 
@@ -1791,6 +1779,7 @@ static void assign_lvar_offsets(Obj *prog) {
       case TY_FLOAT:
       case TY_DOUBLE:
       case TY_LDOUBLE:
+      case TY_LONG:
 	      continue;
       default:
         if (gp++ < GP_MAX){

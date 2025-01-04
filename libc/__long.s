@@ -1,123 +1,153 @@
 ;
 ;	long basic library
 ;
-	.export __lloadx
-	.export __lstorex
-	.export __lpush
-	.export __lpop
-	.export __laddx
-	.export __lsubx
-	.export __laddtos
-	.export __lsubtos
+	.export __load32
+	.export __load32i
+	.export __load32x
+	.export __store32x
+	.export __push32
+	.export __pop32
+	.export __add32x
+	.export __sub32x
+	.export __add32tos
+	.export __sub32tos
+	.export __and32tos
+	.export __or32tos
+	.export __xor32tos
+	.export __not32
 	.export	__32to8
 	.export	__32to16
 	.export	__u8to32
 	.export	__u16to32
 	.export	__s8to32
 	.export	__s16to32
-	.export	__lzero
+	.export	__iszero32
 
 	.code
-;
-;	__lloadx	load long from 0-3,x
-;
-__lloadx:
-	ldab	3,x
-	stab	@long+3
-	ldab	2,x
-	stab	@long+2
-	ldab	1,x
-	stab	@long+1
-	ldab	0,x
-	stab	@long+0
+__load32:		; load 32bit from (AccAB)
+	pshb
+	psha
+	tsx
+	ldx 0,x
+	ins
+	ins
+	ldab 3,x
+	stab @long+3
+	ldab 2,x
+	stab @long+2
+	ldab 1,x
+	stab @long+1
+	ldab 0,x
+	stab @long+0
+	rts
+__load32i:		; load 32bit immediate
+	tsx
+	ldx 0,x
+	ins
+	ins
+	ldab 3,x
+	stab @long+3
+	ldab 2,x
+	stab @long+2
+	ldab 1,x
+	stab @long+1
+	ldab 0,x
+	stab @long+0
+	jmp  4,x
+__load32x:		; load 32bit from (0-3,x)
+	ldab 3,x
+	stab @long+3
+	ldab 2,x
+	stab @long+2
+	ldab 1,x
+	stab @long+1
+	ldab 0,x
+	stab @long+0
 	rts
 ;
 ;	__lstorex	store long to 0-3,x
 ;
-__lstorex:
-	ldab	@long+3
-	stab	3,x
-	ldab	@long+2
-	stab	2,x
-	ldab	@long+1
-	stab	1,x
-	ldab	@long+0
-	stab	0,x
+__store32x:
+	ldab @long+3
+	stab 3,x
+	ldab @long+2
+	stab 2,x
+	ldab @long+1
+	stab 1,x
+	ldab @long+0
+	stab 0,x
 	rts
 ;
 ;	__lpush		push @long
 ;
-__lpush:
-	pula
-	pulb
-	stab	@tmp1+1
-	staa	@tmp1
-	ldab	@long+3
+__push32:
+	tsx
+	ldx 0,x
+	ins
+	ins
+	ldab @long+3
 	pshb
-	ldab	@long+2
+	ldab @long+2
 	pshb
-	ldab	@long+1
+	ldab @long+1
 	pshb
-	ldab	@long
+	ldab @long
 	pshb
-	ldx	@tmp1
-	jmp	0,x
+	jmp 0,x
 ;
 ;	__lpop		pul @long
 ;
-__lpop:
-	pula
+__pop32:
+	tsx
+	ldx 0,x
 	pulb
-	stab	@tmp1+1
-	staa	@tmp1
+	stab @long
 	pulb
-	stab	@long
+	stab @long+1
 	pulb
-	stab	@long+1
+	stab @long+2
 	pulb
-	stab	@long+2
-	pulb
-	stab	@long+3
-	ldx	@tmp1
-	jmp	0,x
+	stab @long+3
+	ldx @tmp1
+	jmp 0,x
 ;
 ;	__laddx		@long += (0-3,x)
 ;
-__laddx:
-	ldab	3,x
-	addb	@long+3
-	stab	3,x
-	ldab	2,x
-	addb	@long+2
-	stab	2,x
-	ldab	1,x
-	addb	@long+1
-	stab	1,x
-	ldab	0,x
-	addb	@long
-	stab	0,x
+__add32x:
+	ldab 3,x
+	addb @long+3
+	stab @long+3
+	ldab 2,x
+	addb @long+2
+	stab @long+2
+	ldab 1,x
+	addb @long+1
+	stab @long+1
+	ldab 0,x
+	addb @long
+	stab @long
 	rts
 ;
-;	__lsubx		@long += (0-3,x)
+;	__lsubx		@long -= (0-3,x)
 ;
-__lsubx:
-	ldab	3,x
-	addb	@long+3
-	stab	3,x
-	ldab	2,x
-	addb	@long+2
-	stab	2,x
-	ldab	1,x
-	addb	@long+1
-	stab	1,x
-	ldab	0,x
-	addb	@long
-	stab	0,x
+__sub32x:
+	ldab @long+3
+	subb 3,x
+	stab @long+3
+	sbcb @long+2
+	sbca 2,x
+	stab @long+2
+	ldab @long+1
+	sbcb 1,x
+	stab @long+1
+	ldab @long
+	sbca 0,x
+	stab @long
 	rts
 ;
 ;	__laddtos	@long += TOS, pull TOS
 ;
-__laddtos:
+__add32tos:
 	pula
 	pulb
 	stab	@tmp1+1
@@ -144,7 +174,7 @@ __laddtos:
 ;
 ;	__lsubtos	@long = TOS - @long, pull TOS
 ;
-__lsubtos:
+__sub32tos:
 	pula
 	pulb
 	stab	@tmp1+1
@@ -168,6 +198,72 @@ __lsubtos:
 	ins
 	ldx	@tmp1
 	jmp	0,x
+;
+;
+;
+__and32tos:
+	tsx
+	ldx	0,x
+	ins
+	ins
+	pulb
+	andb	@long
+	stab	@long
+	pulb
+	andb	@long+1
+	stab	@long+1
+	pulb
+	andb	@long+2
+	stab	@long+2
+	pulb
+	andb	@long+3
+	stab	@long+3
+	jmp	0,x
+;
+__or32tos:
+	tsx
+	ldx	0,x
+	ins
+	ins
+	pulb
+	orab	@long
+	stab	@long
+	pulb
+	orab	@long+1
+	stab	@long+1
+	pulb
+	orab	@long+2
+	stab	@long+2
+	pulb
+	orab	@long+3
+	stab	@long+3
+	jmp	0,x
+;
+__xor32tos:
+	tsx
+	ldx	0,x
+	ins
+	ins
+	pulb
+	eorb	@long
+	stab	@long
+	pulb
+	eorb	@long+1
+	stab	@long+1
+	pulb
+	eorb	@long+2
+	stab	@long+2
+	pulb
+	eorb	@long+3
+	stab	@long+3
+	jmp	0,x
+;
+__not32:
+	com	@long+3
+	com	@long+2
+	com	@long+1
+	com	@long
+	rts
 ;
 ;	convert value
 ;
@@ -214,9 +310,9 @@ __s16to32_1:
 ;	if (@long == zero)
 ;		set Z
 ;
-__lzero:
+__iszero32:
 	ldx	@long+2
-	bne	__lzero_end
+	bne	__iszero32_end
 	ldx	@long
-__lzero_end:
+__iszero32_end:
 	rts

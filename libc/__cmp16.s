@@ -1,5 +1,5 @@
 ;
-;	Set a flag based on 16-bit subtraction
+;	16-bit subtraction
 ;
 	.export __eq16
 	.export __ne16
