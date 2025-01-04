@@ -49,7 +49,7 @@ shruloop:
 	lsr @long
 	ror @long+1
 	ror @long+2
-	lsr @long+3
+	ror @long+3
 	decb
 	bne shruloop
 	rts
@@ -62,7 +62,7 @@ shrsloop:
 	asr @long
 	ror @long+1
 	ror @long+2
-	lsr @long+3
+	ror @long+3
 	decb
 	bne shrsloop
 	rts
