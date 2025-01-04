@@ -402,12 +402,12 @@ static bool convert_pp_int(Token *tok) {
     else if (l)
       ty = (val >> 63) ? ty_ulong : ty_long;	// TODO:
     else if (u)
-      ty = (val >> 32) ? ty_ulong : ty_uint;	// TODO:
+      ty = (val >> 16) ? ty_ulong : ty_uint;	// TODO:
     else if (val >> 63)				// TODO:
       ty = ty_ulong;
-    else if (val >> 32)				// TODO:
+    else if (val >> 16)				// TODO:
       ty = ty_long;
-    else if (val >> 31)				// TODO:
+    else if (val >> 15)				// TODO:
       ty = ty_uint;
     else
       ty = ty_int;
