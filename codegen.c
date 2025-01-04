@@ -843,8 +843,8 @@ static void builtin_alloca(void) {
 
 // Generate code for a given node.
 static void gen_expr(Node *node) {
-// println(";\t.loc gen_expr %d %d", node->tok->file->file_no, node->tok->line_no);
-
+  //println(";\t.loc gen_expr %d %d", node->tok->file->file_no, node->tok->line_no);
+  println("; gen_expr() node->kind=%d, node->ty->kind=%d",node->kind,(node->ty)?node->ty->kind:0);
   switch (node->kind) {
   case ND_NULL_EXPR:
     return;
@@ -1359,10 +1359,14 @@ static void gen_expr(Node *node) {
   }
   case TY_LONG: {
     println("; call gen_expr(node->rhs) %s %d",__FILE__,__LINE__);
+    println("; node->rhs->ty = %d",node->rhs->ty->kind);
     gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
     pushl();
     println("; call gen_expr(node->lhs) %s %d",__FILE__,__LINE__);
+    println("; node->lhs->ty = %d",node->lhs->ty->kind);
     gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
     println("; end call");
 
     switch (node->kind) {
@@ -1456,6 +1460,8 @@ static void gen_expr(Node *node) {
       println("\tjsr __shl32");
       println("\tins");
       println("\tins");
+      println("\tins");
+      println("\tins");
 //    println("  mov %%rdi, %%rcx");
 //    println("  shl %%cl, %s", ax);
       depth -= 4;
@@ -1466,9 +1472,13 @@ static void gen_expr(Node *node) {
         println("\tjsr __shr32u");
         println("\tins");
         println("\tins");
+        println("\tins");
+        println("\tins");
 //      println("  shr %%cl, %s", ax);
       }else{
         println("\tjsr __shr32s");
+        println("\tins");
+        println("\tins");
         println("\tins");
         println("\tins");
 //      println("  sar %%cl, %s", ax);
@@ -1481,9 +1491,11 @@ static void gen_expr(Node *node) {
   }
   println("; call gen_expr(node->rhs) %s %d",__FILE__,__LINE__);
   gen_expr(node->rhs);
+  cast(node->rhs->ty, node->ty);
   push();
   println("; call gen_expr(node->lhs) %s %d",__FILE__,__LINE__);
   gen_expr(node->lhs);
+  cast(node->lhs->ty, node->ty);
   println("; end call");
 //  pop("%rdi");
 
