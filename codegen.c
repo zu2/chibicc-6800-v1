@@ -65,15 +65,13 @@ static void popl() {
 }
 
 static void pushf(void) {
-  println("  sub $8, %%rsp");
-  println("  movsd %%xmm0, (%%rsp)");
-  depth++;
+  println("\tjsr __push32");
+  depth+=4;
 }
 
 static void popf(int reg) {
-  println("  movsd (%%rsp), %%xmm%d", reg);
-  println("  add $8, %%rsp");
-  depth--;
+  println("\tjsr __pop32");
+  depth-=4;
 }
 
 // Round up `n` to the nearest multiple of `align`. For instance,
@@ -263,7 +261,8 @@ static void load(Type *ty) {
     // the first element of the array in C" occurs.
     return;
   case TY_FLOAT:
-    println("  movss (%%rax), %%xmm0");
+    println("\tjsr __load32	; @long = (AccAB)");
+//    println("  movss (%%rax), %%xmm0");
     return;
   case TY_DOUBLE:
     println("  movsd (%%rax), %%xmm0");
@@ -315,7 +314,8 @@ static void store(Type *ty) {
     }
     return;
   case TY_FLOAT:
-    println("  movss %%xmm0, (%%rdi)");
+    println("\tjsr __store32x   ; store @long to (0-3,x)");
+//    println("  movss %%xmm0, (%%rdi)");
     return;
   case TY_DOUBLE:
     println("  movsd %%xmm0, (%%rdi)");
@@ -396,23 +396,22 @@ static char i16i32[] = "jsr __s16to32";
 static char i16u32[] = "jsr __s16to32";
 static char u16i32[] = "jsr __u16to32";
 static char u16u32[] = "jsr __u16to32";
+static char u16f32[] = "jsr __u16tof32";
 
-static char i16i8[] = "; cast i16i8";
-static char i16u8[] = "; cast i16u8";
-static char i16i64[] = "; i16i64 " __FILE__;
-static char i16f32[] = "; i16f32 " __FILE__;
-static char i16f64[] = "; i16f64 " __FILE__;
-static char i16f80[] = "; i16f80 " __FILE__;
+static char i16i64[] = ";jsr __i16i64 " __FILE__;
+static char i16f32[] = "jsr __i16tof32";
+static char i16f64[] = "; jsr __i16f64 " __FILE__;
+static char i16f80[] = "; jsr __i16f80 " __FILE__;
 static char i32i8[] = "ldab @long+3";
 static char i32u8[] = "ldab @long+3";
 static char i32i16[] = "ldab @long+3\n\tldaa @long+2";
 static char i32u16[] = "ldab @long+3\n\tldaa @long+2";
-static char i32f32[] = "cvtsi2ssl %eax, %xmm0";
+static char i32f32[] = "jsr __i32tof32";
 static char i32i64[] = "movsxd %eax, %rax";
 static char i32f64[] = "cvtsi2sdl %eax, %xmm0";
 static char i32f80[] = "mov %eax, -4(%rsp); fildl -4(%rsp)";
 
-static char u32f32[] = "mov %eax, %eax; cvtsi2ssq %rax, %xmm0";
+static char u32f32[] = "jsr __u32tof32";
 static char u32i64[] = "mov %eax, %eax";
 static char u32f64[] = "mov %eax, %eax; cvtsi2sdq %rax, %xmm0";
 static char u32f80[] = "mov %eax, %eax; mov %rax, -8(%rsp); fildll -8(%rsp)";
@@ -432,12 +431,12 @@ static char u64f80[] =
   "mov %rax, -8(%rsp); fildq -8(%rsp); test %rax, %rax; jns 1f;"
   "mov $1602224128, %eax; mov %eax, -4(%rsp); fadds -4(%rsp); 1:";
 
-static char f32i8[] = "cvttss2sil %xmm0, %eax; movsbl %al, %eax";
-static char f32u8[] = "cvttss2sil %xmm0, %eax; movzbl %al, %eax";
-static char f32i16[] = "cvttss2sil %xmm0, %eax; movswl %ax, %eax";
-static char f32u16[] = "cvttss2sil %xmm0, %eax; movzwl %ax, %eax";
-static char f32i32[] = "cvttss2sil %xmm0, %eax";
-static char f32u32[] = "cvttss2siq %xmm0, %rax";
+static char f32i8[] = "jsr __f32toi8";
+static char f32u8[] = "jsr __f32tou8";
+static char f32i16[] = "jsr __f32toi16";
+static char f32u16[] = "jsr __f32tou16";
+static char f32i32[] = "jsr __f32toi32";
+static char f32u32[] = "jsr __f32tou32";
 static char f32i64[] = "cvttss2siq %xmm0, %rax";
 static char f32u64[] = "cvttss2siq %xmm0, %rax";
 static char f32f64[] = "cvtss2sd %xmm0, %xmm0";
@@ -475,12 +474,12 @@ static char f80f64[] = "fstpl -8(%rsp); movsd -8(%rsp), %xmm0";
 static char *cast_table[][11] = {
   // i8   i16     i32     i64     u8     u16     u32     u64     f32     f64     f80
   {NULL,  NULL,   i8i32,  i16i64, NULL,  NULL,   i8u32,  i16i64, i16f32, i16f64, i16f80}, // i8
-  {i16i8, NULL,   i16i32, i16i64, i16u8, NULL,   i16u32, i16i64, i16f32, i16f64, i16f80}, // i16
+  {NULL,  NULL,   i16i32, i16i64, NULL,  NULL,   i16u32, i16i64, i16f32, i16f64, i16f80}, // i16
   {i32i8, i32i16, NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   i64f32, i64f64, i64f80}, // i64
 
-  {i16i8, NULL,   u8i32,  i16i64, NULL,  NULL,   u8u32,  i16i64, i16f32, i16f64, i16f80}, // u8
-  {i16i8, NULL,   u16i32, i16i64, i16u8, NULL,   u16i32, i16i64, i16f32, i16f64, i16f80}, // u16
+  {NULL,  NULL,   u8i32,  i16i64, NULL,  NULL,   u8u32,  i16i64, i16f32, i16f64, i16f80}, // u8
+  {NULL,  NULL,   u16i32, i16i64, NULL,  NULL,   u16i32, i16i64, i16f32, i16f64, i16f80}, // u16
   {i32i8, i32i16, NULL,   u32i64, i32u8, i32u16, NULL,   u32i64, u32f32, u32f64, u32f80}, // u32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   u64f32, u64f64, u64f80}, // u64
 
@@ -581,7 +580,6 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   switch (args->ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
-  case TY_FLOAT:
   case TY_DOUBLE:
   case TY_LDOUBLE:
 	  println("; push_args2 push XXX");
@@ -607,6 +605,7 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
       *last_pushed_arg = *args;
     }
     break;
+  case TY_FLOAT:
   case TY_LONG:{
       println("\tjsr __push32");
       depth+=4;
@@ -852,8 +851,11 @@ static void gen_expr(Node *node) {
     switch (node->ty->kind) {
     case TY_FLOAT: {
       union { float f32; uint32_t u32; } u = { node->fval };
-      println("  mov $%u, %%eax  # float %Lf", u.u32, node->fval);
-      println("  movq %%rax, %%xmm0");
+      println("\tjsr __load32i	; float %Lf",node->fval);
+      println("\t.word $%04x",(uint16_t)(u.u32>>16));
+      println("\t.word $%04x",(uint16_t)(u.u32&0x0ffff));
+//    println("  mov $%u, %%eax  # float %Lf", u.u32, node->fval);
+//    println("  movq %%rax, %%xmm0");
       return;
     }
     case TY_DOUBLE: {
@@ -1265,27 +1267,30 @@ static void gen_expr(Node *node) {
   }
 
   switch (node->lhs->ty->kind) {
-  case TY_FLOAT:
-  case TY_DOUBLE: {
+  case TY_FLOAT: {
     gen_expr(node->rhs);
     pushf();
     gen_expr(node->lhs);
-    popf(1);
+//  popf(1);
 
     char *sz = (node->lhs->ty->kind == TY_FLOAT) ? "ss" : "sd";
 
     switch (node->kind) {
     case ND_ADD:
-      println("  add%s %%xmm1, %%xmm0", sz);
+      println("\tjsr __addf32tos	; TOS + @long");
+//    println("  add%s %%xmm1, %%xmm0", sz);
       return;
     case ND_SUB:
-      println("  sub%s %%xmm1, %%xmm0", sz);
+      println("\tjsr __subf32tos	; TOS - @long");
+//    println("  sub%s %%xmm1, %%xmm0", sz);
       return;
     case ND_MUL:
-      println("  mul%s %%xmm1, %%xmm0", sz);
+      println("\tjsr __subf32tos	; TOS * @long");
+//    println("  mul%s %%xmm1, %%xmm0", sz);
       return;
     case ND_DIV:
-      println("  div%s %%xmm1, %%xmm0", sz);
+      println("\tjsr __subf32tos	; TOS / @long");
+//    println("  div%s %%xmm1, %%xmm0", sz);
       return;
     case ND_EQ:
     case ND_NE:
@@ -1315,6 +1320,9 @@ static void gen_expr(Node *node) {
     }
 
     error_tok(node->tok, "invalid expression");
+  }
+  case TY_DOUBLE: {
+    error_tok(node->tok, "double not implemented");
   }
   case TY_LDOUBLE: {
     gen_expr(node->lhs);
@@ -1784,6 +1792,7 @@ static void gen_stmt(Node *node) {
 
 // Assign offsets to local variables.
 static void assign_lvar_offsets(Obj *prog) {
+  println("; assign_lvar_offsets %s %d", __FILE__, __LINE__);
   for (Obj *fn = prog; fn; fn = fn->next) {
     if (!fn->is_function)
       continue;
@@ -1795,6 +1804,7 @@ static void assign_lvar_offsets(Obj *prog) {
 //    int bottom = 0;
 
     int gp = 0, fp = 0;
+    fn->stack_size = 0;
 
     // list of param
     for (Obj *var = fn->params; var; var = var->next) {
@@ -1809,31 +1819,38 @@ static void assign_lvar_offsets(Obj *prog) {
       case TY_DOUBLE:
       case TY_LDOUBLE:
       case TY_LONG:
-	      continue;
+        var->offset = -2;	// stack param mark
+	continue;
       default:
         if (gp++ < GP_MAX){
 	  var->offset = -1;
 	  var->reg_param = 1;	// reg param mark
           continue;
 	}
+        var->offset = -2;		// stack param mark
       }
-      var->offset = -2;		// stack param mark
     }
 
     // Assign offsets to locals
+    int skiped_bp = 2;
     for (Obj *var = fn->locals; var; var = var->next) {
-//      if (var->offset)
-//        println("; 3. var->name=%s, var->offset=%d %s %d",
-//	  var->name,var->offset,__FILE__,__LINE__);
+      int skip_bp = 0;
+      if (var->offset){
+        println("; 3. var->name=%s, var->offset=%d %s %d",
+	  var->name,var->offset,__FILE__,__LINE__);
+      }
       if (var->offset>0)
         continue;
-      if (var->offset==-2){
+      if (var->offset==-2){	// stack param
 	var->offset = 0;
 	continue;
       }
-      if (var->offset==-1){
-        top += 2;
+      if (var->offset==-1){	// reg param, top += sizeof(old BP)
+        skip_bp = 2;
+        skiped_bp = 0;
+	fn->stack_size = top;
       }
+
 
       // AMD64 System V ABI has a special alignment rule for an array of
       // length at least 16 bytes. We need to align such array to at least
@@ -1841,16 +1858,20 @@ static void assign_lvar_offsets(Obj *prog) {
       // https://github.com/hjl-tools/x86-psABI/wiki/x86-64-psABI-draft.pdf.
       int align = (var->ty->kind == TY_ARRAY && var->ty->size >= 16)
         ? MAX(16, var->align) : var->align;
-      var->offset = top;
-      top += var->ty->size;
+      println("; 4. var->name=%s, var->offset=%d,var->ty->size=%d, top=%d, %s %d",
+		      var->name,var->offset,var->ty->size,top,__FILE__,__LINE__);
+      var->offset = top + skip_bp;
+      top += var->ty->size + skip_bp;
       top = align_to(top, align);
-      println("; 4. var->name=%s, var->offset=%d,var->ty->size=%d, %s %d",
-		      var->name,var->offset,var->ty->size,__FILE__,__LINE__);
+      println("; 4= var->name=%s, var->offset=%d,var->ty->size=%d, top=%d, %s %d",
+		      var->name,var->offset,var->ty->size,top,__FILE__,__LINE__);
+      println("; 4= next top=%d",top);
     }
-
-    fn->stack_size = align_to(top, 16);
+    if (!fn->stack_size){ // no reg param
+	fn->stack_size = top;
+    }
     println("; fn->stack_size = %d", fn->stack_size);
-    top += 2;	// return address
+    top += 2 + skiped_bp;		// skip return address
 
     // Assign offsets to pass-by-stack parameters.
     gp = 0;
@@ -1901,9 +1922,12 @@ static void assign_lvar_offsets(Obj *prog) {
       println("; 9. var->name=%s, var->offset=%d,var->ty->size=%d, %s %d",
 		      var->name,var->offset,var->ty->size,__FILE__,__LINE__);
     }
+    println("; fn->stack_size = %d", fn->stack_size);
+    println(";");
 
 
   }
+  println("; assign_lvar_offsets end");
 }
 
 static void emit_data(Obj *prog) {
@@ -2143,8 +2167,12 @@ static void emit_text(Obj *prog) {
     }
     for (Obj *var = fn->params; var; var = var->next) {
       if (var->reg_param){ // push argment pass by register
-    	println("\tpshb");
-	println("\tpsha");
+	if (var->ty->kind == TY_CHAR) {
+    	  println("\tpshb");
+	}else{
+    	  println("\tpshb");
+	  println("\tpsha");
+	}
       }
     }
     // make base pointer
@@ -2155,8 +2183,8 @@ static void emit_text(Obj *prog) {
     println("\tsts @bp");			// make new bp
     println("\tldab @bp+1");
     println("\tldaa @bp");
-    println("\tsubb #<%u",fn->stack_size-5);
-    println("\tsbca #>%u",fn->stack_size-5);
+    println("\tsubb #<%u",fn->stack_size-1);
+    println("\tsbca #>%u",fn->stack_size-1);
     println("\tstab @bp+1");
     println("\tstaa @bp");
     println("\tldx @bp");			// adjust one byte
@@ -2183,8 +2211,8 @@ static void emit_text(Obj *prog) {
     println("\tstaa @tmp1");
     println("\tldab @bp+1");
     println("\tldaa @bp");
-    println("\taddb #<%u",fn->stack_size-5);
-    println("\tadca #>%u",fn->stack_size-5);
+    println("\taddb #<%u",fn->stack_size-1);
+    println("\tadca #>%u",fn->stack_size-1);
     println("\tstab @bp+1");
     println("\tstaa @bp");
     println("\tlds @bp");			// remove local variables
@@ -2194,8 +2222,12 @@ static void emit_text(Obj *prog) {
     println("\tstaa @bp");
     for (Obj *var = fn->params; var; var = var->next) { // skip argment pass by register
       if (var->reg_param){
-    	println("\tins");			// push register var
-	println("\tins");
+        if (var->ty->kind == TY_CHAR) {
+    	  println("\tins");
+        }else{
+    	  println("\tins");
+	  println("\tins");
+        }
       }
     }
 //    println("  mov %%rbp, %%rsp");
