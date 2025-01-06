@@ -341,8 +341,9 @@ static void store(Type *ty) {
 static void cmp_zero(Type *ty) {
   switch (ty->kind) {
   case TY_FLOAT:
-    println("  xorps %%xmm1, %%xmm1");
-    println("  ucomiss %%xmm1, %%xmm0");
+    println("\tjsr __f32iszero");
+//  println("  xorps %%xmm1, %%xmm1");
+//  println("  ucomiss %%xmm1, %%xmm0");
     return;
   case TY_DOUBLE:
     println("  xorpd %%xmm1, %%xmm1");

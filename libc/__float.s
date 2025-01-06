@@ -25,6 +25,7 @@
 	.export __mulf32tos
 	.export __divf32tos
 	.export __cmpf32tos
+	.export __f32iszero
 	.data
 	.export __sign
 	.export __texp
@@ -38,6 +39,8 @@ __lexp:	.byte	0	; @long's exp
 ;		== 0x0000 0000 or 0x8000 0000	
 ;	if 0.0 then Z=1 else Z=0
 ;
+__f32iszero:
+	ldx	#long
 __i32iszerox:
 __f32iszerox:
 	tst	3,x
