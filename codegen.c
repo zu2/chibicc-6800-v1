@@ -851,7 +851,7 @@ static void gen_expr(Node *node) {
     switch (node->ty->kind) {
     case TY_FLOAT: {
       union { float f32; uint32_t u32; } u = { node->fval };
-      println("\tjsr __load32i	; float %Lf",node->fval);
+      println("\tjsr __load32i	; float %e",u.f32);
       println("\t.word $%04x",(uint16_t)(u.u32>>16));
       println("\t.word $%04x",(uint16_t)(u.u32&0x0ffff));
 //    println("  mov $%u, %%eax  # float %Lf", u.u32, node->fval);
@@ -1271,9 +1271,9 @@ static void gen_expr(Node *node) {
 
   switch (node->lhs->ty->kind) {
   case TY_FLOAT: {
-    gen_expr(node->rhs);
+    gen_expr(node->rhs);	// xmm1
     pushf();
-    gen_expr(node->lhs);
+    gen_expr(node->lhs);	// xmm0
 //  popf(1);
 
     char *sz = (node->lhs->ty->kind == TY_FLOAT) ? "ss" : "sd";
@@ -1282,44 +1282,77 @@ static void gen_expr(Node *node) {
     case ND_ADD:
       println("\tjsr __addf32tos	; @long += TOS");
 //    println("  add%s %%xmm1, %%xmm0", sz);
+      depth -= 4;
       return;
     case ND_SUB:
       println("\tjsr __subf32tos	; @long -= TOS");
 //    println("  sub%s %%xmm1, %%xmm0", sz);
+      depth -= 4;
       return;
     case ND_MUL:
       println("\tjsr __mulf32tos	; @long *= TOS");
 //    println("  mul%s %%xmm1, %%xmm0", sz);
+      depth -= 4;
       return;
     case ND_DIV:
       println("\tjsr __divf32tos	; @long /= TOS");
 //    println("  div%s %%xmm1, %%xmm0", sz);
+      depth -= 4;
       return;
     case ND_EQ:
     case ND_NE:
     case ND_LT:
     case ND_LE:
     case ND_GT:
-    case ND_GE:
-      println("  ucomi%s %%xmm0, %%xmm1", sz);
-
+    case ND_GE: {
+      println("\tjsr __cmpf32tos	; @long cmp  TOS");
+//    println("  ucomi%s %%xmm0, %%xmm1", sz);
       if (node->kind == ND_EQ) {
-        println("  sete %%al");
-        println("  setnp %%dl");
-        println("  and %%dl, %%al");
+        println("; ND_EQ");
+	println("\tclra");
+        println("\tsubb #1");		// 00:carry, other NC
+	println("\trolb");
+//      println("  sete %%al");
+//      println("  setnp %%dl");
+//      println("  and %%dl, %%al");
       } else if (node->kind == ND_NE) {
-        println("  setne %%al");
-        println("  setp %%dl");
-        println("  or %%dl, %%al");
-      } else if (node->kind == ND_LT) {
-        println("  seta %%al");
+        println("; ND_NE");
+	println("; float ND_NE");	// EQ:AccB==0, other FF or 01
+//      println("  setne %%al");
+//      println("  setp %%dl");
+//      println("  or %%dl, %%al");
+      } else if (node->kind == ND_LT) {	// AccB:FF true, other false
+        println("; ND_LT");
+        println("\tclra");
+        println("\taddb #1");		// FF:Carry, other:NC
+	println("\trolb");
+//      println("  seta %%al");
+      } else if (node->kind == ND_GT) {	// AccB:01 true, other false
+        println("; ND_GT");
+        println("\tclra");
+        println("\tdecb");
+        println("\tsubb #1");		// 01:carry, other NC
+	println("\trolb");
+//      println("  setae %%al");
+      } else if (node->kind == ND_LE) { // AccB:FF,00 true, other false
+        println("; ND_LE");
+	println("\tdecb");		// AccB:FE,FF tue, other false
+	println("\taddb #2");		// AccB:FE,FF Carry, other NC
+	println("\trolb");
+      } else if (node->kind == ND_GE) { // AccB:00,01 true, other false
+        println("; ND_LE");
+	println("\tsubb #2");		// AccB:00,01 Carry, other NC
+	println("\trolb");
       } else {
-        println("  setae %%al");
+        error_tok(node->tok, "invalid expression");
       }
-
-      println("  and $1, %%al");
-      println("  movzb %%al, %%rax");
+	println("\tclra");
+	println("\tandb #1");
+//      println("  and $1, %%al");
+//      println("  movzb %%al, %%rax");
+        depth -= 4;
       return;
+      }
     }
 
     error_tok(node->tok, "invalid expression");
