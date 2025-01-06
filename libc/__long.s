@@ -112,7 +112,7 @@ __pop32:
 	ldx @tmp1
 	jmp 0,x
 ;
-;	__neg32		negate 32bit long
+;	__neg32		negate 32bit long, break IX
 ;
 __neg32:
 	com @long

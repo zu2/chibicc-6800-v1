@@ -904,10 +904,13 @@ static void gen_expr(Node *node) {
 
     switch (node->ty->kind) {
     case TY_FLOAT:
-      println("  mov $1, %%rax");
-      println("  shl $31, %%rax");
-      println("  movq %%rax, %%xmm1");
-      println("  xorps %%xmm1, %%xmm0");
+      println("\tldab @long	; negate float");
+      println("\teorb #$80");
+      println("\tstab @long");
+//      println("  mov $1, %%rax");
+//      println("  shl $31, %%rax");
+//      println("  movq %%rax, %%xmm1");
+//      println("  xorps %%xmm1, %%xmm0");
       return;
     case TY_DOUBLE:
       println("  mov $1, %%rax");
@@ -1277,19 +1280,19 @@ static void gen_expr(Node *node) {
 
     switch (node->kind) {
     case ND_ADD:
-      println("\tjsr __addf32tos	; TOS + @long");
+      println("\tjsr __addf32tos	; @long += TOS");
 //    println("  add%s %%xmm1, %%xmm0", sz);
       return;
     case ND_SUB:
-      println("\tjsr __subf32tos	; TOS - @long");
+      println("\tjsr __subf32tos	; @long -= TOS");
 //    println("  sub%s %%xmm1, %%xmm0", sz);
       return;
     case ND_MUL:
-      println("\tjsr __subf32tos	; TOS * @long");
+      println("\tjsr __mulf32tos	; @long *= TOS");
 //    println("  mul%s %%xmm1, %%xmm0", sz);
       return;
     case ND_DIV:
-      println("\tjsr __subf32tos	; TOS / @long");
+      println("\tjsr __divf32tos	; @long /= TOS");
 //    println("  div%s %%xmm1, %%xmm0", sz);
       return;
     case ND_EQ:
