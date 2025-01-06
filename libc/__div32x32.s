@@ -35,8 +35,8 @@ loop:
 	bcs skip
 	stab @tmp1+1	; subtracted.
 	staa @tmp1
-	pulb
 	pula
+	pulb
 	inc @tmp4+1	; set the lower bit of the quotient
 	bra next
 skip:
