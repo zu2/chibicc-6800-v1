@@ -44,7 +44,6 @@ skip:
 	pula
 	addb @long+3
 	adca @long+2
-	bra next
 next:
 	dex
 	bne loop
