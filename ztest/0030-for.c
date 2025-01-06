@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 {
 	int	i;
 
-	for (i=0; i<1000; i=i+1){
+	for (i=0; i<1000; i++){
 		if(i==50)
 			break;
 	}
