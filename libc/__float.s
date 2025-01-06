@@ -756,7 +756,7 @@ __divf32tos:
 	;			; TODO: exception check
 	adda	#127
 	staa	__lexp		; saveit
-	jsr	__div32x32	; @tmp3+1:@tmp4:@tmp4+1 = @long / TOS
+	jsr	__fdiv32x32	; @tmp3+1:@tmp4:@tmp4+1 = @long / TOS
 	ldaa	__lexp
 	tst	@tmp3		; hidden bit set?
 	bmi	____divf32tos_20
@@ -786,9 +786,7 @@ ____divf32tos_20:
 ;	@tmp2: loop counter
 ;	brake @long
 ;
-	.export __div32x32
-	.code
-__div32x32:
+__fdiv32x32:
 	ldab #32
 	stab @tmp2	; loop counter
 	clr  @long
