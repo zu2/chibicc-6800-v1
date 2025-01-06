@@ -3,8 +3,13 @@
 This is a fork of @rui314 Rui Ueyama's chibicc to create a compiler
 for the Motorola MC6800.
 
-It doesn't work  well yet. Only simple 16-bit operations are possible.
-(int is 16-bit)
+- int and pointer size are 16-bit.
+- long and float are 32-bit.
+- double and long long of 64-bit or more are not supported.
+
+The float/long library was written for testing, with no attention paid to speed, precision, or exception handling.
+
+It doesn't work well yet. Many parts remain x64. 
 
 The code runs as a stack machine.
 I created the MC6800 version based on the x64 code.
