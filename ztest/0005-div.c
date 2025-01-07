@@ -1,9 +1,9 @@
-int sub(int a)
+int div(int a)
 {
 	return a/4-2;
 }
 
 int main(int argc, char **argv)
 {
-	return sub(8);
+	return div(8);
 }

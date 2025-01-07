@@ -8,6 +8,7 @@
 	.export __push32
 	.export __pop32
 	.export __neg32
+	.export __neg32x
 	.export __add32x
 	.export __sub32x
 	.export __add32tos
@@ -129,6 +130,23 @@ __neg32:
 __neg32_ret:
 	rts
 ;
+;	__neg32x	negate 32bit long (0-3,x)
+;
+__neg32x:
+	com 0,x
+	com 1,x
+	com 2,x
+	neg 3,x
+	bne __neg32x_ret
+	inc 2,x
+	bne __neg32x_ret
+	inc 1,x
+	bne __neg32x_ret
+	inc 0,x
+__neg32x_ret:
+	rts
+;
+;
 ;	__add32x	@long += (0-3,x)
 ;
 __add32x:
@@ -199,7 +217,7 @@ __sub32tos:
 	staa	@tmp1
 	tsx
 	ldab	3,x
-	sbcb	@long+3
+	subb	@long+3
 	stab	@long+3
 	ldab	2,x
 	sbcb	@long+2

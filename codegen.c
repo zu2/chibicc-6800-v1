@@ -1204,7 +1204,8 @@ static void gen_expr(Node *node) {
     // respectively. We clear the upper bits here.
     switch (node->ty->kind) {
     case TY_BOOL:
-      println("  movzx %%al, %%eax");
+      println("\tclra");
+//    println("  movzx %%al, %%eax");
       return;
     case TY_CHAR:
       if (node->ty->is_unsigned){
@@ -1429,23 +1430,19 @@ static void gen_expr(Node *node) {
       depth -= 4;
       return;
     case ND_DIV:
-      println("; XXX __div32tos (u/s)");
-//      if (node->ty->is_unsigned) {
-//        println("\tjsr __div16x16u");
-//      }else{
-//        println("\tjsr __div16x16s");
-//      }
+      if (node->ty->is_unsigned) {
+        println("\tjsr __div32x32u ; @long /= TOS, pull TOS");
+      }else{
+        println("\tjsr __div32x32s ; @long /= TOS, pull TOS");
+      }
       depth -= 4;
       return;
     case ND_MOD:
-      println("; XXX __rem32tos (u/s)");
-//      if (node->ty->is_unsigned) {
-//        println("\tjsr __rem16x16u");
-//      }else{
-//        println("\tjsr __rem16x16s");
-//      }
-//      println("\tins");
-//      println("\tins");
+      if (node->ty->is_unsigned) {
+        println("\tjsr __rem32x32u ; @long %= TOS, pull TOS");
+      }else{
+        println("\tjsr __rem32x32s ; @long %= TOS, pull TOS");
+      }
       depth -= 4;
       return;
     case ND_BITAND:
