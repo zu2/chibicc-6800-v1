@@ -15,7 +15,18 @@ tmp3:	.word	0
 tmp4:	.word	0
 long:	.word	0
 	.word	0
-
+;
+	.export	rax
+	.export	rbx
+	.export	rcx
+	.export	rdi
+	.export	r8b
+rax:	.word	0
+rbx:	.word	0
+rcx:	.word	0
+rdi:	.word	0
+r8b:	.word	0
+;
 	.export _putc
 	.export _getc
 	.export _print

@@ -13,19 +13,20 @@ __div16x16:
 	ldx #16		; loop counter
 	clra
 	clrb		; carry is also cleared
-loop:
+__div16x16_1:
 	rol @tmp2+1	; shift divient
 	rol @tmp2
 	rolb
 	rola
 	subb @tmp1+1	; divisor
 	sbca @tmp1
-	bcc skip
+	bcc __div16x16_2
 	addb @tmp1+1
 	adca @tmp1	; C must 1
-skip:	dex		; quotient bit will be added to @tmp at next loop.
-	bne loop
-	rol @tmp2+1
+__div16x16_2:
+	dex		; quotient bit will be added to @tmp at next loop.
+	bne __div16x16_1
+	rol @tmp2+1	; Shift to get the remaining quotient 1 bit
 	rol @tmp2
 	com @tmp2+1
 	com @tmp2

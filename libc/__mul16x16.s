@@ -24,7 +24,4 @@ __mul16x16_1:
 __mul16x16_2:
 	dec @tmp2
 	bne __mul16x16_1
-	ins
-	ins
-	ins
 	rts
