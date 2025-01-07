@@ -592,10 +592,14 @@ bool file_exists(char *path) {
 }
 
 static char *find_libpath(void) {
+#if 0
   if (file_exists("/usr/lib/x86_64-linux-gnu/crti.o"))
     return "/usr/lib/x86_64-linux-gnu";
   if (file_exists("/usr/lib64/crti.o"))
     return "/usr/lib64";
+#endif
+  if (file_exists("/opt/chibicc/lib/crt0.o"))
+    return "/opt/chibicc/lib";
   error("library path is not found");
 }
 
@@ -625,23 +629,29 @@ static void run_linker(StringArray *inputs, char *output) {
   strarray_push(&arr, "-C256");
   strarray_push(&arr, "-Z0");
   strarray_push(&arr, "-m");
-  strarray_push(&arr, "a.map");
+  char *mapfile = replace_extn(output, ".map");
+  strarray_push(&arr, mapfile);
   strarray_push(&arr, "-o");
-  strarray_push(&arr, output);
+  char *binfile = replace_extn(output, ".bin");
+  strarray_push(&arr, binfile);
 
   char *libpath = find_libpath();
-  char *gcc_libpath = find_gcc_libpath();
+//  char *gcc_libpath = find_gcc_libpath();
 
 
+  strarray_push(&arr, format("%s/crt0.o", libpath));
+#if 0
   if (opt_shared) {
     strarray_push(&arr, format("%s/crt0.o", libpath));
-//    strarray_push(&arr, format("%s/crtbeginS.o", gcc_libpath));
+    strarray_push(&arr, format("%s/crtbeginS.o", gcc_libpath));
   } else {
     strarray_push(&arr, format("%s/crt1.o", libpath));
-//    strarray_push(&arr, format("%s/crti.o", libpath));
-//    strarray_push(&arr, format("%s/crtbegin.o", gcc_libpath));
+    strarray_push(&arr, format("%s/crti.o", libpath));
+    strarray_push(&arr, format("%s/crtbegin.o", gcc_libpath));
   }
+#endif
 
+#if 0
   strarray_push(&arr, format("-L%s", gcc_libpath));
 //  strarray_push(&arr, "-L/usr/lib/x86_64-linux-gnu");
 //  strarray_push(&arr, "-L/usr/lib64");
@@ -652,6 +662,9 @@ static void run_linker(StringArray *inputs, char *output) {
 //  strarray_push(&arr, "-L/usr/lib");
 //  strarray_push(&arr, "-L/lib");
   strarray_push(&arr, "-L/opt/chibicc/lib");
+#else
+  strarray_push(&arr, "/opt/chibicc/lib/libc.a");
+#endif
 
 #if 0
   if (!opt_static) {
@@ -666,6 +679,7 @@ static void run_linker(StringArray *inputs, char *output) {
   for (int i = 0; i < inputs->len; i++)
     strarray_push(&arr, inputs->data[i]);
 
+#if 0
   if (opt_static) {
     strarray_push(&arr, "--start-group");
     strarray_push(&arr, "-lgcc");
@@ -674,11 +688,12 @@ static void run_linker(StringArray *inputs, char *output) {
     strarray_push(&arr, "--end-group");
   } else {
     strarray_push(&arr, "-lc");
-//    strarray_push(&arr, "-lgcc");
-//    strarray_push(&arr, "--as-needed");
-//    strarray_push(&arr, "-lgcc_s");
-//    strarray_push(&arr, "--no-as-needed");
+    strarray_push(&arr, "-lgcc");
+    strarray_push(&arr, "--as-needed");
+    strarray_push(&arr, "-lgcc_s");
+    strarray_push(&arr, "--no-as-needed");
   }
+#endif
 
 #if 0
   if (opt_shared)
