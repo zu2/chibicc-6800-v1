@@ -570,7 +570,8 @@ static void cc1(void) {
 }
 
 static void assemble(char *input, char *output) {
-  char *cmd[] = {"as6800", "-c", input, "-o", output, NULL};
+//  char *cmd[] = {"as6800", "-c", input, "-o", output, NULL};
+  char *cmd[] = {"as6800", "-o", output, input,  NULL};
   run_subprocess(cmd);
 }
 
@@ -617,38 +618,47 @@ static char *find_gcc_libpath(void) {
 static void run_linker(StringArray *inputs, char *output) {
   StringArray arr = {};
 
-  strarray_push(&arr, "ld");
+//ld6800 -v -b -C256 -Z0 -m $s.map -o $s.bin ../crt0.o $s.o ../libc/libc.a
+  strarray_push(&arr, "ld6800");
+  strarray_push(&arr, "-v");
+  strarray_push(&arr, "-b");
+  strarray_push(&arr, "-C256");
+  strarray_push(&arr, "-Z0");
+  strarray_push(&arr, "-m");
+  strarray_push(&arr, "a.map");
   strarray_push(&arr, "-o");
   strarray_push(&arr, output);
-  strarray_push(&arr, "-m");
-  strarray_push(&arr, "elf_x86_64");
 
   char *libpath = find_libpath();
   char *gcc_libpath = find_gcc_libpath();
 
+
   if (opt_shared) {
-    strarray_push(&arr, format("%s/crti.o", libpath));
-    strarray_push(&arr, format("%s/crtbeginS.o", gcc_libpath));
+    strarray_push(&arr, format("%s/crt0.o", libpath));
+//    strarray_push(&arr, format("%s/crtbeginS.o", gcc_libpath));
   } else {
     strarray_push(&arr, format("%s/crt1.o", libpath));
-    strarray_push(&arr, format("%s/crti.o", libpath));
-    strarray_push(&arr, format("%s/crtbegin.o", gcc_libpath));
+//    strarray_push(&arr, format("%s/crti.o", libpath));
+//    strarray_push(&arr, format("%s/crtbegin.o", gcc_libpath));
   }
 
   strarray_push(&arr, format("-L%s", gcc_libpath));
-  strarray_push(&arr, "-L/usr/lib/x86_64-linux-gnu");
-  strarray_push(&arr, "-L/usr/lib64");
-  strarray_push(&arr, "-L/lib64");
-  strarray_push(&arr, "-L/usr/lib/x86_64-linux-gnu");
-  strarray_push(&arr, "-L/usr/lib/x86_64-pc-linux-gnu");
-  strarray_push(&arr, "-L/usr/lib/x86_64-redhat-linux");
-  strarray_push(&arr, "-L/usr/lib");
-  strarray_push(&arr, "-L/lib");
+//  strarray_push(&arr, "-L/usr/lib/x86_64-linux-gnu");
+//  strarray_push(&arr, "-L/usr/lib64");
+//  strarray_push(&arr, "-L/lib64");
+//  strarray_push(&arr, "-L/usr/lib/x86_64-linux-gnu");
+//  strarray_push(&arr, "-L/usr/lib/x86_64-pc-linux-gnu");
+//  strarray_push(&arr, "-L/usr/lib/x86_64-redhat-linux");
+//  strarray_push(&arr, "-L/usr/lib");
+//  strarray_push(&arr, "-L/lib");
+  strarray_push(&arr, "-L/opt/chibicc/lib");
 
+#if 0
   if (!opt_static) {
     strarray_push(&arr, "-dynamic-linker");
     strarray_push(&arr, "/lib64/ld-linux-x86-64.so.2");
   }
+#endif
 
   for (int i = 0; i < ld_extra_args.len; i++)
     strarray_push(&arr, ld_extra_args.data[i]);
@@ -664,18 +674,20 @@ static void run_linker(StringArray *inputs, char *output) {
     strarray_push(&arr, "--end-group");
   } else {
     strarray_push(&arr, "-lc");
-    strarray_push(&arr, "-lgcc");
-    strarray_push(&arr, "--as-needed");
-    strarray_push(&arr, "-lgcc_s");
-    strarray_push(&arr, "--no-as-needed");
+//    strarray_push(&arr, "-lgcc");
+//    strarray_push(&arr, "--as-needed");
+//    strarray_push(&arr, "-lgcc_s");
+//    strarray_push(&arr, "--no-as-needed");
   }
 
+#if 0
   if (opt_shared)
     strarray_push(&arr, format("%s/crtendS.o", gcc_libpath));
   else
     strarray_push(&arr, format("%s/crtend.o", gcc_libpath));
 
   strarray_push(&arr, format("%s/crtn.o", libpath));
+#endif
   strarray_push(&arr, NULL);
 
   run_subprocess(arr.data);
