@@ -24,6 +24,15 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
 - https://github.com/EtchedPixels/Fuzix-Bintools
 - https://github.com/EtchedPixels/Fuzix-Compiler-Kit
 
+# How to install
+
+- install Fuzix-Bintools & Fuzix-Compiler-Kit
+- git clone https://github.com/zu2/chibicc-6800-v1.git
+- make
+- make install
+- add "/opt/chibicc/bin:/opt/fcc/bin" to $PATH
+- chibicc a.c
+
 
 Below is Rui's original README.md.
 
