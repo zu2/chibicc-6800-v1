@@ -815,30 +815,75 @@ static void copy_struct_mem(void) {
 
 static void builtin_alloca(void) {
   // Align size to 16 bytes.
-  println("  add $15, %%rdi");
-  println("  and $0xfffffff0, %%edi");
+  // MC6800 has no align, ignore it.
+//  println("  add $15, %%rdi");
+//  println("  and $0xfffffff0, %%edi");
 
   // Shift the temporary area by %rdi.
-  println("  mov %d(%%rbp), %%rcx", current_fn->alloca_bottom->offset);
-  println("  sub %%rsp, %%rcx");
-  println("  mov %%rsp, %%rax");
-  println("  sub %%rdi, %%rsp");
-  println("  mov %%rsp, %%rdx");
-  println("1:");
-  println("  cmp $0, %%rcx");
-  println("  je 2f");
-  println("  mov (%%rax), %%r8b");
-  println("  mov %%r8b, (%%rdx)");
-  println("  inc %%rdx");
-  println("  inc %%rax");
-  println("  dec %%rcx");
-  println("  jmp 1b");
-  println("2:");
+  // println("; %%di has alloca size");
+  println("\tstab rdi+1");		// The name of the work area will be decided later.
+  println("\tstaa rdi");
+  // println(";	__alloca_bottom__ -> cx");
+  // The area between alloca_bottom and SP is the stack currently in use. Move this.
+  println("\tldab @bp+1	; IX =  (__alloca_bottom)");
+  println("\tldaa @bp");
+  println("\taddb #<%d",current_fn->alloca_bottom->offset);
+  println("\tadca #>%d",current_fn->alloca_bottom->offset);
+  println("\tpshb");
+  println("\tpsha");
+  println("\ttsx");
+  println("\tldx 0,x");
+  println("\tins");
+  println("\tins");
+  println("\tstx @tmp3 ; save address of __alloca_bottom__");
+  println("\sts  @tmp2 ; save current SP");
+  println("\tsts @tmp1 ; sp -= rdi");
+  println("\tldab @tmp1+1");
+  println("\tldaa @tmp1");
+  println("\tsubb rdi+1");
+  println("\tsbca rdi");
+  println("\tstab @tmp1+1");
+  println("\tstaa @tmp1");
+  println("\tlds @tmp1 ; get new SP");
+  println("\tldx 0,x");
+  int c1 = count();
+  int c2 = count();
+  println("; copy stack working area to stack top");
+  println("L_%d:",c1);
+  println("\tcpx @tmp2");
+  println("\tbeq L_%d",c2);
+  println("\tldab 0,x");
+  println("\tpshb");
+  println("\tdex");
+  println("\tbra L_%d",c1);
+  println("L_%d:",c2);
+  //println("  mov %d(%%rbp), %%rcx", current_fn->alloca_bottom->offset);
+  //println("  sub %%rsp, %%rcx");
+  //println("  mov %%rsp, %%rax");
+  //println("  sub %%rdi, %%rsp");
+  //println("  mov %%rsp, %%rdx");
+  //println("1:");
+  //println("  cmp $0, %%rcx");
+  //println("  je 2f");
+  //println("  mov (%%rax), %%r8b");
+  //println("  mov %%r8b, (%%rdx)");
+  //println("  inc %%rdx");
+  //println("  inc %%rax");
+  //println("  dec %%rcx");
+  //println("  jmp 1b");
+  //println("2:");
 
   // Move alloca_bottom pointer.
-  println("  mov %d(%%rbp), %%rax", current_fn->alloca_bottom->offset);
-  println("  sub %%rdi, %%rax");
-  println("  mov %%rax, %d(%%rbp)", current_fn->alloca_bottom->offset);
+  println("\tldx @tmp3");
+  println("\tldab 1,x	; make new __alloca_bottom__");
+  println("\tldaa 0,x");
+  println("\tsubb rdi+1");
+  println("\tsbca rdi");
+  println("\tstab 1,x");
+  println("\tstaa 0,x");
+  //println("  mov %d(%%rbp), %%rax", current_fn->alloca_bottom->offset);
+  //println("  sub %%rdi, %%rax");
+  //println("  mov %%rax, %d(%%rbp)", current_fn->alloca_bottom->offset);
 }
 
 // Generate code for a given node.
@@ -892,7 +937,7 @@ static void gen_expr(Node *node) {
       return;
     case TY_LONG:
       int c = count();
-      println("\tjsr __load32i		; load 32bit immediate #%u",node->val);
+      println("\tjsr __load32i		; load 32bit immediate #%lu",node->val);
       println("\t.word %u",(uint16_t)((node->val>>16)&0x0ffff));
       println("\t.word %u",(uint16_t)(node->val&0x0ffff));
       return;
@@ -1003,9 +1048,9 @@ static void gen_expr(Node *node) {
     return;
   case ND_MEMZERO:
     // `rep stosb` is equivalent to `memset(%rdi, %al, %rcx)`.
-//    println("; ND_MEMZERO %.*s %d %s %d",
-//		    node->var->ty->name->len, node->var->ty->name->loc,
-//		    node->var->ty->size, __FILE__, __LINE__);
+    println("; ND_MEMZERO %.*s size=%d, offset=%d,  %s %d",
+		    node->var->ty->name->len, node->var->ty->name->loc,
+		    node->var->ty->size, node->var->offset, __FILE__, __LINE__);
     println("\tldx @bp");
     println("\tldab #%d",node->var->ty->size);
     println("\tclra");
@@ -1104,7 +1149,9 @@ static void gen_expr(Node *node) {
   case ND_FUNCALL: {
     if (node->lhs->kind == ND_VAR && !strcmp(node->lhs->var->name, "alloca")) {
       gen_expr(node->args);
-      println("  mov %%rax, %%rdi");
+      println("; ND_FUNCALL %s %d",__FILE__,__LINE__);
+      println("; call builtin_alloca()");
+      //println("  mov %%rax, %%rdi");
       builtin_alloca();
       return;
     }
@@ -2223,6 +2270,8 @@ static void emit_text(Obj *prog) {
     println("\tstaa @bp");
     println("\tldx @bp");			// adjust one byte
     println("\ttxs");
+    println("\tsts %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
+//  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
     // Emit code
     fprintf(stderr,"depth=%d\n",depth);
     gen_stmt(fn->body);
