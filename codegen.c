@@ -308,9 +308,17 @@ static void store(Type *ty) {
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
+    println(";	store %s %d",__FILE__,__LINE__);
+    println("\tstab @tmp2+1");
+    println("\tstaa @tmp2");
+    println("\tstx  @tmp3");
     for (int i = 0; i < ty->size; i++) {
-      println("  mov %d(%%rax), %%r8b", i);
-      println("  mov %%r8b, %d(%%rdi)", i);
+	println("\tldx @tmp2");
+	println("\tldab %d,x",i);
+	println("\tldx @tmp3");
+	println("\tstab %d,x",i);
+//      println("  mov %d(%%rax), %%r8b", i);
+//      println("  mov %%r8b, %d(%%rdi)", i);
     }
     return;
   case TY_FLOAT:
@@ -554,13 +562,26 @@ static bool has_flonum2(Type *ty) {
 
 static void push_struct(Type *ty) {
   int sz = align_to(ty->size, 8);
-  println("  sub $%d, %%rsp", sz);
-  depth += sz / 8;
-
-  for (int i = 0; i < ty->size; i++) {
-    println("  mov %d(%%rax), %%r10b", i);
-    println("  mov %%r10b, %d(%%rsp)", i);
+  int c = count;
+  depth += sz;
+  assert(sz <= 256);	// can't handle sz > 256
+  println("\tpshb");
+  println("\tpsha");
+  println("\ttsx");
+  println("\tldx 0,x");
+  println("\tins");
+  println("\tins");
+  for (int i = ty->size-1; i >=0 ; i-- ){
+    println("\tldab %d,x",i);
+    println("\tpshb");
   }
+//  println("  sub $%d, %%rsp", sz);
+//  depth += sz / 8;
+
+//  for (int i = 0; i < ty->size; i++) {
+//    println("  mov %d(%%rax), %%r10b", i);
+//    println("  mov %%r10b, %d(%%rsp)", i);
+//  }
 }
 
 static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
@@ -579,17 +600,16 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   println("; push_args2 TY_CHAR=%d args->ty->kind=%d", TY_CHAR, args->ty->kind);
 
   switch (args->ty->kind) {
-  case TY_STRUCT:
-  case TY_UNION:
   case TY_DOUBLE:
   case TY_LDOUBLE:
-	  println("; push_args2 push XXX");
-	  break;
-#if 0
+    assert(args->ty->kind!=TY_DOUBLE && args->ty->kind!=TY_LDOUBLE);
+    println("; push_args2 push XXX");
+    break;
   case TY_STRUCT:
   case TY_UNION:
     push_struct(args->ty);
     break;
+#if 0
   case TY_FLOAT:
   case TY_DOUBLE:
     pushf();
@@ -646,7 +666,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
   println("; push_args %s %d",__FILE__,__LINE__);
   // If the return type is a large struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument.
-  if (node->ret_buffer && node->ty->size > 16)
+  if (node->ret_buffer)  // && node->ty->size > 16)
     gp++;
 
   println("; push_args gp=%d %s %d",gp,__FILE__,__LINE__);
@@ -715,8 +735,13 @@ static int push_args(Node *node, Node *last_pushed_arg) {
 
   // If the return type is a large struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument.
-  if (node->ret_buffer && node->ty->size > 16) {
-    println("  lea %d(%%rbp), %%rax", node->ret_buffer->offset);
+  // MC6800: all struct/union passes the pointer
+  if (node->ret_buffer) { // && node->ty->size > 16) {
+    println("\tldab @bp+1	; %s %d");
+    println("\tldaa @bp");
+    println("\taddb #<%d",node->ret_buffer->offset);
+    println("\tadca #>%d",node->ret_buffer->offset);
+//    println("  lea %d(%%rbp), %%rax", node->ret_buffer->offset);
     push();
   }
 
@@ -805,12 +830,26 @@ static void copy_struct_mem(void) {
   Type *ty = current_fn->ty->return_ty;
   Obj *var = current_fn->params;
 
-  println("  mov %d(%%rbp), %%rdi", var->offset);
-
+  println("; copy_struct_mem %s %d",__FILE__,__LINE__);
+  println("\tstab @tmp2+1");
+  println("\tstaa @tmp2");
+  println("\tldab @bp+1");
+  println("\tldaa @bp");
+  println("\taddb #<%d",var->offset);
+  println("\tadca #>%d",var->offset);
+  println("\tstab @tmp3+1");
+  println("\tstaa @tmp3");
+//println("  mov %d(%%rbp), %%rdi", var->offset);
   for (int i = 0; i < ty->size; i++) {
-    println("  mov %d(%%rax), %%dl", i);
-    println("  mov %%dl, %d(%%rdi)", i);
+    println("\tldx @tmp2");
+    println("\tldab %d,x",i);
+    println("\tldx @tmp3");
+    println("\tstab %d,x",i);
+//  println("  mov %d(%%rax), %%dl", i);
+//  println("  mov %%dl, %d(%%rdi)", i);
   }
+  println("\tldab @tmp2+1");
+  println("\tldaa @tmp2");
 }
 
 static void builtin_alloca(void) {
@@ -907,7 +946,6 @@ static void gen_expr(Node *node) {
     case TY_DOUBLE: {
       error_tok(node->tok, "gen_expr: double not implemented yet");
 #if 0
-
       union { double f64; uint64_t u64; } u = { node->fval };
       println("  mov $%lu, %%rax  # double %Lf", u.u64, node->fval);
       println("  movq %%rax, %%xmm0");
@@ -1175,7 +1213,7 @@ static void gen_expr(Node *node) {
 
     // If the return type is a large struct/union, the caller passes
     // a pointer to a buffer as if it were the first argument.
-    if (node->ret_buffer && node->ty->size > 16)
+    if (node->ret_buffer) //  && node->ty->size > 16)
       pop(argreg64[gp++]);
 
     for (Node *arg = node->args; arg; arg = arg->next) {
@@ -1276,10 +1314,13 @@ static void gen_expr(Node *node) {
 
     // If the return type is a small struct, a value is returned
     // using up to two registers.
+    // MC6800: all struct/union not passed by register
+#if 0
     if (node->ret_buffer && node->ty->size <= 16) {
       copy_ret_buffer(node->ret_buffer);
       println("  lea %d(%%rbp), %%rax", node->ret_buffer->offset);
     }
+#endif
 
     return;
   }
@@ -1849,9 +1890,11 @@ static void gen_stmt(Node *node) {
       switch (ty->kind) {
       case TY_STRUCT:
       case TY_UNION:
+#if 0
         if (ty->size <= 16)
           copy_struct_reg();
         else
+#endif
           copy_struct_mem();
         break;
       }
@@ -2162,7 +2205,7 @@ static void emit_text(Obj *prog) {
     current_fn->function_no = count();
 
     // Prologue
-    println("; function prologue emit_text %s %d",__FILE__,__LINE__);
+    println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
 //    println("  push %%rbp");
 //    println("  mov %%rsp, %%rbp");
 //    println("  sub $%d, %%rsp", fn->stack_size);
@@ -2219,6 +2262,8 @@ static void emit_text(Obj *prog) {
       case TY_FLOAT:
       case TY_DOUBLE:
       case TY_LONG:
+      case TY_STRUCT:
+      case TY_UNION:
 	      break;
 #if 0
       case TY_STRUCT:
@@ -2288,6 +2333,7 @@ static void emit_text(Obj *prog) {
     }
 
     // Epilogue
+    println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("L_return_%d:", fn->function_no);
 //    println("L_return_%s:", fn->name);
     println("\tstab @tmp1+1");
