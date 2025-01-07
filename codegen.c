@@ -553,11 +553,13 @@ static bool has_flonum(Type *ty, int lo, int hi, int offset) {
 }
 
 static bool has_flonum1(Type *ty) {
-  return has_flonum(ty, 0, 8, 0);
+  return 0;
+//return has_flonum(ty, 0, 8, 0);
 }
 
 static bool has_flonum2(Type *ty) {
-  return has_flonum(ty, 8, 16, 0);
+  return 0;
+//return has_flonum(ty, 8, 16, 0);
 }
 
 static void push_struct(Type *ty) {
@@ -1304,12 +1306,14 @@ static void gen_expr(Node *node) {
 //        println("  movsbl %%al, %%eax");
       }
       return;
+#if 0
     case TY_SHORT:
       if (node->ty->is_unsigned)
         println("  movzwl %%ax, %%eax");
       else
         println("  movswl %%ax, %%eax");
       return;
+#endif
     }
 
     // If the return type is a small struct, a value is returned
