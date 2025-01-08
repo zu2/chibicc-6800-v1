@@ -862,8 +862,8 @@ static void builtin_alloca(void) {
 
   // Shift the temporary area by %rdi.
   // println("; %%di has alloca size");
-  println("\tstab rdi+1");		// The name of the work area will be decided later.
-  println("\tstaa rdi");
+  println("\tstab @rdi+1");		// The name of the work area will be decided later.
+  println("\tstaa @rdi");
   // println(";	__alloca_bottom__ -> cx");
   // The area between alloca_bottom and SP is the stack currently in use. Move this.
   println("\tldab @bp+1	; IX =  (__alloca_bottom)");
@@ -881,8 +881,8 @@ static void builtin_alloca(void) {
   println("\tsts @tmp1 ; sp -= rdi");
   println("\tldab @tmp1+1");
   println("\tldaa @tmp1");
-  println("\tsubb rdi+1");
-  println("\tsbca rdi");
+  println("\tsubb @rdi+1");
+  println("\tsbca @rdi");
   println("\tstab @tmp1+1");
   println("\tstaa @tmp1");
   println("\tlds @tmp1 ; get new SP");
@@ -918,8 +918,8 @@ static void builtin_alloca(void) {
   println("\tldx @tmp3");
   println("\tldab 1,x	; make new __alloca_bottom__");
   println("\tldaa 0,x");
-  println("\tsubb rdi+1");
-  println("\tsbca rdi");
+  println("\tsubb @rdi+1");
+  println("\tsbca @rdi");
   println("\tstab 1,x");
   println("\tstaa 0,x");
   //println("  mov %d(%%rbp), %%rax", current_fn->alloca_bottom->offset);
@@ -1030,11 +1030,27 @@ static void gen_expr(Node *node) {
 
     Member *mem = node->member;
     if (mem->is_bitfield) {
-      println("  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
-      if (mem->ty->is_unsigned)
-        println("  shr $%d, %%rax", 64 - mem->bit_width);
-      else
-        println("  sar $%d, %%rax", 64 - mem->bit_width);
+      println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s %d",
+		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
+      println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
+      for (int i=0; i<mem->bit_width + mem->bit_offset; i++){
+	println("\taslb");
+	println("\trora");
+      }
+//    println("  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
+      for (int i=0; i<mem->bit_width; i++) {
+        if (mem->ty->is_unsigned){
+	  println("\tlsra");
+	  println("\trolb");
+        }else{
+	  println("\tasra");
+	  println("\trolb");
+	} 
+      }
+//    if (mem->ty->is_unsigned)
+//      println("  shr $%d, %%rax", 64 - mem->bit_width);
+//    else
+//      println("  sar $%d, %%rax", 64 - mem->bit_width);
     }
     return;
   }
@@ -1051,24 +1067,46 @@ static void gen_expr(Node *node) {
     gen_expr(node->rhs);
 
     if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
-      println("  mov %%rax, %%r8");
+      println("\tstab @tmp1+1");
+      println("\tstab @tmp1");
+//    println("  mov %%rax, %%r8");
 
       // If the lhs is a bitfield, we need to read the current value
       // from memory and merge it with a new value.
       Member *mem = node->lhs->member;
-      println("  mov %%rax, %%rdi");
-      println("  and $%ld, %%rdi", (1L << mem->bit_width) - 1);
-      println("  shl $%d, %%rdi", mem->bit_offset);
-
-      println("  mov (%%rsp), %%rax");
+      println("; bitfieled mem->bit_width=%d, mem->bit_offset=%d, %s %d",
+		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
+      println("\tandb #<%d", (int)(1L << mem->bit_width) - 1);
+      println("\tanda #>%d", (int)(1L << mem->bit_width) - 1);
+      for (int i=0; i<mem->bit_offset; i++){
+	println("\taslb");
+	println("\trola");
+      }
+      println("\tstab @rdi+1");
+      println("\tstaa @rdi");
+//    println("  mov %%rax, %%rdi");
+//    println("  and $%ld, %%rdi", (1L << mem->bit_width) - 1);
+//    println("  shl $%d, %%rdi", mem->bit_offset);
+      println("\tpula");
+      println("\tpulb");
+      println("\tpshb");
+      println("\tpsha");
+//    depth -= 2;
+//    println("  mov (%%rsp), %%rax");
       load(mem->ty);
 
       long mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
-      println("  mov $%ld, %%r9", ~mask);
-      println("  and %%r9, %%rax");
-      println("  or %%rdi, %%rax");
+      println("\tandb #<%d",(int)~mask);
+      println("\tanda #>%d",(int)~mask);
+      println("\torab @rdi+1");
+      println("\toraa @rdi+1");
+//    println("  mov $%ld, %%r9", ~mask);
+//    println("  and %%r9, %%rax");
+//    println("  or %%rdi, %%rax");
       store(node->ty);
-      println("  mov %%r8, %%rax");
+      println("\tldab @tmp1+1");
+      println("\tldaa @tmp1");
+//    println("  mov %%r8, %%rax");
       return;
     }
 

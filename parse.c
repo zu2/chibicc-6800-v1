@@ -157,7 +157,8 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr);
 static Token *global_variable(Token *tok, Type *basety, VarAttr *attr);
 
 static int align_down(int n, int align) {
-  return align_to(n - align + 1, align);
+  return n;
+//return align_to(n - align + 1, align);
 }
 
 static void enter_scope(void) {
@@ -2712,31 +2713,33 @@ static Type *struct_decl(Token **rest, Token *tok) {
   // Assign offsets within the struct to members.
   int bits = 0;
 
+//int regsize = 8;
+  int regsize = 2;
   for (Member *mem = ty->members; mem; mem = mem->next) {
     if (mem->is_bitfield && mem->bit_width == 0) {
       // Zero-width anonymous bitfield has a special meaning.
       // It affects only alignment.
-      bits = align_to(bits, mem->ty->size * 8);
+      bits = align_to(bits, mem->ty->size * regsize);
     } else if (mem->is_bitfield) {
       int sz = mem->ty->size;
-      if (bits / (sz * 8) != (bits + mem->bit_width - 1) / (sz * 8))
-        bits = align_to(bits, sz * 8);
+      if (bits / (sz * regsize) != (bits + mem->bit_width - 1) / (sz * regsize))
+        bits = align_to(bits, sz * regsize);
 
-      mem->offset = align_down(bits / 8, sz);
-      mem->bit_offset = bits % (sz * 8);
+      mem->offset = align_down(bits / regsize, sz);	// TODO:
+      mem->bit_offset = bits % (sz * regsize);
       bits += mem->bit_width;
     } else {
       if (!ty->is_packed)
-        bits = align_to(bits, mem->align * 8);
-      mem->offset = bits / 8;
-      bits += mem->ty->size * 8;
+        bits = align_to(bits, mem->align * regsize);
+      mem->offset = bits / regsize;
+      bits += mem->ty->size * regsize;
     }
 
     if (!ty->is_packed && ty->align < mem->align)
       ty->align = mem->align;
   }
 
-  ty->size = align_to(bits, ty->align * 8) / 8;
+  ty->size = align_to(bits, ty->align * regsize) / regsize;	// TODO:
   return ty;
 }
 
