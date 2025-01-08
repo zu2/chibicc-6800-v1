@@ -6,6 +6,7 @@ for the Motorola MC6800.
 - int and pointer size are 16-bit.
 - long and float are 32-bit.
 - double and long long of 64-bit or more are not supported.
+- Passing struct/union by value and bit fields have been implemented.
 
 The float/long library was written for testing, with no attention paid to speed, precision, or exception handling.
 
