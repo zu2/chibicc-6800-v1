@@ -27,8 +27,8 @@ rcx:	.word	0
 rdi:	.word	0
 r8b:	.word	0
 ;
-	.export _putc
-	.export _getc
+	.export _putchar
+	.export _getchar
 	.export _print
 	.export _cpu_counter
 	.code
@@ -52,12 +52,10 @@ doexit:
 ;
 ;	minimal I/O routine
 ;
-	.export	_putc
-	.export	_getc
-_putc:
+_putchar:
 	stab $fefe;
 	rts
-_getc:
+_getchar:
 	ldab #'_'
 	stab $fefe
 	rts
