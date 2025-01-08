@@ -1,10 +1,4 @@
-void putc(int ch);
-
-void putstr(char *s)
-{
-	while (*s)
-		putc(*s++);
-}
+#include "common.h"
 
 int isxdigit(ch)
 {
@@ -19,10 +13,10 @@ int main(int argc, char **argv)
 
 	while (*p){
 		if (isxdigit(*p))
-			putc(*p);
+			putchar(*p);
 		p++;
 	}
-	putc('\n');
+	putchar('\n');
 
 	return isxdigit('@');
 }

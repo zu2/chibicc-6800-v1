@@ -2,52 +2,7 @@
 //	float basic library
 //
 
-extern	void print(int i);
-extern	void putc(int ch);
-
-void putstr(unsigned char *s)
-{
-	while (*s)
-		putc(*s++);
-}
-
-void
-puthexc(unsigned int ch)
-{
-	int	v1=(ch>>4)&0x0f;
-	int	v2=(ch&0x0f);
-
-	putc((v1<10)?(v1+'0'):(v1+'A'-10));
-	putc((v2<10)?(v2+'0'):(v2+'A'-10));
-}
-void
-puthexi(int v)
-{
-	unsigned char *p = (unsigned char *)&v;
-
-	puthexc(*p);
-	puthexc(*(p+1));
-}
-void
-puthexl(long v)
-{
-	unsigned char *p = (unsigned char *)&v;
-
-	puthexc(*p);
-	puthexc(*(p+1));
-	puthexc(*(p+2));
-	puthexc(*(p+3));
-}
-void
-puthexf(float f)
-{
-	unsigned char *p = (unsigned char *)&f;
-
-	puthexc(*p);
-	puthexc(*(p+1));
-	puthexc(*(p+2));
-	puthexc(*(p+3));
-}
+#include "common.h"
 
 int
 cmpf(float f, float g)
@@ -56,8 +11,8 @@ cmpf(float f, float g)
 	unsigned char *p = (unsigned char *)&f;
 	unsigned char *q = (unsigned char *)&g;
 
-	puthexf(f);putc(' ');
-	puthexf(g);putc('\n');
+	puthexf(f);putchar(' ');
+	puthexf(g);putchar('\n');
 #if 0
 	for (i=0; i<4; ++i,++p,++q){
 		if (*p != *q){
@@ -83,7 +38,7 @@ int main(int argc, char **argv)
 	putstr("1.0==2.0=\t");print(f==g);
 	putstr("2.0==1.0:\t");print(2.0==1.0);
 	putstr("2.0==1.0:\t");print(g==f);
-	putc('\n');
+	putchar('\n');
 	// NE
 	putstr("0.0!=0.0:\t");print(0.0!=0.0);
 	putstr("0.0!=0.0=\t");print(h!=h);
@@ -91,7 +46,7 @@ int main(int argc, char **argv)
 	putstr("1.0!=2.0=\t");print(f!=g);
 	putstr("2.0!=1.0:\t");print(2.0!=1.0);
 	putstr("2.0!=1.0=\t");print(g!=f);
-	putc('\n');
+	putchar('\n');
 	// LT
 	putstr("0.0<0.0:\t");print(0.0<0.0);
 	putstr("0.0<0.0=\t");print(h<h);
@@ -99,7 +54,7 @@ int main(int argc, char **argv)
 	putstr("1.0<2.0=\t");print(f<g);
 	putstr("2.0<1.0:\t");print(2.0<1.0);
 	putstr("2.0<1.0=\t");print(g<f);
-	putc('\n');
+	putchar('\n');
 	// GT
 	putstr("0.0>0.0:\t");print(0.0>0.0);
 	putstr("0.0>0.0=\t");print(h>h);
@@ -107,7 +62,7 @@ int main(int argc, char **argv)
 	putstr("1.0>2.0=\t");print(f>g);
 	putstr("2.0>1.0:\t");print(2.0>1.0);
 	putstr("2.0>1.0=\t");print(g>f);
-	putc('\n');
+	putchar('\n');
 	// LE
 	putstr("0.0<=0.0:\t");print(0.0<=0.0);
 	putstr("0.0<=0.0=\t");print(h<=h);
@@ -115,7 +70,7 @@ int main(int argc, char **argv)
 	putstr("1.0<=2.0=\t");print(f<=g);
 	putstr("2.0<=1.0:\t");print(2.0<=1.0);
 	putstr("2.0<=1.0=\t");print(g<=f);
-	putc('\n');
+	putchar('\n');
 	// GE
 	putstr("0.0>=0.0:\t");print(0.0>=0.0);
 	putstr("0.0>=0.0=\t");print(h>=h);
@@ -123,6 +78,6 @@ int main(int argc, char **argv)
 	putstr("1.0>=2.0=\t");print(f>=g);
 	putstr("2.0>=1.0:\t");print(2.0>=1.0);
 	putstr("2.0>=1.0=\t");print(g>=f);
-	putc('\n');
+	putchar('\n');
 	return 0;
 }

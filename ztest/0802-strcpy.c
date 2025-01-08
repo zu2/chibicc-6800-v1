@@ -1,10 +1,4 @@
-void putc(int ch);
-
-void putstr(char *s)
-{
-	while (*s)
-		putc(*s++);
-}
+#include "common.h"
 
 char *strcpy(char *p, char *q)
 {

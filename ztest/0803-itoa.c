@@ -1,11 +1,4 @@
-void putc(int ch);
-extern void print(int i);
-
-void putstr(char *s)
-{
-	while (*s)
-		putc(*s++);
-}
+#include "common.h"
 
 char *strcpy(char *p, char *q)
 {
@@ -58,7 +51,7 @@ int main(int argc, char **argv)
 	char q[100];
 
 	p = itoa(-32501,q,10);
-	putstr(p); putc('\n');
+	putstr(p); putchar('\n');
 
 	return strcmp(p,"-32501");
 }

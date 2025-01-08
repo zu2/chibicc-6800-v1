@@ -2,52 +2,7 @@
 //	float basic library
 //
 
-extern	void print(int i);
-extern	void putc(int ch);
-
-void putstr(unsigned char *s)
-{
-	while (*s)
-		putc(*s++);
-}
-
-void
-puthexc(unsigned int ch)
-{
-	int	v1=(ch>>4)&0x0f;
-	int	v2=(ch&0x0f);
-
-	putc((v1<10)?(v1+'0'):(v1+'A'-10));
-	putc((v2<10)?(v2+'0'):(v2+'A'-10));
-}
-void
-puthexi(int v)
-{
-	unsigned char *p = (unsigned char *)&v;
-
-	puthexc(*p);
-	puthexc(*(p+1));
-}
-void
-puthexl(long v)
-{
-	unsigned char *p = (unsigned char *)&v;
-
-	puthexc(*p);
-	puthexc(*(p+1));
-	puthexc(*(p+2));
-	puthexc(*(p+3));
-}
-void
-puthexf(float f)
-{
-	unsigned char *p = (unsigned char *)&f;
-
-	puthexc(*p);
-	puthexc(*(p+1));
-	puthexc(*(p+2));
-	puthexc(*(p+3));
-}
+#include "common.h"
 
 int
 cmpf(float f, float g)
@@ -56,8 +11,8 @@ cmpf(float f, float g)
 	unsigned char *p = (unsigned char *)&f;
 	unsigned char *q = (unsigned char *)&g;
 
-	puthexf(f);putc(' ');
-	puthexf(g);putc('\n');
+	puthexf(f);putchar(' ');
+	puthexf(g);putchar('\n');
 #if 0
 	for (i=0; i<4; ++i,++p,++q){
 		if (*p != *q){
@@ -200,8 +155,8 @@ int main(int argc, char **argv)
 	if ((long)f != -2147483648)
 		return	98;
 #if	0
-	putstr("1.0f:\t");puthexf(f);putc('\n');
-	putstr("(unsigned long)1.0f:\t");puthexl((unsigned long)1.0);putc('\n');
+	putstr("1.0f:\t");puthexf(f);putchar('\n');
+	putstr("(unsigned long)1.0f:\t");puthexl((unsigned long)1.0);putchar('\n');
 #endif
 
 	return 0;

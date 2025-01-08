@@ -2,18 +2,10 @@
  *	8 queens
  */
 
-extern	void putc(int ch);
-extern	void print(int i);
-extern	void cpu_counter(void);
+#include "common.h"
 
 unsigned char	x[8],col[8],up[15],down[15];
 int	count=0;
-
-void putstr(char *s)
-{
-	while (*s)
-		putc(*s++);
-}
 
 void
 generate(unsigned char n)
@@ -30,9 +22,9 @@ generate(unsigned char n)
 			down[n+h] = 0;
 			if(n==7){
 				for(k=0; k<8; k++){
-					putc(x[k]+'0');
+					putchar(x[k]+'0');
 				}
-				putc('\n');
+				putchar('\n');
 				count++;
 			}else{
 				generate(n+1);
@@ -59,7 +51,7 @@ int main(int argc, char *argv[])
 	}
 	generate(0);
 	cpu_counter();
-	putstr("total=");print(count);putc('\n');
+	putstr("total=");print(count);putchar('\n');
 
 	return count!=92;
 }

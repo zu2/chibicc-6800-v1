@@ -2,9 +2,7 @@
 //
 //
 
-extern	void putc(int ch);
-extern	void print(int i);
-extern	void cpu_counter(void);
+#include "common.h"
 
 #define N	(8)
 #define NN	(8*8)
@@ -21,35 +19,29 @@ void exit(int r)
 	*(char *)0xfeff = r;
 }
 
-void putstr(char *s)
-{
-	while (*s)
-		putc(*s++);
-}
-
 void
 printboard() 
 {
     unsigned char i,j;
-    putstr("\nSolution ");print(++solution);putc('\n');
+    putstr("\nSolution ");print(++solution);putchar('\n');
     for (i = 2; i <= N + 1; i++) {
         for (j = 2; j <= N + 1; j++) {
 			if(board[i][j]>=10){
-				putc(board[i][j]/10+'0');
+				putchar(board[i][j]/10+'0');
 			}else{
-				putc(' ');
+				putchar(' ');
 			}
-			putc(board[i][j]%10+'0');
-			putc(' ');
+			putchar(board[i][j]%10+'0');
+			putchar(' ');
 		}
-		putc('\n');
+		putchar('\n');
     }
 	putstr("count=");
 	if(count>10){
-		putc(count/10+'0');
+		putchar(count/10+'0');
 	}
-	putc(count%10+'0');
-	putc('\n');
+	putchar(count%10+'0');
+	putchar('\n');
 }
 
 

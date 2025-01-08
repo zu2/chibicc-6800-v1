@@ -2,16 +2,7 @@
 cpm c asciiart.c -LF
 */
 
-extern	void	putc(int ch);
-extern	void	print(int i);
-extern	void	cpu_counter(void);
-
-void putstr(unsigned char *s)
-{
-	while (*s)
-		putc(*s++);
-}
-
+#include "common.h"
 
 char	junk[256];
 
@@ -38,9 +29,9 @@ main()
 					break;
 				}
 			}
-			putc("0123456789ABCDEF "[i]);
+			putchar("0123456789ABCDEF "[i]);
 		}
-		putc('\n');
+		putchar('\n');
 	}
 	putstr("OK\n");
 	cpu_counter();

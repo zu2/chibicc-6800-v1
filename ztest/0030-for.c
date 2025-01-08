@@ -1,6 +1,3 @@
-//extern void print(int i);
-//extern void putc(int c);
-
 int main(int argc, char **argv)
 {
 	int	i;

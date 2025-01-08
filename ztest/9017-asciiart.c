@@ -1,5 +1,4 @@
-extern	void	putc(int ch);
-extern	void	print(int i);
+#include "common.h"
 
 main()
 {
@@ -26,13 +25,13 @@ main()
 				}
 			}
 			if (i>15)
-				putc(' ');
+				putchar(' ');
 			else if (i<10)
-				putc(i+'0');
+				putchar(i+'0');
 			else
-				putc(i-10+'A');
+				putchar(i-10+'A');
 		}
-		putc('\n');
+		putchar('\n');
 	}
 	return 0;
 }
