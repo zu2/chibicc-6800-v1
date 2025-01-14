@@ -12,7 +12,18 @@
 ;	Note: his program was created for testing chibicc-6800-v1, 
 ;	and does not pay attention to speed, accuracy, or exception handling.
 ;
+
 ;
+;	TODO:
+;		Signed zero
+;		Subnormal numbers (Gradual Underflow)
+;		Infinities
+;		NaNs
+;		Exception handling
+;		Calculation precision
+;		Speed up
+;
+
 	.zp
 	.data
 	.export	__i16tof32
@@ -26,6 +37,10 @@
 	.export __divf32tos
 	.export __cmpf32tos
 	.export __f32iszero
+;	.export __f32iszerox
+;	.export __f32isNaNorInf
+;	.export __f32isNaNorInfx
+	.export __fdiv32x32
 	.data
 	.export __sign
 	.export __texp
@@ -33,7 +48,35 @@
 __sign:	.byte	0	; sign of reslut
 __texp:	.byte	0	; TOS's exp
 __lexp:	.byte	0	; @long's exp
+__work: .word	0	; working area
+	.word	0
 	.code
+;
+;	(0-3,x) is NaN? (exp==255)
+;
+__f32isNaNorInf:
+	ldx	#long
+__f32isNaNorInfx:
+	ldab	1,x
+	ldaa	0,x
+	aslb
+	rola
+	adda	#1		; Use add to make the C=0. if usinh inc, C is result of rola
+	bne	__f32isNaN_1
+	;		; exp == 255, check mantissa
+	tstb
+	bne	__f32isNaN_2
+	tst	2,x
+	bne	__f32isNaN_2
+	tst	3,x
+	bne	__f32isNaN_2
+	tst	4,x
+	bne	__f32isNaN_2
+__f32isNaN_1:			; Z=0, C=0 not NaN,Inf
+	rts			; Z=1, C=0 Inf
+__f32isNaN_2:
+	sec
+	rts			; Z=0, C=1 NaN
 ;
 ;	(0-3,x) == 0.0 ?
 ;		== 0x0000 0000 or 0x8000 0000	
@@ -41,7 +84,6 @@ __lexp:	.byte	0	; @long's exp
 ;
 __f32iszero:
 	ldx	#long
-__i32iszerox:
 __f32iszerox:
 	tst	3,x
 	bne	iszerox_ret
@@ -71,7 +113,6 @@ __negi32xret:
 	rts
 ;
 ;	int16 to float32
-;		TODO: round up/down
 ;
 __i16tof32:
 	tstb
@@ -84,28 +125,36 @@ __i16tof32_1:
 	anda	#$80
 	staa	__sign
 	pula
-	bpl	__i32tof32_10
+	bpl	__i16tof32_10
 	nega
 	negb
 	sbca	#0
 	;
-__i32tof32_10:
+__i16tof32_10:
 	clr	@long+3
 	stab	@long+2
-	ldab	#$8e		; exp
 	staa	@long+1
-	bmi	__i32tof32_21
-__i32tof32_20:
+	ldab	#$8f		; exp ($8e+1), if i32>=32768 then exp=$8E
+__i16tof32_20:			; Shift left until the most significant bit becomes 1
 	decb
 	asl	@long+2
 	rol	@long+1
-	bpl	__i32tof32_20
-__i32tof32_21:
-	asl	@long+1
+	bcc	__i16tof32_20	; loop until C=1 (hidden bit check)
+__i16tof32_21:
 	lsrb
-	ror	@long+1
+	ror	@long+1		; shifted one more bit, return 1bit right and set exp's LSB
+	ror	@long+2
 	orab	__sign
 	stab	@long
+	rts
+;
+;
+;
+__f32minint:			; -2147483648 (0x8000 0000) = CF00 0000
+	ldx	#0
+	stx	@long+2
+	ldx	#$CF00
+	stx	long
 	rts
 ;
 ;	int32 to float32
@@ -113,16 +162,14 @@ __i32tof32_21:
 ;
 __i32tof32:
 	ldx	#long
-	jsr	__f32iszerox
+	ldab	0,x
 	bne	__i32tof32_1
-	tstb			; 0x0000 0000 ?
-	jeq	__f32zero
-__f32minint:			; -2147483648 (0x8000 0000) = CF00 0000
-	ldx	#0
-	stx	@long+2
-	ldx	#$CF00
-	stx	long
-	rts
+	ldab	1,x
+	bne	__i32tof32_1
+	ldab	2,x
+	bne	__i32tof32_1
+	ldab	3,x
+	jeq	__f32zero	;   return +0.0
 __i32tof32_1:
 	ldab	0,x
 	andb	#$80
@@ -133,9 +180,9 @@ __i32tof32_2:
 	ldaa	0,x
 	beq	__i32tof32_left	; need left shift
 ;
-	ldab	#$9C		; exp.
-__i32tof32_right:
-	decb
+	ldab	#$96		; exp.
+__i32tof32_right:		; right shift is required until the MSB byte becomes 0
+	incb
 	lsra
 	ror	1,x
 	ror	2,x
@@ -149,7 +196,7 @@ __i32tof32_done:
 	orab	__sign
 	stab	0,x
 	rts
-__i32tof32_left:
+__i32tof32_left:		; left shift is required until hidden bit==1
 	ldab	#$96
 	tst	1,x		; hidden bit set?
 	bmi	__i32tof32_done
@@ -231,6 +278,23 @@ __i3280000000:
 	stx	@long+2
 	ldx	#$8000
 	stx	@long
+	rts
+;
+;	load plus/minus Inf into @long
+;
+__f32pInf:		; 7f80 0000
+	bsr	__f32mInf
+	lsrb
+	stab	@long
+	rts
+__f32mInf:		; ff80 0000
+	ldab	#$80
+	stab	@long+1
+	clrb
+	stab	@long+3
+	stab	@long+2
+	decb
+	stab	@long
 	rts
 ;
 ;	float to nsigned long
@@ -353,7 +417,7 @@ __u16ffff:
 ;
 __subf32tos:
 	tsx
-	ldab	2,x		; flip the sign
+	ldab	2,x		; flip the sign of TOS
 	eorb	#$80
 	stab	2,x
 ;	jmp	addf32tos	; thru to __addf32tos
@@ -364,43 +428,52 @@ __subf32tos:
 __addf32tos:
         ldx     #long
         jsr     __f32iszerox
-	bne	__addf32tos1
-	tsx
+	bne	__addf32tos3
+	tsx			; @long = 0.0, check TOS
 	inx
 	inx
-	jsr	__load32x
+        jsr     __f32iszerox
+	beq	__addf32tos1
+	jsr	__load32x	; @long == 0.0, TOS != 0.0, return TOS
 	jmp	__pullret
 __addf32tos1:
+	;			; both are 0, -0 is returned only if -0 + -0
+	ldab	0,x		; get TOS's sign
+	andb	@long		;   and @long's
+	stab	@long		; value is $00 or $80, so return it as is.
+	jmp	__pullret
+__addf32tos3:			; @long != 0.0, check TOS
 	tsx
 	inx
 	inx
         jsr     __f32iszerox
-	bne	__addf32tos2
-	jmp	__pullret
-__addf32tos2:
+	bne	__addf32tos4
+	jmp	__pullret	; TOS = 0.0, return @long
+;
+__addf32tos4:			; neither of @long and TOS was not 0.0, simply add them.
 	tsx
 	ldab	2,x		; get MSB of TOS
 	eorb	@long
 	andb	#$80		; sign equal?
-	bne	__addf32tos50
+	jne	__addf32tos50
 	;			; sign equal, add it
 	ldab	@long		; save sign
 	andb	#$80
 	stab	__sign
 	jsr	__setup_both	; get both exp to texp, lexp. AccB = texp - lexp
-	bne	__addf32tos3
+	bne	__addf32tos5
 	;
 	bra	__addf32tos11	; texp==lexp, Simply add it.
-__addf32tos3:
+__addf32tos5:
 	bcc	__addf32tos10
-__addf32tos21:			; TOS < @long
+	;			; TOS < @long
 	negb
-	jsr	__lsr_tos	;   shift TOS right
+	jsr	__lsr_tos	;   shift TOS right by AccB, align the bit.
 	ldaa	__lexp
 	jmp	__addf32tos11
 __addf32tos10:			; TOS > @long
+	jsr	__lsr_long	;   shift @long right by AccB, align the bit
 	ldaa	__texp
-	jsr	__lsr_long	;   shift @long right
 __addf32tos11:
 	ldab	@long+3		; @long = @long + TOS
 	addb	5,x
@@ -411,21 +484,48 @@ __addf32tos11:
 	ldab	@long+1
 	adcb	3,x
 	stab	@long+1
-	bcc	__addf32tos13	; over flow?
+	ldab	@long
+	adcb	2,x
+	stab	@long
+	bcc	__addf32tos20	; over flow?
+        ror     @long		; shift one bit
         ror     @long+1		; shift one bit
         ror     @long+2
         ror     @long+3
 	inca			; exp++
-__addf32tos13:
+__addf32tos20:			; even number rounding
+	ldab	@long+3		; check guard bit
+	bpl	__addf32tos29	;   G=0, do nothing
+	andb	#$7f		; check sticky
+	bne	__addf32tos21
+	ldab	@long+2		; check LSB bit
+	asrb
+	bcc	__addf32tos29
+__addf32tos21:
+	inc	@long+2		; inc mant
+	bne	__addf32tos29
+	inc	@long+1
+	bne	__addf32tos29
+	inc	@long+0
+	bne	__addf32tos29
+	;			; over flow
+        ror     @long		; shift one bit
+        ror     @long+1		; shift one bit
+        ror     @long+2
+        ror     @long+3
+	inca			; exp++
+__addf32tos29:
+	jsr	__lsr8_long	; Put it back in the right position
+;
 	asl	@long+1		; exp's LSB set to @long+1
 	lsra
 	ror	@long+1
 	ora	__sign
-__addf32tos15:
 	staa	@long		; set exp
 	jmp	__pullret
 ;
 ;	TOS and @long have different signs, do subtract
+;	(note: TOS:rhs, @long:lhs)
 ;
 __addf32tos50:
 	jsr	__abscmp	; compare: abs(tos) - abs(@long)
@@ -453,10 +553,43 @@ __addf32tos52:
 	ldab	3,x
 	sbcb	@long+1
 	stab	@long+1
+	ldab	2,x
+	sbcb	@long
+	stab	@long
 	;
 __addf32tos54:
-	jsr	__normalize_long	; while hidden bit ==0 do asl @long, AccA--
+	bmi	__addf32tos542
+__addf32tos541:
+	tsta			; denormaluzed number?
+	beq __addf32tos542
+	deca			; while hidden bit ==0 do asl @long, AccA--
+	asl	@long+3
+	rol	@long+2
+	rol	@long+1
+	rol	@long+0
+	bpl	__addf32tos541
+__addf32tos542:
+;
+;	TODO: This part is not strictly correct. fix it later.
+;
+	ldab	@long+3		; check guard bit
+	bpl	__addf32tos55	;   G=0, do nothing
+	andb	#$7f		; check sticky
+	bne	__addf32tos543
+	ldab	@long+2		; check LSB bit
+	asrb
+	bcc	__addf32tos55
+;
+__addf32tos543:
+	inc	@long+2		; inc mant
+	bne	__addf32tos55
+	inc	@long+1
+	bne	__addf32tos55
+	inc	@long+0
+	bne	__addf32tos55
+	swi			; TODO:
 __addf32tos55:
+	jsr	__lsr8_long
 	asl	@long+1		; exp's LSB into @long+1
 	lsra
 	ror	@long+1
@@ -484,6 +617,9 @@ __addf32tos61:
 	ldab	@long+1
 	sbcb	3,x
 	stab	@long+1
+	ldab	@long
+	sbcb	2,x
+	stab	@long
 	;
 	jmp	__addf32tos54
 ;
@@ -512,43 +648,122 @@ __abscmp_ret:
 __setup_both:			; get both exp, set hidden bit
 	jsr	__setup_long	; @long's exp->AccA, set hidden bit of @long
 	jsr	__setup_tos	; TOS's   exp->AccA, set hidden bit of TOS
+	jsr	__asl8_both
 	ldab	__texp
 	subb	__lexp		; AccB = TOS'exp - @long's exp
 	rts
 ;
-__setup_long:		; @long's exp->AccA, set hidden bit of @long
-	ldab	@long+1	; get TOS's exp to a
+__setup_long:			; @long's exp->AccA, set hidden bit of @long
+	ldab	@long+1		; get TOS's exp to a
 	ldaa	@long
+	clr	@long
 	aslb
 	rola
-	sec		; set hidden bit of TOS
+	beq	__setup_long_1	; denormalized number?
+	sec			; set hidden bit of TOS
+__setup_long_1:
 	rorb
 	stab	@long+1
 	staa	__lexp
 	rts
 ;
-__setup_tos:		; TOS's   exp->AccA, set hidden bit of TOS
-	ldab	3,x	; get TOS's exp to a
+__setup_tos:			; TOS's   exp->AccA, set hidden bit of TOS
+	ldab	3,x		; get TOS's exp to a
 	ldaa	2,x
+	clr	2,x
 	aslb
 	rola
-	sec		; set hidden bit of TOS
+	beq	__setup_tos_1	; denormalized number?
+	sec			; set hidden bit of TOS
+__setup_tos_1:
 	rorb
 	stab	3,x
 	staa	__texp
 	rts
 ;
+;
+;
+;
+;	@long shift right 8bit
+;
+__lsr8_both:
+	bsr	__lsr8_tos
+__lsr8_long:
+	ldab	@long+2
+	stab	@long+3
+	ldab	@long+1
+	stab	@long+2
+	ldab	@long
+	stab	@long+1
+	clr	@long
+	rts
+;
+__lsr8_tos:
+	ldab	4,x
+	stab	5,x
+	ldab	3,x
+	stab	4,x
+	ldab	2,x
+	stab	3,x
+	clr	2,x
+	rts
+;
+__asl8_both:
+	bsr	__asl8_tos
+__asl8_long:
+	ldab	@long+1
+	stab	@long
+	ldab	@long+2
+	stab	@long+1
+	ldab	@long+3
+	stab	@long+2
+	clr	@long+3
+	rts
+;
+__asl8_tos:
+	ldab	3,x
+	stab	2,x
+	ldab	4,x
+	stab	3,x
+	ldab	5,x
+	stab	4,x
+	clr	5,x
+	rts
+;
+;	shift right by AccB
+;
 __lsr_long:		; lsr @long by AccB
-	lsr	@long+1
+	lsr	@long+0
+	ror	@long+1
 	ror	@long+2
 	ror	@long+3
 	decb
 	bne	__lsr_long
 	rts
-__lsr_tos:		; lsr TOS (3-5,x) by AccB
-	lsr	3,x
+__lsr_tos:		; lsr TOS (2-5,x) by AccB
+	lsr	2,x
+	ror	3,x
 	ror	4,x
 	ror	5,x
+	decb
+	bne	__lsr_tos
+	rts
+;
+;	shift left by AccB
+;
+__asl_long:		; asl @long by AccB
+	asl	@long+3
+	rol	@long+2
+	rol	@long+1
+	rol	@long+0
+	decb
+	bne	__lsr_long
+	rts
+__asl_tos:		; asl TOS (2-5,x) by AccB
+	asl	5,x
+	rol	4,x
+	rol	3,x
+	rol	2,x
 	decb
 	bne	__lsr_tos
 __normalize_done:
@@ -598,15 +813,34 @@ __pullret:
 ;
 ;	@long = @long * TOS
 ;
-;	No arithmetic is required when multiplying by 0 or 1, but simply multiply it.
+;	No arithmetic is required when multiplying by 1, but simply multiply it now.
 ;
 __mulf32tos:
 	tsx
 	ldab	2,x
 	eorb	@long
 	andb	#$80
-	stab	__sign
-	jsr	__setup_both
+	stab	__sign		; First, determine the sign
+	;
+	inx			; TOS = 0.0 ?
+	inx
+        jsr     __f32iszerox
+	bne	__mulf32tos4
+	;
+        ldx     #long		; @long = 0.0 ?
+        jsr     __f32iszerox
+	bne	__mulf32tos4
+	;
+__f32retzero:			; TOS or long = 0.0, return 0.0
+	jsr	__f32zero	
+	ldab	__sign
+	orb	@long
+	stab	@long
+	jmp	__pullret
+;
+__mulf32tos4:
+	tsx
+	jsr	__setup_both	; mant: 2-4,x and @long to @long+2
 	ldab	__lexp
 	subb	#127		; bias
 	ldaa	__texp
@@ -616,89 +850,135 @@ __mulf32tos:
 	adda	#127
 	staa	__lexp		; saveit
 ;
-;	clr	@tmp2+3		; clear working area
-;	clr	@tmp2+2
+	clr	@tmp2+3		; clear working area 32bit
+	clr	@tmp2+2
 	clr	@tmp2+1
 	clr	@tmp2
-;
-	ldab	@long+3
-	ldaa	3,x
-	jsr	__mul8x8
-;	addb	@tmp2+3
-;	adca	@tmp2+2
-	stab	@tmp2+3
-	staa	@tmp2+2
-	bcc	__mulf32tos_10
-	inc	@tmp2+1
-__mulf32tos_10:
-;
-	ldab	@long+2
-	ldaa	4,x
-	jsr	__mul8x8
-	addb	@tmp2+3
-	adca	@tmp2+2
-	stab	@tmp2+3
-	staa	@tmp2+2
-	bcc	__mulf32tos_11
-	inc	@tmp2+1
-__mulf32tos_11:
-;
-	ldab	@long+1
-	ldaa	5,x
-	jsr	__mul8x8
-	addb	@tmp2+3
-	adca	@tmp2+2
-	stab	@tmp2+3
-	staa	@tmp2+2
-	bcc	__mulf32tos_12
-	inc	@tmp2+1
-__mulf32tos_12:
+;	clr	__work+3	; clear working area 32bit for carry
+	clr	__work+2
+	clr	__work+1
+	clr	__work
 ;
 	ldab	@long+1
 	ldaa	4,x
 	jsr	__mul8x8
-	addb	@tmp2+2
-	adca	@tmp2+1
-	stab	@tmp2+2
-	staa	@tmp2+1
-	bcc	__mulf32tos_13
-	inc	@tmp2
-__mulf32tos_13:
+;	adda	@tmp2+3		; Just after clearing, so @tmp2+3==0
+	staa	@tmp2+3
 ;
 	ldab	@long+2
 	ldaa	3,x
 	jsr	__mul8x8
-	addb	@tmp2+2
-	adca	@tmp2+1
-	stab	@tmp2+2
-	staa	@tmp2+1
-	bcc	__mulf32tos_14
-	inc	@tmp2
-__mulf32tos_14:
+	adda	@tmp2+3
+	staa	@tmp2+3
+	bcc	__mulf32tos30
+	inc	__work+2
+;
+__mulf32tos30:
+	ldab	@long
+	ldaa	4,x
+	jsr	__mul8x8
+	addb	@tmp2+3
+	stab	@tmp2+3
+	adca	@tmp2+2
+	staa	@tmp2+2
+	bcc	__mulf32tos31
+	inc	__work+1
+;
+__mulf32tos31:
 	ldab	@long+1
 	ldaa	3,x
+	jsr	__mul8x8
+	addb	@tmp2+3
+	stab	@tmp2+3
+	adca	@tmp2+2
+	staa	@tmp2+2
+	bcc	__mulf32tos32
+	inc	__work+1
+;
+__mulf32tos32:
+	ldab	@long+2
+	ldaa	2,x
+	jsr	__mul8x8
+	addb	@tmp2+3
+	stab	@tmp2+3
+	adca	@tmp2+2
+	staa	@tmp2+2
+	bcc	__mulf32tos40
+	inc	__work+1
+;
+__mulf32tos40:
+	ldab	@long
+	ldaa	3,x
+	jsr	__mul8x8
+	addb	@tmp2+2
+	stab	@tmp2+2
+	adca	@tmp2+1
+	staa	@tmp2+1
+	bcc	__mulf32tos41
+	inc	__work
+;
+__mulf32tos41:
+;
+	ldab	@long+1
+	ldaa	2,x
+	jsr	__mul8x8
+	addb	@tmp2+2
+	stab	@tmp2+2
+	adca	@tmp2+1
+	staa	@tmp2+1
+	bcc	__mulf32tos50
+	inc	__work
+
+__mulf32tos50:
+	ldab	@long
+	ldaa	2,x
 	jsr	__mul8x8
 	addb	@tmp2+1
-	adca	@tmp2
 	stab	@tmp2+1		; TODO:
+	adca	@tmp2
 	staa	@tmp2
-	bcc	__mulf32tos_15
+	bcc	__mulf32tos60
 	swi	;  TODO: overflow check needed???
-__mulf32tos_15:
+__mulf32tos60:
+	ldab	__work+2
+	addb	@tmp2+2
+	stab	@tmp2+2
+	ldab	__work+1
+	adcb	@tmp2+1
+	stab	@tmp2+1
+	ldab	__work
+	adcb	@tmp2
+	stab	@tmp2
+	bcc	__mulf32tos70
+	swi	; TODO: overflow check needed???
+__mulf32tos70:
 	ldaa	__lexp		; new exp
+	beq	__mulf32tos80	; denormalized number
 	clrb
 	tst	@tmp2		; hidden bit set?
-	bpl	__mulf32tos_16
+	bpl	__mulf32tos71
 	inca
-	bra	__mulf32tos_20
-__mulf32tos_16:
-	incb
+	bra	__mulf32tos80
+__mulf32tos71:
+	ldab	@tmp2+3
+	orab	@tmp2+2
+	orab	@tmp2+1
+	orab	@tmp2
+	bne	__mulf32tos72
+;	;			; The mantissa is all 0, so the value is 0.
+	clra
+	bra	__mulf32tos90
+__mulf32tos72:
+;	decb
 	asl	@tmp2+3
 	rol	@tmp2+2
 	rol	@tmp2+1
 	rol	@tmp2
-	bpl	__mulf32tos_16
-__mulf32tos_20:
+	bpl	__mulf32tos71
+;
+__mulf32tos80:
+	;	TODO: round
+__mulf32tos90:
 	ldab	@tmp2+2
 	stab	@long+3
 	ldab	@tmp2+1
@@ -713,6 +993,8 @@ __mulf32tos_20:
 	jmp	__pullret
 ;
 ;	Multiply 8x8
+;		@tmp1:	work
+;		@tmp1+1:loop counter
 ;
 __mul8x8:
 	tsta
@@ -746,7 +1028,10 @@ __divf32tos:
 	ldab	2,x
 	eorb	@long
 	andb	#$80
-	stab	__sign
+	stab	__sign		; First, determine the sign
+	jsr	__f32iszero	; @long == 0.0 ?
+	jeq	__f32retzero	; return 0.0
+	tsx
 	jsr	__setup_both
 	ldaa	__lexp
 	suba	#127		; bias
@@ -756,18 +1041,33 @@ __divf32tos:
 	;			; TODO: exception check
 	adda	#127
 	staa	__lexp		; saveit
-	jsr	__fdiv32x32	; @tmp3+1:@tmp4:@tmp4+1 = @long / TOS
+	jsr	__fdiv32x32	; @tmp3:@tmp3+1:@tmp4:@tmp4+1 = @long / TOS
 	ldaa	__lexp
 	tst	@tmp3		; hidden bit set?
-	bmi	____divf32tos_20
-__divf32tos_10:
+	bmi	__divf32tos20
+__divf32tos10:
 	deca
 	asl	@tmp4+1
 	rol	@tmp4
 	rol	@tmp3+1
 	rol	@tmp3
-	bpl	__divf32tos_10
-____divf32tos_20:
+	bpl	__divf32tos10
+__divf32tos20:
+;				; TODO: round
+	ldab	@tmp4+1
+	bpl	__divf32tos30
+	andb	#$7f
+	bne	__divf32tos22
+	ldab	@tmp4
+	asrb
+	bcc	__divf32tos30
+__divf32tos22:
+	inc	@tmp4
+	bne	__divf32tos30
+	ldx	@tmp3
+	inx	
+	stx	@tmp3
+__divf32tos30:
 	ldab	@tmp4
 	stab	@long+3
 	ldab	@tmp3+1
@@ -781,31 +1081,30 @@ ____divf32tos_20:
 	staa	@long
 	jmp	__pullret
 ;
-;	@tmp3:@tmp4	= @long / TOS
-;	@tmp1:AccA:AccB	= @long % TOS
+;	@tmp3:@tmp4		= @long / TOS
+;	@tmp1+1:AccA:AccB	= @long % TOS
 ;	@tmp2: loop counter
 ;	brake @long
 ;
 __fdiv32x32:
 	ldab #32
 	stab @tmp2	; loop counter
-	clr  @long
-	ldab @long+1
+	ldab @long
 	stab @tmp1+1
+	ldab @long+2
+	ldaa @long+1
 	clr  @tmp1
-	ldab @long+3
-	ldaa @long+2
 loop:
 	asl  @tmp4+1
 	rol  @tmp4
 	rol  @tmp3+1
 	rol  @tmp3
-	subb 5,x
-	sbca 4,x
+	subb 4,x
+	sbca 3,x
 	pshb
 	psha
 	ldab @tmp1+1
-	sbcb 3,x
+	sbcb 2,x
 	ldaa @tmp1
 	sbca #0
 	bcs  skip
@@ -818,8 +1117,8 @@ loop:
 skip:
 	pula
 	pulb		; can't substract. pull it back.
-	addb 5,x
-	adca 4,x
+	addb 4,x
+	adca 3,x
 next:
 	aslb
 	rola
@@ -831,13 +1130,15 @@ next:
 ;
 ;	@long cmp TOS
 ;
-;	AccAB<0:	@long<TOS
-;	AccAB=0:	@long==TOS
-;	AccAB>0:	@long>TOS
+;	condition:	return AccAB
+;	@long<TOS:	-1
+;	@long==TOS	0
+;	@long>TOS	1
+;
+;	TODO: NaN check with compiler
 ;
 __cmpf32tos:
-        ldx     #long
-        jsr     __f32iszerox
+        jsr     __f32iszero	; @long == 0.0 ?
 	bne	__cmpf32tos_10	; branch if @long!=0.0
 	tsx
 	inx
@@ -862,15 +1163,15 @@ __cmpf32tos_10:
 	cmpb	5,x
 	bhi	__cmpf32tos_gt
 	bcs	__cmpf32tos_lt
-__cmpf32tos_eq:
+__cmpf32tos_eq:			; @long == TOS
 	clrb
 	clra
 	jmp	__pullret
-__cmpf32tos_gt:
+__cmpf32tos_gt:			; @long > TOS
 	ldab	#1
 	clra
 	jmp	__pullret
-__cmpf32tos_lt:
+__cmpf32tos_lt:			; @long < TOS
 	ldab	#$ff
 	tba
 	jmp	__pullret
