@@ -1,8 +1,8 @@
-int sub()
+int sub(x)
 {
 	unsigned char	i;
 	unsigned char	sum = 0;
-	unsigned char	*p = alloca(10);
+	unsigned char	*p = alloca(x);
 
 	for (i=0; i<10; i++){
 		p[i] = i;

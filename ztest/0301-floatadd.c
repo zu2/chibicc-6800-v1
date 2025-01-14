@@ -31,10 +31,16 @@ float long2float(unsigned long x)
 int main(int argc, char **argv)
 {
 	float	f,g,h,e,zp,zm;
-
 	
+
+	float x1 = long2float(0xC0AD1746);
+	float x2 = long2float(0x41300000);
+	puthexl(0x40B2E8BA);putchar('\n');
+	puthexf(x1+x2);putchar('\n');
+
 	zp = long2float(0x00000000);
 	zm = long2float(0x80000000);
+
 	f = 1.0;
        	g = 2.0;
 	h = -1.0;
