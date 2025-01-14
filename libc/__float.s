@@ -560,7 +560,7 @@ __addf32tos52:
 __addf32tos54:
 	bmi	__addf32tos542
 __addf32tos541:
-	tsta			; denormalized number?
+	tsta			; subnormal number?
 	beq __addf32tos542
 	deca			; while hidden bit ==0 do asl @long, AccA--
 	asl	@long+3
@@ -659,7 +659,7 @@ __setup_long:			; @long's exp->AccA, set hidden bit of @long
 	clr	@long
 	aslb
 	rola
-	beq	__setup_long_1	; denormalized number?
+	beq	__setup_long_1	; subnormal number?
 	sec			; set hidden bit of TOS
 __setup_long_1:
 	rorb
@@ -673,7 +673,7 @@ __setup_tos:			; TOS's   exp->AccA, set hidden bit of TOS
 	clr	2,x
 	aslb
 	rola
-	beq	__setup_tos_1	; denormalized number?
+	beq	__setup_tos_1	; subnormal number?
 	sec			; set hidden bit of TOS
 __setup_tos_1:
 	rorb
@@ -953,7 +953,7 @@ __mulf32tos60:
 	swi	; TODO: overflow check needed???
 __mulf32tos70:
 	ldaa	__lexp		; new exp
-	beq	__mulf32tos80	; denormalized number
+	beq	__mulf32tos80	; subnormal number
 	clrb
 	tst	@tmp2		; hidden bit set?
 	bpl	__mulf32tos71
@@ -1043,7 +1043,7 @@ __divf32tos:
 	staa	__lexp		; saveit
 	jsr	__fdiv32x32	; @tmp3:@tmp3+1:@tmp4:@tmp4+1 = @long / TOS
 	ldaa	__lexp
-	beq	__divf32tos30	; denomalized number
+	beq	__divf32tos30	; subnormal number
 	tst	@tmp3		; hidden bit set?
 	bmi	__divf32tos20
 __divf32tos10:
