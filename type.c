@@ -21,7 +21,7 @@ static Type *new_type(TypeKind kind, int size, int align) {
   Type *ty = calloc(1, sizeof(Type));
   ty->kind = kind;
   ty->size = size;
-  ty->align = align;
+  ty->align = 1; // align;
   return ty;
 }
 
@@ -117,7 +117,8 @@ Type *array_of(Type *base, int len) {
 }
 
 Type *vla_of(Type *base, Node *len) {
-  Type *ty = new_type(TY_VLA, 8, 8);
+  Type *ty = new_type(TY_VLA, 2, 1);
+//  Type *ty = new_type(TY_VLA, 8, 8);
   ty->base = base;
   ty->vla_len = len;
   return ty;

@@ -128,7 +128,19 @@ static void gen_addr(Node *node) {
   case ND_VAR:
     // Variable-length array, which is always local.
     if (node->var->ty->kind == TY_VLA) {
-      println("  mov %d(%%rbp), %%rax", node->var->offset);
+	println("\tldab @bp+1");
+	println("\tldaa @bp");
+	println("\taddb #<%d",node->var->offset);
+	println("\tadca #>%d",node->var->offset);
+	println("\tpshb");
+	println("\tpsha");
+	println("\ttsx");
+	println("\tldx 0,x");
+	println("\tins");
+	println("\tins");
+	println("\tldab 1,x");
+	println("\tldaa 0,x");
+      println(";  mov %d(%%rbp), %%rax", node->var->offset);
       return;
     }
 
@@ -238,7 +250,11 @@ static void gen_addr(Node *node) {
     }
     break;
   case ND_VLA_PTR:
-    println("  lea %d(%%rbp), %%rax", node->var->offset);
+    println("\tldab @bp+1");
+    println("\tldaa @bp");
+    println("\taddb #<%d",node->var->offset);
+    println("\tadca #>%d",node->var->offset);
+//    println("  lea %d(%%rbp), %%rax", node->var->offset);
     return;
   }
 
