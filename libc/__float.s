@@ -560,7 +560,7 @@ __addf32tos52:
 __addf32tos54:
 	bmi	__addf32tos542
 __addf32tos541:
-	tsta			; denormaluzed number?
+	tsta			; denormalized number?
 	beq __addf32tos542
 	deca			; while hidden bit ==0 do asl @long, AccA--
 	asl	@long+3
