@@ -1043,6 +1043,7 @@ __divf32tos:
 	staa	__lexp		; saveit
 	jsr	__fdiv32x32	; @tmp3:@tmp3+1:@tmp4:@tmp4+1 = @long / TOS
 	ldaa	__lexp
+	beq	__divf32tos30	; denomalized number
 	tst	@tmp3		; hidden bit set?
 	bmi	__divf32tos20
 __divf32tos10:
