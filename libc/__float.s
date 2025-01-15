@@ -560,9 +560,8 @@ __addf32tos52:
 __addf32tos54:
 	bmi	__addf32tos542
 __addf32tos541:
-	tsta			; subnormal number?
-	beq __addf32tos542
 	deca			; while hidden bit ==0 do asl @long, AccA--
+	beq	__addf32tos542	; subnormal number
 	asl	@long+3
 	rol	@long+2
 	rol	@long+1
@@ -659,8 +658,10 @@ __setup_long:			; @long's exp->AccA, set hidden bit of @long
 	clr	@long
 	aslb
 	rola
-	beq	__setup_long_1	; subnormal number?
 	sec			; set hidden bit of TOS
+	bne	__setup_long_1	; subnormal number?
+	inca
+	clc
 __setup_long_1:
 	rorb
 	stab	@long+1
@@ -673,8 +674,10 @@ __setup_tos:			; TOS's   exp->AccA, set hidden bit of TOS
 	clr	2,x
 	aslb
 	rola
-	beq	__setup_tos_1	; subnormal number?
 	sec			; set hidden bit of TOS
+	bne	__setup_tos_1	; subnormal number?
+	inca
+	clc
 __setup_tos_1:
 	rorb
 	stab	3,x
