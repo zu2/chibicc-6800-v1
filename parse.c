@@ -2434,7 +2434,8 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
   // ptr - ptr, which returns how many elements are between the two.
   if (lhs->ty->base && rhs->ty->base) {
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
-    node->ty = ty_long;
+//    node->ty = ty_long;
+    node->ty = ty_int;
     return new_binary(ND_DIV, node, new_num(lhs->ty->base->size, tok), tok);
   }
 
