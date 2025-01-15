@@ -282,17 +282,24 @@ __i3280000000:
 ;
 ;	load plus/minus Inf into @long
 ;
+__f32Inf:		; AccB(Sign)+7f80 0000
+	tstb
+	bmi	__f32mInf
 __f32pInf:		; 7f80 0000
-	bsr	__f32mInf
-	lsrb
+	ldab	#$7f
 	stab	@long
+	incb
+	stab	@long+1
+	clrb
+	stab	@long+2
+	stab	@long+3
 	rts
 __f32mInf:		; ff80 0000
 	ldab	#$80
 	stab	@long+1
 	clrb
-	stab	@long+3
 	stab	@long+2
+	stab	@long+3
 	decb
 	stab	@long
 	rts
