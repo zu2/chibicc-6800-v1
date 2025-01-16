@@ -5,10 +5,10 @@
 
 static FILE *output_file;
 static int depth;
-static char *argreg8[] = {"%dil", "%sil", "%dl", "%cl", "%r8b", "%r9b"};
-static char *argreg16[] = {"%di", "%si", "%dx", "%cx", "%r8w", "%r9w"};
-static char *argreg32[] = {"%edi", "%esi", "%edx", "%ecx", "%r8d", "%r9d"};
-static char *argreg64[] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
+//static char *argreg8[] = {"%dil", "%sil", "%dl", "%cl", "%r8b", "%r9b"};
+//static char *argreg16[] = {"%di", "%si", "%dx", "%cx", "%r8w", "%r9w"};
+//static char *argreg32[] = {"%edi", "%esi", "%edx", "%ecx", "%r8d", "%r9d"};
+//static char *argreg64[] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 static Obj *current_fn;
 
 static void gen_expr(Node *node);
@@ -42,15 +42,24 @@ static void push(void) {
   depth+=2;
 }
 
-static void pop1(char *arg) {
-  println("; pop(%s) %s %d",arg,__FILE__,__LINE__);
+static void pop1(void) {
+  println("; pop1() %s %d",__FILE__,__LINE__);
   println("\tpulb");
   depth-=1;
 }
-static void pop(char *arg) {
-  println("; pop(%s) %s %d",arg,__FILE__,__LINE__);
+static void pop(void) {
+  println("; pop() %s %d",__FILE__,__LINE__);
   println("\tpula");
   println("\tpulb");
+  depth-=2;
+}
+
+static void popx(void) {
+  println("; popx() %s %d",__FILE__,__LINE__);
+  println("\ttsx");
+  println("\tldx 0,x");
+  println("\tins");
+  println("\tins");
   depth-=2;
 }
 
@@ -69,7 +78,7 @@ static void pushf(void) {
   depth+=4;
 }
 
-static void popf(int reg) {
+static void popf(void) {
   println("\tjsr __pop32");
   depth-=4;
 }
@@ -87,11 +96,13 @@ static void pop_arg(Node *args)
 	  return;
 
   switch(args->ty->kind){
-  case TY_CHAR:	pop1("recover pushed args 1");
+  case TY_CHAR:	println("; recover pushed args 1byte");
+	  	pop1();
 		break;
   case TY_SHORT:
   case TY_INT:
-  case TY_PTR:	pop("recover pushed args 2");
+  case TY_PTR:	println("; recover pushed args 2byte");
+		pop();
 		break;
   default:
 	error_tok(args->tok, "pop_arg fails ty->kind=%d",args->ty->kind);
@@ -100,6 +111,7 @@ static void pop_arg(Node *args)
 }
 
 
+#if	0
 static char *reg_dx(int sz) {
   switch (sz) {
   case 1: return "%dl";
@@ -119,6 +131,7 @@ static char *reg_ax(int sz) {
   }
   unreachable();
 }
+#endif
 
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
@@ -278,17 +291,19 @@ static void load(Type *ty) {
     return;
   case TY_FLOAT:
     println("\tjsr __load32	; @long = (AccAB)");
-//    println("  movss (%%rax), %%xmm0");
+//  println("  movss (%%rax), %%xmm0");
     return;
   case TY_DOUBLE:
-    println("  movsd (%%rax), %%xmm0");
+    assert(ty->kind!=TY_DOUBLE);
+//  println("  movsd (%%rax), %%xmm0");
     return;
   case TY_LDOUBLE:
-    println("  fldt (%%rax)");
+    assert(ty->kind!=TY_LDOUBLE);
+//  println("  fldt (%%rax)");
     return;
   }
 
-  char *insn = ty->is_unsigned ? "movz" : "movs";
+// char *insn = ty->is_unsigned ? "movz" : "movs";
 
   // When we load a char or a short value to a register, we always
   // extend them to the size of int, so we can assume the lower half of
@@ -342,10 +357,12 @@ static void store(Type *ty) {
 //    println("  movss %%xmm0, (%%rdi)");
     return;
   case TY_DOUBLE:
-    println("  movsd %%xmm0, (%%rdi)");
+    assert(ty->kind!=TY_DOUBLE);
+//  println("  movsd %%xmm0, (%%rdi)");
     return;
   case TY_LDOUBLE:
-    println("  fstpt (%%rdi)");
+    assert(ty->kind!=TY_LDOUBLE);
+//  println("  fstpt (%%rdi)");
     return;
   }
 
@@ -370,13 +387,15 @@ static void cmp_zero(Type *ty) {
 //  println("  ucomiss %%xmm1, %%xmm0");
     return;
   case TY_DOUBLE:
-    println("  xorpd %%xmm1, %%xmm1");
-    println("  ucomisd %%xmm1, %%xmm0");
+    assert(ty->kind!=TY_DOUBLE);
+//  println("  xorpd %%xmm1, %%xmm1");
+//  println("  ucomisd %%xmm1, %%xmm0");
     return;
   case TY_LDOUBLE:
-    println("  fldz");
-    println("  fucomip");
-    println("  fstp %%st(0)");
+    assert(ty->kind!=TY_LDOUBLE);
+//  println("  fldz");
+//  println("  fucomip");
+//  println("  fstp %%st(0)");
     return;
   }
 
@@ -420,8 +439,8 @@ static char u8u32[]  = "jsr __u8to32";
 static char i16i32[] = "jsr __s16to32";
 static char i16u32[] = "jsr __s16to32";
 static char u16i32[] = "jsr __u16to32";
-static char u16u32[] = "jsr __u16to32";
-static char u16f32[] = "jsr __u16tof32";
+//static char u16u32[] = "jsr __u16to32";
+//static char u16f32[] = "jsr __u16tof32";
 
 static char i16i64[] = ";jsr __i16i64 " __FILE__;
 static char i16f32[] = "jsr __i16tof32";
@@ -538,6 +557,7 @@ static void cast(Type *from, Type *to) {
     println("\t%s", cast_table[t1][t2]);
 }
 
+#if 0
 // Structs or unions equal or smaller than 16 bytes are passed
 // using up to two registers.
 //
@@ -577,10 +597,11 @@ static bool has_flonum2(Type *ty) {
   return 0;
 //return has_flonum(ty, 8, 16, 0);
 }
+#endif
 
 static void push_struct(Type *ty) {
   int sz = align_to(ty->size, 8);
-  int c = count;
+//  int c = count();
   depth += sz;
   assert(sz <= 256);	// can't handle sz > 256
   println("\tpshb");
@@ -619,7 +640,7 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 
   switch (args->ty->kind) {
   case TY_DOUBLE:
-  case TY_LDOUBLE:
+  case TY_LDOUBLE: 
     assert(args->ty->kind!=TY_DOUBLE && args->ty->kind!=TY_LDOUBLE);
     println("; push_args2 push XXX");
     break;
@@ -628,7 +649,6 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     push_struct(args->ty);
     break;
 #if 0
-  case TY_FLOAT:
   case TY_DOUBLE:
     pushf();
     break;
@@ -679,7 +699,7 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 // - If a function is variadic, set the number of floating-point type
 //   arguments to RAX.
 static int push_args(Node *node, Node *last_pushed_arg) {
-  int stack = 0, gp = 0, fp = 0;
+  int stack = 0, gp = 0; //, fp = 0;
 
   println("; push_args %s %d",__FILE__,__LINE__);
   // If the return type is a large struct/union, the caller passes
@@ -696,11 +716,13 @@ static int push_args(Node *node, Node *last_pushed_arg) {
     case TY_STRUCT:
     case TY_UNION:
     case TY_FLOAT:
-    case TY_DOUBLE:
-    case TY_LDOUBLE:
     case TY_LONG:
         arg->pass_by_stack = true;
         stack += ty->size;
+	break;
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
+	error_tok(node->tok, "gen_expr: double not implemented yet");
 	break;
 #if 0
     case TY_STRUCT:
@@ -755,7 +777,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
   // a pointer to a buffer as if it were the first argument.
   // MC6800: all struct/union passes the pointer
   if (node->ret_buffer) { // && node->ty->size > 16) {
-    println("\tldab @bp+1	; %s %d");
+    println("\tldab @bp+1	; %d",node->ret_buffer->offset);
     println("\tldaa @bp");
     println("\taddb #<%d",node->ret_buffer->offset);
     println("\tadca #>%d",node->ret_buffer->offset);
@@ -766,6 +788,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
   return stack;
 }
 
+#if 0
 static void copy_ret_buffer(Obj *var) {
   Type *ty = var->ty;
   int gp = 0, fp = 0;
@@ -802,7 +825,9 @@ static void copy_ret_buffer(Obj *var) {
     }
   }
 }
+#endif
 
+#if	0
 static void copy_struct_reg(void) {
   Type *ty = current_fn->ty->return_ty;
   int gp = 0, fp = 0;
@@ -843,6 +868,7 @@ static void copy_struct_reg(void) {
     }
   }
 }
+#endif
 
 static void copy_struct_mem(void) {
   Type *ty = current_fn->ty->return_ty;
@@ -893,7 +919,7 @@ static void builtin_alloca(void) {
   println("\tins");
   println("\tins");
   println("\tstx @tmp3 ; save address of __alloca_bottom__");
-  println("\sts  @tmp2 ; save current SP");
+  println("\tsts  @tmp2 ; save current SP");
   println("\tsts @tmp1 ; sp -= rdi");
   println("\tldab @tmp1+1");
   println("\tldaa @tmp1");
@@ -963,6 +989,7 @@ static void gen_expr(Node *node) {
     }
     case TY_DOUBLE: {
       error_tok(node->tok, "gen_expr: double not implemented yet");
+      break;
 #if 0
       union { double f64; uint64_t u64; } u = { node->fval };
       println("  mov $%lu, %%rax  # double %Lf", u.u64, node->fval);
@@ -992,7 +1019,7 @@ static void gen_expr(Node *node) {
       println("\tldaa #>%u", (uint16_t)node->val);
       return;
     case TY_LONG:
-      int c = count();
+//      int c = count();
       println("\tjsr __load32i		; load 32bit immediate #%lu",node->val);
       println("\t.word %u",(uint16_t)((node->val>>16)&0x0ffff));
       println("\t.word %u",(uint16_t)(node->val&0x0ffff));
@@ -1015,13 +1042,15 @@ static void gen_expr(Node *node) {
 //      println("  xorps %%xmm1, %%xmm0");
       return;
     case TY_DOUBLE:
-      println("  mov $1, %%rax");
-      println("  shl $63, %%rax");
-      println("  movq %%rax, %%xmm1");
-      println("  xorpd %%xmm1, %%xmm0");
+      error_tok(node->tok, "gen_expr: double not implemented yet");
+//      println("  mov $1, %%rax");
+//      println("  shl $63, %%rax");
+//      println("  movq %%rax, %%xmm1");
+//      println("  xorpd %%xmm1, %%xmm0");
       return;
     case TY_LDOUBLE:
-      println("  fchs");
+      error_tok(node->tok, "gen_expr: double not implemented yet");
+//      println("  fchs");
       return;
     case TY_LONG:
       println("\tjsr __neg32");
@@ -1033,8 +1062,7 @@ static void gen_expr(Node *node) {
     println("\tnega");
     println("\tnegb");
     println("\tsbca #0");
-
-//    println("  neg %%rax");
+//  println("  neg %%rax");
     return;
   case ND_VAR:
     gen_addr(node);
@@ -1265,12 +1293,12 @@ static void gen_expr(Node *node) {
     println("\tins");
     println("\tins");
 
-    int gp = 0, fp = 0;
+    int gp = 0; //, fp = 0;
 
     // If the return type is a large struct/union, the caller passes
     // a pointer to a buffer as if it were the first argument.
     if (node->ret_buffer) //  && node->ty->size > 16)
-      pop(argreg64[gp++]);
+      pop();			// only 1 arg.
 
     for (Node *arg = node->args; arg; arg = arg->next) {
       Type *ty = arg->ty;
@@ -1280,9 +1308,11 @@ static void gen_expr(Node *node) {
       case TY_STRUCT:
       case TY_UNION:
       case TY_FLOAT:
+      case TY_LONG:
+	      break;
       case TY_DOUBLE:
       case TY_LDOUBLE:
-      case TY_LONG:
+	      error_tok(node->tok, "gen_expr: double not implemented yet");
 	      break;
 #else
       case TY_STRUCT:
@@ -1383,8 +1413,12 @@ static void gen_expr(Node *node) {
     return;
   }
   case ND_LABEL_VAL:
-    println("  lea %s(%%rip), %%rax", node->unique_label);
+    println("\tldab #<%s",node->unique_label);
+    println("\tldaa #>%s",node->unique_label);
+//  println("  lea %s(%%rip), %%rax", node->unique_label);
     return;
+#if	0
+  // __builtin_compare_and_swap
   case ND_CAS: {
     gen_expr(node->cas_addr);
     push();
@@ -1393,8 +1427,8 @@ static void gen_expr(Node *node) {
     gen_expr(node->cas_old);
     println("  mov %%rax, %%r8");
     load(node->cas_old->ty->base);
-    pop("%rdx"); // new
-    pop("%rdi"); // addr
+    pop(); // new
+    pop(); // addr
 
     int sz = node->cas_addr->ty->base->size;
     println("  lock cmpxchg %s, (%%rdi)", reg_dx(sz));
@@ -1409,12 +1443,13 @@ static void gen_expr(Node *node) {
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);
-    pop("%rdi");
+    pop();
 
     int sz = node->lhs->ty->base->size;
     println("  xchg %s, (%%rdi)", reg_ax(sz));
     return;
   }
+#endif
   }
 
   switch (node->lhs->ty->kind) {
@@ -1424,7 +1459,7 @@ static void gen_expr(Node *node) {
     gen_expr(node->lhs);	// xmm0
 //  popf(1);
 
-    char *sz = (node->lhs->ty->kind == TY_FLOAT) ? "ss" : "sd";
+//    char *sz = (node->lhs->ty->kind == TY_FLOAT) ? "ss" : "sd";
 
     switch (node->kind) {
     case ND_ADD:
@@ -1585,9 +1620,9 @@ static void gen_expr(Node *node) {
       return;
     case ND_MOD:
       if (node->ty->is_unsigned) {
-        println("\tjsr __rem32x32u ; @long %= TOS, pull TOS");
+        println("\tjsr __rem32x32u ; @long %%= TOS, pull TOS");
       }else{
-        println("\tjsr __rem32x32s ; @long %= TOS, pull TOS");
+        println("\tjsr __rem32x32s ; @long %%= TOS, pull TOS");
       }
       depth -= 4;
       return;
@@ -1687,7 +1722,8 @@ static void gen_expr(Node *node) {
   println("; end call");
 //  pop("%rdi");
 
-  char *ax, *di, *dx;
+#if 0
+//  char *ax, *di, *dx;
 
 //  assert(node->lhs->ty->kind != TY_LONG);
   if (node->lhs->ty->kind == TY_LONG || node->lhs->ty->base) {
@@ -1699,6 +1735,7 @@ static void gen_expr(Node *node) {
     di = "%edi";
     dx = "%edx";
   }
+#endif
 
   switch (node->kind) {
   case ND_ADD:
@@ -1985,7 +2022,7 @@ static void assign_lvar_offsets(Obj *prog) {
     int top = 0;
 //    int bottom = 0;
 
-    int gp = 0, fp = 0;
+    int gp = 0;	//, fp = 0;
     fn->stack_size = 0;
 
     // list of param
@@ -1998,11 +2035,13 @@ static void assign_lvar_offsets(Obj *prog) {
       case TY_STRUCT:
       case TY_UNION:
       case TY_FLOAT:
-      case TY_DOUBLE:
-      case TY_LDOUBLE:
       case TY_LONG:
         var->offset = -2;	// stack param mark
 	continue;
+      case TY_DOUBLE:
+      case TY_LDOUBLE:
+	assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
+	break;
       default:
         if (gp++ < GP_MAX){
 	  var->offset = -1;
@@ -2058,7 +2097,7 @@ static void assign_lvar_offsets(Obj *prog) {
     // Assign offsets to pass-by-stack parameters.
     gp = 0;
     for (Obj *var = fn->params; var; var = var->next) {
-      Type *ty = var->ty;
+//      Type *ty = var->ty;
 
 //      if (var->offset)
 //        println("; 8. var->name=%s, var->offset=%d %s %d",
@@ -2179,6 +2218,7 @@ static void emit_data(Obj *prog) {
   }
 }
 
+#if	0
 static void store_fp(int r, int offset, int sz) {
   switch (sz) {
   case 4:
@@ -2190,7 +2230,9 @@ static void store_fp(int r, int offset, int sz) {
   }
   unreachable();
 }
+#endif
 
+#if	0
 static void store_gp(int r, int offset, int sz) {
   println("; store_gp r=%d, offset=%d, sz=%d, %s %d",r,offset,sz,__FILE__,__LINE__);
   return;
@@ -2242,6 +2284,7 @@ static void store_gp(int r, int offset, int sz) {
   }
 #endif
 }
+#endif
 
 static void emit_text(Obj *prog) {
   for (Obj *fn = prog; fn; fn = fn->next) {
@@ -2278,7 +2321,7 @@ static void emit_text(Obj *prog) {
         else
           gp++;
       }
-      int off = fn->va_area->offset;
+//    int off = fn->va_area->offset;
 
       // va_elem
 //      println("  movl $%d, %d(%%rbp)", gp * 8, off);          // gp_offset
@@ -2309,7 +2352,7 @@ static void emit_text(Obj *prog) {
 
     // only one argument pass via Acc A,B
     // Save passed-by-register arguments to the stack
-    int gp = 0, fp = 0;
+    int gp = 0; //, fp = 0;
     for (Obj *var = fn->params; var; var = var->next) {
       if (var->offset > 0)
         continue;
@@ -2318,11 +2361,14 @@ static void emit_text(Obj *prog) {
 
       switch (ty->kind) {
       case TY_FLOAT:
-      case TY_DOUBLE:
       case TY_LONG:
       case TY_STRUCT:
       case TY_UNION:
-	      break;
+	break;
+      case TY_DOUBLE:
+      case TY_LDOUBLE:
+	assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
+	break;
 #if 0
       case TY_STRUCT:
       case TY_UNION:
