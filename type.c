@@ -21,7 +21,7 @@ static Type *new_type(TypeKind kind, int size, int align) {
   Type *ty = calloc(1, sizeof(Type));
   ty->kind = kind;
   ty->size = size;
-  ty->align = 1; // align;
+  ty->align = 1; // align must be 1
   return ty;
 }
 
