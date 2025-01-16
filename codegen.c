@@ -2330,24 +2330,6 @@ static void emit_text(Obj *prog) {
 //      println("  addq $16, %d(%%rbp)", off + 8);
 //      println("  movq %%rbp, %d(%%rbp)", off + 16);           // reg_save_area
 //      println("  addq $%d, %d(%%rbp)", off + 24, off + 16);
-
-      // __reg_save_area__
-#if 0
-      println("  movq %%rdi, %d(%%rbp)", off + 24);
-      println("  movq %%rsi, %d(%%rbp)", off + 32);
-      println("  movq %%rdx, %d(%%rbp)", off + 40);
-      println("  movq %%rcx, %d(%%rbp)", off + 48);
-      println("  movq %%r8, %d(%%rbp)", off + 56);
-      println("  movq %%r9, %d(%%rbp)", off + 64);
-      println("  movsd %%xmm0, %d(%%rbp)", off + 72);
-      println("  movsd %%xmm1, %d(%%rbp)", off + 80);
-      println("  movsd %%xmm2, %d(%%rbp)", off + 88);
-      println("  movsd %%xmm3, %d(%%rbp)", off + 96);
-      println("  movsd %%xmm4, %d(%%rbp)", off + 104);
-      println("  movsd %%xmm5, %d(%%rbp)", off + 112);
-      println("  movsd %%xmm6, %d(%%rbp)", off + 120);
-      println("  movsd %%xmm7, %d(%%rbp)", off + 128);
-#endif
     }
 
     // only one argument pass via Acc A,B
@@ -2369,27 +2351,6 @@ static void emit_text(Obj *prog) {
       case TY_LDOUBLE:
 	assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
 	break;
-#if 0
-      case TY_STRUCT:
-      case TY_UNION:
-        assert(ty->size <= 16);
-        if (has_flonum(ty, 0, 8, 0))
-          store_fp(fp++, var->offset, MIN(8, ty->size));
-        else
-          store_gp(gp++, var->offset, MIN(8, ty->size));
-
-        if (ty->size > 8) {
-          if (has_flonum(ty, 8, 16, 0))
-            store_fp(fp++, var->offset + 8, ty->size - 8);
-          else
-            store_gp(gp++, var->offset + 8, ty->size - 8);
-        }
-        break;
-      case TY_FLOAT:
-      case TY_DOUBLE:
-        store_fp(fp++, var->offset, ty->size);
-        break;
-#endif
       default:
 	gp++;
 //      store_gp(gp++, var->offset, ty->size);
@@ -2410,15 +2371,22 @@ static void emit_text(Obj *prog) {
     println("\tldaa @bp");
     println("\tpshb");
     println("\tpsha");
-    println("\tsts @bp");			// make new bp
-    println("\tldab @bp+1");
-    println("\tldaa @bp");
-    println("\tsubb #<%u",fn->stack_size-1);
-    println("\tsbca #>%u",fn->stack_size-1);
-    println("\tstab @bp+1");
-    println("\tstaa @bp");
-    println("\tldx @bp");			// adjust one byte
-    println("\ttxs");
+    if (fn->stack_size<=6){
+      for(int i=0; i<fn->stack_size; i++)
+        println("\tdes");
+      println("\ttsx");
+      println("\tstx @bp");
+    }else{
+      println("\tsts @bp");			// make new bp
+      println("\tldab @bp+1");
+      println("\tldaa @bp");
+      println("\tsubb #<%u",fn->stack_size-1);
+      println("\tsbca #>%u",fn->stack_size-1);
+      println("\tstab @bp+1");
+      println("\tstaa @bp");
+      println("\tldx @bp");			// adjust one byte
+      println("\ttxs");
+    }
     println("\tsts %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
 //  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
     // Emit code
@@ -2440,19 +2408,29 @@ static void emit_text(Obj *prog) {
     println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("L_return_%d:", fn->function_no);
 //    println("L_return_%s:", fn->name);
-    println("\tstab @tmp1+1");
-    println("\tstaa @tmp1");
-    println("\tldab @bp+1");
-    println("\tldaa @bp");
-    println("\taddb #<%u",fn->stack_size-1);
-    println("\tadca #>%u",fn->stack_size-1);
-    println("\tstab @bp+1");
-    println("\tstaa @bp");
-    println("\tlds @bp");			// remove local variables
-    println("\tpula");
-    println("\tpulb");
-    println("\tstab @bp+1");			// restore old bp
-    println("\tstaa @bp");
+    println("; recover sp, fn->stack_size=%d",fn->stack_size);
+    if (fn->stack_size<=10){
+      println("\tlds @bp");
+      for(int i=0; i<fn->stack_size-1; i++)
+	println("\tins");
+    }else{
+      println("\tstab @tmp1+1");
+      println("\tstaa @tmp1");
+      println("\tldab @bp+1");
+      println("\tldaa @bp");
+      println("\taddb #<%u",fn->stack_size-1);
+      println("\tadca #>%u",fn->stack_size-1);
+      println("\tstab @bp+1");
+      println("\tstaa @bp");
+      println("\tlds @bp");			// remove local variables
+      println("\tldab @tmp1+1");
+      println("\tldaa @tmp1");
+    }
+    println("\ttsx");
+    println("\tldx 0,x");
+    println("\tins");
+    println("\tins");
+    println("\tstx @bp");
     for (Obj *var = fn->params; var; var = var->next) { // skip argment pass by register
       if (var->reg_param){
         if (var->ty->kind == TY_CHAR) {
@@ -2465,8 +2443,6 @@ static void emit_text(Obj *prog) {
     }
 //    println("  mov %%rbp, %%rsp");
 //    println("  pop %%rbp");
-    println("\tldab @tmp1+1");
-    println("\tldaa @tmp1");
     println("\trts");
   }
 }
