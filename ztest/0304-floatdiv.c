@@ -11,15 +11,26 @@ cmpf(float f, float g)
 	unsigned char *p = (unsigned char *)&f;
 	unsigned char *q = (unsigned char *)&g;
 
-	puthexf(f);putchar(' ');
-	puthexf(g);putchar('\n');
-#if 0
 	for (i=0; i<4; ++i,++p,++q){
 		if (*p != *q){
 			return	i+1;
 		}
 	}
-#endif
+	return 0;
+}
+
+int
+cmpfl(float f, unsigned long g)
+{
+	int i;
+	unsigned char *p = (unsigned char *)&f;
+	unsigned char *q = (unsigned char *)&g;
+
+	for (i=0; i<4; ++i,++p,++q){
+		if (*p != *q){
+			return	i+1;
+		}
+	}
 	return 0;
 }
 
@@ -104,17 +115,17 @@ int main(int argc, char **argv)
        	g = 0.3;
 	h = 0.003;
 	e = 9001.5;
-	putstr("1.0/0.3:\t");puthexf(3.33333333333333);putchar('\n');
-	putstr("1.0/0.3=\t");puthexf(f/g);putchar('\n');
+//	putstr("1.0/0.3:\t");puthexf(3.33333333333333);putchar('\n');
+//	putstr("1.0/0.3=\t");puthexf(f/g);putchar('\n');
 	if (f/g!=3.33333333333333)
 		return 31;
-	putstr("1.0/0.003:\t");puthexf(333.333333333333);putchar('\n');
-	putstr("1.0/0.003=\t");puthexf(f/h);putchar('\n');
-	putstr("0.3/0.003:\t");puthexf(100.0);putchar('\n');
-	putstr("0.3/0.003=\t");puthexf(g/h);putchar('\n');
-	putstr("0.003/9001.5:\t");puthexf(3.33277787035494e-07);putchar('\n');
-	putstr("0.003/9001.5=\t");puthexf(h/e);putchar('\n');
-	putchar('\n');
+//	putstr("1.0/0.003:\t");puthexf(333.333333333333);putchar('\n');
+//	putstr("1.0/0.003=\t");puthexf(f/h);putchar('\n');
+//	putstr("0.3/0.003:\t");puthexf(100.0);putchar('\n');
+//	putstr("0.3/0.003=\t");puthexf(g/h);putchar('\n');
+//	putstr("0.003/9001.5:\t");puthexf(3.33277787035494e-07);putchar('\n');
+//	putstr("0.003/9001.5=\t");puthexf(h/e);putchar('\n');
+//	putchar('\n');
 
 	return 0;
 }
