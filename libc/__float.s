@@ -15,6 +15,8 @@
 
 ;
 ;	TODO:
+;		more test
+;		refactoring
 ;		Signed zero
 ;		Subnormal numbers (Gradual Underflow)
 ;		Infinities
@@ -45,9 +47,12 @@
 	.export __sign
 	.export __texp
 	.export __lexp
+	.export __expdiff
 __sign:	.byte	0	; sign of reslut
 __texp:	.byte	0	; TOS's exp
 __lexp:	.byte	0	; @long's exp
+__expdiff:
+	.word	0	; texp - lexp
 __work: .word	0	; working area
 	.word	0
 	.code
@@ -85,14 +90,14 @@ __f32isNaN_2:
 __f32iszero:
 	ldx	#long
 __f32iszerox:
-	tst	3,x
-	bne	iszerox_ret
-	tst	2,x
+	ldab	0,x		; exponent on the MSB side, to check from the top is faster
+	bitb	#$7F
 	bne	iszerox_ret
 	tst	1,x
 	bne	iszerox_ret
-	ldab	0,x
-	bitb	#$7f		; (0,x) == 0x00 or 0x80 ?
+	tst	2,x
+	bne	iszerox_ret
+	tst	3,x
 iszerox_ret:
 	rts
 ;
@@ -282,6 +287,8 @@ __i3280000000:
 ;
 ;	load plus/minus Inf into @long
 ;
+__f32retInf:
+	ldab	__sign
 __f32Inf:		; AccB(Sign)+7f80 0000
 	tstb
 	bmi	__f32mInf
@@ -293,7 +300,7 @@ __f32pInf:		; 7f80 0000
 	clrb
 	stab	@long+2
 	stab	@long+3
-	rts
+	jmp     __pullret
 __f32mInf:		; ff80 0000
 	ldab	#$80
 	stab	@long+1
@@ -302,7 +309,7 @@ __f32mInf:		; ff80 0000
 	stab	@long+3
 	decb
 	stab	@long
-	rts
+	jmp     __pullret
 ;
 ;	float to nsigned long
 ;		@long -> @long
@@ -851,14 +858,25 @@ __f32retzero:			; TOS or long = 0.0, return 0.0
 __mulf32tos4:
 	tsx
 	jsr	__setup_both	; mant: 2-4,x and @long to @long+2
+	clra
 	ldab	__lexp
-	subb	#127		; bias
-	ldaa	__texp
-	suba	#127
-	aba
+	addb	__texp
+	adca	#0
+	subb	#127
+	sbca	#0
 	; 			; TODO:	exception check
-	adda	#127
-	staa	__lexp		; saveit
+	stab	__expdiff+1	; saveit
+	staa	__expdiff
+;
+	beq	__mulf32tos03
+	bpl	__mulf32tos02
+	cmpb	#$E8		; underflow
+	bcc	__mulf32tos03
+	jmp	__f32retzero
+__mulf32tos02:			; overflow
+	jmp	__f32retInf
+;
+__mulf32tos03:
 ;
 	clr	@tmp2+3		; clear working area 32bit
 	clr	@tmp2+2
@@ -959,32 +977,52 @@ __mulf32tos60:
 	ldab	__work
 	adcb	@tmp2
 	stab	@tmp2
-	bcc	__mulf32tos70
+	bcc	__mulf32tos65
 	swi	; TODO: overflow check needed???
+__mulf32tos65:
+	ldaa	__expdiff+1
+	tst	__expdiff
+	bmi	__mulf32tos69	; subnormal number
+	jne	__f32retInf	; overflow
+	cmpa	#$FF
+	jeq	__f32retInf
+	bra	__mulf32tos70
+	;
+__mulf32tos69:
+	lsr	@tmp2
+	ror	@tmp2+1
+	ror	@tmp2+2
+	ror	@tmp2+3
+	inca
+	bne	__mulf32tos69
+	bra	__mulf32tos80
+;
 __mulf32tos70:
-	ldaa	__lexp		; new exp
+	tsta
 	beq	__mulf32tos80	; subnormal number
 	clrb
 	tst	@tmp2		; hidden bit set?
-	bpl	__mulf32tos71
+	bpl	__mulf32tos72
 	inca
+	jeq	__f32retInf
+	cmpa	#$ff
+	jeq	__f32retInf
 	bra	__mulf32tos80
-__mulf32tos71:
+__mulf32tos72:
 	ldab	@tmp2+3
 	orab	@tmp2+2
 	orab	@tmp2+1
 	orab	@tmp2
-	bne	__mulf32tos72
+	bne	__mulf32tos73
 ;	;			; The mantissa is all 0, so the value is 0.
 	clra
 	bra	__mulf32tos90
-__mulf32tos72:
-;	decb
+__mulf32tos73:
 	asl	@tmp2+3
 	rol	@tmp2+2
 	rol	@tmp2+1
 	rol	@tmp2
-	bpl	__mulf32tos71
+	bpl	__mulf32tos72
 ;
 __mulf32tos80:
 	;	TODO: round
@@ -1043,21 +1081,45 @@ __divf32tos:
 	jeq	__f32retzero	; return 0.0
 	tsx
 	jsr	__setup_both
-	ldaa	__lexp
-	suba	#127		; bias
-	ldab	__texp
-	subb	#127
-	sba
+	clra
+	ldab	__lexp
+	subb	__texp
+	sbca	#0
+	addb	#127
+	adca	#0
+	stab	__expdiff+1	; expdiff = lexp - texp + 127
+	staa	__expdiff
+	beq	__divf32tos03
+	bpl	__divf32tos02
+	cmpb	#$E9		; underflow
+	bcc	__divf32tos03
+	jmp	__f32retzero
+__divf32tos02:			; overflow
+	jmp	__f32retInf
+__divf32tos03:
 	;			; TODO: exception check
-	adda	#127
-	staa	__lexp		; saveit
 	jsr	__fdiv32x32	; @tmp3:@tmp3+1:@tmp4:@tmp4+1 = @long / TOS
-	ldaa	__lexp
-	beq	__divf32tos30	; subnormal number
+	ldaa	__expdiff+1
+	beq	__divf32tos04
+	tst	__expdiff
+	bpl	__divf32tos08
+__divf32tos04:
+	; 			; subnormal number: shift right
+	deca
+__divf32tos05:
+	lsr	@tmp3
+	ror	@tmp3+1
+	ror	@tmp4
+	ror	@tmp4+1
+	inca
+	bne	__divf32tos05
+	bra	__divf32tos30	; skip normalize
+__divf32tos08:
 	tst	@tmp3		; hidden bit set?
 	bmi	__divf32tos20
 __divf32tos10:
 	deca
+	beq	__divf32tos30	; under flow
 	asl	@tmp4+1
 	rol	@tmp4
 	rol	@tmp3+1
