@@ -12,9 +12,7 @@ main()
 	float a, b, ca, cb, t;
 	float x1,y1;
 
-//	printf("hit Enter key:");
-//	gets(junk);
-
+	cpu_counter();
 	for (y = -12; y <= 12; y++) {
 		for (x = -39; x <= 39; x++) {
 			ca = x * 0.0458;
@@ -33,8 +31,6 @@ main()
 		}
 		putchar('\n');
 	}
-	putstr("OK\n");
 	cpu_counter();
-//	putstr("hit Enter key:\n");
-//	gets(junk);
+	return 0;
 }

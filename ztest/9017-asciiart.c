@@ -5,6 +5,7 @@ main()
 	int f, i, x, y;
 	int c, d, a, b, q, s, t, p;
 
+	cpu_counter();
 	f = 50;
 	for (y = -12; y <= 12; y++) {
 		for (x = -39; x <= 39; x++) {
@@ -33,5 +34,6 @@ main()
 		}
 		putchar('\n');
 	}
+	cpu_counter();
 	return 0;
 }

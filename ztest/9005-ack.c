@@ -2,6 +2,8 @@
  *	ackerman
  */
 
+extern	void cpu_counter(void);
+
 int
 ack_c(int x, int y)
 {
@@ -40,6 +42,8 @@ int main(int argc, char *argv[])
 		return 5;
 	if(ack_i(4,0)!=13)
 		return 10;
+
+	cpu_counter();
 
 	return 0;
 }
