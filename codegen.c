@@ -245,6 +245,7 @@ static void gen_addr(Node *node){
     println("\tldaa #>_%s", node->var->name);
     return;
   case ND_DEREF:
+    println("; ND_DEREF %s %d",__FILE__,__LINE__);
     gen_expr(node->lhs);
     return;
   case ND_COMMA:
@@ -820,8 +821,8 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   if (!args)
     return;
   push_args2(args->next, first_pass,last_pushed_arg);
-  println("; push_args2 args=%d, %s %d",args!=NULL,__FILE__,__LINE__);
-  println("; push_args2 first_pass=%d, args->pass_by_stack=%d, %s %d",first_pass,args->pass_by_stack,__FILE__,__LINE__);
+//  println("; push_args2 args=%d, %s %d",args!=NULL,__FILE__,__LINE__);
+//  println("; push_args2 first_pass=%d, args->pass_by_stack=%d, %s %d",first_pass,args->pass_by_stack,__FILE__,__LINE__);
 
   if ((first_pass && !args->pass_by_stack) || (!first_pass && args->pass_by_stack))
     return;
@@ -842,7 +843,7 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     push_struct(args->ty);
     break;
   case TY_CHAR: {
-      println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
+//      println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
       if (args->pass_by_stack){
         push1();
         *last_pushed_arg = *args;
@@ -856,8 +857,8 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     }
     break;
   default: {
-      println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
-      println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
+//      println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
+//      println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
       if (args->pass_by_stack){
         push();
         *last_pushed_arg = *args;
@@ -1252,8 +1253,16 @@ static void gen_expr(Node *node) {
     return;
   }
   case ND_DEREF:
+    println("; ND_DEREF %s %d",__FILE__,__LINE__);
+    if (test_addr_x(node->lhs)){
+      int off = gen_addr_x(node->lhs,false);
+      println("\tldx %d,x",off);
+      load_x(node->ty,0);
+      return;
+    }
     gen_expr(node->lhs);
     load(node->ty);
+    println("; ND_DEREF end %s %d",__FILE__,__LINE__);
     return;
   case ND_ADDR:
     gen_addr(node->lhs);
@@ -2180,7 +2189,7 @@ static void gen_stmt(Node *node) {
 
 // Assign offsets to local variables.
 static void assign_lvar_offsets(Obj *prog) {
-  println("; assign_lvar_offsets %s %d", __FILE__, __LINE__);
+//  println("; assign_lvar_offsets %s %d", __FILE__, __LINE__);
   for (Obj *fn = prog; fn; fn = fn->next) {
     if (!fn->is_function)
       continue;
@@ -2226,8 +2235,8 @@ static void assign_lvar_offsets(Obj *prog) {
     for (Obj *var = fn->locals; var; var = var->next) {
       int skip_bp = 0;
       if (var->offset){
-        println("; 3. var->name=%s, var->offset=%d %s %d",
-	  var->name,var->offset,__FILE__,__LINE__);
+//        println("; 3. var->name=%s, var->offset=%d %s %d",
+//	  var->name,var->offset,__FILE__,__LINE__);
       }
       if (var->offset>0)
         continue;
@@ -2248,19 +2257,19 @@ static void assign_lvar_offsets(Obj *prog) {
       // https://github.com/hjl-tools/x86-psABI/wiki/x86-64-psABI-draft.pdf.
       int align = (var->ty->kind == TY_ARRAY && var->ty->size >= 16)
         ? MAX(16, var->align) : var->align;
-      println("; 4. var->name=%s, var->offset=%d,var->ty->size=%d, top=%d, %s %d",
-		      var->name,var->offset,var->ty->size,top,__FILE__,__LINE__);
+//      println("; 4. var->name=%s, var->offset=%d,var->ty->size=%d, top=%d, %s %d",
+//		      var->name,var->offset,var->ty->size,top,__FILE__,__LINE__);
       var->offset = top + skip_bp;
       top += var->ty->size + skip_bp;
       top = align_to(top, align);
-      println("; 4= var->name=%s, var->offset=%d,var->ty->size=%d, top=%d, %s %d",
-		      var->name,var->offset,var->ty->size,top,__FILE__,__LINE__);
-      println("; 4= next top=%d",top);
+//      println("; 4= var->name=%s, var->offset=%d,var->ty->size=%d, top=%d, %s %d",
+//		      var->name,var->offset,var->ty->size,top,__FILE__,__LINE__);
+//      println("; 4= next top=%d",top);
     }
     if (!fn->stack_size){ // no reg param
 	fn->stack_size = top;
     }
-    println("; fn->stack_size = %d", fn->stack_size);
+//    println("; fn->stack_size = %d", fn->stack_size);
     top += 2 + skiped_bp;		// skip return address
 
     // Assign offsets to pass-by-stack parameters.
@@ -2277,15 +2286,15 @@ static void assign_lvar_offsets(Obj *prog) {
       top = align_to(top, 8);
       var->offset = top;
       top += var->ty->size;
-      println("; 9. var->name=%s, var->offset=%d,var->ty->size=%d, %s %d",
-		      var->name,var->offset,var->ty->size,__FILE__,__LINE__);
+//      println("; 9. var->name=%s, var->offset=%d,var->ty->size=%d, %s %d",
+//		      var->name,var->offset,var->ty->size,__FILE__,__LINE__);
     }
-    println("; fn->stack_size = %d", fn->stack_size);
-    println(";");
+//    println("; fn->stack_size = %d", fn->stack_size);
+//    println(";");
 
 
   }
-  println("; assign_lvar_offsets end");
+//  println("; assign_lvar_offsets end");
 }
 
 static void emit_data(Obj *prog) {
@@ -2373,7 +2382,11 @@ static void emit_text(Obj *prog) {
     println("_%s:", fn->name);
     current_fn = fn;
     current_fn->function_no = count();
-
+    println("; fn->body->kind=%d",fn->body->kind);
+    if(fn->body->kind==ND_BLOCK && fn->body->body==NULL){	// empty function
+      println("\trts	; empty function");
+      return;
+    }
     // Prologue
     println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
 //    println("  push %%rbp");
