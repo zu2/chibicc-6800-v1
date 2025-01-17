@@ -259,6 +259,10 @@ static Node *new_vla_ptr(Obj *var, Token *tok) {
 Node *new_cast(Node *expr, Type *ty) {
   add_type(expr);
 
+//fprintf(stderr,"; new_cast %p %p\n",expr->ty,ty);
+  if(expr->ty==ty)
+    return expr;
+
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_CAST;
   node->tok = expr->tok;
@@ -2398,7 +2402,8 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
 
   // ptr + num
   if (lhs->ty->base && is_integer(rhs->ty)) {
-    rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
+    if (lhs->ty->base->size!=1)
+      rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
     return new_binary(ND_ADD, lhs, rhs, tok);
   }
   error_tok(tok, "invalid operands");
@@ -2436,7 +2441,10 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
 //    node->ty = ty_long;
     node->ty = ty_int;
-    return new_binary(ND_DIV, node, new_num(lhs->ty->base->size, tok), tok);
+    if (lhs->ty->base->size==1)
+      return node;
+    else
+      return new_binary(ND_DIV, node, new_num(lhs->ty->base->size, tok), tok);
   }
 
   error_tok(tok, "invalid operands");
@@ -3092,6 +3100,7 @@ static Node *primary(Token **rest, Token *tok) {
     return new_num(2, start);
   }
 
+#if	0
   if (equal(tok, "__builtin_compare_and_swap")) {
     Node *node = new_node(ND_CAS, tok);
     tok = skip(tok->next, "(");
@@ -3113,6 +3122,7 @@ static Node *primary(Token **rest, Token *tok) {
     *rest = skip(tok, ")");
     return node;
   }
+#endif
 
   if (tok->kind == TK_IDENT) {
     // Variable or enum constant
