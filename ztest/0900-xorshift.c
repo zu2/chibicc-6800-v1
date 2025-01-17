@@ -24,12 +24,15 @@ int main(int argc, char **argv)
 	int	i;
 
 	rnd = 0x12345678;
-	puthexl(rnd);putchar('\n');
 
 	for (i=0; i<1000; i++){
-		puthexl(xorshift32());putchar('\n');
-		print(rnd>>16);
-		print(rnd&0xffff);
+		xorshift32();
+		if (i==500 && rnd!=0x846802a6)
+			return 1;
 	}
+	if (rnd != 0xe1d909c5)
+	  return 2;
+
 	return 0;
 }
+
