@@ -769,8 +769,9 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   case TY_UNION:
     push_struct(args->ty);
     break;
-  case TY_CHAR: {
+  case TY_CHAR:
     println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
+    if (args->pass_by_stack){
       push1();
       *last_pushed_arg = *args;
     }
@@ -781,11 +782,11 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
       depth+=4;
     }
     break;
-  default: {
-      println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
-      println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
-      if (args->pass_by_stack)
-        push();
+  default:
+    println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
+    println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
+    if (args->pass_by_stack){
+      push();
       *last_pushed_arg = *args;
     }
     break;
