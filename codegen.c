@@ -1842,6 +1842,16 @@ static void gen_expr(Node *node) {
 	    println("\taslb");
 	    println("\trola");
 	    return;
+	  case 8:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    return;
 	  case 16:
             gen_expr(node->lhs);
             cast(node->lhs->ty, node->ty);
