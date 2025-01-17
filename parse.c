@@ -259,9 +259,11 @@ static Node *new_vla_ptr(Obj *var, Token *tok) {
 Node *new_cast(Node *expr, Type *ty) {
   add_type(expr);
 
-//fprintf(stderr,"; new_cast %p %p\n",expr->ty,ty);
   if(expr->ty==ty)
     return expr;
+  if(expr->ty->kind==ty->kind)
+    return expr;
+//fprintf(stderr,"; new_cast %p %p\n",expr->ty,ty);
 
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_CAST;

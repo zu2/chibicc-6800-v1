@@ -328,6 +328,32 @@ static int gen_addr_x(Node *node,bool save_d)
   return 0;
 }
 
+//
+// Can the address of this node be calculated using only the IX register?
+//
+static int test_addr_x(Node *node)
+{
+  //println("; enter test_addr_x offset=%d",node->var->offset); // XXX
+  switch (node->kind) {
+  case ND_VAR:
+    // Variable-length array, which is always local.
+    if (node->var->ty->kind == TY_VLA){
+      return (node->var->offset<=254);
+    }
+    // Local variable
+    if (node->var->is_local) {
+      return (node->var->offset <= 254);
+    }
+    // Function
+    if (node->ty->kind == TY_FUNC) {
+      return 1;
+    }
+    // maybe Global variable
+    return 1;
+  }
+  return 0;
+}
+
 // Load a value from where %rax is pointing to.
 static void load(Type *ty) {
   switch (ty->kind) {
@@ -496,6 +522,52 @@ static void store(Type *ty) {
   }else if (ty->size == 4){
     println("\tjsr __store32x   ; store @long to (0-3,x)");
 //  println("  mov %%eax, (%%rdi)");
+  }else
+    println("  mov %%rax, (%%rdi)");
+}
+
+static void store_x(Type *ty,int off) {
+  switch (ty->kind) {
+  case TY_STRUCT:
+  case TY_UNION:
+    println(";	store %s %d",__FILE__,__LINE__);
+    println("\tstab @tmp2+1");
+    println("\tstaa @tmp2");
+    println("\tstx  @tmp3");
+    for (int i = 0; i < ty->size; i++) {
+	println("\tldx @tmp2");
+	println("\tldab %d,x",i);
+	println("\tldx @tmp3");
+	println("\tstab %d,x",i);
+//      println("  mov %d(%%rax), %%r8b", i);
+//      println("  mov %%r8b, %d(%%rdi)", i);
+    }
+    return;
+  case TY_DOUBLE:
+    assert(ty->kind!=TY_DOUBLE);
+//  println("  movsd %%xmm0, (%%rdi)");
+    return;
+  case TY_LDOUBLE:
+    assert(ty->kind!=TY_LDOUBLE);
+//  println("  fstpt (%%rdi)");
+    return;
+  }
+
+  println("; store ty->size=%d, %s %d",ty->size,__FILE__,__LINE__);
+  if (ty->size == 1){
+    println("\tstab %d,x",off);
+  }else if (ty->size == 2){
+    println("\tstab %d,x",off+1);
+    println("\tstaa %d,x",off);
+  }else if (ty->size == 4){	// TY_LONG, TY_FLOAT
+    println("\tldab @long+3");
+    println("\tstab %d,x",off+3);
+    println("\tldab @long+2");
+    println("\tstab %d,x",off+2);
+    println("\tldab @long+1");
+    println("\tstab %d,x",off+1);
+    println("\tldab @long");
+    println("\tstab %d,x",off);
   }else
     println("  mov %%rax, (%%rdi)");
 }
@@ -753,27 +825,28 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 
   if ((first_pass && !args->pass_by_stack) || (!first_pass && args->pass_by_stack))
     return;
-  println("; push_args2 call gen_expr %s %d",__FILE__,__LINE__);
+//  println("; push_args2 call gen_expr %s %d",__FILE__,__LINE__);
   gen_expr(args);
-  println("; push_args2 end  gen_expr %s %d",__FILE__,__LINE__);
-  println("; push_args2 args->ty->kind=%d", args->ty->kind);
-  println("; push_args2 TY_CHAR=%d args->ty->kind=%d", TY_CHAR, args->ty->kind);
+//  println("; push_args2 end  gen_expr %s %d",__FILE__,__LINE__);
+//  println("; push_args2 args->ty->kind=%d", args->ty->kind);
+//  println("; push_args2 TY_CHAR=%d args->ty->kind=%d", TY_CHAR, args->ty->kind);
 
   switch (args->ty->kind) {
   case TY_DOUBLE:
   case TY_LDOUBLE: 
     assert(args->ty->kind!=TY_DOUBLE && args->ty->kind!=TY_LDOUBLE);
-    println("; push_args2 push XXX");
+//  println("; push_args2 push XXX");
     break;
   case TY_STRUCT:
   case TY_UNION:
     push_struct(args->ty);
     break;
-  case TY_CHAR:
-    println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
-    if (args->pass_by_stack){
-      push1();
-      *last_pushed_arg = *args;
+  case TY_CHAR: {
+      println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
+      if (args->pass_by_stack){
+        push1();
+        *last_pushed_arg = *args;
+      }
     }
     break;
   case TY_FLOAT:
@@ -782,12 +855,13 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
       depth+=4;
     }
     break;
-  default:
-    println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
-    println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
-    if (args->pass_by_stack){
-      push();
-      *last_pushed_arg = *args;
+  default: {
+      println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
+      println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
+      if (args->pass_by_stack){
+        push();
+        *last_pushed_arg = *args;
+      }
     }
     break;
   }
@@ -1036,6 +1110,20 @@ static void builtin_alloca(void) {
   //println("  mov %%rax, %d(%%rbp)", current_fn->alloca_bottom->offset);
 }
 
+static bool is_compare(Node *node)
+{
+    switch(node->kind){
+    case ND_EQ:
+    case ND_NE:
+    case ND_LT:
+    case ND_LE:
+    case ND_GT:
+    case ND_GE:
+      return 1;
+    }
+    return 0;
+}
+
 // Generate code for a given node.
 static void gen_expr(Node *node) {
   //println(";\t.loc gen_expr %d %d", node->tok->file->file_no, node->tok->line_no);
@@ -1054,28 +1142,9 @@ static void gen_expr(Node *node) {
 //    println("  movq %%rax, %%xmm0");
       return;
     }
-    case TY_DOUBLE: {
-      error_tok(node->tok, "gen_expr: double not implemented yet");
-      break;
-#if 0
-      ugen_exprnion { double f64; uint64_t u64; } u = { node->fval };
-      println("  mov $%lu, %%rax  # double %Lf", u.u64, node->fval);
-      println("  movq %%rax, %%xmm0");
-#endif
-      return;
-    }
+    case TY_DOUBLE:
     case TY_LDOUBLE: {
-      error_tok(node->tok, "gen_expr: long double not implemented yet");
-#if 0
-      union { long double f80; uint64_t u64[2]; } u;
-      memset(&u, 0, sizeof(u));
-      u.f80 = node->fval;
-      println("  mov $%lu, %%rax  # long double %Lf", u.u64[0], node->fval);
-      println("  mov %%rax, -16(%%rsp)");
-      println("  mov $%lu, %%rax", u.u64[1]);
-      println("  mov %%rax, -8(%%rsp)");
-      println("  fldt -16(%%rsp)");
-#endif
+      error_tok(node->tok, "gen_expr: double not implemented yet");
       return;
     }
     case TY_CHAR:
@@ -1190,6 +1259,12 @@ static void gen_expr(Node *node) {
     gen_addr(node->lhs);
     return;
   case ND_ASSIGN:
+    if (test_addr_x(node->lhs)){ 
+      gen_expr(node->rhs);
+      int off = gen_addr_x(node->lhs,true);
+      store_x(node->ty,off);
+      return;
+    }
     gen_addr(node->lhs);
     push();
     gen_expr(node->rhs);
@@ -1274,8 +1349,8 @@ static void gen_expr(Node *node) {
   case ND_COND: {
     int c = count();
     gen_expr(node->cond);
-    cmp_zero(node->cond->ty);
-//    println("  je .L.else.%d", c);
+    if (!is_compare(node->cond))
+      cmp_zero(node->cond->ty);
     println("\tjeq L_else_%d", c);
     gen_expr(node->then);
     println("\tjmp L_end_%d", c);
@@ -1367,7 +1442,10 @@ static void gen_expr(Node *node) {
     // if passed-by-register argument, last_pushed_arg!=NULL
     println(";↑stack_args=%d  gen_expr %s %d",stack_args,__FILE__,__LINE__);
     println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
-    int off = gen_addr_x(node->lhs,false);
+    if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
+      println("\tjsr _%s",node->lhs->var->name);
+    }else{
+      int off = gen_addr_x(node->lhs,false);
 #if 0
     println(";↑made by gen_expr %s %d",__FILE__,__LINE__);
     println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
@@ -1380,78 +1458,16 @@ static void gen_expr(Node *node) {
     println("\tins");
 #endif
 
-    int gp = 0; //, fp = 0;
-
-    // If the return type is a large struct/union, the caller passes
-    // a pointer to a buffer as if it were the first argument.
-    println("; last_pushed_arg:%p",last_pushed_arg);
-#if 0
-    if (node->ret_buffer) //  && node->ty->size > 16)
-      pop();			// only 1 arg.
-    for (Node *arg = node->args; arg; arg = arg->next) {
-      Type *ty = arg->ty;
-
-      switch (ty->kind) {
-#if 1
-      case TY_STRUCT:
-      case TY_UNION:
-      case TY_FLOAT:
-      case TY_LONG:
-	      break;
-      case TY_DOUBLE:
-      case TY_LDOUBLE:
-	      error_tok(node->tok, "gen_expr: double not implemented yet");
-	      break;
-#else
-      case TY_STRUCT:
-      case TY_UNION:
-        if (ty->size > 16)
-          continue;
-
-        bool fp1 = has_flonum1(ty);
-        bool fp2 = has_flonum2(ty);
-
-        if (fp + fp1 + fp2 < FP_MAX && gp + !fp1 + !fp2 < GP_MAX) {
-          if (fp1)
-            popf(fp++);
-          else
-            pop(argreg64[gp++]);
-
-          if (ty->size > 8) {
-            if (fp2)
-              popf(fp++);
-            else
-              pop(argreg64[gp++]);
-          }
-        }
-        break;
-      case TY_FLOAT:
-      case TY_DOUBLE:
-        if (fp < FP_MAX)
-          popf(fp++);
-        break;
-      case TY_LDOUBLE:
-        break;
-#endif
-      default:
-	// Even though there is only one register variable,
-	// I'll leave the original description here in case I change my mind.
-        if (gp < 1){
-            pop_arg(last_pushed_arg);
-//          pop(argreg64[gp++]);
-	    gp++;
-	}
-      }
+      // If the return type is a large struct/union, the caller passes
+      // a pointer to a buffer as if it were the first argument.
+      println("; last_pushed_arg:%p",last_pushed_arg);
+      println("\tjsr %d,x",off);
+      println(";↑made by gen_expr %s %d",__FILE__,__LINE__);
+      println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
+      println(";↑stack_args=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
     }
-#endif
-    println("\tjsr 0,x");
-    println(";↑made by gen_expr %s %d",__FILE__,__LINE__);
-    println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
-//    println("  mov %%rax, %%r10");
-//    println("  mov $%d, %%rax", fp);
-//    println("  call *%%r10");
-//    println("  add $%d, %%rsp", stack_args * 8);
-    println(";↑stack_args=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
+  
+    // Removes pushed arguments before calling a function
     while(stack_args--) {
 	    println("\tins");
 	    depth--;
@@ -1459,39 +1475,25 @@ static void gen_expr(Node *node) {
 //    depth -= stack_args;
     println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
 
-// It looks like the most significant 48 or 56 bits in RAX may
-    // contain garbage if a function return type is short or bool/char,
-    // respectively. We clear the upper bits here.
+    // If the return value is a type shorter than an int,
+    // the upper bytes contain garbage, so we correct it.
     switch (node->ty->kind) {
     case TY_BOOL:
       println("\tclra");
-//    println("  movzx %%al, %%eax");
       return;
     case TY_CHAR:
-      if (node->ty->is_unsigned){
-	  println("\tclra");
-//        println("  movzbl %%al, %%eax");
-      }else{
-	  println("\tclra");
+      println("\tclra");
+      if (!node->ty->is_unsigned){
 	  println("\tasrb");
 	  println("\trolb");
 	  println("\tsbca #0");
-//        println("  movsbl %%al, %%eax");
       }
       return;
-#if 0
-    case TY_SHORT:
-      if (node->ty->is_unsigned)
-        println("  movzwl %%ax, %%eax");
-      else
-        println("  movswl %%ax, %%eax");
-      return;
-#endif
     }
 
     // If the return type is a small struct, a value is returned
     // using up to two registers.
-    // MC6800: all struct/union not passed by register
+    // MC6800: all struct/union not passed by register, so ignore it.
 #if 0
     if (node->ret_buffer && node->ty->size <= 16) {
       copy_ret_buffer(node->ret_buffer);
@@ -1500,56 +1502,26 @@ static void gen_expr(Node *node) {
 #endif
 
     return;
-  }
+  } // ND_FUNCALL
   case ND_LABEL_VAL:
     println("\tldab #<%s",node->unique_label);
     println("\tldaa #>%s",node->unique_label);
 //  println("  lea %s(%%rip), %%rax", node->unique_label);
     return;
 #if	0
-  // __builtin_compare_and_swap
-  case ND_CAS: {
-    gen_expr(node->cas_addr);
-    push();
-    gen_expr(node->cas_new);
-    push();
-    gen_expr(node->cas_old);
-    println("  mov %%rax, %%r8");
-    load(node->cas_old->ty->base);
-    pop(); // new
-    pop(); // addr
-
-    int sz = node->cas_addr->ty->base->size;
-    println("  lock cmpxchg %s, (%%rdi)", reg_dx(sz));
-    println("  sete %%cl");
-    println("  je 1f");
-    println("  mov %s, (%%r8)", reg_ax(sz));
-    println("1:");
-    println("  movzbl %%cl, %%eax");
-    return;
-  }
-  case ND_EXCH: {
-    gen_expr(node->lhs);
-    push();
-    gen_expr(node->rhs);
-    pop();
-
-    int sz = node->lhs->ty->base->size;
-    println("  xchg %s, (%%rdi)", reg_ax(sz));
-    return;
-  }
+  case ND_CAS:
+  case ND_EXCH:
+    assert(0);
 #endif
   }
-
+  // Above is a unary operator
+  //
+  // Below is a binary operator
   switch (node->lhs->ty->kind) {
   case TY_FLOAT: {
     gen_expr(node->rhs);	// xmm1
     pushf();
     gen_expr(node->lhs);	// xmm0
-//  popf(1);
-
-//    char *sz = (node->lhs->ty->kind == TY_FLOAT) ? "ss" : "sd";
-
     switch (node->kind) {
     case ND_ADD:
       println("\tjsr __addf32tos	; @long += TOS");
@@ -1628,50 +1600,10 @@ static void gen_expr(Node *node) {
     }
 
     error_tok(node->tok, "invalid expression");
-  }
-  case TY_DOUBLE: {
-    error_tok(node->tok, "double not implemented");
-  }
+  } // TY_FLOAT
+  case TY_DOUBLE:
   case TY_LDOUBLE: {
-    gen_expr(node->lhs);
-    gen_expr(node->rhs);
-
-    switch (node->kind) {
-    case ND_ADD:
-      println("  faddp");
-      return;
-    case ND_SUB:
-      println("  fsubrp");
-      return;
-    case ND_MUL:
-      println("  fmulp");
-      return;
-    case ND_DIV:
-      println("  fdivrp");
-      return;
-    case ND_EQ:
-    case ND_NE:
-    case ND_LT:
-    case ND_LE:
-    case ND_GT:
-    case ND_GE:
-      println("  fcomip");
-      println("  fstp %%st(0)");
-
-      if (node->kind == ND_EQ)
-        println("  sete %%al");
-      else if (node->kind == ND_NE)
-        println("  setne %%al");
-      else if (node->kind == ND_LT)
-        println("  seta %%al");
-      else
-        println("  setae %%al");
-
-      println("  movzb %%al, %%rax");
-      return;
-    }
-
-    error_tok(node->tok, "invalid expression");
+    error_tok(node->tok, "double not implemented");
   }
   case TY_LONG: {
     println("; call gen_expr(node->rhs) %s %d",__FILE__,__LINE__);
@@ -1730,12 +1662,12 @@ static void gen_expr(Node *node) {
 //    println("  xor %s, %s", di, ax);
       depth -= 4;
       return;
-  case ND_EQ:
-  case ND_NE:
-  case ND_LT:
-  case ND_LE:
-  case ND_GT:
-  case ND_GE:
+    case ND_EQ:
+    case ND_NE:
+    case ND_LT:
+    case ND_LE:
+    case ND_GT:
+    case ND_GE:
       // Since push in the order is rhs -> lhs, the conditions are reversed.
       // Should I change the name?
       if (node->kind == ND_EQ) {
@@ -1799,35 +1731,49 @@ static void gen_expr(Node *node) {
       return;
     }
     error_tok(node->tok, "TY_LONG: invalid expression");
+  } // TY_LONG
   }
-  }
-  println("; call gen_expr(node->rhs) %s %d",__FILE__,__LINE__);
-  gen_expr(node->rhs);
-  cast(node->rhs->ty, node->ty);
-  push();
-  println("; call gen_expr(node->lhs) %s %d",__FILE__,__LINE__);
-  gen_expr(node->lhs);
-  cast(node->lhs->ty, node->ty);
-  println("; end call");
-//  pop("%rdi");
-
-#if 0
-//  char *ax, *di, *dx;
-
-//  assert(node->lhs->ty->kind != TY_LONG);
-  if (node->lhs->ty->kind == TY_LONG || node->lhs->ty->base) {
-    ax = "%rax";
-    di = "%rdi";
-    dx = "%rdx";
-  } else {
-    ax = "%eax";
-    di = "%edi";
-    dx = "%edx";
-  }
-#endif
-
+  // The following is a binary operator, length less than or equal to an int
   switch (node->kind) {
   case ND_ADD:
+    if (node->lhs->kind==ND_NUM)
+      println("; ND_ADD node->lhs->kind=ND_NUM");
+    if (node->rhs->kind==ND_NUM)
+      println("; ND_ADD node->rhs->kind=ND_NUM");
+    if (node->lhs->kind!=ND_NUM && node->rhs->kind==ND_NUM){
+      println("; swap lhs<->rhs");
+      Node *tmp;
+      tmp = node->lhs;
+      node->lhs = node->rhs;
+      node->rhs = tmp;
+    }
+    if (node->lhs->ty->kind !=  node->ty->kind){
+      println("; node->lhs->ty(%d) != node->ty(%d)",node->lhs->ty->kind,node->ty->kind);
+    }
+    if (node->lhs->ty->kind ==  node->ty->kind){
+      switch(node->lhs->kind){
+      case ND_NUM: {
+        switch (node->lhs->ty->kind) {
+	case TY_CHAR:
+        case TY_INT:
+          gen_expr(node->rhs);
+          cast(node->rhs->ty, node->ty);
+          println("\taddb #<%u", (uint16_t)node->lhs->val);
+          println("\tadca #>%u", (uint16_t)node->lhs->val);
+	  return;
+	default:
+	  println("; ND_ADD node->lhs->ty->kind not TY_CHAR/TY_INT");
+        }
+      default:
+        println("; ND_ADD node->lhs->kind not ND_NUM");
+      }
+      }
+    }
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
 //  println("  add %s, %s", di, ax);
     println("\ttsx");
     println("\taddb 1,x");
@@ -1837,6 +1783,26 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_SUB:
+    if (node->rhs->ty ==  node->ty){
+      switch(node->rhs->kind){
+      case ND_NUM: {
+        switch (node->rhs->ty->kind) {
+	case TY_CHAR:
+        case TY_INT:
+          gen_expr(node->lhs);
+          cast(node->lhs->ty, node->ty);
+          println("\tsubb #<%u", (uint16_t)node->rhs->val);
+          println("\tsbca #>%u", (uint16_t)node->rhs->val);
+	  return;
+        }
+      }
+      }
+    }
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
 //    println("  sub %s, %s", di, ax);
     println("\ttsx");
     println("\tsubb 1,x");
@@ -1846,6 +1812,58 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_MUL:
+    if (node->lhs->ty ==  node->ty){
+      switch(node->rhs->kind){
+      case ND_NUM:
+        switch (node->rhs->ty->kind) {
+        case TY_INT:
+	  switch(node->rhs->val){
+	  case 2:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\taslb");
+	    println("\trola");
+	    return;
+	  case 3:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\tstab @tmp1+1");
+	    println("\tstaa @tmp1");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taddb @tmp1+1");
+	    println("\tadca @tmp1");
+	    return;
+	  case 4:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    return;
+	  case 16:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    return;
+          }
+        }
+	break;
+      }
+    }
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
 //  println("  imul %s, %s", di, ax);
     println("\tjsr __mul16x16");
     println("\tins");
@@ -1853,6 +1871,11 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_DIV:
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
     if (node->ty->is_unsigned) {
       println("\tjsr __div16x16u");
     }else{
@@ -1863,6 +1886,11 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_MOD:
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
     if (node->ty->is_unsigned) {
       println("\tjsr __rem16x16u");
     }else{
@@ -1873,6 +1901,11 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_BITAND:
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
 //    println("  and %s, %s", di, ax);
     println("\ttsx");
     println("\tandb 1,x");
@@ -1882,6 +1915,11 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_BITOR:
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
 //    println("  or %s, %s", di, ax);
     println("\ttsx");
     println("\torab 1,x");
@@ -1891,6 +1929,11 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_BITXOR:
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
 //    println("  xor %s, %s", di, ax);
     println("\ttsx");
     println("\teorb 1,x");
@@ -1905,12 +1948,26 @@ static void gen_expr(Node *node) {
   case ND_LE:
   case ND_GT:
   case ND_GE:
-    println("\ttsx");
-    println("\tsubb 1,x");
-    println("\tsbca 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    if (node->rhs->ty ==  node->ty
+    &&  node->rhs->kind == ND_NUM
+    &&  node->rhs->ty->kind == TY_INT){
+      gen_expr(node->lhs);
+      cast(node->lhs->ty, node->ty);
+      println("\tsubb #<%u", (uint16_t)node->rhs->val);
+      println("\tsbca #>%u", (uint16_t)node->rhs->val);
+    }else{
+      gen_expr(node->rhs);
+      cast(node->rhs->ty, node->ty);
+      push();
+      gen_expr(node->lhs);
+      cast(node->lhs->ty, node->ty);
+      println("\ttsx");
+      println("\tsubb 1,x");
+      println("\tsbca 0,x");
+      println("\tins");
+      println("\tins");
+      depth -= 2;
+    }
     if (node->kind == ND_EQ) {
       println("\tjsr __eq16");
     } else if (node->kind == ND_NE) {
@@ -1939,6 +1996,11 @@ static void gen_expr(Node *node) {
 //    println("  movzb %%al, %%rax");
     return;
   case ND_SHL:
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
     println("\tjsr __shl16");
     println("\tins");
     println("\tins");
@@ -1947,6 +2009,11 @@ static void gen_expr(Node *node) {
 //    println("  shl %%cl, %s", ax);
     return;
   case ND_SHR:
+    gen_expr(node->rhs);
+    cast(node->rhs->ty, node->ty);
+    push();
+    gen_expr(node->lhs);
+    cast(node->lhs->ty, node->ty);
 //    println("  mov %%rdi, %%rcx");
     if (node->lhs->ty->is_unsigned){
       println("\tjsr __shr16u");
@@ -1973,7 +2040,8 @@ static void gen_stmt(Node *node) {
   case ND_IF: {
     int c = count();
     gen_expr(node->cond);
-    cmp_zero(node->cond->ty);
+    if (!is_compare(node->cond))
+      cmp_zero(node->cond->ty);
     println("\tjeq L_else_%d", c);
     gen_stmt(node->then);
     println("\tjmp L_end_%d", c);
@@ -1990,7 +2058,8 @@ static void gen_stmt(Node *node) {
     println("L_begin_%d:", c);
     if (node->cond) {
       gen_expr(node->cond);
-      cmp_zero(node->cond->ty);
+      if (!is_compare(node->cond))
+        cmp_zero(node->cond->ty);
       println("\tjeq %s", node->brk_label);
     }
     gen_stmt(node->then);
@@ -2007,7 +2076,8 @@ static void gen_stmt(Node *node) {
     gen_stmt(node->then);
     println("%s:", node->cont_label);
     gen_expr(node->cond);
-    cmp_zero(node->cond->ty);
+    if (!is_compare(node->cond))
+      cmp_zero(node->cond->ty);
     println("\tjne L_begin_%d", c);
     println("%s:", node->brk_label);
     return;
@@ -2274,74 +2344,6 @@ static void emit_data(Obj *prog) {
     println("  .zero %d", var->ty->size);
   }
 }
-
-#if	0
-static void store_fp(int r, int offset, int sz) {
-  switch (sz) {
-  case 4:
-    println("  movss %%xmm%d, %d(%%rbp)", r, offset);
-    return;
-  case 8:
-    println("  movsd %%xmm%d, %d(%%rbp)", r, offset);
-    return;
-  }
-  unreachable();
-}
-#endif
-
-#if	0
-static void store_gp(int r, int offset, int sz) {
-  println("; store_gp r=%d, offset=%d, sz=%d, %s %d",r,offset,sz,__FILE__,__LINE__);
-  return;
-#if 1
-  switch (sz) {
-  case 2:
-    println("; store AccA,B to @bp[offset]");
-    println("\tpshb");
-    println("\tpsha");
-    println("\tldab @bp+1");
-    println("\tldaa @bp");
-    println("\taddb #<%d",offset);
-    println("\tadca #>%d",offset);
-    println("\tpshb");
-    println("\tpsha");
-    println("\ttsx");
-    println("\tldx 0,x");
-    println("\tins");
-    println("\tins");
-    println("\tpula");
-    println("\tpulb");
-    println("\tstab 1,x");
-    println("\tstaa 0,x");
-    return;
-  default:
-    println("; store_gp %s %d XXX",__FILE__,__LINE__);
-    return;
-  }
-#else
-  switch (sz) {
-  case 1:
-    println("  mov %s, %d(%%rbp)", argreg8[r], offset);
-    return;
-  case 2:
-    println("  mov %s, %d(%%rbp)", argreg16[r], offset);
-    return;
-  case 4:
-    println("  mov %s, %d(%%rbp)", argreg32[r], offset);
-    return;
-  case 8:
-    println("  mov %s, %d(%%rbp)", argreg64[r], offset);
-    return;
-  default:
-    for (int i = 0; i < sz; i++) {
-      println("  mov %s, %d(%%rbp)", argreg8[r], offset + i);
-      println("  shr $8, %s", argreg64[r]);
-    }
-    return;
-  }
-#endif
-}
-#endif
 
 static void emit_text(Obj *prog) {
   for (Obj *fn = prog; fn; fn = fn->next) {
