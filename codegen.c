@@ -1,8 +1,5 @@
 #include "chibicc.h"
 
-#define GP_MAX 1
-#define FP_MAX 0
-
 static FILE *output_file;
 static int depth;
 //static char *argreg8[] = {"%dil", "%sil", "%dl", "%cl", "%r8b", "%r9b"};
@@ -110,6 +107,16 @@ static void pop_arg(Node *args)
   }
 }
 
+static void tfr_dx()
+{
+  println("\tpshb");
+  println("\tpsha");
+  println("\ttsx");
+  println("\tldx 0,x");
+  println("\tins");
+  println("\tins");
+}
+
 
 #if	0
 static char *reg_dx(int sz) {
@@ -135,8 +142,9 @@ static char *reg_ax(int sz) {
 
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
-static void gen_addr(Node *node) {
-  //println("; enter gen_addr offset=%d",node->var->offset); // XXX
+static void gen_addr(Node *node){
+  if (node && node->var)
+    println("; enter gen_addr offset=%d",node->var->offset); // XXX
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
@@ -274,6 +282,52 @@ static void gen_addr(Node *node) {
   error_tok(node->tok, "not an lvalue");
 }
 
+// Compute the absolute address of a given node in IX.
+// It's an error if a given node does not reside in memory.
+static int gen_addr_x(Node *node,bool save_d)
+{
+  //println("; enter gen_addr_x offset=%d",node->var->offset); // XXX
+  switch (node->kind) {
+  case ND_VAR:
+    // Variable-length array, which is always local.
+    if (node->var->ty->kind == TY_VLA){
+      if (node->var->offset<=254) {
+        println("\tldx @bp");
+        println("\tldx %d,x	; gen_addr_x():TY_LDA ",node->var->offset);
+        println(";  mov %d(%%rbp), %%rax", node->var->offset);
+        return 0;
+      }
+    }
+    // Local variable
+    if (node->var->is_local) {
+      if (node->var->offset <= 254){
+        if(node->var->ty && node->var->ty->name && node->var->name){
+          println("; gen_addr_x var->name=%s, size=%d, offset=%d, %s %d", node->var->name, node->var->ty->size, node->var->offset, __FILE__, __LINE__ ); // XXX
+        }
+	println("\tldx @bp");
+	return node->var->offset;
+      }
+    }
+    // Function
+    if (node->ty->kind == TY_FUNC) {
+      println("\tldx #_%s",node->var->name);
+      return 0;
+    }
+    // maybe Global variable
+    println("\tldx #_%s",node->var->name);
+    return 0;
+    break;
+  }
+  // fallback to gen_addr()
+  if (save_d)
+    push();
+  gen_addr(node);
+  tfr_dx();
+  if (save_d)
+    pop();
+  return 0;
+}
+
 // Load a value from where %rax is pointing to.
 static void load(Type *ty) {
   switch (ty->kind) {
@@ -328,6 +382,73 @@ static void load(Type *ty) {
     println("  mov (%%rax), %%rax");
 }
 
+static void load_x(Type *ty,int off) {
+  switch (ty->kind) {
+  case TY_ARRAY:
+  case TY_STRUCT:
+  case TY_UNION:
+  case TY_FUNC:
+  case TY_VLA:
+    // If it is an array, do not attempt to load a value to the
+    // register because in general we can't load an entire array to a
+    // register. As a result, the result of an evaluation of an array
+    // becomes not the array itself but the address of the array.
+    // This is where "array is automatically converted to a pointer to
+    // the first element of the array in C" occurs.
+    return;
+  case TY_LONG:
+  case TY_FLOAT:
+    println("\tldab %d,x",off+3);
+    println("\tstab @long+3");
+    println("\tldab %d,x",off+2);
+    println("\tstab @long+2");
+    println("\tldab %d,x",off+1);
+    println("\tstab @long+1");
+    println("\tldab %d,x",off);
+    println("\tstab @long");
+//  println("  movss (%%rax), %%xmm0");
+    return;
+  case TY_DOUBLE:
+    assert(ty->kind!=TY_DOUBLE);
+//  println("  movsd (%%rax), %%xmm0");
+    return;
+  case TY_LDOUBLE:
+    assert(ty->kind!=TY_LDOUBLE);
+//  println("  fldt (%%rax)");
+    return;
+  }
+
+// char *insn = ty->is_unsigned ? "movz" : "movs";
+
+  // When we load a char or a short value to a register, we always
+  // extend them to the size of int, so we can assume the lower half of
+  // a register always contains a valid value. The upper half of a
+  // register for char, short and int may contain garbage. When we load
+  // a long value to a register, it simply occupies the entire register.
+//  println("; load ty->name=%.*s, size=%d, %s %d", ty->name->len, ty->name->loc, ty->size, __FILE__, __LINE__ ); // XXX
+  if (ty->size == 1){
+    println("\tclra");
+    println("\tldab %d,x",off);
+    if (!ty->is_unsigned){
+      println("\tasrb");
+      println("\trolb");
+      println("\tsbca #0");
+    }
+  }else if (ty->size == 2){
+    println("\tldab %d,x",off+1);
+    println("\tldaa %d,x",off);
+  }else if (ty->size == 4){
+    println("\tldab %d,x",off+3);
+    println("\tstab @long+3");
+    println("\tldab %d,x",off+2);
+    println("\tstab @long+2");
+    println("\tldab %d,x",off+1);
+    println("\tstab @long+1");
+    println("\tldab %d,x",off);
+    println("\tstab @long");
+  }else
+    println("  mov (%%rax), %%rax");
+}
 // Store D to an address that the stack top is pointing to.
 static void store(Type *ty) {
   println("\ttsx");
@@ -648,16 +769,6 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   case TY_UNION:
     push_struct(args->ty);
     break;
-#if 0
-  case TY_DOUBLE:
-    pushf();
-    break;
-  case TY_LDOUBLE:
-    println("  sub $16, %%rsp");
-    println("  fstpt (%%rsp)");
-    depth += 2;
-    break;
-#endif
   case TY_CHAR: {
     println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
       push1();
@@ -671,8 +782,10 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     }
     break;
   default: {
+      println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
       println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
-      push();
+      if (args->pass_by_stack)
+        push();
       *last_pushed_arg = *args;
     }
     break;
@@ -682,22 +795,12 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 // Load function call arguments. Arguments are already evaluated and
 // stored to the stack as local variables. What we need to do in this
 // function is to load them to registers or push them to the stack as
-// specified by the x86-64 psABI. Here is what the spec says:
+// specified by the chibicc-6800 API.
 //
-// - Up to 6 arguments of integral type are passed using RDI, RSI,
-//   RDX, RCX, R8 and R9.
+// - Only 1 argument passed by AccAB: (1byte or 2byte)
+// - No alignment
+// - Other arguments are pushed onto the stack from right to left.
 //
-// - Up to 8 arguments of floating-point type are passed using XMM0 to
-//   XMM7.
-//
-// - If all registers of an appropriate type are already used, push an
-//   argument to the stack in the right-to-left order.
-//
-// - Each argument passed on the stack takes 8 bytes, and the end of
-//   the argument area must be aligned to a 16 byte boundary.
-//
-// - If a function is variadic, set the number of floating-point type
-//   arguments to RAX.
 static int push_args(Node *node, Node *last_pushed_arg) {
   int stack = 0, gp = 0; //, fp = 0;
 
@@ -717,59 +820,22 @@ static int push_args(Node *node, Node *last_pushed_arg) {
     case TY_UNION:
     case TY_FLOAT:
     case TY_LONG:
-        arg->pass_by_stack = true;
+        arg->pass_by_stack = true; // Arguments bigger than 2 bytes are pushed onto the stack
         stack += ty->size;
 	break;
     case TY_DOUBLE:
     case TY_LDOUBLE:
 	error_tok(node->tok, "gen_expr: double not implemented yet");
 	break;
-#if 0
-    case TY_STRUCT:
-    case TY_UNION:
-      if (ty->size > 16) {
-        arg->pass_by_stack = true;
-        stack += align_to(ty->size, 8) / 8;
-      } else {
-        bool fp1 = has_flonum1(ty);
-        bool fp2 = has_flonum2(ty);
-
-        if (fp + fp1 + fp2 < FP_MAX && gp + !fp1 + !fp2 < GP_MAX) {
-          fp = fp + fp1 + fp2;
-          gp = gp + !fp1 + !fp2;
-        } else {
-          arg->pass_by_stack = true;
-          stack += align_to(ty->size, 8) / 8;
-        }
-      }
-      break;
-    case TY_FLOAT:
-    case TY_DOUBLE:
-      if (fp++ >= FP_MAX) {
-        arg->pass_by_stack = true;
-        stack++;
-      }
-      break;
-    case TY_LDOUBLE:
-      arg->pass_by_stack = true;
-      stack += 2;
-      break;
-#endif
     default:
-      println("; push_args gp=%d, GP_MAX=%d, %s %d",gp,GP_MAX,__FILE__,__LINE__);
-      if (gp++ >= GP_MAX) {	// all argument pass via stack
+      println("; push_args gp=%d, %s %d",gp,__FILE__,__LINE__);
+      if (gp++ >= 1) {
         arg->pass_by_stack = true;
         stack+=arg->ty->size;
-      }
+      }else
+	arg->pass_by_stack = false;
     }
   }
-#if 0
-  if ((depth + stack) % 2 == 1) {
-    println("  sub $8, %%rsp");
-    depth++;
-    stack++;
-  }
-#endif
   push_args2(node->args, true,   last_pushed_arg);
   push_args2(node->args, false,  last_pushed_arg);
 
@@ -781,7 +847,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
     println("\tldaa @bp");
     println("\taddb #<%d",node->ret_buffer->offset);
     println("\tadca #>%d",node->ret_buffer->offset);
-//    println("  lea %d(%%rbp), %%rax", node->ret_buffer->offset);
+//  println("  lea %d(%%rbp), %%rax", node->ret_buffer->offset);
     push();
   }
 
@@ -991,7 +1057,7 @@ static void gen_expr(Node *node) {
       error_tok(node->tok, "gen_expr: double not implemented yet");
       break;
 #if 0
-      union { double f64; uint64_t u64; } u = { node->fval };
+      ugen_exprnion { double f64; uint64_t u64; } u = { node->fval };
       println("  mov $%lu, %%rax  # double %Lf", u.u64, node->fval);
       println("  movq %%rax, %%xmm0");
 #endif
@@ -1064,9 +1130,26 @@ static void gen_expr(Node *node) {
     println("\tsbca #0");
 //  println("  neg %%rax");
     return;
+#if 1
+  case ND_VAR:
+    switch (node->ty->kind) {
+    case TY_ARRAY:
+    case TY_STRUCT:
+    case TY_UNION:
+    case TY_FUNC:
+    case TY_VLA:
+      println("; gen_expr ND_VAR %s %d",__FILE__,__LINE__);
+      gen_addr(node);
+      load(node->ty);
+      return;
+    }
+    int off = gen_addr_x(node,false);
+    load_x(node->ty,off);
+#else
   case ND_VAR:
     gen_addr(node);
     load(node->ty);
+#endif
     return;
   case ND_MEMBER: {
     gen_addr(node);
@@ -1280,9 +1363,11 @@ static void gen_expr(Node *node) {
 
     Node *last_pushed_arg = calloc(1,sizeof(Node));
     int stack_args = push_args(node, last_pushed_arg);
+    // if passed-by-register argument, last_pushed_arg!=NULL
     println(";↑stack_args=%d  gen_expr %s %d",stack_args,__FILE__,__LINE__);
     println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
-    gen_expr(node->lhs);
+    int off = gen_addr_x(node->lhs,false);
+#if 0
     println(";↑made by gen_expr %s %d",__FILE__,__LINE__);
     println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
     // function address -> IX
@@ -1292,14 +1377,16 @@ static void gen_expr(Node *node) {
     println("\tldx 0,x");
     println("\tins");
     println("\tins");
+#endif
 
     int gp = 0; //, fp = 0;
 
     // If the return type is a large struct/union, the caller passes
     // a pointer to a buffer as if it were the first argument.
+    println("; last_pushed_arg:%p",last_pushed_arg);
+#if 0
     if (node->ret_buffer) //  && node->ty->size > 16)
       pop();			// only 1 arg.
-
     for (Node *arg = node->args; arg; arg = arg->next) {
       Type *ty = arg->ty;
 
@@ -1348,13 +1435,14 @@ static void gen_expr(Node *node) {
       default:
 	// Even though there is only one register variable,
 	// I'll leave the original description here in case I change my mind.
-        if (gp < GP_MAX){
+        if (gp < 1){
             pop_arg(last_pushed_arg);
 //          pop(argreg64[gp++]);
 	    gp++;
 	}
       }
     }
+#endif
     println("\tjsr 0,x");
     println(";↑made by gen_expr %s %d",__FILE__,__LINE__);
     println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
@@ -2043,7 +2131,7 @@ static void assign_lvar_offsets(Obj *prog) {
 	assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
 	break;
       default:
-        if (gp++ < GP_MAX){
+        if (gp++ < 1){
 	  var->offset = -1;
 	  var->reg_param = 1;	// reg param mark
           continue;
@@ -2105,38 +2193,6 @@ static void assign_lvar_offsets(Obj *prog) {
       if (var->offset)
         continue;
 
-#if 0
-      switch (ty->kind) {
-      case TY_STRUCT:
-      case TY_UNION:
-      case TY_FLOAT:
-      case TY_DOUBLE:
-      case TY_LDOUBLE:
-	      break;
-      case TY_STRUCT:
-      case TY_UNION:
-        if (ty->size <= 16) {
-          bool fp1 = has_flonum(ty, 0, 8, 0);
-          bool fp2 = has_flonum(ty, 8, 16, 8);
-          if (fp + fp1 + fp2 < FP_MAX && gp + !fp1 + !fp2 < GP_MAX) {
-            fp = fp + fp1 + fp2;
-            gp = gp + !fp1 + !fp2;
-            continue;
-          }
-        }
-        break;
-      case TY_FLOAT:
-      case TY_DOUBLE:
-        if (fp++ < FP_MAX)
-          continue;
-        break;
-      case TY_LDOUBLE:
-        break;
-      default:
-        if (gp++ < GP_MAX)	// skip pass by register argument
-          continue;
-      }
-#endif
       top = align_to(top, 8);
       var->offset = top;
       top += var->ty->size;
