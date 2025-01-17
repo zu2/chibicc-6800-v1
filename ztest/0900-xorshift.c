@@ -33,6 +33,7 @@ int main(int argc, char **argv)
 	if (rnd != 0xe1d909c5)
 	  return 2;
 
+	cpu_counter();
 	return 0;
 }
 
