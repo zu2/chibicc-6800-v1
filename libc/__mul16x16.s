@@ -6,10 +6,13 @@
 __mul16x16:
 	stab @tmp1+1
 	staa @tmp1
+	oraa @tmp1+1
+	beq __mul16x16_zero
 	tsx
 	tst 2,x		; TOS < 256 ?
 	bne  __mul16x16_10
 	ldab 3,x
+	beq __mul16x16_zero
 	stab 2,x
 	clr 3,x
 	ldab #8
@@ -33,4 +36,8 @@ __mul16x16_50:
 __mul16x16_90:
 	dec @tmp2
 	bne __mul16x16_50
+	rts
+__mul16x16_zero:
+	clrb
+	clra
 	rts
