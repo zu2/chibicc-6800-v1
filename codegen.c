@@ -2,17 +2,13 @@
 
 static FILE *output_file;
 static int depth;
-//static char *argreg8[] = {"%dil", "%sil", "%dl", "%cl", "%r8b", "%r9b"};
-//static char *argreg16[] = {"%di", "%si", "%dx", "%cx", "%r8w", "%r9w"};
-//static char *argreg32[] = {"%edi", "%esi", "%edx", "%ecx", "%r8d", "%r9d"};
-//static char *argreg64[] = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
 static Obj *current_fn;
 
 static void gen_expr(Node *node);
 static void gen_stmt(Node *node);
 
 __attribute__((format(printf, 1, 2)))
-static void println(char *fmt, ...) {
+void println(char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   vfprintf(output_file, fmt, ap);
@@ -880,13 +876,13 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 static int push_args(Node *node, Node *last_pushed_arg) {
   int stack = 0, gp = 0; //, fp = 0;
 
-  println("; push_args %s %d",__FILE__,__LINE__);
+//println("; push_args %s %d",__FILE__,__LINE__);
   // If the return type is a large struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument.
   if (node->ret_buffer)  // && node->ty->size > 16)
     gp++;
 
-  println("; push_args gp=%d %s %d",gp,__FILE__,__LINE__);
+//println("; push_args gp=%d %s %d",gp,__FILE__,__LINE__);
   // Load as many arguments to the registers as possible.
   for (Node *arg = node->args; arg; arg = arg->next) {
     Type *ty = arg->ty;
@@ -904,7 +900,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
 	error_tok(node->tok, "gen_expr: double not implemented yet");
 	break;
     default:
-      println("; push_args gp=%d, %s %d",gp,__FILE__,__LINE__);
+//    println("; push_args gp=%d, %s %d",gp,__FILE__,__LINE__);
       if (gp++ >= 1) {
         arg->pass_by_stack = true;
         stack+=arg->ty->size;
@@ -1127,6 +1123,8 @@ static bool is_compare(Node *node)
 
 // Generate code for a given node.
 static void gen_expr(Node *node) {
+  node = optimize_expr(node);
+
   //println(";\t.loc gen_expr %d %d", node->tok->file->file_no, node->tok->line_no);
   println("; gen_expr() node->kind=%d, node->ty->kind=%d",node->kind,(node->ty)?node->ty->kind:0);
   switch (node->kind) {
@@ -1157,9 +1155,13 @@ static void gen_expr(Node *node) {
       return;
     case TY_LONG:
 //      int c = count();
-      println("\tjsr __load32i		; load 32bit immediate #%lu",node->val);
-      println("\t.word %u",(uint16_t)((node->val>>16)&0x0ffff));
-      println("\t.word %u",(uint16_t)(node->val&0x0ffff));
+      println("\tldx #%u",(uint16_t)((node->val>>16)&0x0ffff));
+      println("\tstx @long");
+      println("\tldx #%u",(uint16_t)(node->val&0x0ffff));
+      println("\tstx @long+2");
+//    println("\tjsr __load32i		; load 32bit immediate #%lu",node->val);
+//    println("\t.word %u",(uint16_t)((node->val>>16)&0x0ffff));
+//    println("\t.word %u",(uint16_t)(node->val&0x0ffff));
       return;
     }
     error_tok(node->tok, "gen_expr: not implemented yet token");
@@ -1559,34 +1561,25 @@ static void gen_expr(Node *node) {
     case ND_GT:
     case ND_GE: {
       println("\tjsr __cmpf32tos	; @long cmp  TOS");
-//    println("  ucomi%s %%xmm0, %%xmm1", sz);
       if (node->kind == ND_EQ) {
         println("; ND_EQ");
 	println("\tclra");
         println("\tsubb #1");		// 00:carry, other NC
 	println("\trolb");
-//      println("  sete %%al");
-//      println("  setnp %%dl");
-//      println("  and %%dl, %%al");
       } else if (node->kind == ND_NE) {
         println("; ND_NE");
 	println("; float ND_NE");	// EQ:AccB==0, other FF or 01
-//      println("  setne %%al");
-//      println("  setp %%dl");
-//      println("  or %%dl, %%al");
       } else if (node->kind == ND_LT) {	// AccB:FF true, other false
         println("; ND_LT");
         println("\tclra");
         println("\taddb #1");		// FF:Carry, other:NC
 	println("\trolb");
-//      println("  seta %%al");
       } else if (node->kind == ND_GT) {	// AccB:01 true, other false
         println("; ND_GT");
         println("\tclra");
         println("\tdecb");
         println("\tsubb #1");		// 01:carry, other NC
 	println("\trolb");
-//      println("  setae %%al");
       } else if (node->kind == ND_LE) { // AccB:FF,00 true, other false
         println("; ND_LE");
 	println("\tdecb");		// AccB:FE,FF tue, other false
@@ -1601,46 +1594,65 @@ static void gen_expr(Node *node) {
       }
 	println("\tclra");
 	println("\tandb #1");
-//      println("  and $1, %%al");
-//      println("  movzb %%al, %%rax");
         depth -= 4;
       return;
       }
     }
 
     error_tok(node->tok, "invalid expression");
-  } // TY_FLOAT
+  } // TY_FLOAT:
   case TY_DOUBLE:
   case TY_LDOUBLE: {
     error_tok(node->tok, "double not implemented");
   }
   case TY_LONG: {
-    println("; call gen_expr(node->rhs) %s %d",__FILE__,__LINE__);
-    println("; node->rhs->ty = %d",node->rhs->ty->kind);
-    gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
-    pushl();
-    println("; call gen_expr(node->lhs) %s %d",__FILE__,__LINE__);
-    println("; node->lhs->ty = %d",node->lhs->ty->kind);
+#if 0
+    if ((node->rhs->kind     == ND_NUM)
+    &&  (node->rhs->ty->kind == TY_LONG) ){
+      println("; push32 %lu (%08lx)",node->rhs->val,node->rhs->val);
+      println("\tldab #%u",(uint16_t)(node->rhs->val & 0x000000FF));
+      println("\tpshb");
+      println("\tldab #%u",(uint16_t)((node->rhs->val & 0x0000FF00)>>8));
+      println("\tpshb");
+      println("\tldab #%u",(uint16_t)((node->rhs->val & 0x00FF0000)>>16));
+      println("\tpshb");
+      println("\tldab #%u",(uint16_t)((node->rhs->val & 0xFF000000)>>24));
+      println("\tpshb");
+      depth += 4;
+    }else{
+       gen_expr(node->rhs);
+       pushl();
+    }
     gen_expr(node->lhs);
-    cast(node->lhs->ty, node->ty);
-    println("; end call");
+#endif
 
     switch (node->kind) {
     case ND_ADD:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       println("\tjsr __add32tos	; @long += TOS, pull TOS");
       depth -= 4;
       return;
     case ND_SUB:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       println("\tjsr __sub32tos  ; @long = TOS - @long, pull TOS");
       depth -= 4;
       return;
     case ND_MUL:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       println("\tjsr __mul32tos ; @long *= TOS, pull TOS");
 //  println("  imul %s, %s", di, ax);
       depth -= 4;
       return;
     case ND_DIV:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       if (node->ty->is_unsigned) {
         println("\tjsr __div32x32u ; @long /= TOS, pull TOS");
       }else{
@@ -1649,6 +1661,9 @@ static void gen_expr(Node *node) {
       depth -= 4;
       return;
     case ND_MOD:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       if (node->ty->is_unsigned) {
         println("\tjsr __rem32x32u ; @long %%= TOS, pull TOS");
       }else{
@@ -1657,16 +1672,25 @@ static void gen_expr(Node *node) {
       depth -= 4;
       return;
     case ND_BITAND:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       println("\tjsr __and32tos");
 //    println("  and %s, %s", di, ax);
       depth -= 4;
       return;
     case ND_BITOR:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       println("\tjsr __or32tos");
 //    println("  or %s, %s", di, ax);
       depth -= 4;
       return;
     case ND_BITXOR:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       println("\tjsr __xor32tos");
 //    println("  xor %s, %s", di, ax);
       depth -= 4;
@@ -1677,6 +1701,9 @@ static void gen_expr(Node *node) {
     case ND_LE:
     case ND_GT:
     case ND_GE:
+      gen_expr(node->rhs);
+      pushl();
+      gen_expr(node->lhs);
       // Since push in the order is rhs -> lhs, the conditions are reversed.
       // Should I change the name?
       if (node->kind == ND_EQ) {
@@ -1707,44 +1734,41 @@ static void gen_expr(Node *node) {
 //    println("  movzb %%al, %%rax");
       depth -= 4;
       return;
+    //
+    // Shift operations are not performed by usual_arith_conv() in type.c. 
+    // The node and lhs are long, but the type of rhs is unknown.
+    // Modify type.c to shift by 1 byte (char) to reduce the size.
+    // When calling the helper function, provide the shift amount in AccB.
+    //
     case ND_SHL:
-      // Since push in the order is rhs -> lhs, 
-      // The shift count is in TOS, and @long is shifted, it's good.
+      gen_expr(node->rhs);
+      cast(node->rhs->ty, ty_char);
+      push1();
+      gen_expr(node->lhs);
+      pop1();
       println("\tjsr __shl32");
-      println("\tins");
-      println("\tins");
-      println("\tins");
-      println("\tins");
-//    println("  mov %%rdi, %%rcx");
-//    println("  shl %%cl, %s", ax);
-      depth -= 4;
       return;
     case ND_SHR:
-//    println("  mov %%rdi, %%rcx");
+      gen_expr(node->rhs);
+      cast(node->rhs->ty, ty_char);
+      push1();
+      gen_expr(node->lhs);
+      pop1();
       if (node->lhs->ty->is_unsigned){
         println("\tjsr __shr32u");
-        println("\tins");
-        println("\tins");
-        println("\tins");
-        println("\tins");
-//      println("  shr %%cl, %s", ax);
       }else{
         println("\tjsr __shr32s");
-        println("\tins");
-        println("\tins");
-        println("\tins");
-        println("\tins");
-//      println("  sar %%cl, %s", ax);
       }
-      depth -= 4;
       return;
     }
     error_tok(node->tok, "TY_LONG: invalid expression");
-  } // TY_LONG
+  } // TY_LONG:
   }
   // The following is a binary operator, length less than or equal to an int
   switch (node->kind) {
   case ND_ADD:
+    node->lhs = optimize_expr(node->lhs);
+    node->rhs = optimize_expr(node->rhs);
     if (node->lhs->kind==ND_NUM)
       println("; ND_ADD node->lhs->kind=ND_NUM");
     if (node->rhs->kind==ND_NUM)
@@ -1759,7 +1783,8 @@ static void gen_expr(Node *node) {
     if (node->lhs->ty->kind !=  node->ty->kind){
       println("; node->lhs->ty(%d) != node->ty(%d)",node->lhs->ty->kind,node->ty->kind);
     }
-    if (node->lhs->ty->kind ==  node->ty->kind){
+    if ((node->lhs->ty->kind ==  node->ty->kind)
+    ||  (node->lhs->ty->kind == 4 && node->ty->kind == 10) ){
       switch(node->lhs->kind){
       case ND_NUM: {
         switch (node->lhs->ty->kind) {
@@ -1792,12 +1817,21 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_SUB:
-    if (node->rhs->ty ==  node->ty){
+    if (node->rhs->kind==ND_NUM)
+      println("; ND_SUB node->rhs->kind=ND_NUM");
+    if (node->lhs->ty->kind !=  node->ty->kind){
+      println("; node->lhs->ty->kind(%d) != node->ty->kind(%d)",node->lhs->ty->kind,node->ty->kind);
+    }
+    if (node->rhs->ty->kind !=  node->ty->kind){
+      println("; node->rhs->ty->kind(%d) != node->ty->kind(%d)",node->rhs->ty->kind,node->ty->kind);
+    }
+    if (node->rhs->ty->kind ==  node->ty->kind){
       switch(node->rhs->kind){
       case ND_NUM: {
         switch (node->rhs->ty->kind) {
 	case TY_CHAR:
         case TY_INT:
+        case TY_PTR:
           gen_expr(node->lhs);
           cast(node->lhs->ty, node->ty);
           println("\tsubb #<%u", (uint16_t)node->rhs->val);
@@ -2189,7 +2223,7 @@ static void gen_stmt(Node *node) {
 
 // Assign offsets to local variables.
 static void assign_lvar_offsets(Obj *prog) {
-//  println("; assign_lvar_offsets %s %d", __FILE__, __LINE__);
+  println("; assign_lvar_offsets %s %d", __FILE__, __LINE__);
   for (Obj *fn = prog; fn; fn = fn->next) {
     if (!fn->is_function)
       continue;
@@ -2389,10 +2423,6 @@ static void emit_text(Obj *prog) {
     }
     // Prologue
     println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
-//    println("  push %%rbp");
-//    println("  mov %%rsp, %%rbp");
-//    println("  sub $%d, %%rsp", fn->stack_size);
-//    println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
 
     // Save arg registers if function is variadic
     if (fn->va_area) {

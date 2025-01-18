@@ -95,7 +95,7 @@ Type *copy_type(Type *ty) {
 }
 
 Type *pointer_to(Type *base) {
-  Type *ty = new_type(TY_PTR, 2, 2);
+  Type *ty = new_type(TY_PTR, 2, 1);
   ty->base = base;
   ty->is_unsigned = true;
   return ty;
@@ -110,7 +110,8 @@ Type *func_type(Type *return_ty) {
 }
 
 Type *array_of(Type *base, int len) {
-  Type *ty = new_type(TY_ARRAY, base->size * len, base->align);
+  Type *ty = new_type(TY_ARRAY, base->size * len, 1);
+//Type *ty = new_type(TY_ARRAY, base->size * len, base->align);
   ty->base = base;
   ty->array_len = len;
   return ty;
@@ -118,14 +119,14 @@ Type *array_of(Type *base, int len) {
 
 Type *vla_of(Type *base, Node *len) {
   Type *ty = new_type(TY_VLA, 2, 1);
-//  Type *ty = new_type(TY_VLA, 8, 8);
+//Type *ty = new_type(TY_VLA, 8, 8);
   ty->base = base;
   ty->vla_len = len;
   return ty;
 }
 
 Type *enum_type(void) {
-  return new_type(TY_ENUM, 4, 4);
+  return new_type(TY_ENUM, 4, 1);
 }
 
 Type *struct_type(void) {
@@ -193,7 +194,7 @@ void add_type(Node *node) {
 
   switch (node->kind) {
   case ND_NUM:
-    node->ty = ty_int;
+    node->ty = ty_int;	// TODO: LONG, CHAR
     return;
   case ND_ADD:
   case ND_SUB:
@@ -226,7 +227,7 @@ void add_type(Node *node) {
   case ND_GT:
   case ND_GE:
     usual_arith_conv(&node->lhs, &node->rhs);
-    node->ty = ty_int;
+    node->ty = ty_int;	// TODO: bool?
     return;
   case ND_FUNCALL:
     node->ty = node->func_ty->return_ty;
@@ -234,11 +235,13 @@ void add_type(Node *node) {
   case ND_NOT:
   case ND_LOGOR:
   case ND_LOGAND:
-    node->ty = ty_int;
+    node->ty = ty_int;	// TODO: bool?
     return;
   case ND_BITNOT:
+    node->ty = node->lhs->ty;
+    return;
   case ND_SHL:
-  case ND_SHR:
+  case ND_SHR:		// TODO: Is it okay to use an int for the shift amount?
     node->ty = node->lhs->ty;
     return;
   case ND_VAR:
