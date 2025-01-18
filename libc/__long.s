@@ -102,6 +102,8 @@ __push32:
 __pop32:
 	tsx
 	ldx 0,x
+	ins
+	ins
 	pulb
 	stab @long
 	pulb
@@ -110,7 +112,6 @@ __pop32:
 	stab @long+2
 	pulb
 	stab @long+3
-	ldx @tmp1
 	jmp 0,x
 ;
 ;	__neg32		negate 32bit long, break IX
