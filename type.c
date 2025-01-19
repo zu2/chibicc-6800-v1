@@ -40,6 +40,38 @@ bool is_numeric(Type *ty) {
   return is_integer(ty) || is_flonum(ty);
 }
 
+// add from slimcc
+bool is_redundant_cast(Node *expr, Type *ty) {
+  if (expr->kind != ND_CAST)
+    return false;
+
+  Type *ty2 = expr->ty;
+  Type *ty3 = expr->lhs->ty;
+  int sz = ty->size;
+  int sz2 = ty2->size;
+  int sz3 = ty3->size;
+
+  if (is_integer(ty) && is_integer(ty2) && is_integer(ty3)) {
+    if (ty3->kind == TY_BOOL)
+      return true;
+    if (ty2->kind == TY_BOOL)
+      return false;
+    if (ty->kind == TY_BOOL)
+      return sz2 >= sz3;
+
+    if (sz <= sz3)
+      return sz <= sz2;
+    if (sz <= sz2)
+      return true;
+    if (sz2 == sz3)
+      return ty3->is_unsigned == ty2->is_unsigned;
+    if (sz2 > sz3)
+      return ty3->is_unsigned || !ty2->is_unsigned;
+  }
+  return false;
+}
+
+
 bool is_compatible(Type *t1, Type *t2) {
   if (t1 == t2)
     return true;
