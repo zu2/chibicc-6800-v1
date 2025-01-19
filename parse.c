@@ -259,11 +259,10 @@ static Node *new_vla_ptr(Obj *var, Token *tok) {
 Node *new_cast(Node *expr, Type *ty) {
   add_type(expr);
 
-  if(expr->ty==ty)
+  if (is_redundant_cast(expr, ty)) {	// add from slimcc
+    expr->ty = ty;
     return expr;
-//if(expr->ty->kind==ty->kind)		// TODO: This breaks casting between pointers. Think why
-//  return expr;
-//fprintf(stderr,"; new_cast %p %p\n",expr->ty,ty);
+  }
 
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_CAST;
