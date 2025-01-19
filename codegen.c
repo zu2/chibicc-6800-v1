@@ -107,15 +107,19 @@ static void pop_arg(Node *args)
   }
 }
 
+static void ldx_bp()
+{
+  if (IX_Dest != IX_BP)
+    println("\tldx @bp");
+  IX_Dest = IX_BP;
+}
+
 static void tfr_dx()
 {
-  println("\tpshb");
-  println("\tpsha");
-  println("\ttsx");
-  println("\tldx 0,x");
+  println("\tstab @tmp1+1");
+  println("\tstaa @tmp1");
+  println("\tldx @tmp1");
   IX_Dest = IX_None;
-  println("\tins");
-  println("\tins");
 }
 
 static char *helper_savex[] = {
@@ -148,12 +152,7 @@ static void gen_addr(Node *node){
 	println("\tldaa @bp");
 	println("\taddb #<%d",node->var->offset);
 	println("\tadca #>%d",node->var->offset);
-	println("\tpshb");
-	println("\tpsha");
-	println("\ttsx");
-	println("\tldx 0,x");	IX_Dest = IX_None;
-	println("\tins");
-	println("\tins");
+	tfr_dx();
 	println("\tldab 1,x");
 	println("\tldaa 0,x");
       println(";  mov %d(%%rbp), %%rax", node->var->offset);
@@ -240,7 +239,6 @@ static void gen_addr(Node *node){
     println("\tldaa #>_%s", node->var->name);
     return;
   case ND_DEREF:
-    println("; ND_DEREF %s %d",__FILE__,__LINE__);
     gen_expr(node->lhs);
     return;
   case ND_COMMA:
@@ -288,10 +286,7 @@ static int gen_addr_x(Node *node,bool save_d)
     // Variable-length array, which is always local.
     if (node->var->ty->kind == TY_VLA){
       if (node->var->offset<=254) {
-        if (IX_Dest == IX_BP)
-          println(";\tldx @bp	; unnessesary ldx @bp ?");
-	else
-          println("\tldx @bp");	;
+	ldx_bp();
         println("\tldx %d,x	; gen_addr_x():TY_LDA ",node->var->offset);
 	IX_Dest = IX_None;
         println(";  mov %d(%%rbp), %%rax", node->var->offset);
@@ -302,14 +297,10 @@ static int gen_addr_x(Node *node,bool save_d)
     // Local variable
     if (node->var->is_local) {
       if (node->var->offset <= 254){
-        if(node->var->ty && node->var->ty->name && node->var->name){
-          println("; gen_addr_x var->name=%s, size=%d, offset=%d, %s %d", node->var->name, node->var->ty->size, node->var->offset, __FILE__, __LINE__ ); // XXX
-        }
-        if (IX_Dest == IX_BP)
-          println(";\tldx @bp	; unnessesary ldx @bp ?");
-	else
-	  println("\tldx @bp");
-	IX_Dest = IX_BP;
+//        if(node->var->ty && node->var->ty->name && node->var->name){
+//          println("; gen_addr_x var->name=%s, size=%d, offset=%d, %s %d", node->var->name, node->var->ty->size, node->var->offset, __FILE__, __LINE__ ); // XXX
+//        }
+	ldx_bp();
 	return node->var->offset;
       }
       assert(0); // TODO:
@@ -525,7 +516,7 @@ static void store(Type *ty) {
     return;
   }
 
-  println("; store ty->size=%d, %s %d",ty->size,__FILE__,__LINE__);
+//  println("; store ty->size=%d, %s %d",ty->size,__FILE__,__LINE__);
   if (ty->size == 1){
     println("\tstab 0,x");
   }else if (ty->size == 2){
@@ -738,7 +729,7 @@ static void cast(Type *from, Type *to) {
 
   int t1 = getTypeId(from);
   int t2 = getTypeId(to);
-  println("; cast t1:%d, t2:%d",t1,t2);
+//  println("; cast t1:%d, t2:%d",t1,t2);
   if (cast_table[t1][t2]){
     println("\t%s", cast_table[t1][t2]);
     if(strncmp("jsr",cast_table[t1][t2],3)==0)
@@ -803,13 +794,7 @@ static void push_struct(Type *ty) {
 //  int c = count();
   depth += sz;
   assert(sz <= 256);	// can't handle sz > 256
-  println("\tpshb");
-  println("\tpsha");
-  println("\ttsx");
-  println("\tldx 0,x");
-  IX_Dest = IX_None;
-  println("\tins");
-  println("\tins");
+  tfr_dx();
   for (int i = ty->size-1; i >=0 ; i-- ){
     println("\tldab %d,x",i);
     println("\tpshb");
@@ -1061,13 +1046,7 @@ static void builtin_alloca(void) {
   println("\tldaa @bp");
   println("\taddb #<%d",current_fn->alloca_bottom->offset);
   println("\tadca #>%d",current_fn->alloca_bottom->offset);
-  println("\tpshb");
-  println("\tpsha");
-  println("\ttsx");
-  println("\tldx 0,x");
-  IX_Dest = IX_None;
-  println("\tins");
-  println("\tins");
+  tfr_dx();
   println("\tstx @tmp3 ; save address of __alloca_bottom__");
   println("\tsts @tmp2 ; save current SP");
   println("\tsts @tmp1 ; sp -= rdi");
@@ -1195,7 +1174,6 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
 static int can_direct(Node *rhs)
 {
   int r = gen_direct_sub(rhs,NULL,NULL,1);	// test mode
-  println("; can_direct %d",r);
 
   return r;
 }
@@ -1235,24 +1213,42 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
     }
   } // ND_NUM
   case ND_VAR: {
-    if (rhs->var->ty->kind != TY_VLA
-    &&  rhs->var->is_local
-    &&  test_addr_x(rhs)){
-      if (test) return 1;
-      int off = gen_addr_x(rhs,true);
-      println("\tldab @long+3");
-      println("\t%s %d,x",opb,off+3);
-      println("\tstab @long+3");
-      println("\tldaa @long+2");
-      println("\t%s %d,x",opa,off+2);
-      println("\tstaa @long+2");
-      println("\tldaa @long+1");
-      println("\t%s %d,x",opa,off+1);
-      println("\tstaa @long+1");
-      println("\tldaa @long");
-      println("\t%s %d,x",opa,off);
-      println("\tstaa @long");
-      return 1;
+    if (rhs->var->ty->kind != TY_VLA){
+      if (!test_addr_x(rhs)) return 0;
+      if (rhs->var->is_local){
+        if (test) return 1;
+        int off = gen_addr_x(rhs,true);
+        println("\tldab @long+3");
+        println("\t%s %d,x",opb,off+3);
+        println("\tstab @long+3");
+        println("\tldaa @long+2");
+        println("\t%s %d,x",opa,off+2);
+        println("\tstaa @long+2");
+        println("\tldaa @long+1");
+        println("\t%s %d,x",opa,off+1);
+        println("\tstaa @long+1");
+        println("\tldaa @long");
+        println("\t%s %d,x",opa,off);
+        println("\tstaa @long");
+        return 1;
+      }else{ // global
+        if (test) return 1;
+	println("\tldx #_%s",rhs->var->name);
+	IX_Dest = IX_None;
+        println("\tldab @long+3");
+        println("\t%s 3,x",opb);
+        println("\tstab @long+3");
+        println("\tldaa @long+2");
+        println("\t%s 2,x",opa);
+        println("\tstaa @long+2");
+        println("\tldaa @long+1");
+        println("\t%s 1,x",opa);
+        println("\tstaa @long+1");
+        println("\tldaa @long");
+        println("\t%s 0,x",opa);
+        println("\tstaa @long");
+	return 1;
+      }
     }
     return 0;
   } // ND_VAR
@@ -1275,12 +1271,117 @@ static int gen_direct_long(Node *rhs,char *opb, char *opa)
   return gen_direct_long_sub(rhs,opb,opa,0);
 }
 
+//
+// Evaluate condition, if false then jumps to the if_false
+//   if can't return 0
+//
+static int gen_jump_if_false(Node *node,char *if_false)
+{
+  if(!is_compare(node))
+    return 0;
+  if(node->lhs->ty->kind!=TY_CHAR && node->lhs->ty->kind!=TY_INT && node->lhs->ty->kind!=TY_SHORT)
+    return 0;
+  char if_thru[32];
+  int c = count();
+  sprintf(if_thru,"L_thru_%d",c);
+  if (can_direct(node->rhs)){
+    gen_expr(node->lhs);
+    if(node->rhs->kind == ND_NUM && node->rhs->val == 0){
+      if(node->kind != ND_EQ && node->kind != ND_NE)
+        println("\ttsta");
+    }else if(!gen_direct(node->rhs,"subb","sbca"))
+      assert(0);
+  }else{
+    gen_expr(node->rhs);
+    push();
+    gen_expr(node->lhs);
+    println("\ttsx");
+    IX_Dest = IX_None;
+    println("\tsubb 1,x");
+    println("\tsbca 0,x");
+    println("\tins");
+    println("\tins");
+    depth -= 2;
+  }
+  switch(node->kind){
+  case ND_EQ:
+    println("; gen_jump_if_false ND_EQ");
+    println("\taba");
+    println("\tadca #0");
+    println("\tjne %s",if_false);
+    break;
+  case ND_NE:
+    println("; gen_jump_if_false ND_NE");
+    println("\taba");
+    println("\tadca #0");
+    println("\tjeq %s",if_false);
+    break;
+  case ND_LT:
+    println("; gen_jump_if_false ND_LT");
+    if (node->lhs->ty->is_unsigned){
+      println("\tjcc %s",if_false);
+    }else{
+      println("\tjge %s",if_false);
+    }
+    break;
+  case ND_GE:
+    println("; gen_jump_if_false ND_GE");
+    if (node->lhs->ty->is_unsigned){
+      println("\tjcs %s",if_false);
+    }else{
+      println("\tjlt %s",if_false);
+    }
+    break;
+  case ND_LE:
+    println("; gen_jump_if_false ND_LE");
+    if (node->lhs->ty->is_unsigned){
+      println("\tjhi %s",if_false);
+      println("\tbcs %s",if_thru);
+      println("\ttstb");
+      println("\tjne %s",if_false);
+      println("%s:",if_thru);
+    }else{
+      println("\tjgt %s",if_false);
+      println("\tblt %s",if_thru);
+      println("\ttstb");
+      println("\tjne %s",if_false);
+      println("%s:",if_thru);
+    }
+    break;
+  case ND_GT:
+    println("; gen_jump_if_false ND_GT");
+    if (node->lhs->ty->is_unsigned){
+      println("\tjcs %s",if_false);
+      println("\tbhi %s",if_thru);
+      println("\ttstb");
+      println("\tjeq %s",if_false);
+      println("%s:",if_thru);
+    }else{
+      println("\tjlt %s",if_false);
+      println("\tbgt %s",if_thru);
+      println("\ttstb");
+      println("\tjeq %s",if_false);
+      println("%s:",if_thru);
+    }
+    break;
+  }
+  return 1;
+}
+//
+// Evaluate condition, if false then jumps to the specified label.
+//   if can't return 0
+//
+static int gen_jump_if_true(Node *node,char *if_true)
+{
+ return 0; // XXX : not yet implemented
+}
+
 // Generate code for a given node.
 static void gen_expr(Node *node) {
   node = optimize_expr(node);
 
   //println(";\t.loc gen_expr %d %d", node->tok->file->file_no, node->tok->line_no);
-  println("; gen_expr() node->kind=%d, node->ty->kind=%d, is_unsigned=%d",node->kind,(node->ty)?node->ty->kind:0,(node->ty)?node->ty->is_unsigned:-1);
+//  println("; gen_expr() node->kind=%d, node->ty->kind=%d, is_unsigned=%d",node->kind,(node->ty)?node->ty->kind:0,(node->ty)?node->ty->is_unsigned:-1);
   switch (node->kind) {
   case ND_NULL_EXPR:
     return;
@@ -1411,7 +1512,6 @@ static void gen_expr(Node *node) {
     return;
   }
   case ND_DEREF:
-    println("; ND_DEREF %s %d",__FILE__,__LINE__);
     if (test_addr_x(node->lhs)){
       int off = gen_addr_x(node->lhs,false);
       println("\tldx %d,x",off);
@@ -1421,13 +1521,11 @@ static void gen_expr(Node *node) {
     }
     gen_expr(node->lhs);
     load(node->ty);
-    println("; ND_DEREF end %s %d",__FILE__,__LINE__);
     return;
   case ND_ADDR:
     gen_addr(node->lhs);
     return;
   case ND_ASSIGN:
-    println("; ND_ASSIGN %s %d",__FILE__,__LINE__);
     if (test_addr_x(node->lhs)){ 
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
@@ -1494,9 +1592,9 @@ static void gen_expr(Node *node) {
     gen_expr(node->rhs);
     return;
   case ND_CAST:
-    println("; ND_CAST is_redundant_cast %d, %s %d",is_redundant_cast(node,node->ty),__FILE__,__LINE__);
-    println("; is_interger(node,node->lhs):%d %d",is_integer(node->ty),is_integer(node->lhs->ty));
-    println("; size(node,node->lhs):%d %d",node->ty->size,node->lhs->ty->size);
+//    println("; ND_CAST is_redundant_cast %d, %s %d",is_redundant_cast(node,node->ty),__FILE__,__LINE__);
+//    println("; is_interger(node,node->lhs):%d %d",is_integer(node->ty),is_integer(node->lhs->ty));
+//    println("; size(node,node->lhs):%d %d",node->ty->size,node->lhs->ty->size);
     gen_expr(node->lhs);
     cast(node->lhs->ty, node->ty);
     return;
@@ -1505,10 +1603,7 @@ static void gen_expr(Node *node) {
     println("; ND_MEMZERO %.*s size=%d, offset=%d,  %s %d",
 		    node->var->ty->name->len, node->var->ty->name->loc,
 		    node->var->ty->size, node->var->offset, __FILE__, __LINE__);
-    if (IX_Dest == IX_BP)
-      println(";\tldx @bp	; unnessesary ldx @bp ?");
-    else
-      println("\tldx @bp");
+    ldx_bp();
     println("\tldab #%d",node->var->ty->size);
     println("\tclra");
     int c = count();
@@ -1561,27 +1656,29 @@ static void gen_expr(Node *node) {
     return;
   case ND_LOGAND: {
     int c = count();
-    gen_expr(node->lhs);
-    cmp_zero(node->lhs->ty);
-    println("\tjeq L_false_%d", c);
-//  println("  je L_false_%d", c);
-    gen_expr(node->rhs);
-    cmp_zero(node->rhs->ty);
-    println("\tbeq L_false_%d", c);
+    char L_false[32];
+    char L_end[32];
+    sprintf(L_false,"L_false_%d",c);
+    sprintf(L_end,  "L_end_%d",c);
+    if (!gen_jump_if_false(node->lhs,L_false)){
+      gen_expr(node->lhs);
+      if (!is_compare(node->lhs))
+        cmp_zero(node->lhs->ty);
+      println("\tjeq %s",L_false);
+    }
+    if (!gen_jump_if_false(node->rhs,L_false)){
+      gen_expr(node->rhs);
+      if (!is_compare(node->rhs))
+        cmp_zero(node->rhs->ty);
+      println("\tbeq %s",L_false);
+    }
     println("\tldab #1");
-    println("\tbra L_end_%d", c);
-    println("L_false_%d:", c);
-    IX_Dest = IX_None;
+    println("\tbra %s",L_end);
+    println("%s:",L_false);
     println("\tclrb");
     println("L_end_%d:", c);
-    IX_Dest = IX_None;
     println("\tclra");
-//  println("  je L_false_%d", c);
-//  println("  mov $1, %%rax");
-//  println("  jmp L_end_%d", c);
-//  println("L_false_%d:", c);
-//  println("  mov $0, %%rax");
-//  println("L_end_%d:", c);
+    IX_Dest = IX_None;
     return;
   }
   case ND_LOGOR: {
@@ -1622,8 +1719,8 @@ static void gen_expr(Node *node) {
     Node *last_pushed_arg = calloc(1,sizeof(Node));
     int stack_args = push_args(node, last_pushed_arg);
     // if passed-by-register argument, last_pushed_arg!=NULL
-    println(";↑stack_args=%d  gen_expr %s %d",stack_args,__FILE__,__LINE__);
-    println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
+//    println(";↑stack_args=%d  gen_expr %s %d",stack_args,__FILE__,__LINE__);
+//    println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
     if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
       println("\tjsr _%s",node->lhs->var->name);
     }else{
@@ -1632,9 +1729,9 @@ static void gen_expr(Node *node) {
       // a pointer to a buffer as if it were the first argument.
       println("; last_pushed_arg:%p",last_pushed_arg);
       println("\tjsr %d,x",off);
-      println(";↑made by gen_expr %s %d",__FILE__,__LINE__);
-      println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
-      println(";↑stack_args=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
+//      println(";↑made by gen_expr %s %d",__FILE__,__LINE__);
+//      println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
+//      println(";↑stack_args=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
     }
     IX_Dest = IX_None;
   
@@ -1644,7 +1741,7 @@ static void gen_expr(Node *node) {
 	    depth--;
     }
 //    depth -= stack_args;
-    println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
+//    println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
 
     // If the return value is a type shorter than an int,
     // the upper bytes contain garbage, so we correct it.
@@ -1999,6 +2096,7 @@ static void gen_expr(Node *node) {
       case ND_NUM:
         switch (node->rhs->ty->kind) {
         case TY_INT:
+        case TY_SHORT:
 	  switch(node->rhs->val){
 	  case 2:
             gen_expr(node->lhs);
@@ -2063,6 +2161,31 @@ static void gen_expr(Node *node) {
     IX_Dest = IX_None;
     return;
   case ND_DIV:
+    if (node->lhs->ty ==  node->ty){
+      switch(node->rhs->kind){
+      case ND_NUM:
+        switch (node->rhs->ty->kind) {
+        case TY_INT:
+        case TY_SHORT:
+          switch(node->rhs->val){
+          case 2:
+            gen_expr(node->lhs);
+	    if (node->lhs->ty->is_unsigned){
+              println("\tasra");
+              println("\trorb");
+	    }else{
+              println("\tasra");
+              println("\trola");
+              println("\tadcb #0");
+              println("\tadca #0");
+              println("\tasra");
+              println("\trorb");
+	    }  
+            return;
+	  }
+	}
+      }
+    }
     gen_expr(node->rhs);
     cast(node->rhs->ty, node->ty);
     push();
@@ -2222,110 +2345,6 @@ static void gen_expr(Node *node) {
   error_tok(node->tok, "invalid expression");
 }
 
-//
-// Evaluate condition, if false then jumps to the if_false
-//   if can't return 0
-//
-static int gen_jump_if_false(Node *node,char *if_false)
-{
-  if(!is_compare(node))
-    return 0;
-  if(node->lhs->ty->kind!=TY_CHAR && node->lhs->ty->kind!=TY_INT && node->lhs->ty->kind!=TY_SHORT)
-    return 0;
-  char if_thru[32];
-  int c = count();
-  sprintf(if_thru,"L_thru_%d",c);
-  if (can_direct(node->rhs)){
-    gen_expr(node->lhs);
-    if(node->rhs->kind == ND_NUM && node->rhs->val == 0){
-      if(node->kind != ND_EQ && node->kind != ND_NE)
-        println("\ttsta");
-    }else if(!gen_direct(node->rhs,"subb","sbca"))
-      assert(0);
-  }else{
-    gen_expr(node->rhs);
-    push();
-    gen_expr(node->lhs);
-    println("\ttsx");
-    IX_Dest = IX_None;
-    println("\tsubb 1,x");
-    println("\tsbca 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
-  }
-  switch(node->kind){
-  case ND_EQ:
-    println("; gen_jump_if_false ND_EQ");
-    println("\taba");
-    println("\tadca #0");
-    println("\tjne %s",if_false);
-    break;
-  case ND_NE:
-    println("; gen_jump_if_false ND_NE");
-    println("\taba");
-    println("\tadca #0");
-    println("\tjeq %s",if_false);
-    break;
-  case ND_LT:
-    println("; gen_jump_if_false ND_LT");
-    if (node->lhs->ty->is_unsigned){
-      println("\tjcc %s",if_false);
-    }else{
-      println("\tjge %s",if_false);
-    }
-    break;
-  case ND_GE:
-    println("; gen_jump_if_false ND_GE");
-    if (node->lhs->ty->is_unsigned){
-      println("\tjcs %s",if_false);
-    }else{
-      println("\tjlt %s",if_false);
-    }
-    break;
-  case ND_LE:
-    println("; gen_jump_if_false ND_LE");
-    if (node->lhs->ty->is_unsigned){
-      println("\tjhi %s",if_false);
-      println("\tbcs %s",if_thru);
-      println("\ttstb");
-      println("\tjne %s",if_false);
-      println("%s:",if_thru);
-    }else{
-      println("\tjgt %s",if_false);
-      println("\tblt %s",if_thru);
-      println("\ttstb");
-      println("\tjne %s",if_false);
-      println("%s:",if_thru);
-    }
-    break;
-  case ND_GT:
-    println("; gen_jump_if_false ND_GT");
-    if (node->lhs->ty->is_unsigned){
-      println("\tjcs %s",if_false);
-      println("\tbhi %s",if_thru);
-      println("\ttstb");
-      println("\tjeq %s",if_false);
-      println("%s:",if_thru);
-    }else{
-      println("\tjlt %s",if_false);
-      println("\tbgt %s",if_thru);
-      println("\ttstb");
-      println("\tjeq %s",if_false);
-      println("%s:",if_thru);
-    }
-    break;
-  }
-  return 1;
-}
-//
-// Evaluate condition, if false then jumps to the specified label.
-//   if can't return 0
-//
-static int gen_jump_if_true(Node *node,char *if_true)
-{
- return 0; // XXX : not yet implemented
-}
 
 static void gen_stmt(Node *node) {
 //  println(";\t.loc gen_stmt %d %d", node->tok->file->file_no, node->tok->line_no);
@@ -2342,8 +2361,6 @@ static void gen_stmt(Node *node) {
       sprintf(L_end, "L_end_%d"  ,c);
       strcpy(L_else,L_end);
     }
-      
-
     if (!gen_jump_if_false(node->cond,L_else)){
       gen_expr(node->cond);
       if (!is_compare(node->cond))
@@ -2765,19 +2782,13 @@ static void emit_text(Obj *prog) {
       println("\tsbca #>%u",fn->stack_size-1);
       println("\tstab @bp+1");
       println("\tstaa @bp");
-      if (IX_Dest == IX_BP)
-        println(";\tldx @bp	; unnessesary ldx @bp ?");
-      else
-        println("\tldx @bp");			// adjust one byte
-      IX_Dest = IX_BP;
+      ldx_bp();
       println("\ttxs");
     }
     println("\tstx %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
 //  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
     // Emit code
-    fprintf(stderr,"depth=%d\n",depth);
     gen_stmt(fn->body);
-    fprintf(stderr,"depth=%d\n",depth);
 //    assert(depth == 0);
 
     // [https://www.sigbus.info/n1570#5.1.2.2.3p1] The C spec defines
@@ -2790,8 +2801,8 @@ static void emit_text(Obj *prog) {
     }
 
     // Epilogue
-    println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("L_return_%d:", fn->function_no);
+    println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
 //    println("L_return_%s:", fn->name);
     println("; recover sp, fn->stack_size=%d",fn->stack_size);
     if (fn->stack_size<=10){
