@@ -1170,8 +1170,6 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
         return 1;
       }else{
         // global
-	fprintf(stderr,"; rhs->var->name %p\n",rhs->var->name);
-	fprintf(stderr,"; rhs->var->name %s\n",rhs->var->name);
         if (rhs->ty->kind==TY_CHAR){
 	  return 0;
         }else{
@@ -1266,8 +1264,8 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
 
 static int can_direct_long(Node *rhs)
 {
-  int r = gen_direct_sub(rhs,NULL,NULL,1);	// test mode
-  println("; can_direct %d",r);
+  int r = gen_direct_long_sub(rhs,NULL,NULL,1);	// test mode
+  println("; can_direct_long %d",r);
 
   return r;
 }
