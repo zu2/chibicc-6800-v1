@@ -263,6 +263,11 @@ Node *new_cast(Node *expr, Type *ty) {
     expr->ty = ty;
     return expr;
   }
+  if (is_integer(expr->ty) && is_integer(ty)
+  &&  expr->ty->size == ty->size
+  &&  expr->ty->is_unsigned == ty->is_unsigned){
+      return expr;
+  }
 
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_CAST;
@@ -2403,8 +2408,10 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
 
   // ptr + num
   if (lhs->ty->base && is_integer(rhs->ty)) {
-    if (lhs->ty->base->size!=1)
+    if (lhs->ty->base->size!=1){
       rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
+      return new_binary(ND_ADD, rhs, lhs, tok);	// TODO:
+    }
     return new_binary(ND_ADD, lhs, rhs, tok);
   }
   error_tok(tok, "invalid operands");

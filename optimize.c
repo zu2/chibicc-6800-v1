@@ -1,5 +1,86 @@
 #include "chibicc.h"
 
+static char *type_str(Node *node)
+{
+  if (!node || !node->ty) return "NULL";
+
+  if (node->ty == ty_void) return "ty_void";
+  if (node->ty == ty_bool) return "ty_bool";
+  if (node->ty == ty_char) return "ty_char";
+  if (node->ty == ty_short) return "ty_short";
+  if (node->ty == ty_int) return "ty_int";
+  if (node->ty == ty_long) return "ty_long";
+  if (node->ty == ty_uchar) return "ty_uchar";
+  if (node->ty == ty_ushort) return "ty_ushort";
+  if (node->ty == ty_uint) return "ty_uint";
+  if (node->ty == ty_ulong) return "ty_ulong";
+  if (node->ty == ty_float) return "ty_float";
+  if (node->ty == ty_double) return "ty_double";
+  if (node->ty == ty_ldouble) return "ty_ldouble";
+
+  switch(node->ty->kind){
+  case TY_VOID:	return "TY_VOID(0)";
+  case TY_BOOL: return "TY_BOOL(1)";
+  case TY_CHAR: return "TY_CHAR(2)";
+  case TY_SHORT:return "TY_SHORT(3)";
+  case TY_INT:  return "TY_INT(4)";
+  case TY_LONG: return "TY_LONG(5)";
+  case TY_FLOAT:return "TY_FLOAT(6)";
+  case TY_DOUBLE:return "TY_DOUBLE(7)";
+  case TY_LDOUBLE:return "TY_LDOUBLE(8)";
+  case TY_ENUM: return "TY_ENUM(9)";
+  case TY_PTR:  return "TY_PTR(10)";
+  case TY_FUNC: return "TY_FUNC(11)";
+  case TY_ARRAY:return "TY_ARRAY(12)";
+  case TY_VLA:  return "TY_VLA(13)";
+  case TY_STRUCT:return "TY_STRUCT(14)";
+  case TY_UNION:return "TY_UNION(15)";
+  }
+
+  assert(0);
+}
+
+static Node *swap_lr(Node *node)
+{
+  Node *tmp;
+  tmp = node->lhs;
+  node->lhs = node->rhs;
+  node->rhs = tmp;
+
+  return node;
+}
+
+static int node_cost(Node *node)
+{
+  switch(node->kind){
+  case ND_NUM:
+    return 1;
+  case ND_VAR:
+    if (node->var->ty->kind == TY_VLA)	return 200;
+    if (node->var->is_local)		return test_addr_x(node)?50:100;
+    return 20;
+  case ND_CAST:
+    return node_cost(node->lhs)+10;
+  }
+  return 255;
+}
+
+static Node *optimize_lr(Node *node)
+{
+    node->lhs = optimize_expr(node->lhs);
+    node->rhs = optimize_expr(node->rhs);
+    return node;
+}
+
+static Node *optimize_lr_swap(Node *node)
+{
+    node->lhs = optimize_expr(node->lhs);
+    node->rhs = optimize_expr(node->rhs);
+    if (node_cost(node->lhs) < node_cost(node->rhs))
+      return swap_lr(node);
+    return node;
+}
+
 Node *optimize_expr(Node *node)
 {
   Node *lhs = node->lhs;
@@ -56,9 +137,26 @@ Node *optimize_expr(Node *node)
     //gen_expr(node->rhs);
     return node;
   case ND_CAST:
-    println("; ND_CAST: node->lhs->ty->kind %d, node->ty->kind %d",node->lhs->ty->kind,node->ty->kind);
-    if (node->lhs->ty == node->ty)
+    node->lhs = optimize_expr(node->lhs);
+    return node;
+#if 0
+//    println("; ND_CAST: node->lhs->ty->kind %d, node->ty->kind %d, %s %d",node->lhs->ty->kind,node->ty->kind,__FILE__,__LINE__);
+//    println("; ND_CAST: node->lhs->ty %p, node->ty %p",node->lhs->ty,node->ty);
+      println("; ND_CAST: lhs:%s node:%s",type_str(node->lhs),type_str(node));
+      println("; ND_CAST: lhs->ty->size:%d node->ty->size:%d",node->lhs->ty->size,node->ty->size);
+      println("; ND_CAST: lhs->ty->is_integer:%d node->ty->is_integer:%d",is_integer(node->lhs->ty),is_integer(node->ty));
+      println("; ND_CAST: lhs->ty->is_unsigned:%d node->ty->is_unsigned:%d",node->lhs->ty->is_unsigned,node->ty->is_unsigned);
+    if (is_integer(node->ty) && is_integer(node->lhs->ty)){
+      if (node->ty->size == node->lhs->ty->size
+      &&  (node->ty->is_unsigned == node->lhs->ty->is_unsigned)){
+	println("; delete ND_CAST");
+        return optimize_expr(node->lhs);
+      }
+    }
+    if (node->lhs->ty == node->ty){
+      println("; delete ND_CAST");
       return optimize_expr(node->lhs);
+    }
     if (node->lhs->ty->kind==4 && node->ty->kind==5){
       println("; ND_CAST: int to long");
       if (node->lhs->kind == ND_NUM){
@@ -70,7 +168,15 @@ Node *optimize_expr(Node *node)
       println("; ND_CAST: int to ptr: skip cast");
       return optimize_expr(node->lhs);
     }
+#if 1
+    if (node->lhs->ty->kind==4 && node->ty->kind==4
+    &&  node->lhs->ty->is_unsigned != node->ty->is_unsigned){
+      node->lhs->ty->is_unsigned = node->ty->is_unsigned;
+      return optimize_expr(node->lhs);
+    }
+#endif
     return node;
+#endif
   case ND_MEMZERO:
   case ND_COND:
   case ND_NOT:
@@ -82,37 +188,35 @@ Node *optimize_expr(Node *node)
     return node;
   // Below is a binary operator
   case ND_ADD:
-    if (node->lhs->kind==ND_NUM
-    && node->rhs->kind==ND_NUM
-    && node->lhs->ty == node->rhs->ty){
-      if (node->lhs->ty->kind == TY_CHAR
-      ||  node->lhs->ty->kind == TY_INT
-      ||  node->lhs->ty->kind == TY_LONG){
-        node->lhs->val += node->rhs->val;
-	return node->lhs;
-      }
+    node = optimize_lr_swap(node);
+    if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
+      lhs->val +=  rhs->val;
+      return lhs;
     }
     return node;
   case ND_SUB:
+    node = optimize_lr(node);
+    if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
+      lhs->val -= rhs->val;
+      return lhs;
+    }
+    return node;
   case ND_MUL:
+  case ND_BITAND:
+  case ND_BITOR:
+  case ND_BITXOR:
+    return node = optimize_lr_swap(node);
   case ND_DIV:
+  case ND_MOD:
   case ND_EQ:
   case ND_NE:
   case ND_LT:
   case ND_LE:
   case ND_GT:
   case ND_GE:
-  case ND_MOD:
-  case ND_BITAND:
-  case ND_BITOR:
-  case ND_BITXOR:
   case ND_SHL:
   case ND_SHR:
-    lhs = optimize_expr(node->lhs);
-    rhs = optimize_expr(node->rhs);
-    node->lhs = lhs;
-    node->rhs = rhs;
-    return node;
+    return optimize_lr(node);
   }
   return node;
 }

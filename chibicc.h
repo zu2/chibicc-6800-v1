@@ -420,6 +420,7 @@ Obj *optimize(Obj *prog);
 //
 __attribute__((format(printf, 1, 2)))
 void println(char *fmt, ...);
+int  test_addr_x(Node *node);
 void codegen(Obj *prog, FILE *out);
 int align_to(int n, int align);
 
