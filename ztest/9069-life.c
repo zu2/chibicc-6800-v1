@@ -4,12 +4,12 @@
 //
 
 extern	void print(int i);
-extern	void putc(int ch);
+extern	void putchar(int ch);
 
 void putstr(unsigned char *s)
 {
 	while (*s)
-		putc(*s++);
+		putchar(*s++);
 }
 
 
@@ -35,11 +35,11 @@ display()
 	putstr("\x1b[0;0H");
 	for (y=1; y<=48; y++) {
 		for (x=1; x<=64; x++){
-			putc(a1[x][y]?'*':' ');
+			putchar(a1[x][y]?'*':' ');
 		}
-		putc('\n');
+		putchar('\n');
 	}
-	putc('\n');
+	putchar('\n');
 }
 
 void

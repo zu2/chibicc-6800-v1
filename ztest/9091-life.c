@@ -4,12 +4,12 @@
  
 
 extern	void print(int i);
-extern	void putc(int ch);
+extern	void putchar(int ch);
 
 void putstr(unsigned char *s)
 {
 	while (*s)
-		putc(*s++);
+		putchar(*s++);
 }
 
 #define N  44  /* 縦方向 */
@@ -24,19 +24,19 @@ int main(void)
 	a[N/2][M/2] = a[N/2-1][M/2] = a[N/2+1][M/2]
 		= a[N/2][M/2-1] = a[N/2-1][M/2+1] = 1;  /* 初期状態 */
 	for (g = 1; g <= 250; g++) {
-		putstr("\x1b[0;0HGeneration ");print(g);putc('\n');  /* 世代 */
+		putstr("\x1b[0;0HGeneration ");print(g);putchar('\n');  /* 世代 */
 		for (i = 1; i <= N; i++) {
 			for (j = 1; j <= M; j++) {
 				if (a[i][j]) {
-					putc('*');
+					putchar('*');
 					b[i-1][j-1]++;  b[i-1][j]++;  b[i-1][j+1]++;
 					b[i  ][j-1]++;                b[i  ][j+1]++;
 					b[i+1][j-1]++;  b[i+1][j]++;  b[i+1][j+1]++;
 				} else {
-					putc('.');
+					putchar('.');
 				}
 			}
-			putc('\n');
+			putchar('\n');
 		}
 		for (i = 0; i <= N + 1; i++) {
 			for (j = 0; j <= M + 1; j++) {
