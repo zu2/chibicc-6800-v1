@@ -72,6 +72,12 @@ static Node *optimize_lr(Node *node)
     return node;
 }
 
+static Node *optimize_l(Node *node)
+{
+    node->lhs = optimize_expr(node->lhs);
+    return node;
+}
+
 static Node *optimize_lr_swap(Node *node)
 {
     node->lhs = optimize_expr(node->lhs);
@@ -179,13 +185,14 @@ Node *optimize_expr(Node *node)
 #endif
   case ND_MEMZERO:
   case ND_COND:
+  case ND_FUNCALL:
+  case ND_LABEL_VAL:
+    return node;
   case ND_NOT:
   case ND_BITNOT:
   case ND_LOGAND:
   case ND_LOGOR:
-  case ND_FUNCALL:
-  case ND_LABEL_VAL:
-    return node;
+    return optimize_l(node);
   // Below is a binary operator
   case ND_ADD:
     node = optimize_lr_swap(node);
@@ -208,12 +215,36 @@ Node *optimize_expr(Node *node)
     return node = optimize_lr_swap(node);
   case ND_DIV:
   case ND_MOD:
+    return optimize_lr(node);
   case ND_EQ:
   case ND_NE:
   case ND_LT:
   case ND_LE:
   case ND_GT:
   case ND_GE:
+    node->lhs = optimize_expr(node->lhs);
+    node->rhs = optimize_expr(node->rhs);
+    if ( node_cost(node->lhs) < node_cost(node->rhs)
+    ||  (node_cost(node->lhs) == node_cost(node->rhs)
+      &&(node->kind == ND_LE || node->kind == ND_GT))){
+      node = swap_lr(node);
+      switch(node->kind){
+      case ND_LT:
+	node->kind = ND_GT;
+	break;
+      case ND_LE:
+        node->kind = ND_GE;
+        break;
+      case ND_GT:
+	node->kind = ND_LT;
+	break;
+      case ND_GE:
+        node->kind = ND_LE;
+        break;
+      }
+      return node;
+    }
+    return node;
   case ND_SHL:
   case ND_SHR:
     return optimize_lr(node);
