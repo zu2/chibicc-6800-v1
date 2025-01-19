@@ -114,28 +114,6 @@ static void tfr_dx()
 }
 
 
-#if	0
-static char *reg_dx(int sz) {
-  switch (sz) {
-  case 1: return "%dl";
-  case 2: return "%dx";
-  case 4: return "%edx";
-  case 8: return "%rdx";
-  }
-  unreachable();
-}
-
-static char *reg_ax(int sz) {
-  switch (sz) {
-  case 1: return "%al";
-  case 2: return "%ax";
-  case 4: return "%eax";
-  case 8: return "%rax";
-  }
-  unreachable();
-}
-#endif
-
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
 static void gen_addr(Node *node){
@@ -614,8 +592,8 @@ static int getTypeId(Type *ty) {
   case TY_FLOAT:
     return F32;
   case TY_DOUBLE:
-    return F32;
   case TY_LDOUBLE:
+    assert(args->ty->kind!=TY_DOUBLE && args->ty->kind!=TY_LDOUBLE);
     return F32;
   }
   return U16;
@@ -635,7 +613,6 @@ static char u16i32[] = "jsr __u16to32";
 static char i16i64[] = ";jsr __i16i64 " __FILE__;
 static char i16f32[] = "jsr __i16tof32";
 static char i16f64[] = "; jsr __i16f64 " __FILE__;
-static char i16f80[] = "; jsr __i16f80 " __FILE__;
 static char i32i8[] = "ldab @long+3";
 static char i32u8[] = "ldab @long+3";
 static char i32i16[] = "ldab @long+3\n\tldaa @long+2";
@@ -643,27 +620,21 @@ static char i32u16[] = "ldab @long+3\n\tldaa @long+2";
 static char i32f32[] = "jsr __i32tof32";
 static char i32i64[] = "movsxd %eax, %rax";
 static char i32f64[] = "cvtsi2sdl %eax, %xmm0";
-static char i32f80[] = "mov %eax, -4(%rsp); fildl -4(%rsp)";
 
 static char u32f32[] = "jsr __u32tof32";
 static char u32i64[] = "mov %eax, %eax";
 static char u32f64[] = "mov %eax, %eax; cvtsi2sdq %rax, %xmm0";
-static char u32f80[] = "mov %eax, %eax; mov %rax, -8(%rsp); fildll -8(%rsp)";
 
 static char i64i32[] = "; i64i32 " __FILE__;
 static char i64u32[] = "; i64u32 " __FILE__;
 static char i64f32[] = "cvtsi2ssq %rax, %xmm0";
 static char i64f64[] = "cvtsi2sdq %rax, %xmm0";
-static char i64f80[] = "movq %rax, -8(%rsp); fildll -8(%rsp)";
 
 static char u64f32[] = "cvtsi2ssq %rax, %xmm0";
 static char u64f64[] =
   "test %rax,%rax; js 1f; pxor %xmm0,%xmm0; cvtsi2sd %rax,%xmm0; jmp 2f; "
   "1: mov %rax,%rdi; and $1,%eax; pxor %xmm0,%xmm0; shr %rdi; "
   "or %rax,%rdi; cvtsi2sd %rdi,%xmm0; addsd %xmm0,%xmm0; 2:";
-static char u64f80[] =
-  "mov %rax, -8(%rsp); fildq -8(%rsp); test %rax, %rax; jns 1f;"
-  "mov $1602224128, %eax; mov %eax, -4(%rsp); fadds -4(%rsp); 1:";
 
 static char f32i8[] = "jsr __f32toi8";
 static char f32u8[] = "jsr __f32tou8";
@@ -674,7 +645,6 @@ static char f32u32[] = "jsr __f32tou32";
 static char f32i64[] = "cvttss2siq %xmm0, %rax";
 static char f32u64[] = "cvttss2siq %xmm0, %rax";
 static char f32f64[] = "cvtss2sd %xmm0, %xmm0";
-static char f32f80[] = "movss %xmm0, -4(%rsp); flds -4(%rsp)";
 
 static char f64i8[] = "cvttsd2sil %xmm0, %eax; movsbl %al, %eax";
 static char f64u8[] = "cvttsd2sil %xmm0, %eax; movzbl %al, %eax";
@@ -685,7 +655,6 @@ static char f64u32[] = "cvttsd2siq %xmm0, %rax";
 static char f64i64[] = "cvttsd2siq %xmm0, %rax";
 static char f64u64[] = "cvttsd2siq %xmm0, %rax";
 static char f64f32[] = "cvtsd2ss %xmm0, %xmm0";
-static char f64f80[] = "movsd %xmm0, -8(%rsp); fldl -8(%rsp)";
 
 #define FROM_F80_1                                           \
   "fnstcw -10(%rsp); movzwl -10(%rsp), %eax; or $12, %ah; " \
@@ -693,33 +662,22 @@ static char f64f80[] = "movsd %xmm0, -8(%rsp); fldl -8(%rsp)";
 
 #define FROM_F80_2 " -24(%rsp); fldcw -10(%rsp); "
 
-static char f80i8[] = FROM_F80_1 "fistps" FROM_F80_2 "movsbl -24(%rsp), %eax";
-static char f80u8[] = FROM_F80_1 "fistps" FROM_F80_2 "movzbl -24(%rsp), %eax";
-static char f80i16[] = FROM_F80_1 "fistps" FROM_F80_2 "movzbl -24(%rsp), %eax";
-static char f80u16[] = FROM_F80_1 "fistpl" FROM_F80_2 "movswl -24(%rsp), %eax";
-static char f80i32[] = FROM_F80_1 "fistpl" FROM_F80_2 "mov -24(%rsp), %eax";
-static char f80u32[] = FROM_F80_1 "fistpl" FROM_F80_2 "mov -24(%rsp), %eax";
-static char f80i64[] = FROM_F80_1 "fistpq" FROM_F80_2 "mov -24(%rsp), %rax";
-static char f80u64[] = FROM_F80_1 "fistpq" FROM_F80_2 "mov -24(%rsp), %rax";
-static char f80f32[] = "fstps -8(%rsp); movss -8(%rsp), %xmm0";
-static char f80f64[] = "fstpl -8(%rsp); movsd -8(%rsp), %xmm0";
-
 // ex. i32i16: i32->i16
 static char *cast_table[][11] = {
   // i8   i16     i32     i64     u8     u16     u32     u64     f32     f64     f80
-  {NULL,  NULL,   i8i32,  i16i64, NULL,  NULL,   i8u32,  i16i64, i16f32, i16f64, i16f80}, // i8
-  {NULL,  NULL,   i16i32, i16i64, NULL,  NULL,   i16u32, i16i64, i16f32, i16f64, i16f80}, // i16
-  {i32i8, i32i16, NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, i32f80}, // i32
-  {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   i64f32, i64f64, i64f80}, // i64
+  {NULL,  NULL,   i8i32,  i16i64, NULL,  NULL,   i8u32,  i16i64, i16f32, i16f64, NULL}, // i8
+  {NULL,  NULL,   i16i32, i16i64, NULL,  NULL,   i16u32, i16i64, i16f32, i16f64, NULL}, // i16
+  {i32i8, i32i16, NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, NULL}, // i32
+  {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   i64f32, i64f64, NULL}, // i64
 
-  {NULL,  NULL,   u8i32,  i16i64, NULL,  NULL,   u8u32,  i16i64, i16f32, i16f64, i16f80}, // u8
-  {NULL,  NULL,   u16i32, i16i64, NULL,  NULL,   u16i32, i16i64, i16f32, i16f64, i16f80}, // u16
-  {i32i8, i32i16, NULL,   u32i64, i32u8, i32u16, NULL,   u32i64, u32f32, u32f64, u32f80}, // u32
-  {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   u64f32, u64f64, u64f80}, // u64
+  {NULL,  NULL,   u8i32,  i16i64, NULL,  NULL,   u8u32,  i16i64, i16f32, i16f64, NULL}, // u8
+  {NULL,  NULL,   u16i32, i16i64, NULL,  NULL,   u16i32, i16i64, i16f32, i16f64, NULL}, // u16
+  {i32i8, i32i16, NULL,   u32i64, i32u8, i32u16, NULL,   u32i64, u32f32, u32f64, NULL}, // u32
+  {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   u64f32, u64f64, NULL}, // u64
 
-  {f32i8, f32i16, f32i32, f32i64, f32u8, f32u16, f32u32, f32u64, NULL,   f32f64, f32f80}, // f32
-  {f64i8, f64i16, f64i32, f64i64, f64u8, f64u16, f64u32, f64u64, f64f32, NULL,   f64f80}, // f64
-  {f80i8, f80i16, f80i32, f80i64, f80u8, f80u16, f80u32, f80u64, f80f32, f80f64, NULL},   // f80
+  {f32i8, f32i16, f32i32, f32i64, f32u8, f32u16, f32u32, f32u64, NULL,   f32f64, NULL}, // f32
+  {f64i8, f64i16, f64i32, f64i64, f64u8, f64u16, f64u32, f64u64, f64f32, NULL,   NULL}, // f64
+  {NULL,  NULL,   NULL,   NULL,   NULL,  NULL,   NULL,   NULL,   NULL,   NULL,   NULL}, // f80
 };
 
 static void cast(Type *from, Type *to) {
@@ -1270,6 +1228,7 @@ static void gen_expr(Node *node) {
     gen_addr(node->lhs);
     return;
   case ND_ASSIGN:
+    println("; ND_ASSIGN %s %d",__FILE__,__LINE__);
     if (test_addr_x(node->lhs)){ 
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
@@ -1325,6 +1284,7 @@ static void gen_expr(Node *node) {
     }
 
     store(node->ty);
+    println("; ND_ASSIGN end %s %d",__FILE__,__LINE__);
     return;
   case ND_STMT_EXPR:
     for (Node *n = node->body; n; n = n->next)
@@ -1628,9 +1588,9 @@ static void gen_expr(Node *node) {
 
     switch (node->kind) {
     case ND_ADD:
-      gen_expr(node->rhs);
-      pushl();
       gen_expr(node->lhs);
+      pushl();
+      gen_expr(node->rhs);
       println("\tjsr __add32tos	; @long += TOS, pull TOS");
       depth -= 4;
       return;
@@ -1642,9 +1602,9 @@ static void gen_expr(Node *node) {
       depth -= 4;
       return;
     case ND_MUL:
-      gen_expr(node->rhs);
-      pushl();
       gen_expr(node->lhs);
+      pushl();
+      gen_expr(node->rhs);
       println("\tjsr __mul32tos ; @long *= TOS, pull TOS");
 //  println("  imul %s, %s", di, ax);
       depth -= 4;
@@ -1672,25 +1632,25 @@ static void gen_expr(Node *node) {
       depth -= 4;
       return;
     case ND_BITAND:
-      gen_expr(node->rhs);
-      pushl();
       gen_expr(node->lhs);
+      pushl();
+      gen_expr(node->rhs);
       println("\tjsr __and32tos");
 //    println("  and %s, %s", di, ax);
       depth -= 4;
       return;
     case ND_BITOR:
-      gen_expr(node->rhs);
-      pushl();
       gen_expr(node->lhs);
+      pushl();
+      gen_expr(node->rhs);
       println("\tjsr __or32tos");
 //    println("  or %s, %s", di, ax);
       depth -= 4;
       return;
     case ND_BITXOR:
-      gen_expr(node->rhs);
-      pushl();
       gen_expr(node->lhs);
+      pushl();
+      gen_expr(node->rhs);
       println("\tjsr __xor32tos");
 //    println("  xor %s, %s", di, ax);
       depth -= 4;
@@ -1841,7 +1801,7 @@ static void gen_expr(Node *node) {
       }
       }
     }
-    gen_expr(node->rhs);
+    gen_expr(node->rhs);		// TODO: lhs to rhs
     cast(node->rhs->ty, node->ty);
     push();
     gen_expr(node->lhs);
@@ -1912,10 +1872,9 @@ static void gen_expr(Node *node) {
 	break;
       }
     }
-    gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
-    push();
     gen_expr(node->lhs);
+    push();
+    gen_expr(node->rhs);
     cast(node->lhs->ty, node->ty);
 //  println("  imul %s, %s", di, ax);
     println("\tjsr __mul16x16");
@@ -1954,11 +1913,9 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_BITAND:
-    gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
-    push();
     gen_expr(node->lhs);
-    cast(node->lhs->ty, node->ty);
+    push();
+    gen_expr(node->rhs);
 //    println("  and %s, %s", di, ax);
     println("\ttsx");
     println("\tandb 1,x");
@@ -1968,11 +1925,9 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_BITOR:
-    gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
-    push();
     gen_expr(node->lhs);
-    cast(node->lhs->ty, node->ty);
+    push();
+    gen_expr(node->rhs);
 //    println("  or %s, %s", di, ax);
     println("\ttsx");
     println("\torab 1,x");
@@ -1982,11 +1937,9 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_BITXOR:
-    gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
-    push();
     gen_expr(node->lhs);
-    cast(node->lhs->ty, node->ty);
+    push();
+    gen_expr(node->rhs);
 //    println("  xor %s, %s", di, ax);
     println("\ttsx");
     println("\teorb 1,x");
