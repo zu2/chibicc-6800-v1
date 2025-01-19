@@ -1,10 +1,10 @@
 extern	void print(int i);
-extern	void putc(int ch);
+extern	void putchar(int ch);
 
 void putstr(unsigned char *s)
 {
 	while (*s)
-		putc(*s++);
+		putchar(*s++);
 }
 
 void
@@ -13,8 +13,8 @@ puthexc(unsigned int ch)
 	int	v1=(ch>>4)&0x0f;
 	int	v2=(ch&0x0f);
 
-	putc((v1<10)?(v1+'0'):(v1+'A'-10));
-	putc((v2<10)?(v2+'0'):(v2+'A'-10));
+	putchar((v1<10)?(v1+'0'):(v1+'A'-10));
+	putchar((v2<10)?(v2+'0'):(v2+'A'-10));
 }
 void
 puthexi(int v)
@@ -72,10 +72,10 @@ int main(int argc, char **argv)
         xn = -f(xo) / df(xo) + xo;
     }
     cpu_counter();
-    putstr("√2=");puthexf(xn);putc('\n');
-    putstr("√2*√2=");puthexf(xn*xn);putc('\n');
-    putstr("2.0:");puthexf(2.0);putc('\n');
-    putc('\n');
+    putstr("√2=");puthexf(xn);putchar('\n');
+    putstr("√2*√2=");puthexf(xn*xn);putchar('\n');
+    putstr("2.0:");puthexf(2.0);putchar('\n');
+    putchar('\n');
 
     return fabs((xn*xn)-2.0)>0.000001;
 }
