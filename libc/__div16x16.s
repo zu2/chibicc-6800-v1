@@ -32,13 +32,17 @@ __div16x16_2:
 	com @tmp2
 	rts
 ;
-;	Note:
+; Note:
+; Direct memory operations on the MC6800 are slow.
+; INC/DEC/ROL require 6 cycles for direct pages.
+; With index addressing uses 7 cycles.
+
+; To eliminate direct memory operations in the loop, quotient bit uses the carry of subtraction.
+; The carry is put into the lower digits in the next loop.
+; The last loop bit is not reflected in the quotient, ROL is executed once when the loop is exited.
 ;
-;	In this program, I stop manipulating @tmp every time the loop goes through,
-;	and then make the numbers add up at the end.
-;
-;	By replacing inc @tmp1+1 with sec in the loop, 6 cycles are saved per pullback.
-;	This amounts to max 96 cycles for 16 iterations. 6*16 = 96
-;
-;	The rol/com takes extra time, but this is 24 cycles.
+; Also, the quotient bit was inverted, COM operation is required when the loop is exited.
+; 
+; Delete one INC/DEC from the loop saves 6*16 = 96 cycles.
+; The final rol/com takes 24 cycles, but it is still faster.
 ;
