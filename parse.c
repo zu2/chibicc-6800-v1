@@ -261,8 +261,8 @@ Node *new_cast(Node *expr, Type *ty) {
 
   if(expr->ty==ty)
     return expr;
-  if(expr->ty->kind==ty->kind)
-    return expr;
+//if(expr->ty->kind==ty->kind)		// TODO: This breaks casting between pointers. Think why
+//  return expr;
 //fprintf(stderr,"; new_cast %p %p\n",expr->ty,ty);
 
   Node *node = calloc(1, sizeof(Node));
