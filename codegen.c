@@ -2452,7 +2452,7 @@ static void emit_text(Obj *prog) {
       println("\tldx @bp");			// adjust one byte
       println("\ttxs");
     }
-    println("\tsts %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
+    println("\tstx %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
 //  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
     // Emit code
     fprintf(stderr,"depth=%d\n",depth);
