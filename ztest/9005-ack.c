@@ -4,8 +4,8 @@
 
 extern	void cpu_counter(void);
 
-int
-ack_c(int x, int y)
+unsigned char
+ack_c(unsigned char x, unsigned char y)
 {
 	if(x==0){
 		return y+1;

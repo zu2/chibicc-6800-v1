@@ -1,3 +1,5 @@
+#include "common.h"
+
 int main(int argc, char **argv)
 {
 	int	i;
@@ -7,5 +9,6 @@ int main(int argc, char **argv)
 			break;
 	}
 
+	cpu_counter();
 	return (i!=50);
 }

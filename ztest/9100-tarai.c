@@ -1,3 +1,5 @@
+#include "common.h"
+
 int tarai(int x, int y, int z)
 {
 
@@ -12,8 +14,9 @@ int tarai(int x, int y, int z)
 
 int main(int argc, char **argv)
 {
-	if(tarai(13,7,0)!=13)
+	if(tarai(13,7,0)!=13)		// call 91924989 times
 		return 1;
 
+	cpu_counter();
 	return 0;
 }
