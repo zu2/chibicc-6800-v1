@@ -1,0 +1,11 @@
+#!/bin/sh
+
+for i in [0-9]*.c; do
+  ./onetest $i
+  ret=$?
+  echo $ret
+  if [ $ret -ne 0 ]; then
+    exit $ret
+  fi
+done
+
