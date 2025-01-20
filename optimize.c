@@ -226,8 +226,6 @@ Node *optimize_expr(Node *node)
   case ND_GE:
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
-// bug: 9006-knight don't run
-#if 0
     println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
     if ( node_cost(node->lhs) < node_cost(node->rhs)
     ||  (node_cost(node->lhs) == node_cost(node->rhs)
@@ -250,7 +248,6 @@ Node *optimize_expr(Node *node)
       }
       return node;
     }
-#endif
     return node;
   case ND_SHL:
   case ND_SHR:

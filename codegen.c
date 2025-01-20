@@ -410,6 +410,7 @@ static void load(Type *ty) {
 }
 
 static void load_x(Type *ty,int off) {
+  // Note: Do not destroy IX in this routine.
   switch (ty->kind) {
   case TY_ARRAY:
   case TY_STRUCT:
@@ -433,7 +434,6 @@ static void load_x(Type *ty,int off) {
     println("\tstab @long+1");
     println("\tldab %d,x",off);
     println("\tstab @long");
-//  println("  movss (%%rax), %%xmm0");
     return;
   case TY_DOUBLE:
     assert(ty->kind!=TY_DOUBLE);
@@ -1119,6 +1119,7 @@ static bool is_compare(Node *node)
 //
 static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
 {
+  println("; gen_direct_sub rhs->kind %d, rhs->ty->kind %d",rhs->kind,rhs->ty->kind);
   switch(rhs->kind){
   case ND_NUM: {
     switch (rhs->ty->kind) {
@@ -1134,6 +1135,7 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
     }
   } // ND_NUM
   case ND_VAR: {
+    println("; gen_direct_sub ND_VAR: %s",rhs->var->name);
     if (rhs->var->ty->kind != TY_VLA ){
       if (!test_addr_x(rhs)) return 0;
       if(rhs->var->is_local){
@@ -1149,12 +1151,17 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
         return 1;
       }else{
         // global
+        println("; gen_direct_sub ND_VAR %s is global?",rhs->var->name);
         if (rhs->ty->kind==TY_CHAR){
 	  return 0;
         }else{
+          println("; gen_direct_sub ND_VAR %s is global",rhs->var->name);
           if (test) return 1;
-          println("\t%s #<_%s",opb,rhs->var->name);
-          println("\t%s #>_%s",opa,rhs->var->name);
+	  int off = gen_addr_x(rhs,true);
+          println("\t%s %d,x",opb,off+1);
+          println("\t%s %d,x",opa,off);
+//          println("\t%s #<_%s",opb,rhs->var->name);
+//          println("\t%s #>_%s",opa,rhs->var->name);
         }
         return 1;
       }
@@ -1183,6 +1190,239 @@ static int gen_direct(Node *rhs,char *opb, char *opa)
   return gen_direct_sub(rhs,opb,opa,0);
 }
 
+static int gen_direct_long_and(int64_t v,char *opa, char *opb){
+  uint32_t v1 = v & 0x000000FF;
+  uint32_t v2 = v & 0x0000FF00;
+  uint32_t v3 = v & 0x00FF0000;
+  uint32_t v4 = v & 0xFF000000;
+
+  if (v1==0){
+    println("\tclr @long+3");
+  }else if (v1 != 0x000000FF){
+    println("\tldab @long+3");
+    println("\t%s #%u", opb, v1);
+    println("\tstab @long+3");
+  }
+  if (v2 == 0){
+    println("\tclr @long+2");
+  }else if (v2 != 0x0000FF00){
+    println("\tldaa @long+2");
+    println("\t%s #%u", opa, v2>>8);
+    println("\tstaa @long+2");
+  }
+  if (v3 == 0){
+    println("\tclr @long+1");
+  }else if (v3 != 0x00FF0000){
+    println("\tldaa @long+1");
+    println("\t%s #%u", opa, v3>>16);
+    println("\tstaa @long+1");
+  }
+  if (v4 == 0){
+    println("\tclr @long");
+  }else if (v4 != 0xFF000000){
+    println("\tldaa @long");
+    println("\t%s #%u", opa, v4>>24);
+    println("\tstaa @long");
+  }
+
+  return 1;
+}
+
+static int gen_direct_long_or(uint64_t v,char *opa, char *opb){
+  uint32_t v1 = v & 0x000000FF;
+  uint32_t v2 = v & 0x0000FF00;
+  uint32_t v3 = v & 0x00FF0000;
+  uint32_t v4 = v & 0xFF000000;
+  bool b_is_ff = 0;
+
+  if (v1==0x000000FF) {
+    println("\tldab #$FF");
+    println("\tstab @long+3");
+    b_is_ff = 1;
+  }else if (v1) {
+    println("\tldab @long+3");
+    println("\t%s #%u", opb, v1);
+    println("\tstab @long+3");
+  }
+  if (v2 == 0x0000FF00){
+    if (!b_is_ff) {
+      println("\tldab #$FF");
+      b_is_ff = 1;
+    }
+    println("\tstab @long+2");
+  }else if (v2) {
+    println("\tldaa @long+2");
+    println("\t%s #%u", opa, v2>>8);
+    println("\tstaa @long+2");
+  }
+  if (v3 == 0x00FF0000){
+    if (!b_is_ff) {
+      println("\tldab #$FF");
+      b_is_ff = 1;
+    }
+    println("\tstab @long+1");
+  }else if (v3) {
+    println("\tldaa @long+1");
+    println("\t%s #%u", opa, v3>>16);
+    println("\tstaa @long+1");
+  }
+  if (v4 == 0xFF000000){
+    if (!b_is_ff) {
+      println("\tldab #$FF");
+      b_is_ff = 1;
+    }
+    println("\tstab @long");
+  }else if (v4) {
+    println("\tldaa @long");
+    println("\t%s #%u", opa, v4>>24);
+    println("\tstaa @long");
+  }
+
+  return 1;
+}
+static int gen_direct_long_xor(uint64_t v,char *opa, char *opb){
+  uint32_t v1 = v & 0x000000FF;
+  uint32_t v2 = v & 0x0000FF00;
+  uint32_t v3 = v & 0x00FF0000;
+  uint32_t v4 = v & 0xFF000000;
+
+  if (v1) {
+    println("\tldab @long+3");
+    println("\t%s #%u", opb, v1);
+    println("\tstab @long+3");
+  }
+  if (v2) {
+    println("\tldaa @long+2");
+    println("\t%s #%u", opa, v2>>8);
+    println("\tstaa @long+2");
+  }
+  if (v3) {
+    println("\tldaa @long+1");
+    println("\t%s #%u", opa, v3>>16);
+    println("\tstaa @long+1");
+  }
+  if (v4) {
+    println("\tldaa @long");
+    println("\t%s #%u", opa, v4>>24);
+    println("\tstaa @long");
+  }
+
+  return 1;
+}
+//
+//
+// shift operation
+//
+int gen_direct_shl_long(Node *node)
+{
+  Node *rhs = node->rhs;
+
+  if (node->kind != ND_SHL || rhs->kind != ND_NUM)
+    return 0;
+  if (node->rhs->ty->kind!=TY_LONG && node->rhs->ty->kind!=TY_INT)
+    return 0;
+
+  if ( rhs->val >= 32 ) {
+    println("\tldx #0");
+    println("\tstx @long+2");
+    println("\tstx @long");
+    IX_Dest = IX_None;
+    return 1;
+  }
+  switch (rhs->val) {
+  case 24:
+  case 16:
+  case 8:
+  }
+  switch (rhs->val) {
+  case 24:
+    println("\tclra");
+    println("\tldab @long+3");
+    println("\tstab @long");
+    println("\tstaa @long+3");
+    println("\tstaa @long+2");
+    println("\tstaa @long+1");
+    return 1;
+  case 16:
+    println("\tldx @long+2");
+    println("\tstx @long");
+    println("\tldx #0");
+    println("\tstx @long+2");
+    IX_Dest = IX_None;
+    return 1;
+  case 8:
+    println("\tldx @long+1");
+    println("\tldx @long");
+    println("\tldab @long+3");
+    println("\tstab @long+2");
+    println("\tclr @long+3");
+    IX_Dest = IX_None;
+    return 1;
+  }
+  return 0;
+}
+
+int gen_direct_shr_long(Node *node)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+  if (node->kind != ND_SHR || rhs->kind != ND_NUM)
+    return 0;
+  if (node->rhs->ty->kind!=TY_LONG && node->rhs->ty->kind!=TY_INT)
+    return 0;
+
+  if ( rhs->val >= 32 ) {
+    println("\tclra");
+    if (!lhs->ty->is_unsigned) {
+      println("\tasl @long");
+      println("\tsbca #0");
+    }
+    println("\tstaa @long+3");
+    println("\tstaa @long+2");
+    println("\tstaa @long+1");
+    println("\tstaa @long");
+    return 1;
+  }
+  switch (rhs->val) {
+  case 24:
+  case 16:
+  case 8:
+    println("\tclra");
+    if (!lhs->ty->is_unsigned) {
+      int c = count();
+      println("\ttst @long");
+      println("\tbpl L_%d",c);
+      println("\tsbca #0");
+      println("L_%d:",c);
+    }
+  }
+  switch (rhs->val) {
+  case 24:
+    println("\tldab @long");
+    println("\tstab @long+3");
+    println("\tstaa @long+2");
+    println("\tstaa @long+1");
+    println("\tstaa @long");
+    return 1;
+  case 16:
+    println("\tldx @long");
+    println("\tstx @long+2");
+    println("\tstaa @long+1");
+    println("\tstaa @long");
+    IX_Dest = IX_None;
+    return 1;
+  case 8:
+    println("\tldx @long+1");
+    println("\tstx @long+2");
+    println("\tldab @long");
+    println("\tstab @long+1");
+    println("\tstaa @long");
+    IX_Dest = IX_None;
+    return 1;
+  }
+  return 0;
+}
+
 //
 // long version:
 // If rhs is a simple expression, it is computed directly without pushing it onto the stack.
@@ -1194,7 +1434,13 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
     switch (rhs->ty->kind) {
     case TY_LONG:
       if (test) return 1;
-      println("; gen_direct_long %u, %08x",(uint32_t)rhs->val,(uint32_t)rhs->val);
+      // TODO: Branching with strcmp is not pretty. think it later.
+      if (strcmp(opb,"andb")==0)
+	return gen_direct_long_and(rhs->val,opa,opb);
+      if (strcmp(opb,"orab")==0)
+	return gen_direct_long_or(rhs->val,opa,opb);
+      if (strcmp(opb,"eorb")==0)
+	return gen_direct_long_xor(rhs->val,opa,opb);
       println("\tldab @long+3");
       println("\t%s #%u", opb, (uint32_t) (rhs->val & 0x000000FF));
       println("\tstab @long+3");
@@ -1252,6 +1498,10 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
     }
     return 0;
   } // ND_VAR
+  case ND_CAST:
+    println("; gen_direct_long_sub skip ND_CAST? %d",is_empty_cast(rhs->lhs->ty, rhs->ty));
+    if(is_empty_cast(rhs->lhs->ty, rhs->ty))
+      return gen_direct_long_sub(rhs->lhs, opb, opa, test);
   default:
     return 0;
   }
@@ -1376,6 +1626,7 @@ static int gen_jump_if_true(Node *node,char *if_true)
  return 0; // XXX : not yet implemented
 }
 
+
 // Generate code for a given node.
 static void gen_expr(Node *node) {
   node = optimize_expr(node);
@@ -1460,7 +1711,6 @@ static void gen_expr(Node *node) {
     println("\tsbca #0");
 //  println("  neg %%rax");
     return;
-#if 1
   case ND_VAR:
     switch (node->ty->kind) {
     case TY_ARRAY:
@@ -1475,11 +1725,6 @@ static void gen_expr(Node *node) {
     }
     int off = gen_addr_x(node,false);
     load_x(node->ty,off);
-#else
-  case ND_VAR:
-    gen_addr(node);
-    load(node->ty);
-#endif
     return;
   case ND_MEMBER: {
     gen_addr(node);
@@ -2024,10 +2269,14 @@ static void gen_expr(Node *node) {
     //
     case ND_SHL:
     case ND_SHR:
-      if (can_direct(node->rhs)) {
+      if (node->rhs->kind == ND_NUM
+      && (node->rhs->ty->kind==TY_LONG || node->rhs->ty->kind==TY_INT) ){
         gen_expr(node->lhs);
-	if (!gen_direct(node->rhs,"ldab","ldaa"))
-	  assert(0);
+  	if (node->kind == ND_SHL && gen_direct_shl_long(node))
+	   return;
+	if (node->kind == ND_SHR && gen_direct_shr_long(node))
+	   return;
+	println("\tldab #%d",(uint32_t)(node->rhs->val & 0x000000FF));
       }else{
         gen_expr(node->rhs);
         cast(node->rhs->ty, ty_char);
@@ -2361,6 +2610,7 @@ static void gen_stmt(Node *node) {
       sprintf(L_end, "L_end_%d"  ,c);
       strcpy(L_else,L_end);
     }
+    node->cond = optimize_expr(node->cond);
     if (!gen_jump_if_false(node->cond,L_else)){
       gen_expr(node->cond);
       if (!is_compare(node->cond))
@@ -2384,6 +2634,7 @@ static void gen_stmt(Node *node) {
       gen_stmt(node->init);
     println("L_begin_%d:", c);
     IX_Dest = IX_None;
+    node->cond = optimize_expr(node->cond);
     if (node->cond) {
       println("; NF_FOR:node is cond");
       if (!gen_jump_if_false(node->cond,node->brk_label)){
@@ -2410,6 +2661,7 @@ static void gen_stmt(Node *node) {
     IX_Dest = IX_None;
     gen_stmt(node->then);
     println("%s:", node->cont_label);
+    node->cond = optimize_expr(node->cond);
     gen_expr(node->cond);
     if (!is_compare(node->cond))
       cmp_zero(node->cond->ty);
