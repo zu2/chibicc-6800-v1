@@ -144,7 +144,8 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_CAST:
     node->lhs = optimize_expr(node->lhs);
-    return node;
+//    return node;
+#if 1
 #if 0
 //    println("; ND_CAST: node->lhs->ty->kind %d, node->ty->kind %d, %s %d",node->lhs->ty->kind,node->ty->kind,__FILE__,__LINE__);
 //    println("; ND_CAST: node->lhs->ty %p, node->ty %p",node->lhs->ty,node->ty);
@@ -152,6 +153,7 @@ Node *optimize_expr(Node *node)
       println("; ND_CAST: lhs->ty->size:%d node->ty->size:%d",node->lhs->ty->size,node->ty->size);
       println("; ND_CAST: lhs->ty->is_integer:%d node->ty->is_integer:%d",is_integer(node->lhs->ty),is_integer(node->ty));
       println("; ND_CAST: lhs->ty->is_unsigned:%d node->ty->is_unsigned:%d",node->lhs->ty->is_unsigned,node->ty->is_unsigned);
+#endif
     if (is_integer(node->ty) && is_integer(node->lhs->ty)){
       if (node->ty->size == node->lhs->ty->size
       &&  (node->ty->is_unsigned == node->lhs->ty->is_unsigned)){
@@ -164,7 +166,7 @@ Node *optimize_expr(Node *node)
       return optimize_expr(node->lhs);
     }
     if (node->lhs->ty->kind==4 && node->ty->kind==5){
-      println("; ND_CAST: int to long");
+//      println("; ND_CAST: int to long");
       if (node->lhs->kind == ND_NUM){
 	node->lhs->ty = node->ty;
 	return node->lhs;
@@ -224,9 +226,13 @@ Node *optimize_expr(Node *node)
   case ND_GE:
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
+// bug: 9006-knight don't run
+#if 0
+    println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
     if ( node_cost(node->lhs) < node_cost(node->rhs)
     ||  (node_cost(node->lhs) == node_cost(node->rhs)
       &&(node->kind == ND_LE || node->kind == ND_GT))){
+      println("; optimize RO %d swap_lr",node->kind);
       node = swap_lr(node);
       switch(node->kind){
       case ND_LT:
@@ -244,6 +250,7 @@ Node *optimize_expr(Node *node)
       }
       return node;
     }
+#endif
     return node;
   case ND_SHL:
   case ND_SHR:
