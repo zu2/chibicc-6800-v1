@@ -109,8 +109,17 @@ static void pop_arg(Node *args)
 
 static void ldx_bp()
 {
-  if (IX_Dest != IX_BP)
-    println("\tldx @bp");
+  if (IX_Dest != IX_BP){
+    println("; depth = %d",depth);
+    switch (depth){
+    case 0:
+      println("\ttsx");
+      break;
+    default:
+      println("\tldx @bp");
+      break;
+    }
+  }
   IX_Dest = IX_BP;
 }
 
@@ -166,8 +175,10 @@ static void gen_addr(Node *node){
         }
 	println("\tldab @bp+1");
 	println("\tldaa @bp");
-	println("\taddb #<%d",node->var->offset);
-	println("\tadca #>%d",node->var->offset);
+	if (node->var->offset) {
+	  println("\taddb #<%d",node->var->offset);
+	  println("\tadca #>%d",node->var->offset);
+	}
 //      println("  lea %d(%%rbp), %%rax", node->var->offset);
       return;
     }
@@ -247,8 +258,10 @@ static void gen_addr(Node *node){
     return;
   case ND_MEMBER:
     gen_addr(node->lhs);
-    println("\taddb #<%d",node->member->offset);
-    println("\tadca #>%d",node->member->offset);
+    if (node->member->offset) {
+      println("\taddb #<%d",node->member->offset);
+      println("\tadca #>%d",node->member->offset);
+    }
 //    println("  add $%d, %%rax", node->member->offset);
     return;
   case ND_FUNCALL:
@@ -267,8 +280,10 @@ static void gen_addr(Node *node){
   case ND_VLA_PTR:
     println("\tldab @bp+1");
     println("\tldaa @bp");
-    println("\taddb #<%d",node->var->offset);
-    println("\tadca #>%d",node->var->offset);
+    if (node->var->offset) {
+      println("\taddb #<%d",node->var->offset);
+      println("\tadca #>%d",node->var->offset);
+    }
 //    println("  lea %d(%%rbp), %%rax", node->var->offset);
     return;
   }
@@ -332,23 +347,30 @@ static int gen_addr_x(Node *node,bool save_d)
 //
 int test_addr_x(Node *node)
 {
-  return 0;	// It's buggy.
   //println("; enter test_addr_x offset=%d",node->var->offset); // XXX
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
     if (node->var->ty->kind == TY_VLA){
+//    println("; node->var->ty->kind == TY_VLA");
+      return 0;	// It's buggy.
       return (node->var->offset + node->var->ty->size <= 256);
     }
     // Local variable
     if (node->var->is_local) {
+      println("; node->var->is_local %s",node->var->name);
+      println("; => %d",node->var->offset + node->var->ty->size <= 256);
       return (node->var->offset + node->var->ty->size <= 256);
     }
     // Function
     if (node->ty->kind == TY_FUNC) {
+      println("; node->ty->kind == TY_FUNC");
+//    return 0;	// It's buggy.
       return 1;
     }
     // maybe Global variable
+    println("; maybe Global variable %s",node->var->name);
+    return 0;	// It's buggy.
     return 1;
   }
   return 0;
@@ -412,6 +434,7 @@ static void load(Type *ty) {
 
 static void load_x(Type *ty,int off) {
   // Note: Do not destroy IX in this routine.
+  println("; load_x(off=%d)",off);
   switch (ty->kind) {
   case TY_ARRAY:
   case TY_STRUCT:
@@ -913,8 +936,10 @@ static int push_args(Node *node, Node *last_pushed_arg) {
   if (node->ret_buffer) { // && node->ty->size > 16) {
     println("\tldab @bp+1	; %d",node->ret_buffer->offset);
     println("\tldaa @bp");
-    println("\taddb #<%d",node->ret_buffer->offset);
-    println("\tadca #>%d",node->ret_buffer->offset);
+    if (node->ret_buffer->offset) {
+      println("\taddb #<%d",node->ret_buffer->offset);
+      println("\tadca #>%d",node->ret_buffer->offset);
+    }
 //  println("  lea %d(%%rbp), %%rax", node->ret_buffer->offset);
     push();
   }
@@ -1724,7 +1749,7 @@ static void gen_expr(Node *node) {
       load(node->ty);
       return;
     }
-#if 0
+#if 1
     int off = gen_addr_x(node,false);
     load_x(node->ty,off);
 #else
@@ -3040,8 +3065,10 @@ static void emit_text(Obj *prog) {
       println("\tsbca #>%u",fn->stack_size-1);
       println("\tstab @bp+1");
       println("\tstaa @bp");
-      ldx_bp();
+      println("\tldx @bp");
+      IX_Dest = IX_BP;
       println("\ttxs");
+      depth = 0;
     }
     println("\tstx %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
 //  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
