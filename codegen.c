@@ -332,6 +332,7 @@ static int gen_addr_x(Node *node,bool save_d)
 //
 int test_addr_x(Node *node)
 {
+  return 0;	// It's buggy.
   //println("; enter test_addr_x offset=%d",node->var->offset); // XXX
   switch (node->kind) {
   case ND_VAR:
@@ -1723,8 +1724,13 @@ static void gen_expr(Node *node) {
       load(node->ty);
       return;
     }
+#if 0
     int off = gen_addr_x(node,false);
     load_x(node->ty,off);
+#else
+    gen_addr(node);
+    load(node->ty);
+#endif
     return;
   case ND_MEMBER: {
     gen_addr(node);
