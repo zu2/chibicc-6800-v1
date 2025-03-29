@@ -3095,17 +3095,26 @@ static void emit_text(Obj *prog) {
       for(int i=0; i<fn->stack_size-1; i++)
 	println("\tins");
     }else{
-      println("\tstab @tmp1+1");
-      println("\tstaa @tmp1");
+      println("\tpshb");
       println("\tldab @bp+1");
-      println("\tldaa @bp");
       println("\taddb #<%u",fn->stack_size-1);
-      println("\tadca #>%u",fn->stack_size-1);
       println("\tstab @bp+1");
-      println("\tstaa @bp");
+      println("\tldab @bp");
+      println("\tadcb #>%u",fn->stack_size-1);
+      println("\tstab @bp");
+      println("\tpulb");
       println("\tlds @bp");			// remove local variables
-      println("\tldab @tmp1+1");
-      println("\tldaa @tmp1");
+//    println("\tstab @tmp1+1");
+//    println("\tstaa @tmp1");
+//    println("\tldab @bp+1");
+//    println("\tldaa @bp");
+//    println("\taddb #<%u",fn->stack_size-1);
+//    println("\tadca #>%u",fn->stack_size-1);
+//    println("\tstab @bp+1");
+//    println("\tstaa @bp");
+//    println("\tlds @bp");			// remove local variables
+//    println("\tldab @tmp1+1");
+//    println("\tldaa @tmp1");
     }
     println("\ttsx");
     println("\tldx 0,x");
