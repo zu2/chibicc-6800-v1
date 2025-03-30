@@ -3095,7 +3095,9 @@ static void emit_text(Obj *prog) {
       for(int i=0; i<fn->stack_size-1; i++)
 	println("\tins");
     }else{
-      if (fn->ty->return_ty != ty_void)
+      if (fn->ty->return_ty != ty_void
+      &&  fn->ty->return_ty != ty_long
+      &&  fn->ty->return_ty != ty_float)
         println("\tpshb");
       println("\tldab @bp+1");
       println("\taddb #<%u",fn->stack_size-1);
@@ -3103,7 +3105,9 @@ static void emit_text(Obj *prog) {
       println("\tldab @bp");
       println("\tadcb #>%u",fn->stack_size-1);
       println("\tstab @bp");
-      if (fn->ty->return_ty != ty_void)
+      if (fn->ty->return_ty != ty_void
+      &&  fn->ty->return_ty != ty_long
+      &&  fn->ty->return_ty != ty_float)
         println("\tpulb");
       println("\tlds @bp");			// remove local variables
 //    println("\tstab @tmp1+1");
