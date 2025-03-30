@@ -1880,14 +1880,22 @@ static void gen_expr(Node *node) {
 		    node->var->ty->name->len, node->var->ty->name->loc,
 		    node->var->ty->size, node->var->offset, __FILE__, __LINE__);
     ldx_bp();
-    println("\tldab #%d",node->var->ty->size);
-    println("\tclra");
-    int c = count();
-    println("L_memzero_%d:", c);
-    println("\tstaa %d,x",node->var->offset);
-    println("\tinx");
-    println("\tdecb");
-    println("\tbne L_memzero_%d", c);
+    if(node->var->ty->size <= 4
+    && node->var->ty->size + node->var->offset <= 256){
+      for (int i=0; i<node->var->ty->size; i++){
+        println("\tclr %d,x",node->var->offset+i);
+      }
+    }else{
+      println("\tldab #%d",node->var->ty->size);
+      println("\tclra");
+      int c = count();
+      println("L_memzero_%d:", c);
+      println("\tstaa %d,x",node->var->offset);
+      println("\tinx");
+      println("\tdecb");
+      println("\tbne L_memzero_%d", c);
+      break;
+    }
 //    println("  mov $%d, %%rcx", node->var->ty->size);
 //    println("  lea %d(%%rbp), %%rdi", node->var->offset);
 //    println("  mov $0, %%al");
