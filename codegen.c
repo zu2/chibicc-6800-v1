@@ -1166,6 +1166,9 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
       if (!test_addr_x(rhs)) return 0;
       if(rhs->var->is_local){
         if (test) return 1;
+	if (rhs->ty->kind==TY_ARRAY) {
+	  return 0;
+	}
         int off = gen_addr_x(rhs,true);
         if (rhs->ty->kind==TY_CHAR){
           println("\t%s %d,x",opb,off);
