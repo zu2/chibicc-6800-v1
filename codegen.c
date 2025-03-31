@@ -868,6 +868,7 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   case TY_FLOAT:
   case TY_LONG:{
       println("\tjsr __push32");
+      IX_Dest = IX_None;
       depth+=4;
     }
     break;

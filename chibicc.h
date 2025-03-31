@@ -176,7 +176,7 @@ struct Relocation {
 
 // AST node
 typedef enum {
-  ND_NULL_EXPR, // Do nothing
+  ND_NULL_EXPR, // 0: Do nothing
   ND_ADD,       // +
   ND_SUB,       // -
   ND_MUL,       // *
@@ -186,7 +186,7 @@ typedef enum {
   ND_BITAND,    // &
   ND_BITOR,     // |
   ND_BITXOR,    // ^
-  ND_SHL,       // <<
+  ND_SHL,       // 10: <<
   ND_SHR,       // >>
   ND_EQ,        // ==
   ND_NE,        // !=
@@ -196,7 +196,7 @@ typedef enum {
   ND_GE,        // >=
   ND_ASSIGN,    // =
   ND_COND,      // ?:
-  ND_COMMA,     // ,
+  ND_COMMA,     // 20: ,
   ND_MEMBER,    // . (struct member access)
   ND_ADDR,      // unary &
   ND_DEREF,     // unary *
@@ -206,7 +206,7 @@ typedef enum {
   ND_LOGOR,     // ||
   ND_RETURN,    // "return"
   ND_IF,        // "if"
-  ND_FOR,       // "for" or "while"
+  ND_FOR,       // 30: "for" or "while"
   ND_DO,        // "do"
   ND_SWITCH,    // "switch"
   ND_CASE,      // "case"
@@ -216,16 +216,17 @@ typedef enum {
   ND_LABEL,     // Labeled statement
   ND_LABEL_VAL, // [GNU] Labels-as-values
   ND_FUNCALL,   // Function call
-  ND_EXPR_STMT, // Expression statement
+  ND_EXPR_STMT, // 40: Expression statement
   ND_STMT_EXPR, // Statement expression
   ND_VAR,       // Variable
   ND_VLA_PTR,   // VLA designator
-  ND_NUM,       // Integer
+  ND_NUM,       // 44: Integer
   ND_CAST,      // Type cast
   ND_MEMZERO,   // Zero-clear a stack variable
   ND_ASM,       // "asm"
   ND_CAS,       // Atomic compare-and-swap
   ND_EXCH,      // Atomic exchange
+  ND_POST_INCDEC,// post inc/dec (++,--)
 } NodeKind;
 
 // AST node type
@@ -303,17 +304,17 @@ Obj *parse(Token *tok);
 //
 
 typedef enum {
-  TY_VOID,
+  TY_VOID,	// 0
   TY_BOOL,
   TY_CHAR,
   TY_SHORT,
   TY_INT,
-  TY_LONG,
+  TY_LONG,	// 5
   TY_FLOAT,
   TY_DOUBLE,
   TY_LDOUBLE,
   TY_ENUM,
-  TY_PTR,
+  TY_PTR,	// 10
   TY_FUNC,
   TY_ARRAY,
   TY_VLA, // variable-length array
