@@ -41,6 +41,15 @@ bool is_numeric(Type *ty) {
 }
 
 // add from slimcc
+bool is_array(Type *ty) {
+  return ty->kind == TY_ARRAY || ty->kind == TY_VLA;
+}
+
+bool is_bitfield(Node *node) {
+  return node->kind == ND_MEMBER && node->member->is_bitfield;
+}
+
+// add from slimcc
 bool is_redundant_cast(Node *expr, Type *ty) {
   if (expr->kind != ND_CAST)
     return false;

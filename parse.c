@@ -1406,11 +1406,17 @@ static Node *lvar_initializer(Token **rest, Token *tok, Obj *var) {
   // that unspecified elements are set to 0. Here, we simply
   // zero-initialize the entire memory region of a variable before
   // initializing it with user-supplied values.
-  Node *lhs = new_node(ND_MEMZERO, tok);
-  lhs->var = var;
-
   Node *rhs = create_lvar_init(init, var->ty, &desg, tok);
-  return new_binary(ND_COMMA, lhs, rhs, tok);
+  switch(var->ty->kind){
+  case TY_ARRAY:
+  case TY_STRUCT:
+  case TY_UNION:
+    Node *lhs = new_node(ND_MEMZERO, tok);
+    lhs->var = var;
+
+    return new_binary(ND_COMMA, lhs, rhs, tok);
+  }
+  return rhs;
 }
 
 static uint64_t read_buf(char *buf, int sz) {
@@ -2072,7 +2078,7 @@ static Node *to_assign(Node *binary) {
 
   // Convert `A.x op= C` to `tmp = &A, (*tmp).x = (*tmp).x op C`.
   if (binary->lhs->kind == ND_MEMBER) {
-    Obj *var = new_lvar("", pointer_to(binary->lhs->lhs->ty));
+    Obj *var = new_lvar("*tmp", pointer_to(binary->lhs->lhs->ty));
 
     Node *expr1 = new_binary(ND_ASSIGN, new_var_node(var, tok),
                              new_unary(ND_ADDR, binary->lhs->lhs, tok), tok);
@@ -2836,6 +2842,16 @@ static Node *struct_ref(Node *node, Token *tok) {
 // Convert A++ to `(typeof A)((A += 1) - 1)`
 static Node *new_inc_dec(Node *node, Token *tok, int addend) {
   add_type(node);
+
+  if (!node->ty->is_atomic
+  &&  (node->ty == ty_char || node->ty == ty_int) ){
+    fprintf(stderr,"new_inc_dec: ND_POST_INCDEC\n");
+    node = new_add(node,new_num(addend,tok), tok);
+    node->kind = ND_POST_INCDEC;
+    node->ty = node->lhs->ty;
+    return node;
+  }
+
   return new_cast(new_add(to_assign(new_add(node, new_num(addend, tok), tok)),
                           new_num(-addend, tok), tok),
                   node->ty);

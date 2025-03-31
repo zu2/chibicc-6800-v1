@@ -1703,6 +1703,55 @@ static void gen_expr(Node *node) {
     error_tok(node->tok, "gen_expr: not implemented yet token");
     return;
   }
+  case ND_POST_INCDEC: {
+    if (node->rhs->kind != ND_NUM){
+      fprintf(stderr,"ND_POST_INCDEC: assertion failed 1\n");
+      assert(0);
+    }
+    int val = node->rhs->val;
+    int off;
+    if (test_addr_x(node->lhs)){
+      off = gen_addr_x(node->lhs,false);
+    }else{
+      off = 0;
+      gen_addr(node->lhs);
+      println("\tpshb");
+      println("\tpsha");
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tins");
+      println("\tins");
+    }
+    switch (node->lhs->ty->kind) {
+    case TY_CHAR:
+      println("\tldab %d,x",off);
+      println("\taddb #%d",val);
+      println("\tstab %d,x",off);
+      println("\tsubb #%d",val);
+      println("\tclra");
+      if (!node->lhs->ty->is_unsigned){
+        println("\tasrb");
+        println("\trolb");
+        println("\tsbca #0");
+      }
+      break;
+    case TY_SHORT:
+    case TY_INT:
+      println("\tldab %d,x",off+1);
+      println("\tldaa %d,x",off);
+      println("\taddb #<%d",val);
+      println("\tadca #>%d",val);
+      println("\tstab %d,x",off+1);
+      println("\tstaa %d,x",off);
+      println("\tsubb #<%d",val);
+      println("\tsbca #>%d",val);
+      break;
+    default:
+      fprintf(stderr,"ND_POST_INCDEC: assertion failed 1\n");
+      assert(0);
+    }
+    return;
+  }
   case ND_NEG:
     gen_expr(node->lhs);
 
@@ -3121,24 +3170,22 @@ static void emit_text(Obj *prog) {
       &&  fn->ty->return_ty != ty_float)
         println("\tpulb");
       println("\tlds @bp");			// remove local variables
-//    println("\tstab @tmp1+1");
-//    println("\tstaa @tmp1");
-//    println("\tldab @bp+1");
-//    println("\tldaa @bp");
-//    println("\taddb #<%u",fn->stack_size-1);
-//    println("\tadca #>%u",fn->stack_size-1);
-//    println("\tstab @bp+1");
-//    println("\tstaa @bp");
-//    println("\tlds @bp");			// remove local variables
-//    println("\tldab @tmp1+1");
-//    println("\tldaa @tmp1");
     }
-    println("\ttsx");
-    println("\tldx 0,x");
-    IX_Dest = IX_None;
-    println("\tins");
-    println("\tins");
-    println("\tstx @bp");
+    if (fn->ty->return_ty != ty_void
+    &&  fn->ty->return_ty != ty_long
+    &&  fn->ty->return_ty != ty_float){
+      println("\ttsx");
+      println("\tldx 0,x");
+      IX_Dest = IX_None;
+      println("\tins");
+      println("\tins");
+      println("\tstx @bp");
+    }else{
+      println("\tpulb");
+      println("\tstab @bp");
+      println("\tpulb");
+      println("\tstab @bp+1");
+    }
     for (Obj *var = fn->params; var; var = var->next) { // skip argment pass by register
       if (var->reg_param){
         if (var->ty->kind == TY_CHAR) {
