@@ -833,6 +833,57 @@ static void push_struct(Type *ty) {
 //  }
 }
 
+
+void
+gen_direct_pushl_sub(int val)
+{
+  static int a,b;
+
+  if(val==-1){
+    a = -1;
+    b = -1;
+    return;
+  }
+  if (a==val){
+    println("\tpsha");
+  }else if (b==val){
+    println("\tpshb");
+  }else if (val==0){
+    if (b==-1 || a!=-1){
+      println("\tclrb");
+      println("\tpshb");
+      b = 0;
+    }else{
+      println("\tclra");
+      println("\tpsha");
+      a = 0;
+    }
+  }else if (b==-1 || a!=-1){
+    println("\tldab #%d",val);
+    println("\tpshb");
+    b = val;
+  }else{
+    println("\tldaa #%d",val);
+    println("\tpsha");
+    a = val;
+  }
+}
+
+void
+gen_direct_pushl(int64_t val)
+{
+   int v0 = (int)(val & 0x000000FF);
+   int v1 = (int)(val & 0x0000FF00);
+   int v2 = (int)(val & 0x00FF0000);
+   int v3 = (int)(val & 0xFF000000);
+   gen_direct_pushl_sub(-1);
+   gen_direct_pushl_sub(v0);
+   gen_direct_pushl_sub(v1);
+   gen_direct_pushl_sub(v2);
+   gen_direct_pushl_sub(v3);
+   depth+=4;
+}
+
 static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   if (!args)
     return;
@@ -842,11 +893,6 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 
   if ((first_pass && !args->pass_by_stack) || (!first_pass && args->pass_by_stack))
     return;
-//  println("; push_args2 call gen_expr %s %d",__FILE__,__LINE__);
-  gen_expr(args);
-//  println("; push_args2 end  gen_expr %s %d",__FILE__,__LINE__);
-//  println("; push_args2 args->ty->kind=%d", args->ty->kind);
-//  println("; push_args2 TY_CHAR=%d args->ty->kind=%d", TY_CHAR, args->ty->kind);
 
   switch (args->ty->kind) {
   case TY_DOUBLE:
@@ -856,10 +902,12 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     break;
   case TY_STRUCT:
   case TY_UNION:
+    gen_expr(args);
     push_struct(args->ty);
     break;
   case TY_CHAR: {
-//      println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
+    gen_expr(args);
+//  println("; push_args2 %d: Experimental pushing char 1 byte at a time  %s %d",args->ty->kind,__FILE__,__LINE__);
       if (args->pass_by_stack){
         push1();
         *last_pushed_arg = *args;
@@ -867,13 +915,49 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     }
     break;
   case TY_FLOAT:
-  case TY_LONG:{
-      println("\tjsr __push32");
-      IX_Dest = IX_None;
-      depth+=4;
+    gen_expr(args);
+    pushl();
+    break;
+  case TY_LONG:
+    println("; push_args2: TY_LONG args->kind:%d",args->kind);
+    int64_t val = args->val;
+    switch(args->kind){
+    case ND_CAST:
+      println("; push_args2: ND_CAST");
+      if(!is_empty_cast(args->lhs->ty, args->ty)
+      && args->lhs->kind != ND_NUM){
+        gen_expr(args);
+        pushl();
+	break;
+      }
+      val = args->lhs->val;
+      // THRU
+    case ND_NUM:
+      gen_direct_pushl(val);
+      break;
+    case ND_VAR:
+      if (test_addr_x(args)){
+        int off = gen_addr_x(args,false);
+	println("\tldab %d,x",off+3);
+	println("\tpshb");
+	println("\tldab %d,x",off+2);
+	println("\tpshb");
+	println("\tldab %d,x",off+1);
+	println("\tpshb");
+	println("\tldab %d,x",off);
+	println("\tpshb");
+      }else{
+        gen_expr(args);
+        pushl();
+      }
+      break;
+    default:
+      gen_expr(args);
+      pushl();
     }
     break;
   default: {
+    gen_expr(args);
 //      println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
 //      println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
       if (args->pass_by_stack){
