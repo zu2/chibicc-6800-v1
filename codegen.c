@@ -61,9 +61,17 @@ static void popx(void) {
 }
 
 static void pushl(void) {
-  println("\tjsr __push32");
+//println("\tjsr __push32");
+//IX_Dest = IX_None;
+  println("\tldab @long+3");
+  println("\tpshb");
+  println("\tldab @long+2");
+  println("\tpshb");
+  println("\tldab @long+1");
+  println("\tpshb");
+  println("\tldab @long");
+  println("\tpshb");
   depth+=4;
-  IX_Dest = IX_None;
 }
 
 static void popl() {
@@ -873,9 +881,9 @@ void
 gen_direct_pushl(int64_t val)
 {
    int v0 = (int)(val & 0x000000FF);
-   int v1 = (int)(val & 0x0000FF00);
-   int v2 = (int)(val & 0x00FF0000);
-   int v3 = (int)(val & 0xFF000000);
+   int v1 = (int)((val & 0x0000FF00)>>8);
+   int v2 = (int)((val & 0x00FF0000)>>16);
+   int v3 = (int)((val & 0xFF000000)>>24);
    gen_direct_pushl_sub(-1);
    gen_direct_pushl_sub(v0);
    gen_direct_pushl_sub(v1);
@@ -1636,6 +1644,83 @@ static int gen_direct_long(Node *rhs,char *opb, char *opa)
   return gen_direct_long_sub(rhs,opb,opa,0);
 }
 
+int gen_direct_long2(Node *node,char *opb, char *opa)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+  int L =  ((lhs->kind == ND_NUM) && (lhs->ty->kind == TY_LONG))*2
+        +  ((lhs->kind == ND_VAR) && test_addr_x(lhs) &&  lhs->var->is_local);
+  int R =  ((rhs->kind == ND_NUM) && (rhs->ty->kind == TY_LONG))*2
+        +  ((rhs->kind == ND_VAR) && test_addr_x(rhs) &&  rhs->var->is_local);
+  int loff = 0;
+  int roff = 0;
+  uint64_t lv;
+  uint64_t rv;
+
+  if (L==1)
+    loff = gen_addr_x(lhs,false);
+  else
+    lv   = lhs->val;
+  if (R==1)
+    roff = gen_addr_x(rhs,false);
+  else
+    rv   = rhs->val;
+  
+  if (L==1)
+    println("\tldab %d,x",loff+3);
+  else
+    println("\tldab #%d",(int)(lv & 0x000000FF));
+  if (R==1)
+    println("\t%s %d,x",opb,roff+3);
+  else
+    println("\t%s #%d",opb,(int)(rv & 0x000000FF));
+  println("\tstab @long+3");
+  if (L==1)
+    println("\tldab %d,x",loff+2);
+  else
+    println("\tldab #%d",(int)(lv & 0x0000FF00)>>8);
+  if (R==1)
+    println("\t%s %d,x",opa,roff+2);
+  else
+    println("\t%s #%d",opa,(int)(rv & 0x0000FF00)>>8);
+  println("\tstaa @long+2");
+  if (L==1)
+    println("\tldab %d,x",loff+1);
+  else
+    println("\tldab #%d",(int)(lv & 0x00FF0000)>>16);
+  if (R==1)
+    println("\t%s %d,x",opa,roff+1);
+  else
+    println("\t%s #%d",opa,(int)(rv & 0x00FF0000)>>16);
+  println("\tstaa @long+1");
+  if (L==1)
+    println("\tldab %d,x",loff);
+  else
+    println("\tldab #%d",(int)(lv & 0xFF000000)>>24);
+  if (R==1)
+    println("\t%s %d,x",opa,roff);
+  else
+    println("\t%s #%d",opa,(int)(rv & 0xFF000000)>>24);
+  println("\tstaa @long");
+  return 1;
+}
+
+int can_direct_long2(Node *node)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+
+  int L =  ((lhs->kind == ND_NUM) && (lhs->ty->kind == TY_LONG))
+        || ((lhs->kind == ND_VAR) && test_addr_x(lhs) &&  lhs->var->is_local);
+  int R =  ((rhs->kind == ND_NUM) && (rhs->ty->kind == TY_LONG))
+        || ((rhs->kind == ND_VAR) && test_addr_x(rhs) &&  rhs->var->is_local);
+  if (!L || !R){
+    println("; can_direct_long2: L:%d, R:%d",L,R);
+    return 0;
+  }
+  return 1;
+}
+
 //
 // Evaluate condition, if false then jumps to the if_false
 //   if can't return 0
@@ -2292,6 +2377,10 @@ static void gen_expr(Node *node) {
   case TY_LONG: {
     switch (node->kind) {
     case ND_ADD:
+      if (can_direct_long2(node)){
+        gen_direct_long2(node,"addb","adca");
+        return;
+      }
       gen_expr(node->lhs);
       if (can_direct_long(node->rhs)){
 	if (gen_direct_long(node->rhs,"addb","adca")){
@@ -2306,6 +2395,10 @@ static void gen_expr(Node *node) {
       IX_Dest = IX_None;
       return;
     case ND_SUB:
+      if (can_direct_long2(node)){
+        gen_direct_long2(node,"subb","sbca");
+        return;
+      }
       if (can_direct_long(node->rhs)){
         gen_expr(node->lhs);
 	if (gen_direct_long(node->rhs,"subb","sbca")){
@@ -2404,8 +2497,23 @@ static void gen_expr(Node *node) {
     case ND_LE:
     case ND_GT:
     case ND_GE:
-      gen_expr(node->rhs);
-      pushl();
+      if (node->rhs->kind == ND_NUM && node->rhs->ty->kind==TY_LONG) {
+        gen_direct_pushl(node->rhs->val);
+      }else if (test_addr_x(node->rhs)){
+        int off = gen_addr_x(node->rhs,false);
+	println("\tldab %d,x",off+3);
+	println("\tpshb");
+	println("\tldab %d,x",off+2);
+	println("\tpshb");
+	println("\tldab %d,x",off+1);
+	println("\tpshb");
+	println("\tldab %d,x",off);
+	println("\tpshb");
+	depth+=4;
+      }else{
+        gen_expr(node->rhs);
+        pushl();
+      }
       gen_expr(node->lhs);
       // Since push in the order is rhs -> lhs, the conditions are reversed.
       // Should I change the name?
