@@ -34,7 +34,8 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
 - add "/opt/chibicc/bin:/opt/fcc/bin" to $PATH
 - chibicc a.c
 
-
+---
+---
 Below is Rui's original README.md.
 
 # chibicc: A Small C Compiler
