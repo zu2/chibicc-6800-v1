@@ -11,7 +11,7 @@ char subc(char x,char y)
 
 	return 0;
 }
-void subi(int x,int y)
+int subi(int x,int y)
 {
 	int	z=3;
 
