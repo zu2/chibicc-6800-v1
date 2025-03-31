@@ -627,6 +627,7 @@ static void cmp_zero(Type *ty) {
     println("\tadca #0");
   }else{
     println("\tjsr __iszero32");
+    IX_Dest = IX_None;
   }
 }
 
