@@ -849,7 +849,8 @@ static Node *compute_vla_size(Type *ty, Token *tok) {
   else
     base_sz = new_num(ty->base->size, tok);
 
-  ty->vla_size = new_lvar("", ty_ulong);
+  ty->vla_size = new_lvar("", ty_uint);
+//ty->vla_size = new_lvar("", ty_ulong);
   Node *expr = new_binary(ND_ASSIGN, new_var_node(ty->vla_size, tok),
                           new_binary(ND_MUL, ty->vla_len, base_sz, tok),
                           tok);

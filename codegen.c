@@ -119,14 +119,7 @@ static void ldx_bp()
 {
   if (IX_Dest != IX_BP){
     println("; depth = %d",depth);
-    switch (depth){
-    case 0:
-      println("\ttsx");
-      break;
-    default:
-      println("\tldx @bp");
-      break;
-    }
+    println("\tldx @bp");	// TSX cannot be used because of VLA/alloca
   }
   IX_Dest = IX_BP;
 }
