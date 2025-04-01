@@ -52,4 +52,6 @@ noadd:
 	ins
 	ins
 	ins
+	ins
+	ins
 	jmp	0,x
