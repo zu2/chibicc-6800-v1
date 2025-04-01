@@ -851,9 +851,16 @@ static Node *compute_vla_size(Type *ty, Token *tok) {
 
   ty->vla_size = new_lvar("", ty_uint);
 //ty->vla_size = new_lvar("", ty_ulong);
-  Node *expr = new_binary(ND_ASSIGN, new_var_node(ty->vla_size, tok),
+
+  Node *expr;
+  if (base_sz->val==1){
+    expr = new_binary(ND_ASSIGN, new_var_node(ty->vla_size, tok),
+		    	ty->vla_len, tok);
+  }else{
+    expr = new_binary(ND_ASSIGN, new_var_node(ty->vla_size, tok),
                           new_binary(ND_MUL, ty->vla_len, base_sz, tok),
                           tok);
+  }
   return new_binary(ND_COMMA, node, expr, tok);
 }
 
