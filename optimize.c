@@ -91,7 +91,6 @@ Node *optimize_expr(Node *node)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
-  Node *tmp;
 
   switch (node->kind) {
   case ND_NULL_EXPR:

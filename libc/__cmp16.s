@@ -45,10 +45,14 @@ __lt16s:
 	rts
 ;
 __lt16u:
-	bcs	__true
-	clrb
-	clra
+	ldaa	#0
+	tab
+	adcb	#0
 	rts
+;	bcs	__true
+;	clrb
+;	clra
+;	rts
 ;
 ;	a-b > 0 ?
 ;
@@ -103,7 +107,11 @@ __ge16s:
 	rts
 ;
 __ge16u:
-	bcc	__true
-	clrb
-	clra
+	ldaa	#0
+	ldab	#1
+	sbcb	#0
 	rts
+;	bcc	__true
+;	clrb
+;	clra
+;	rts

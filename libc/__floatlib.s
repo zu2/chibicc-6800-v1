@@ -22,12 +22,9 @@ __lexp:	.byte	0	; @long's exp
 	.code
 ;
 ;	@long = fabs(@long)
+;	parameter passed by @long
 ;
 _fabs:
-	tsx
-	inx
-	inx
-	jsr	__load32x	; @long = TOS
 	asl	@long		; sign bit = 0
 	lsr	@long
 	rts
