@@ -348,32 +348,55 @@ static int gen_addr_x(Node *node,bool save_d)
 //
 int test_addr_x(Node *node)
 {
-  //println("; enter test_addr_x offset=%d",node->var->offset); // XXX
   switch (node->kind) {
-  case ND_VAR:
+  case ND_VAR: {
     // Variable-length array, which is always local.
     if (node->var->ty->kind == TY_VLA){
 //    println("; node->var->ty->kind == TY_VLA");
       return 0;	// It's buggy.
-      return (node->var->offset + node->var->ty->size <= 256);
+      //return (node->var->offset + node->var->ty->size <= 256);
     }
     // Local variable
     if (node->var->is_local) {
       println("; node->var->is_local %s",node->var->name);
       println("; => %d",node->var->offset + node->var->ty->size <= 256);
-      return (node->var->offset + node->var->ty->size <= 256);
+      return  (node->var->offset + node->var->ty->size <= 256);
     }
     // Function
     if (node->ty->kind == TY_FUNC) {
       println("; node->ty->kind == TY_FUNC");
-//    return 0;	// It's buggy.
       return 1;
     }
     // maybe Global variable
     println("; maybe Global variable %s",node->var->name);
     return 0;	// It's buggy.
     return 1;
+  } // ND_VAR
+  case ND_DEREF: {
+    Node *lhs = node->lhs;
+    fprintf(stderr,"; test_addr_x: ND_DEREF lhs->kind:%d\n",lhs->kind);
+    println("; test_addr_x: ND_DEREF lhs->kind:%d",lhs->kind);
+    switch (lhs->kind){
+    case ND_ADD:
+      println("; test_addr_x: ND_DEREF lhs->lhs->kind:%d",lhs->lhs->kind);
+      if (lhs->lhs->kind == ND_CAST) {
+        println("; test_addr_x: ND_DEREF lllhs->kind:%d",lhs->lhs->lhs->kind);
+      }
+      println("; test_addr_x: ND_DEREF lhs->rhs->kind:%d",lhs->rhs->kind);
+      if (lhs->rhs->kind == ND_CAST) {
+        println("; test_addr_x: ND_DEREF lrlhs->kind:%d",lhs->rhs->lhs->kind);
+      }
+      println("; test_addr_x: ND_DEREF lhs->rhs->kind:%d",lhs->rhs->kind);
+      return 0;
+    case ND_VAR:
+      fprintf(stderr,"; test_addr_x: ND_DEREF lhs->kind is ND_VAL\n");
+      println("; test_addr_x: ND_DEREF lhs->kind is ND_VAL");
+      return test_addr_x(lhs);
+    }
+    return 0;
   }
+  default:
+  } // switch
   return 0;
 }
 
@@ -1252,6 +1275,7 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
     if (rhs->var->ty->kind != TY_VLA ){
       if (!test_addr_x(rhs)) return 0;
       if(rhs->var->is_local){
+        println("; gen_direct_sub ND_VAR %s is local",rhs->var->name);
         if (test) return 1;
 	if (rhs->ty->kind==TY_ARRAY) {
 	  return 0;
@@ -1732,8 +1756,9 @@ static int gen_jump_if_false(Node *node,char *if_false)
     if(node->rhs->kind == ND_NUM && node->rhs->val == 0){
       if(node->kind != ND_EQ && node->kind != ND_NE)
         println("\ttsta");
-    }else if(!gen_direct(node->rhs,"subb","sbca"))
+    }else if(!gen_direct(node->rhs,"subb","sbca")){
       assert(0);
+    }
   }else{
     gen_expr(node->rhs);
     push();
@@ -1847,11 +1872,29 @@ static void gen_expr(Node *node) {
       return;
     }
     case TY_CHAR:
-      println("\tldab #<%u", (uint16_t)node->val);
+      if(node->val==0){
+        println("\tclrb");
+      }else{
+        println("\tldab #<%u", (uint16_t)node->val);
+      }
       return;
     case TY_INT:
-      println("\tldab #<%u", (uint16_t)node->val);
-      println("\tldaa #>%u", (uint16_t)node->val);
+      if((uint16_t)node->val==0){
+        println("\tclrb");
+        println("\tclra");
+      }else if ((node->val&0x00ff)==0){
+        println("\tclrb");
+        println("\tldaa #>%u", (uint16_t)node->val);
+      }else if ((node->val&0xff00)==0){
+        println("\tldab #<%u", (uint16_t)node->val);
+        println("\tclra");
+      }else if (((node->val&0xff00)>>8)==(node->val&0x00ff)){
+        println("\tldab #<%u", (uint16_t)node->val);
+        println("\ttba");
+      }else{
+        println("\tldab #<%u", (uint16_t)node->val);
+        println("\tldaa #>%u", (uint16_t)node->val);
+      }
       return;
     case TY_LONG:
       println("\tldx #%u",(uint16_t)((node->val>>16)&0x0ffff));
@@ -1953,16 +1996,20 @@ static void gen_expr(Node *node) {
     println("\tsbca #0");
 //  println("  neg %%rax");
     return;
+  //   ND_NEG end
   case ND_VAR:
+    println("; gen_expr ND_VAR %s %d",__FILE__,__LINE__);
     switch (node->ty->kind) {
     case TY_ARRAY:
     case TY_STRUCT:
     case TY_UNION:
     case TY_FUNC:
     case TY_VLA:
-      println("; gen_expr ND_VAR %s %d",__FILE__,__LINE__);
+      println("; gen_expr gen_addr %s %d",__FILE__,__LINE__);
       gen_addr(node);
+      println("; gen_expr load %s %d",__FILE__,__LINE__);
       load(node->ty);
+      println("; gen_expr ND_VAR end %s %d",__FILE__,__LINE__);
       return;
     }
 #if 1
@@ -2018,13 +2065,38 @@ static void gen_expr(Node *node) {
     gen_addr(node->lhs);
     return;
   case ND_ASSIGN:
+    println("; ND_ASSIGN %s %d",__FILE__,__LINE__);
     if (test_addr_x(node->lhs)){ 
+      println("; ND_ASSIGN: test_addr_x(lhs) OK");
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
       store_x(node->ty,off);
       return;
     }
+    println("; ND_ASSIGN: test_addr_x fail");
     gen_addr(node->lhs);
+    if (node->rhs->kind == ND_NUM
+    &&  node->rhs->val  == 0) {
+       println("; ND_ASSIGN (char or int) = 0");
+       switch(node->rhs->ty->kind){
+       case TY_CHAR:
+       case TY_INT:
+       case TY_LONG:
+	 tfr_dx();
+	 if (node->rhs->ty->kind!=TY_CHAR) {
+	   if (node->rhs->ty->kind!=TY_INT) {	// TY_LONG
+	     println("\tclr 3,x");
+	     println("\tclr 2,x");
+	   }
+	   println("\tclr 1,x");		// TY_LONG, TY_INT
+	 }
+	 println("\tclr 0,x");
+	 println("\tins");
+	 println("\tins");
+	 IX_Dest = IX_None;
+	 return;
+       }
+    }
     push();
     gen_expr(node->rhs);
 
@@ -2582,8 +2654,25 @@ static void gen_expr(Node *node) {
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
     gen_expr(node->lhs);
+    println("; ND_ADD gen_direct? %s,%d",__FILE__,__LINE__);
     if (gen_direct(node->rhs,"addb","adca"))
       return;
+    if (node->rhs->kind     == ND_CAST
+    &&  node->rhs->ty->kind == TY_ARRAY
+    &&  node->rhs->lhs->kind == ND_VAR
+    &&  node->rhs->lhs->var->is_local   ) {
+      println("\taddb @bp+1");
+      println("\tadca @bp");
+      if (node->rhs->lhs->var->offset) {
+        println("\taddb #<%d",node->rhs->lhs->var->offset);
+        println("\tadca #>%d",node->rhs->lhs->var->offset);
+      }
+      return;
+    }
+    //println("; node->rhs->kind %d",node->rhs->kind);
+    //println("; node->rhs->ty->kind %d",node->rhs->ty->kind);
+    //println("; node->rhs->lhs->kind %d",node->rhs->lhs->kind);
+    println("; ND_ADD not direct, push lhs? %s,%d",__FILE__,__LINE__);
     push();
     gen_expr(node->rhs);
 //  println("  add %s, %s", di, ax);
@@ -3195,7 +3284,13 @@ static void emit_data(Obj *prog) {
           rel = rel->next;
           pos += 8;
         } else {
-          println("\t.byte %d", var->init_data[pos++]);
+	  if (isalnum(var->init_data[pos])){
+            println("\t.byte %d	; '%c'", var->init_data[pos],
+			                 var->init_data[pos]);
+	  }else{
+            println("\t.byte %d", var->init_data[pos]);
+	  }
+	  pos++;
         }
       }
       continue;
@@ -3328,8 +3423,8 @@ static void emit_text(Obj *prog) {
     // main function is equivalent to returning 0, even though the
     // behavior is undefined for the other functions.
     if (strcmp(fn->name, "main") == 0){
-      println("\tldab #<0");
-      println("\tldaa #>0");
+      println("\tclrb");
+      println("\tclra");
     }
 
     // Epilogue
