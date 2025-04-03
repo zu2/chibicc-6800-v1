@@ -95,6 +95,7 @@ int align_to(int n, int align) {
 //  return (n + align - 1) / align * align;
 }
 
+#if	0
 static void pop_arg(Node *args)
 {
   if(!args)
@@ -114,6 +115,7 @@ static void pop_arg(Node *args)
 	break;
   }
 }
+#endif
 
 static void ldx_bp()
 {
@@ -374,23 +376,10 @@ int test_addr_x(Node *node)
   } // ND_VAR
   case ND_DEREF: {
     Node *lhs = node->lhs;
-    fprintf(stderr,"; test_addr_x: ND_DEREF lhs->kind:%d\n",lhs->kind);
-    println("; test_addr_x: ND_DEREF lhs->kind:%d",lhs->kind);
     switch (lhs->kind){
     case ND_ADD:
-      println("; test_addr_x: ND_DEREF lhs->lhs->kind:%d",lhs->lhs->kind);
-      if (lhs->lhs->kind == ND_CAST) {
-        println("; test_addr_x: ND_DEREF lllhs->kind:%d",lhs->lhs->lhs->kind);
-      }
-      println("; test_addr_x: ND_DEREF lhs->rhs->kind:%d",lhs->rhs->kind);
-      if (lhs->rhs->kind == ND_CAST) {
-        println("; test_addr_x: ND_DEREF lrlhs->kind:%d",lhs->rhs->lhs->kind);
-      }
-      println("; test_addr_x: ND_DEREF lhs->rhs->kind:%d",lhs->rhs->kind);
       return 0;
     case ND_VAR:
-      fprintf(stderr,"; test_addr_x: ND_DEREF lhs->kind is ND_VAL\n");
-      println("; test_addr_x: ND_DEREF lhs->kind is ND_VAL");
       return test_addr_x(lhs);
     }
     return 0;
@@ -940,10 +929,17 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     break;
   case TY_FLOAT:
     gen_expr(args);
-    pushl();
+    if (args->pass_by_stack){
+      pushf();
+      *last_pushed_arg = *args;
+    }
     break;
   case TY_LONG:
     println("; push_args2: TY_LONG args->kind:%d",args->kind);
+    if (!args->pass_by_stack){
+        gen_expr(args);
+	break;
+    }
     int64_t val = args->val;
     switch(args->kind){
     case ND_CAST:
@@ -952,12 +948,14 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
       && args->lhs->kind != ND_NUM){
         gen_expr(args);
         pushl();
+        *last_pushed_arg = *args;
 	break;
       }
       val = args->lhs->val;
       // THRU
     case ND_NUM:
       gen_direct_pushl(val);
+      *last_pushed_arg = *args;
       break;
     case ND_VAR:
       if (test_addr_x(args)){
@@ -974,10 +972,12 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
         gen_expr(args);
         pushl();
       }
+      *last_pushed_arg = *args;
       break;
     default:
       gen_expr(args);
       pushl();
+      *last_pushed_arg = *args;
     }
     break;
   default: {
@@ -998,17 +998,19 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 // function is to load them to registers or push them to the stack as
 // specified by the chibicc-6800 API.
 //
-// - Only 1 argument passed by AccAB: (1byte or 2byte)
+// - Only first one argument passed by AccAB or @long: (1/2/4bytes)
 // - No alignment
 // - Other arguments are pushed onto the stack from right to left.
 //
 static int push_args(Node *node, Node *last_pushed_arg) {
-  int stack = 0, gp = 0; //, fp = 0;
+  int stack = 0, gp = 0;
 
 //println("; push_args %s %d",__FILE__,__LINE__);
   // If the return type is a large struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument.
   if (node->ret_buffer)  // && node->ty->size > 16)
+    gp++;
+  if (current_fn->va_area)
     gp++;
 
 //println("; push_args gp=%d %s %d",gp,__FILE__,__LINE__);
@@ -1019,8 +1021,6 @@ static int push_args(Node *node, Node *last_pushed_arg) {
     switch (ty->kind) {
     case TY_STRUCT:
     case TY_UNION:
-    case TY_FLOAT:
-    case TY_LONG:
         arg->pass_by_stack = true; // Arguments bigger than 2 bytes are pushed onto the stack
         stack += ty->size;
 	break;
@@ -1028,7 +1028,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
     case TY_LDOUBLE:
 	error_tok(node->tok, "gen_expr: double not implemented yet");
 	break;
-    default:
+    default: // TY_CHAR TY_INT TY_LONG TY_FLOAT
 //    println("; push_args gp=%d, %s %d",gp,__FILE__,__LINE__);
       if (gp++ >= 1) {
         arg->pass_by_stack = true;
@@ -1043,7 +1043,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
   // If the return type is a large struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument.
   // MC6800: all struct/union passes the pointer
-  if (node->ret_buffer) { // && node->ty->size > 16) {
+  if (node->ret_buffer) { // && node->ty->size > 16)
     println("\tldab @bp+1	; %d",node->ret_buffer->offset);
     println("\tldaa @bp");
     if (node->ret_buffer->offset) {
@@ -3135,9 +3135,8 @@ static void assign_lvar_offsets(Obj *prog) {
     // inevitably passed by stack rather than by register.
     // The first passed-by-stack parameter resides at RBP+16.
     int top = 0;
-//    int bottom = 0;
 
-    int gp = 0;	//, fp = 0;
+    int gp = 0;
     fn->stack_size = 0;
 
     // list of param
@@ -3149,8 +3148,6 @@ static void assign_lvar_offsets(Obj *prog) {
       switch (ty->kind) {
       case TY_STRUCT:
       case TY_UNION:
-      case TY_FLOAT:
-      case TY_LONG:
         var->offset = -2;	// stack param mark
 	continue;
       case TY_DOUBLE:
@@ -3158,7 +3155,7 @@ static void assign_lvar_offsets(Obj *prog) {
 	assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
 	break;
       default:
-        if (gp++ < 1){
+        if (gp++ < 1){		// only one args pass by register
 	  var->offset = -1;
 	  var->reg_param = 1;	// reg param mark
           continue;
@@ -3182,20 +3179,14 @@ static void assign_lvar_offsets(Obj *prog) {
 	continue;
       }
       if (var->offset==-1){	// reg param, top += sizeof(old BP)
-        skip_bp = 2;
-        skiped_bp = 0;
+	// XXX
+        skip_bp = 0;
+        skiped_bp = 4;
 	fn->stack_size = top;
       }
 
-
-      // AMD64 System V ABI has a special alignment rule for an array of
-      // length at least 16 bytes. We need to align such array to at least
-      // 16-byte boundaries. See p.14 of
-      // https://github.com/hjl-tools/x86-psABI/wiki/x86-64-psABI-draft.pdf.
       int align = (var->ty->kind == TY_ARRAY && var->ty->size >= 16)
         ? MAX(16, var->align) : var->align;
-//      println("; 4. var->name=%s, var->offset=%d,var->ty->size=%d, top=%d, %s %d",
-//		      var->name,var->offset,var->ty->size,top,__FILE__,__LINE__);
       var->offset = top + skip_bp;
       top += var->ty->size + skip_bp;
       top = align_to(top, align);
@@ -3212,26 +3203,13 @@ static void assign_lvar_offsets(Obj *prog) {
     // Assign offsets to pass-by-stack parameters.
     gp = 0;
     for (Obj *var = fn->params; var; var = var->next) {
-//      Type *ty = var->ty;
-
-//      if (var->offset)
-//        println("; 8. var->name=%s, var->offset=%d %s %d",
-//	  var->name,var->offset,__FILE__,__LINE__);
       if (var->offset)
         continue;
-
       top = align_to(top, 8);
-      var->offset = top;
+      var->offset = top-2;
       top += var->ty->size;
-//      println("; 9. var->name=%s, var->offset=%d,var->ty->size=%d, %s %d",
-//		      var->name,var->offset,var->ty->size,__FILE__,__LINE__);
     }
-//    println("; fn->stack_size = %d", fn->stack_size);
-//    println(";");
-
-
   }
-//  println("; assign_lvar_offsets end");
 }
 
 static void emit_data(Obj *prog) {
@@ -3334,29 +3312,12 @@ static void emit_text(Obj *prog) {
     // Prologue
     println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
 
-    // Save arg registers if function is variadic
-    if (fn->va_area) {
-      int gp = 0, fp = 0;
-      for (Obj *var = fn->params; var; var = var->next) {
-        if (is_flonum(var->ty))
-          fp++;
-        else
-          gp++;
-      }
-//    int off = fn->va_area->offset;
-
-      // va_elem
-//      println("  movl $%d, %d(%%rbp)", gp * 8, off);          // gp_offset
-//      println("  movl $%d, %d(%%rbp)", fp * 8 + 48, off + 4); // fp_offset
-//      println("  movq %%rbp, %d(%%rbp)", off + 8);            // overflow_arg_area
-//      println("  addq $16, %d(%%rbp)", off + 8);
-//      println("  movq %%rbp, %d(%%rbp)", off + 16);           // reg_save_area
-//      println("  addq $%d, %d(%%rbp)", off + 24, off + 16);
-    }
-
-    // only one argument pass via Acc A,B
+    // only one argument pass via Acc A,B, @long
     // Save passed-by-register arguments to the stack
-    int gp = 0; //, fp = 0;
+    int gp = 0;
+    if (fn->va_area){
+      gp++;
+    }
     for (Obj *var = fn->params; var; var = var->next) {
       if (var->offset > 0)
         continue;
@@ -3364,8 +3325,6 @@ static void emit_text(Obj *prog) {
       Type *ty = var->ty;
 
       switch (ty->kind) {
-      case TY_FLOAT:
-      case TY_LONG:
       case TY_STRUCT:
       case TY_UNION:
 	break;
@@ -3375,24 +3334,51 @@ static void emit_text(Obj *prog) {
 	break;
       default:
 	gp++;
-//      store_gp(gp++, var->offset, ty->size);
       }
     }
+    int save_reg_param = 0;
+    for (Obj *var = fn->params; var; var = var->next) {
+      if (var->reg_param && var->ty->kind == TY_INT) {
+	  save_reg_param = 1;
+	  break;
+	}
+      }
+    // make base pointer
+    if (save_reg_param)
+      println("\tstaa @tmp1");
+    println("\tldaa @bp+1");			// push old @bp
+    println("\tpsha");
+    println("\tldaa @bp");
+    println("\tpsha");
+    if (save_reg_param)
+      println("\tldaa @tmp1");
+    int reg_param_size = 0;
     for (Obj *var = fn->params; var; var = var->next) {
       if (var->reg_param){ // push argment pass by register
-	if (var->ty->kind == TY_CHAR) {
+        reg_param_size = var->ty->size;
+	switch(var->ty->kind){
+	case TY_CHAR:
     	  println("\tpshb");
-	}else{
+	  break;
+	case TY_INT:
     	  println("\tpshb");
 	  println("\tpsha");
+	  break;
+        case TY_FLOAT:
+        case TY_LONG:
+    	  println("\tldab @long+3");
+	  println("\tpshb");
+    	  println("\tldab @long+2");
+	  println("\tpshb");
+    	  println("\tldab @long+1");
+	  println("\tpshb");
+    	  println("\tldab @long");
+	  println("\tpshb");
+	  break;
 	}
       }
     }
     // make base pointer
-    println("\tldab @bp+1");			// push old @bp
-    println("\tldaa @bp");
-    println("\tpshb");
-    println("\tpsha");
     if (fn->stack_size<=6){
       for(int i=0; i<fn->stack_size; i++)
         println("\tdes");
@@ -3431,10 +3417,11 @@ static void emit_text(Obj *prog) {
     println("L_return_%d:", fn->function_no);
     println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
 //    println("L_return_%s:", fn->name);
-    println("; recover sp, fn->stack_size=%d",fn->stack_size);
-    if (fn->stack_size<=10){
+    println("; recover sp, fn->stack_size=%d reg_param_size=%d",
+		    	fn->stack_size,reg_param_size);
+    if (fn->stack_size + reg_param_size <= 10){
       println("\tlds @bp");
-      for(int i=0; i<fn->stack_size-1; i++)
+      for(int i=0; i<fn->stack_size + reg_param_size - 1; i++)
 	println("\tins");
     }else{
       if (fn->ty->return_ty != ty_void
@@ -3442,10 +3429,10 @@ static void emit_text(Obj *prog) {
       &&  fn->ty->return_ty != ty_float)
         println("\tpshb");
       println("\tldab @bp+1");
-      println("\taddb #<%u",fn->stack_size-1);
+      println("\taddb #<%u",fn->stack_size+reg_param_size-1);
       println("\tstab @bp+1");
       println("\tldab @bp");
-      println("\tadcb #>%u",fn->stack_size-1);
+      println("\tadcb #>%u",fn->stack_size+reg_param_size-1);
       println("\tstab @bp");
       if (fn->ty->return_ty != ty_void
       &&  fn->ty->return_ty != ty_long
@@ -3468,18 +3455,6 @@ static void emit_text(Obj *prog) {
       println("\tpulb");
       println("\tstab @bp+1");
     }
-    for (Obj *var = fn->params; var; var = var->next) { // skip argment pass by register
-      if (var->reg_param){
-        if (var->ty->kind == TY_CHAR) {
-    	  println("\tins");
-        }else{
-    	  println("\tins");
-	  println("\tins");
-        }
-      }
-    }
-//    println("  mov %%rbp, %%rsp");
-//    println("  pop %%rbp");
     println("\trts");
   }
 }
