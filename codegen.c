@@ -900,6 +900,7 @@ gen_direct_pushl(int64_t val)
 static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   if (!args)
     return;
+  fprintf(stderr,"; push_args2\n");
   push_args2(args->next, first_pass,last_pushed_arg);
 //  println("; push_args2 args=%d, %s %d",args!=NULL,__FILE__,__LINE__);
 //  println("; push_args2 first_pass=%d, args->pass_by_stack=%d, %s %d",first_pass,args->pass_by_stack,__FILE__,__LINE__);
@@ -981,9 +982,10 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     }
     break;
   default: {
+    println("; push_args2: args->ty->kind=%d",args->ty->kind);
     gen_expr(args);
-//      println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
-//      println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
+    println("; push_args2 default: args->pass_by_stack=%d",args->pass_by_stack);
+    println("; push_args2 %d: call push() by default %s %d",args->ty->kind,__FILE__,__LINE__);
       if (args->pass_by_stack){
         push();
         *last_pushed_arg = *args;
@@ -1005,12 +1007,12 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 static int push_args(Node *node, Node *last_pushed_arg) {
   int stack = 0, gp = 0;
 
+  fprintf(stderr,"; push_args\n");
 //println("; push_args %s %d",__FILE__,__LINE__);
   // If the return type is a large struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument.
+  println("; push_args");
   if (node->ret_buffer)  // && node->ty->size > 16)
-    gp++;
-  if (current_fn->va_area)
     gp++;
 
 //println("; push_args gp=%d %s %d",gp,__FILE__,__LINE__);
@@ -1018,6 +1020,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
   for (Node *arg = node->args; arg; arg = arg->next) {
     Type *ty = arg->ty;
 
+    arg->pass_by_stack = false;
     switch (ty->kind) {
     case TY_STRUCT:
     case TY_UNION:
@@ -1028,7 +1031,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
     case TY_LDOUBLE:
 	error_tok(node->tok, "gen_expr: double not implemented yet");
 	break;
-    default: // TY_CHAR TY_INT TY_LONG TY_FLOAT
+    default: // TY_CHAR TY_INT TY_LONG TY_FLOAT TY_PTR
 //    println("; push_args gp=%d, %s %d",gp,__FILE__,__LINE__);
       if (gp++ >= 1) {
         arg->pass_by_stack = true;
@@ -1143,6 +1146,7 @@ static void copy_struct_mem(void) {
   Type *ty = current_fn->ty->return_ty;
   Obj *var = current_fn->params;
 
+  fprintf(stderr,"; copy_struct_mem ty=%p, Obj=%p\n",ty,var);
   println("; copy_struct_mem %s %d",__FILE__,__LINE__);
   println("\tstab @tmp2+1");
   println("\tstaa @tmp2");
@@ -1260,6 +1264,7 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
   case ND_NUM: {
     switch (rhs->ty->kind) {
     case TY_CHAR:		// TODO: Avoid unnecessary type promotion
+    case TY_SHORT:
     case TY_INT:
     case TY_PTR:
       if (test) return 1;
@@ -1879,6 +1884,8 @@ static void gen_expr(Node *node) {
       }
       return;
     case TY_INT:
+    case TY_SHORT:
+    case TY_PTR:
       if((uint16_t)node->val==0){
         println("\tclrb");
         println("\tclra");
@@ -2080,11 +2087,12 @@ static void gen_expr(Node *node) {
        println("; ND_ASSIGN (char or int) = 0");
        switch(node->rhs->ty->kind){
        case TY_CHAR:
+       case TY_SHORT:
        case TY_INT:
        case TY_LONG:
 	 tfr_dx();
 	 if (node->rhs->ty->kind!=TY_CHAR) {
-	   if (node->rhs->ty->kind!=TY_INT) {	// TY_LONG
+	   if (node->rhs->ty->kind==TY_LONG) {
 	     println("\tclr 3,x");
 	     println("\tclr 2,x");
 	   }
@@ -2308,9 +2316,23 @@ static void gen_expr(Node *node) {
     IX_Dest = IX_None;
   
     // Removes pushed arguments before calling a function
-    while(stack_args--) {
-	    println("\tins");
-	    depth--;
+    if (stack_args*4 > 34) {
+      println("; ins*%d",stack_args);
+      println("\tstaa @tmp2");		// 4
+      println("\tsts @tmp1");		// 5
+      println("\tldaa @tmp1+1");	// 3
+      println("\tadda #<%d",stack_args);// 2
+      println("\tstaa @tmp1+1"); 	// 4
+      println("\tldaa @tmp1");		// 3
+      println("\tadca #>%d",stack_args);// 2
+      println("\tstaa @tmp1");		// 4
+      println("\tlds @tmp1");		// 4
+      println("\tldaa @tmp2");		// 3
+    }else{
+      while(stack_args--) {
+        println("\tins");
+        depth--;
+      }
     }
 //    depth -= stack_args;
 //    println(";↑depth=%d  gen_expr %s %d",depth,__FILE__,__LINE__);
@@ -3093,6 +3115,7 @@ static void gen_stmt(Node *node) {
     gen_stmt(node->lhs);
     return;
   case ND_RETURN:
+    fprintf(stderr,"; ND_RETURN\n");
     if (node->lhs) {
       gen_expr(node->lhs);
       Type *ty = node->lhs->ty;
@@ -3105,7 +3128,9 @@ static void gen_stmt(Node *node) {
           copy_struct_reg();
         else
 #endif
+        fprintf(stderr,"; copy_struct_mem begin\n");
           copy_struct_mem();
+        fprintf(stderr,"; copy_struct_mem end\n");
         break;
       }
     }
@@ -3290,6 +3315,7 @@ static void emit_text(Obj *prog) {
     if (!fn->is_function || !fn->is_definition)
       continue;
 
+    fprintf(stderr,"; emit_text fn->name=%s\n",fn->name);
     // No code is emitted for "static inline" functions
     // if no one is referencing them.
     if (!fn->is_live)
@@ -3315,9 +3341,6 @@ static void emit_text(Obj *prog) {
     // only one argument pass via Acc A,B, @long
     // Save passed-by-register arguments to the stack
     int gp = 0;
-    if (fn->va_area){
-      gp++;
-    }
     for (Obj *var = fn->params; var; var = var->next) {
       if (var->offset > 0)
         continue;
@@ -3338,7 +3361,8 @@ static void emit_text(Obj *prog) {
     }
     int save_reg_param = 0;
     for (Obj *var = fn->params; var; var = var->next) {
-      if (var->reg_param && var->ty->kind == TY_INT) {
+      if (var->reg_param
+      && ((var->ty->kind == TY_INT) || (var->ty->kind == TY_PTR))) {
 	  save_reg_param = 1;
 	  break;
 	}
@@ -3360,7 +3384,9 @@ static void emit_text(Obj *prog) {
 	case TY_CHAR:
     	  println("\tpshb");
 	  break;
+	case TY_SHORT:
 	case TY_INT:
+	case TY_PTR:
     	  println("\tpshb");
 	  println("\tpsha");
 	  break;
@@ -3426,8 +3452,9 @@ static void emit_text(Obj *prog) {
     }else{
       if (fn->ty->return_ty != ty_void
       &&  fn->ty->return_ty != ty_long
-      &&  fn->ty->return_ty != ty_float)
+      &&  fn->ty->return_ty != ty_float){
         println("\tpshb");
+      }
       println("\tldab @bp+1");
       println("\taddb #<%u",fn->stack_size+reg_param_size-1);
       println("\tstab @bp+1");
@@ -3436,8 +3463,9 @@ static void emit_text(Obj *prog) {
       println("\tstab @bp");
       if (fn->ty->return_ty != ty_void
       &&  fn->ty->return_ty != ty_long
-      &&  fn->ty->return_ty != ty_float)
+      &&  fn->ty->return_ty != ty_float){
         println("\tpulb");
+      }
       println("\tlds @bp");			// remove local variables
     }
     if (fn->ty->return_ty != ty_void
