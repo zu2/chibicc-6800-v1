@@ -360,8 +360,8 @@ int test_addr_x(Node *node)
     }
     // Local variable
     if (node->var->is_local) {
-      println("; node->var->is_local %s",node->var->name);
-      println("; => %d",node->var->offset + node->var->ty->size <= 256);
+//      println("; node->var->is_local %s",node->var->name);
+//      println("; => %d",node->var->offset + node->var->ty->size <= 256);
       return  (node->var->offset + node->var->ty->size <= 256);
     }
     // Function
@@ -525,7 +525,7 @@ static void store(Type *ty) {
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
-    println(";	store %s %d",__FILE__,__LINE__);
+    println(";	store TY_STRUCT/UNION %s %d",__FILE__,__LINE__);
     println("\tstab @tmp2+1");
     println("\tstaa @tmp2");
     println("\tstx  @tmp3");
@@ -570,7 +570,7 @@ static void store_x(Type *ty,int off) {
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
-    println(";	store %s %d",__FILE__,__LINE__);
+    println(";	store_x TY_STRUCT/UNION off=%d, %s %d",off,__FILE__,__LINE__);
     println("\tstab @tmp2+1");
     println("\tstaa @tmp2");
     println("\tstx  @tmp3");
@@ -579,7 +579,7 @@ static void store_x(Type *ty,int off) {
 	println("\tldab %d,x",i);
 	println("\tldx @tmp3");
         IX_Dest = IX_None;
-	println("\tstab %d,x",i);
+	println("\tstab %d,x",i+off);
 //      println("  mov %d(%%rax), %%r8b", i);
 //      println("  mov %%r8b, %d(%%rdi)", i);
     }
@@ -900,7 +900,6 @@ gen_direct_pushl(int64_t val)
 static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
   if (!args)
     return;
-  fprintf(stderr,"; push_args2\n");
   push_args2(args->next, first_pass,last_pushed_arg);
 //  println("; push_args2 args=%d, %s %d",args!=NULL,__FILE__,__LINE__);
 //  println("; push_args2 first_pass=%d, args->pass_by_stack=%d, %s %d",first_pass,args->pass_by_stack,__FILE__,__LINE__);
@@ -1007,7 +1006,6 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 static int push_args(Node *node, Node *last_pushed_arg) {
   int stack = 0, gp = 0;
 
-  fprintf(stderr,"; push_args\n");
 //println("; push_args %s %d",__FILE__,__LINE__);
   // If the return type is a large struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument.
@@ -1043,9 +1041,10 @@ static int push_args(Node *node, Node *last_pushed_arg) {
   push_args2(node->args, true,   last_pushed_arg);
   push_args2(node->args, false,  last_pushed_arg);
 
-  // If the return type is a large struct/union, the caller passes
-  // a pointer to a buffer as if it were the first argument.
+  // If the return type is a struct/union, the caller passes
+  // a pointer to a buffer as if it were the first argument (in Acc A,B).
   // MC6800: all struct/union passes the pointer
+  println("; return type is struct/union, the caller passes a pointer");
   if (node->ret_buffer) { // && node->ty->size > 16)
     println("\tldab @bp+1	; %d",node->ret_buffer->offset);
     println("\tldaa @bp");
@@ -1053,121 +1052,42 @@ static int push_args(Node *node, Node *last_pushed_arg) {
       println("\taddb #<%d",node->ret_buffer->offset);
       println("\tadca #>%d",node->ret_buffer->offset);
     }
-//  println("  lea %d(%%rbp), %%rax", node->ret_buffer->offset);
-    push();
   }
 
   return stack;
 }
 
-#if 0
-static void copy_ret_buffer(Obj *var) {
-  Type *ty = var->ty;
-  int gp = 0, fp = 0;
-
-  if (has_flonum1(ty)) {
-    assert(ty->size == 4 || 8 <= ty->size);
-    if (ty->size == 4)
-      println("  movss %%xmm0, %d(%%rbp)", var->offset);
-    else
-      println("  movsd %%xmm0, %d(%%rbp)", var->offset);
-    fp++;
-  } else {
-    for (int i = 0; i < MIN(8, ty->size); i++) {
-      println("  mov %%al, %d(%%rbp)", var->offset + i);
-      println("  shr $8, %%rax");
-    }
-    gp++;
-  }
-
-  if (ty->size > 8) {
-    if (has_flonum2(ty)) {
-      assert(ty->size == 12 || ty->size == 16);
-      if (ty->size == 12)
-        println("  movss %%xmm%d, %d(%%rbp)", fp, var->offset + 8);
-      else
-        println("  movsd %%xmm%d, %d(%%rbp)", fp, var->offset + 8);
-    } else {
-      char *reg1 = (gp == 0) ? "%al" : "%dl";
-      char *reg2 = (gp == 0) ? "%rax" : "%rdx";
-      for (int i = 8; i < MIN(16, ty->size); i++) {
-        println("  mov %s, %d(%%rbp)", reg1, var->offset + i);
-        println("  shr $8, %s", reg2);
-      }
-    }
-  }
-}
-#endif
-
-#if	0
-static void copy_struct_reg(void) {
-  Type *ty = current_fn->ty->return_ty;
-  int gp = 0, fp = 0;
-
-  println("  mov %%rax, %%rdi");
-
-  if (has_flonum(ty, 0, 8, 0)) {
-    assert(ty->size == 4 || 8 <= ty->size);
-    if (ty->size == 4)
-      println("  movss (%%rdi), %%xmm0");
-    else
-      println("  movsd (%%rdi), %%xmm0");
-    fp++;
-  } else {
-    println("  mov $0, %%rax");
-    for (int i = MIN(8, ty->size) - 1; i >= 0; i--) {
-      println("  shl $8, %%rax");
-      println("  mov %d(%%rdi), %%al", i);
-    }
-    gp++;
-  }
-
-  if (ty->size > 8) {
-    if (has_flonum(ty, 8, 16, 0)) {
-      assert(ty->size == 12 || ty->size == 16);
-      if (ty->size == 4)
-        println("  movss 8(%%rdi), %%xmm%d", fp);
-      else
-        println("  movsd 8(%%rdi), %%xmm%d", fp);
-    } else {
-      char *reg1 = (gp == 0) ? "%al" : "%dl";
-      char *reg2 = (gp == 0) ? "%rax" : "%rdx";
-      println("  mov $0, %s", reg2);
-      for (int i = MIN(16, ty->size) - 1; i >= 8; i--) {
-        println("  shl $8, %s", reg2);
-        println("  mov %d(%%rdi), %s", i, reg1);
-      }
-    }
-  }
-}
-#endif
-
+//
+// return struct from local area to *first_arg
+//   AccA,B: point to return struct addr
+//   var: first arg area
+//
 static void copy_struct_mem(void) {
   Type *ty = current_fn->ty->return_ty;
   Obj *var = current_fn->params;
 
-  fprintf(stderr,"; copy_struct_mem ty=%p, Obj=%p\n",ty,var);
   println("; copy_struct_mem %s %d",__FILE__,__LINE__);
   println("\tstab @tmp2+1");
   println("\tstaa @tmp2");
   println("\tldab @bp+1");
   println("\tldaa @bp");
-  println("\taddb #<%d",var->offset);
-  println("\tadca #>%d",var->offset);
+  println("\taddb #<%d",current_fn->stack_size);
+  println("\tadca #>%d",current_fn->stack_size);
   println("\tstab @tmp3+1");
   println("\tstaa @tmp3");
-//println("  mov %d(%%rbp), %%rdi", var->offset);
+  println("\tldx @tmp3");
+  println("\tldx 0,x");
+  println("\tstx @tmp3");
+//assume max struct size<256
   for (int i = 0; i < ty->size; i++) {
     println("\tldx @tmp2");
     println("\tldab %d,x",i);
     println("\tldx @tmp3");
     IX_Dest = IX_None;
     println("\tstab %d,x",i);
-//  println("  mov %d(%%rax), %%dl", i);
-//  println("  mov %%dl, %d(%%rdi)", i);
   }
-  println("\tldab @tmp2+1");
-  println("\tldaa @tmp2");
+  println("\tldab @tmp3+1");
+  println("\tldaa @tmp3");
 }
 
 static void builtin_alloca(void) {
@@ -2077,33 +1997,66 @@ static void gen_expr(Node *node) {
       println("; ND_ASSIGN: test_addr_x(lhs) OK");
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
+      println("; call store_x: off=%d",off);
       store_x(node->ty,off);
       return;
     }
     println("; ND_ASSIGN: test_addr_x fail");
     gen_addr(node->lhs);
-    if (node->rhs->kind == ND_NUM
-    &&  node->rhs->val  == 0) {
-       println("; ND_ASSIGN (char or int) = 0");
-       switch(node->rhs->ty->kind){
-       case TY_CHAR:
-       case TY_SHORT:
-       case TY_INT:
-       case TY_LONG:
-	 tfr_dx();
-	 if (node->rhs->ty->kind!=TY_CHAR) {
-	   if (node->rhs->ty->kind==TY_LONG) {
-	     println("\tclr 3,x");
-	     println("\tclr 2,x");
+    if (node->rhs->kind == ND_NUM) {
+      if (node->rhs->val == 0) {
+	 // TODO: Multiple assignments may be strange
+         println("; ND_ASSIGN (char or int) = 0");
+         switch(node->rhs->ty->kind){
+         case TY_CHAR:
+         case TY_SHORT:
+         case TY_INT:
+         case TY_LONG:
+           tfr_dx();
+	   if (node->rhs->ty->kind!=TY_CHAR) {
+	     if (node->rhs->ty->kind==TY_LONG) {
+	       println("\tclr 3,x");
+	       println("\tclr 2,x");
+	     }
+	     println("\tclr 1,x");		// TY_LONG, TY_INT
 	   }
-	   println("\tclr 1,x");		// TY_LONG, TY_INT
+	   println("\tclr 0,x");
+	   IX_Dest = IX_None;
+	   return;
 	 }
-	 println("\tclr 0,x");
-	 println("\tins");
-	 println("\tins");
-	 IX_Dest = IX_None;
-	 return;
-       }
+	 // Complex types will be dealt with later
+       }else{
+	 // TODO: Multiple assignments may be strange
+         println("; ND_ASSIGN (char or int) = const");
+         tfr_dx();
+	 switch(node->rhs->ty->kind){
+	 case TY_CHAR:
+	   println("\tldab #<%d",(int)node->rhs->val);
+	   println("\tstab 0,x");
+	   IX_Dest = IX_None;
+	   return;
+	 case TY_INT:
+	   println("\tldab #<%d",(int)node->rhs->val);
+	   println("\tldaa #>%d",(int)node->rhs->val);
+	   println("\tstab 1,x");
+	   println("\tstaa 0,x");
+	   IX_Dest = IX_None;
+	   return;
+	 case TY_FLOAT:
+	 case TY_LONG:
+	   println("\tldab #%d",(int)(node->rhs->val & 0x00ff0000)>>16);
+	   println("\tldaa #%d",(int)(node->rhs->val & 0xff000000)>>24);
+	   println("\tstab 1,x");
+	   println("\tstaa 0,x");
+	   println("\tldab #%d",(int)(node->rhs->val & 0x000000ff));
+	   println("\tldaa #%d",(int)(node->rhs->val & 0x0000ff00)>>8);
+	   println("\tstab 3,x");
+	   println("\tstaa 2,x");
+	   IX_Dest = IX_None;
+	   return;
+	 }
+      }
+      // Complex types will be dealt with later
     }
     push();
     gen_expr(node->rhs);
@@ -2987,6 +2940,17 @@ static void gen_expr(Node *node) {
 static void gen_stmt(Node *node) {
 //  println(";\t.loc gen_stmt %d %d", node->tok->file->file_no, node->tok->line_no);
 
+  char s[1024];
+  char *p = node->loc;
+  char *q = s;
+  while(*p && *p!='\r' && *p!='\n'){
+    *q++ = *p++;
+  }
+  *q = '\0';
+  if (strcmp(s,";") && s[0]){
+    println("; gen_stmt: %s",s);
+  }
+
   switch (node->kind) {
   case ND_IF: {
     int c = count();
@@ -3115,22 +3079,17 @@ static void gen_stmt(Node *node) {
     gen_stmt(node->lhs);
     return;
   case ND_RETURN:
-    fprintf(stderr,"; ND_RETURN\n");
+    println("; ND_RETURN");
     if (node->lhs) {
       gen_expr(node->lhs);
       Type *ty = node->lhs->ty;
-
+      println("; ty->kind:%d",ty->kind);
       switch (ty->kind) {
       case TY_STRUCT:
       case TY_UNION:
-#if 0
-        if (ty->size <= 16)
-          copy_struct_reg();
-        else
-#endif
-        fprintf(stderr,"; copy_struct_mem begin\n");
-          copy_struct_mem();
-        fprintf(stderr,"; copy_struct_mem end\n");
+        println("; copy_struct_mem begin");
+        copy_struct_mem();
+        println("; copy_struct_mem end");
         break;
       }
     }
@@ -3315,7 +3274,6 @@ static void emit_text(Obj *prog) {
     if (!fn->is_function || !fn->is_definition)
       continue;
 
-    fprintf(stderr,"; emit_text fn->name=%s\n",fn->name);
     // No code is emitted for "static inline" functions
     // if no one is referencing them.
     if (!fn->is_live)
@@ -3341,6 +3299,11 @@ static void emit_text(Obj *prog) {
     // only one argument pass via Acc A,B, @long
     // Save passed-by-register arguments to the stack
     int gp = 0;
+    switch (fn->ty->return_ty->kind){
+    case TY_STRUCT:
+    case TY_UNION:
+      gp++;
+    }
     for (Obj *var = fn->params; var; var = var->next) {
       if (var->offset > 0)
         continue;
@@ -3360,13 +3323,20 @@ static void emit_text(Obj *prog) {
       }
     }
     int save_reg_param = 0;
-    for (Obj *var = fn->params; var; var = var->next) {
-      if (var->reg_param
-      && ((var->ty->kind == TY_INT) || (var->ty->kind == TY_PTR))) {
-	  save_reg_param = 1;
-	  break;
-	}
+    switch (fn->ty->return_ty->kind){
+    case TY_STRUCT:
+    case TY_UNION:
+      save_reg_param = 1;
+      break;
+    default:
+      for (Obj *var = fn->params; var; var = var->next) {
+        if (var->reg_param
+        && ((var->ty->kind == TY_INT) || (var->ty->kind == TY_PTR))) {
+  	  save_reg_param = 1;
+  	  break;
+ 	}
       }
+    }
     // make base pointer
     if (save_reg_param)
       println("\tstaa @tmp1");
@@ -3377,30 +3347,39 @@ static void emit_text(Obj *prog) {
     if (save_reg_param)
       println("\tldaa @tmp1");
     int reg_param_size = 0;
-    for (Obj *var = fn->params; var; var = var->next) {
-      if (var->reg_param){ // push argment pass by register
-        reg_param_size = var->ty->size;
-	switch(var->ty->kind){
-	case TY_CHAR:
-    	  println("\tpshb");
-	  break;
-	case TY_SHORT:
-	case TY_INT:
-	case TY_PTR:
-    	  println("\tpshb");
-	  println("\tpsha");
-	  break;
-        case TY_FLOAT:
-        case TY_LONG:
-    	  println("\tldab @long+3");
-	  println("\tpshb");
-    	  println("\tldab @long+2");
-	  println("\tpshb");
-    	  println("\tldab @long+1");
-	  println("\tpshb");
-    	  println("\tldab @long");
-	  println("\tpshb");
-	  break;
+    switch (fn->ty->return_ty->kind){
+    case TY_STRUCT:
+    case TY_UNION:
+      println("\tpshb");
+      println("\tpsha");
+      reg_param_size = 2;
+      break;
+    default:
+      for (Obj *var = fn->params; var; var = var->next) {
+        if (var->reg_param){ // push argment pass by register
+          reg_param_size = var->ty->size;
+  	  switch(var->ty->kind){
+          case TY_CHAR:
+    	    println("\tpshb");
+	    break;
+	  case TY_SHORT:
+	  case TY_INT:
+	  case TY_PTR:
+    	    println("\tpshb");
+	    println("\tpsha");
+	    break;
+          case TY_FLOAT:
+          case TY_LONG:
+    	    println("\tldab @long+3");
+	    println("\tpshb");
+    	    println("\tldab @long+2");
+	    println("\tpshb");
+    	    println("\tldab @long+1");
+	    println("\tpshb");
+    	    println("\tldab @long");
+	    println("\tpshb");
+	    break;
+	  }
 	}
       }
     }
@@ -3442,7 +3421,6 @@ static void emit_text(Obj *prog) {
     // Epilogue
     println("L_return_%d:", fn->function_no);
     println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
-//    println("L_return_%s:", fn->name);
     println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 		    	fn->stack_size,reg_param_size);
     if (fn->stack_size + reg_param_size <= 10){
@@ -3450,9 +3428,12 @@ static void emit_text(Obj *prog) {
       for(int i=0; i<fn->stack_size + reg_param_size - 1; i++)
 	println("\tins");
     }else{
-      if (fn->ty->return_ty != ty_void
-      &&  fn->ty->return_ty != ty_long
-      &&  fn->ty->return_ty != ty_float){
+      switch (fn->ty->return_ty->kind){
+      case TY_VOID:
+      case TY_LONG:
+      case TY_FLOAT:
+	break;
+      default:
         println("\tpshb");
       }
       println("\tldab @bp+1");
@@ -3461,27 +3442,32 @@ static void emit_text(Obj *prog) {
       println("\tldab @bp");
       println("\tadcb #>%u",fn->stack_size+reg_param_size-1);
       println("\tstab @bp");
-      if (fn->ty->return_ty != ty_void
-      &&  fn->ty->return_ty != ty_long
-      &&  fn->ty->return_ty != ty_float){
+      switch (fn->ty->return_ty->kind){
+      case TY_VOID:
+      case TY_LONG:
+      case TY_FLOAT:
+	break;
+      default:
         println("\tpulb");
       }
       println("\tlds @bp");			// remove local variables
     }
-    if (fn->ty->return_ty != ty_void
-    &&  fn->ty->return_ty != ty_long
-    &&  fn->ty->return_ty != ty_float){
+    switch (fn->ty->return_ty->kind){
+    case TY_VOID:
+    case TY_LONG:
+    case TY_FLOAT:
+      println("\tpulb");
+      println("\tstab @bp");
+      println("\tpulb");
+      println("\tstab @bp+1");
+      break;
+    default:
       println("\ttsx");
       println("\tldx 0,x");
       IX_Dest = IX_None;
       println("\tins");
       println("\tins");
       println("\tstx @bp");
-    }else{
-      println("\tpulb");
-      println("\tstab @bp");
-      println("\tpulb");
-      println("\tstab @bp+1");
     }
     println("\trts");
   }
