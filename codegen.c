@@ -1618,27 +1618,27 @@ int gen_direct_long2(Node *node,char *opb, char *opa)
     println("\t%s #%d",opb,(int)(rv & 0x000000FF));
   println("\tstab @long+3");
   if (L==1)
-    println("\tldab %d,x",loff+2);
+    println("\tldaa %d,x",loff+2);
   else
-    println("\tldab #%d",(int)(lv & 0x0000FF00)>>8);
+    println("\tldaa #%d",(int)(lv & 0x0000FF00)>>8);
   if (R==1)
     println("\t%s %d,x",opa,roff+2);
   else
     println("\t%s #%d",opa,(int)(rv & 0x0000FF00)>>8);
   println("\tstaa @long+2");
   if (L==1)
-    println("\tldab %d,x",loff+1);
+    println("\tldaa %d,x",loff+1);
   else
-    println("\tldab #%d",(int)(lv & 0x00FF0000)>>16);
+    println("\tldaa #%d",(int)(lv & 0x00FF0000)>>16);
   if (R==1)
     println("\t%s %d,x",opa,roff+1);
   else
     println("\t%s #%d",opa,(int)(rv & 0x00FF0000)>>16);
   println("\tstaa @long+1");
   if (L==1)
-    println("\tldab %d,x",loff);
+    println("\tldaa %d,x",loff);
   else
-    println("\tldab #%d",(int)(lv & 0xFF000000)>>24);
+    println("\tldaa #%d",(int)(lv & 0xFF000000)>>24);
   if (R==1)
     println("\t%s %d,x",opa,roff);
   else
