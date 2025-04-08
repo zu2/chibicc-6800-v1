@@ -3114,32 +3114,42 @@ static void assign_lvar_offsets(Obj *prog) {
   for (Obj *fn = prog; fn; fn = fn->next) {
     if (!fn->is_function)
       continue;
+    println("; assign_lvar_offset function start");
 
     // If a function has many parameters, some parameters are
     // inevitably passed by stack rather than by register.
     // The first passed-by-stack parameter resides at RBP+16.
     int top = 0;
 
-    int gp = 0;
+    int gp = 0;	// if gp==0 can use reg_param.
+		//
     fn->stack_size = 0;
+    int has_implicit_reg_param = 0;
+    switch (fn->ty->return_ty->kind){
+    case TY_STRUCT:
+    case TY_UNION:
+      has_implicit_reg_param = 1;
+      gp++;
+    }
 
     // list of param
     for (Obj *var = fn->params; var; var = var->next) {
       Type *ty = var->ty;
 
-      var->reg_param = 0;
+      var->reg_param = 0;	// pass by registe? 1:reg, 0:stack
 
       switch (ty->kind) {
       case TY_STRUCT:
       case TY_UNION:
-        var->offset = -2;	// stack param mark
+	gp++;
+        var->offset = -2;	// STRUCT/UNION must pass via stack
 	continue;
       case TY_DOUBLE:
       case TY_LDOUBLE:
 	assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
 	break;
       default:
-        if (gp++ < 1){		// only one args pass by register
+        if (gp++<1){		// only one args pass by register
 	  var->offset = -1;
 	  var->reg_param = 1;	// reg param mark
           continue;
@@ -3148,50 +3158,39 @@ static void assign_lvar_offsets(Obj *prog) {
       }
     }
 
+    // ローカル変数領域の大きさを計算
     // Assign offsets to locals
-    int skiped_bp = 2;
-    for (Obj *var = fn->locals; var; var = var->next) {
-      int skip_bp = 0;
-      if (var->offset){
-//        println("; 3. var->name=%s, var->offset=%d %s %d",
-//	  var->name,var->offset,__FILE__,__LINE__);
-      }
+    int ret_skipped = 0;
+    for (Obj *var = fn->locals; var; var = var->next) { //引数もここ
       if (var->offset>0)
         continue;
-      if (var->offset==-2){	// stack param
-	var->offset = 0;
+ 
+      if (var->offset == -1) {	// レジスタ引数
+	fn->stack_size = top;
+        var->offset = top;
+	top += var->ty->size + 4;	// skip old @bp, ret addr
+	ret_skipped = 1;
+        println("; 4. reg: var->name=%s, var->offset=%d %s %d",
+			var->name,var->offset,__FILE__,__LINE__);
 	continue;
+      }else if (var->offset == -2){	// stack param
+	if (!ret_skipped) {
+	  fn->stack_size = top;
+	  top += 4 + (has_implicit_reg_param?2:0);
+	  ret_skipped = 1;
+	}
+	var->offset = top;
+	top += var->ty->size;
+        println("; 4. stack: var->name=%s, var->offset=%d %s %d",
+			var->name,var->offset,__FILE__,__LINE__);
+	continue;
+      }else{ // ローカル変数の割り当て
+        println("; 4. local: var->name=%s, var->offset=%d %s %d",
+		var->name,var->offset,__FILE__,__LINE__);
+        var->offset = top;
+        top += var->ty->size;
+        fn->stack_size = top;
       }
-      if (var->offset==-1){	// reg param, top += sizeof(old BP)
-	// XXX
-        skip_bp = 0;
-        skiped_bp = 4;
-	fn->stack_size = top;
-      }
-
-      int align = (var->ty->kind == TY_ARRAY && var->ty->size >= 16)
-        ? MAX(16, var->align) : var->align;
-      var->offset = top + skip_bp;
-      top += var->ty->size + skip_bp;
-      top = align_to(top, align);
-//      println("; 4= var->name=%s, var->offset=%d,var->ty->size=%d, top=%d, %s %d",
-//		      var->name,var->offset,var->ty->size,top,__FILE__,__LINE__);
-//      println("; 4= next top=%d",top);
-    }
-    if (!fn->stack_size){ // no reg param
-	fn->stack_size = top;
-    }
-//    println("; fn->stack_size = %d", fn->stack_size);
-    top += 2 + skiped_bp;		// skip return address
-
-    // Assign offsets to pass-by-stack parameters.
-    gp = 0;
-    for (Obj *var = fn->params; var; var = var->next) {
-      if (var->offset)
-        continue;
-      top = align_to(top, 8);
-      var->offset = top-2;
-      top += var->ty->size;
     }
   }
 }
@@ -3264,8 +3263,10 @@ static void emit_data(Obj *prog) {
     else
       println("\t.bss");
 
-    println("%s:", var->name);
-    println("  .zero %d", var->ty->size);
+    println("_%s:", var->name);
+    for (int i=0; i<var->ty->size; i++){
+      println("\t.byte 0");
+    }
   }
 }
 
@@ -3299,6 +3300,8 @@ static void emit_text(Obj *prog) {
     // only one argument pass via Acc A,B, @long
     // Save passed-by-register arguments to the stack
     int gp = 0;
+    // 返り値がSTRUCT/UNIONの場合は、レジスタ引数に返り値のアドレスが入るので
+    // 関数引数はレジスタに入らない
     switch (fn->ty->return_ty->kind){
     case TY_STRUCT:
     case TY_UNION:
@@ -3323,6 +3326,7 @@ static void emit_text(Obj *prog) {
       }
     }
     int save_reg_param = 0;
+    // 返り値がSTRUCT/UNIONの場合は、レジスタ引数に返り値のアドレスが入る
     switch (fn->ty->return_ty->kind){
     case TY_STRUCT:
     case TY_UNION:
@@ -3423,6 +3427,23 @@ static void emit_text(Obj *prog) {
     println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 		    	fn->stack_size,reg_param_size);
+#if 0
+    if (fn->stack_size + reg_param_size <= 255){
+      println("\tldx @bp");					// 4 2 // 50 23
+      println("\tldx %d,x",fn->stack_size + reg_param_size);	// 6 2
+      println("\tpshb");					// 4 1
+      println("\tldab @bp+1");					// 3 2
+      println("\taddb #<%u",fn->stack_size+reg_param_size+1);	// 2 2
+      println("\tstab @bp+1");					// 4 2
+      println("\tldab @bp");					// 3 2
+      println("\tadcb #>%u",fn->stack_size+reg_param_size+1);	// 2 2
+      println("\tstab @bp");					// 4 2
+      println("\tpulb");					// 4 1
+      println("\tlds @bp");					// 4 2
+      println("\tstx @bp");					// 5 2
+      println("\trts");						// 5 1
+    }else
+#endif
     if (fn->stack_size + reg_param_size <= 10){
       println("\tlds @bp");
       for(int i=0; i<fn->stack_size + reg_param_size - 1; i++)
@@ -3436,12 +3457,12 @@ static void emit_text(Obj *prog) {
       default:
         println("\tpshb");
       }
-      println("\tldab @bp+1");
-      println("\taddb #<%u",fn->stack_size+reg_param_size-1);
-      println("\tstab @bp+1");
-      println("\tldab @bp");
-      println("\tadcb #>%u",fn->stack_size+reg_param_size-1);
-      println("\tstab @bp");
+      println("\tldab @bp+1");					// 3 2 // 18 12
+      println("\taddb #<%u",fn->stack_size+reg_param_size-1);	// 2 2
+      println("\tstab @bp+1");					// 4 2
+      println("\tldab @bp");					// 3 2
+      println("\tadcb #>%u",fn->stack_size+reg_param_size-1);	// 2 2
+      println("\tstab @bp");					// 4 2
       switch (fn->ty->return_ty->kind){
       case TY_VOID:
       case TY_LONG:
@@ -3450,26 +3471,26 @@ static void emit_text(Obj *prog) {
       default:
         println("\tpulb");
       }
-      println("\tlds @bp");			// remove local variables
+      println("\tlds @bp");		// remove local variables // 4 2
     }
     switch (fn->ty->return_ty->kind){
     case TY_VOID:
     case TY_LONG:
     case TY_FLOAT:
-      println("\tpulb");
-      println("\tstab @bp");
-      println("\tpulb");
-      println("\tstab @bp+1");
+      println("\tpulb");	// 4 1	// 16 6 + 5 1 = 21 7
+      println("\tstab @bp");	// 4 2
+      println("\tpulb");	// 4 1
+      println("\tstab @bp+1");	// 4 2
       break;
     default:
-      println("\ttsx");
-      println("\tldx 0,x");
+      println("\ttsx");		// 4 1	// 23 7 + 5 1 = 28 8
+      println("\tldx 0,x");	// 6 2
       IX_Dest = IX_None;
-      println("\tins");
-      println("\tins");
-      println("\tstx @bp");
+      println("\tins");		// 4 1
+      println("\tins");		// 4 1
+      println("\tstx @bp");	// 5 2
     }
-    println("\trts");
+    println("\trts");		// 5 1
   }
 }
 
