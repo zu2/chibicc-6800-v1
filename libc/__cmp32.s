@@ -109,12 +109,12 @@ __gt32u:
 ;	TOS <= @long ? 		; @long >= TOS ?
 ;
 __le32s:
-	bsr	__subtl		; @long - TOS
+	bsr	__sublt		; @long - TOS
 	bge	__true
 	bra	__false
 ;
 __le32u:
-	bsr	__subtl		; @long - TOS
+	bsr	__sublt		; @long - TOS
 	bcc	__true
 	bra	__false
 ;
