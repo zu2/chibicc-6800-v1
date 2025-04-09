@@ -7,7 +7,8 @@ for the Motorola MC6800.
 - long and float size are 32-bit.
 - double and long long, 64-bit or more are not supported.
 - passing/returning struct/union by value and bit fields have been implemented.
-- The first non-struct/union parameter is passed in registers (A/B/@long)
+- function parameter is passed via registers (A/B/@long)
+    - if the first parameter is struct/union, all parameter passed via stack.
     - if the function returns a struct/union, the address of the struct/union is passed in a register as an implicit argument.
 - The case of large local variable areas (>255) is poorly coded/tested.
 
