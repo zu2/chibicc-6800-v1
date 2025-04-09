@@ -3418,7 +3418,17 @@ static void emit_text(Obj *prog) {
       println("\ttxs");
       depth = 0;
     }
-    println("\tstx %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
+    if (fn->alloca_bottom->offset<256){
+      println("\tstx %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
+    }else{
+      println("\taddb #<%d",fn->alloca_bottom->offset);
+      println("\tadca #>%d",fn->alloca_bottom->offset);
+      tfr_dx();
+      println("\tldab @bp+1");
+      println("\tldaa @bp");
+      println("\tstab 1,x	; save sp to __alloca_bottom__");
+      println("\tstaa 0,x");
+    }
 //  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
     // Emit code
     gen_stmt(fn->body);
