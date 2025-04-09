@@ -1188,6 +1188,11 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
     case TY_INT:
     case TY_PTR:
       if (test) return 1;
+      if (rhs->val==0) {
+        if (strcmp(opb,"addb")==0) {	// subb used for compare, so addb only
+          return 1;
+        }
+      }
       println("\t%s #<%u", opb, (uint16_t)rhs->val);
       println("\t%s #>%u", opa, (uint16_t)rhs->val);
       return 1;
