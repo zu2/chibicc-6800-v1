@@ -51,7 +51,7 @@ __shl32:
 	cmpb #32
 	bcc zero	; AccB>=32, return 0
 	bsr shl_check
-	beq ret		; the shift number is a multiple of 8, done.
+	beq ret		; the shift count is 0/8/16/24, done.
 shlloop:
 	lsl @long+3
 	rol @long+2
@@ -74,7 +74,7 @@ __shr32u:
 	cmpb #32
 	bcc zero
 	bsr shru_check
-	beq ret
+	beq ret		; the shift count is 0/8/16/24, done.
 shruloop:
 	lsr @long
 	ror @long+1
@@ -137,7 +137,7 @@ __shr32s:
 	cmpb #32
 	bcc shrs32ret
 	bsr shru_check
-	beq ret
+	beq ret		; the shift count is 0/8/16/24, done.
 shrsloop:
 	asr @long
 	ror @long+1
