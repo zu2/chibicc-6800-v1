@@ -311,7 +311,7 @@ __f32mInf:		; ff80 0000
 	stab	@long
 	jmp     __pullret
 ;
-;	float to nsigned long
+;	float to signed long
 ;		@long -> @long
 ;	
 __f32toi32:
