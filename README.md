@@ -88,6 +88,38 @@ Tradeoffs vary with number of arguments.
 
 Register arguments are saved at the function prologue, and accessed like local variable within the function. There is still room for optimization here.
 
+## float/long in zero page
+
+long/float are handled as 4byte variables (@long) on the zero page.
+
+This is different from the CC68 and Fuzix CC methods. They handled as AccA/B and 2byte on zero page.
+
+When Acc A/B are used together, long/int mixed operations are advantageous.
+
+For example, sign-extend int to long.
+
+```
+    ldx #0
+    tsta
+    bpl L1
+    dex
+L1: stx @hireg
+```
+
+all bytes on zero page.
+
+```
+    ldx #0
+    stab @long+3
+    staa @long+2
+    bpl L1
+    dex
+L1: stx @long
+```
+
+On the other hand, AccA/B are fragile, so they may need to be saved and restored when performing long/float operations.
+
+In the chibicc-6800, everything is on the zero page for clarity.
 
 ---
 Below is Rui's original README.md.
