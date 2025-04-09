@@ -12,7 +12,8 @@ for the Motorola MC6800.
     - if the function returns a struct/union, the address of the struct/union is passed in a register as an implicit argument.
 - The case of large local variable areas (>255) is poorly coded/tested.
 
-The float library was written for testing, with no attention paid to speed, precision, or exception handling.
+The basic float library is written in assembler.
+There are still issues with precision and exception handling.
 
 The compiler passes basic tests, but there are still many issues remaining.
 
