@@ -77,8 +77,6 @@ main(){
         com03.r=0;
         com03.i=0;
         com03 = complex_add3(&com01,&com02);	// com03 = com01 + com02
-	print(com03.r);
-	print(com03.i);
 	if (com01.r + com02.r != com03.r)
 		return 41;
 	if (com01.i + com02.i != com03.i)
