@@ -3234,19 +3234,19 @@ static void emit_data(Obj *prog) {
     // .data or .tdata
     if (var->init_data) {
       if (var->is_tls)
-        println("  .section .tdata,\"awT\",@progbits");
+        println("\t.section .tdata,\"awT\",@progbits");
       else
         println("\t.data");
 
-      println(";  .type %s, @object", var->name);
-      println(";  .size %s, %d", var->name, var->ty->size);
+      println(";\t.type %s, @object", var->name);
+      println(";\t.size %s, %d", var->name, var->ty->size);
       println("_%s:", var->name);
 
       Relocation *rel = var->rel;
       int pos = 0;
       while (pos < var->ty->size) {
         if (rel && rel->offset == pos) {
-          println("  .quad %s%+ld", *rel->label, rel->addend);
+          println("\t.word %s%+ld", *rel->label, rel->addend);
           rel = rel->next;
           pos += 8;
         } else {
@@ -3264,7 +3264,7 @@ static void emit_data(Obj *prog) {
 
     // .bss or .tbss
     if (var->is_tls)
-      println("  .section .tbss,\"awT\",@nobits");
+      println("\t.section .tbss,\"awT\",@nobits");
     else
       println("\t.bss");
 
