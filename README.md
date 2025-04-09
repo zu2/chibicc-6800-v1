@@ -7,14 +7,15 @@ for the Motorola MC6800.
 - long and float size are 32-bit.
 - double and long long, 64-bit or more are not supported.
 - passing/returning struct/union by value and bit fields have been implemented.
+- The first non-struct/union parameter is passed in registers (A/B/@long)
+    - if the function returns a struct/union, the address of the struct/union is passed in a register as an implicit argument.
 
-The float/long library was written for testing, with no attention paid to speed, precision, or exception handling.
+The float library was written for testing, with no attention paid to speed, precision, or exception handling.
 
-It doesn't work well yet. Many parts remain x64. 
+The compiler passes basic tests, but there are still many issues remaining.
 
-The code runs as a stack machine.
-I created the MC6800 version based on the x64 code.
-After compilation, the generated code is very slow and large.
+In the original chibicc, the code is compiled as a stack machine on x86.
+On the 6800, this is very inefficient, so a simple optimization is done:
 
 I've only just started reading the original chibicc code, 
 so there are probably many bugs and inaccuracies I added.
@@ -33,6 +34,9 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
 - make install
 - add "/opt/chibicc/bin:/opt/fcc/bin" to $PATH
 - chibicc a.c
+- To run the test programs
+    - cd ztest; ./runall
+    - cd ztest; ./onetest some-test-program.c
 
 ---
 ---
