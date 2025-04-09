@@ -3345,10 +3345,14 @@ static void emit_text(Obj *prog) {
       break;
     default:
       for (Obj *var = fn->params; var; var = var->next) {
-        if (var->reg_param
-        && ((var->ty->kind == TY_INT) || (var->ty->kind == TY_PTR))) {
-  	  save_reg_param = 1;
-  	  break;
+        if (var->reg_param) {
+	  switch(var->ty->kind){
+	  case TY_SHORT:
+	  case TY_INT:
+	  case TY_PTR:
+  	    save_reg_param = 1;
+  	    break;
+	  }
  	}
       }
     }
