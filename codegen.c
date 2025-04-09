@@ -3236,6 +3236,7 @@ static void emit_data(Obj *prog) {
     //   .section .tdata ; Thread Local Storage
     //   .section .rodata ; 書き換え不可能データ
     if (var->init_data) {
+      println(";");
       println(";\t.type %s, @object", var->name);
       println(";\t.size %s, %d", var->name, var->ty->size);
       if (var->is_tls)
