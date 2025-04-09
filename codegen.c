@@ -3231,15 +3231,20 @@ static void emit_data(Obj *prog) {
       continue;
     }
 
-    // .data or .tdata
+    // .data or .tdata in x64
+    //   .section .data  ; 初期化済み静的データ
+    //   .section .tdata ; Thread Local Storage
+    //   .section .rodata ; 書き換え不可能データ
     if (var->init_data) {
+      println(";\t.type %s, @object", var->name);
+      println(";\t.size %s, %d", var->name, var->ty->size);
       if (var->is_tls)
         println("\t.section .tdata,\"awT\",@progbits");
+      else if (var->is_literal)
+        println("\t.literal");
       else
         println("\t.data");
 
-      println(";\t.type %s, @object", var->name);
-      println(";\t.size %s, %d", var->name, var->ty->size);
       println("_%s:", var->name);
 
       Relocation *rel = var->rel;

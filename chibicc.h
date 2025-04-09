@@ -144,6 +144,7 @@ struct Obj {
   // Global variable
   bool is_tentative;
   bool is_tls;
+  bool is_literal;
   char *init_data;
   Relocation *rel;
 
