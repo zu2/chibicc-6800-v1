@@ -40,7 +40,7 @@ first:	rol	@long+3
 noadd:
 	dec @tmp3
 	bne nextbit
-	; For a 32x32 to 64bit just store 2-5,x into sreg
+	; The result of 32bit*32bit is 64bit. It is stored in 2-5,x and @long.
 	stab	@long+3
 	staa	@long+2
 	ldab	@tmp2+1
