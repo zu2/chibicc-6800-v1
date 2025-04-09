@@ -15,8 +15,7 @@ int main(int argc,char **argv)
       return -1;
 
     for (int i=1; i<23; i++){
-      print(i);
-//    print(fibo[i]);
+      print(fibonacci(i));
       if (fibonacci(i)!=fibo[i])
         return i;
     }
