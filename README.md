@@ -9,6 +9,7 @@ for the Motorola MC6800.
 - passing/returning struct/union by value and bit fields have been implemented.
 - The first non-struct/union parameter is passed in registers (A/B/@long)
     - if the function returns a struct/union, the address of the struct/union is passed in a register as an implicit argument.
+- The case of large local variable areas (>255) is poorly coded/tested.
 
 The float library was written for testing, with no attention paid to speed, precision, or exception handling.
 
@@ -83,7 +84,7 @@ Tradeoffs vary with number of arguments.
 - Two: one PUSH is removed, but an INS is required. Equivalent.
 - Three or more: more INS, less efficient.
 
-Register arguments are saved at the function prologue, and accessed like local variables within the function. There is still room for optimization here.
+Register arguments are saved at the function prologue, and accessed like local variable within the function. There is still room for optimization here.
 
 
 ---
