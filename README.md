@@ -39,6 +39,51 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
     - cd ztest; ./onetest some-test-program.c
 
 ---
+# Memo
+
+## Stack frame
+
+This compiler uses a frame pointer to access local variables and arguments. It's named @bp because it's inherited from x86.
+
+chibicc supports alloca/VLA, so it needs a frame pointer.
+
+Therefore, the frame pointer is saved and restored in the function prologue/epilogue. Functions are a bit slower.
+
+CC68 and Fuzix CC don't have a frame pointer, they use SP.
+This is more efficient, but requires tracking of SP.
+
+In the future, I may drop alloca/VLA support and switch to SP only.
+
+// @bp points old @bp,argument
+//
+// SP  -> stack top
+//        alloca/VLA area
+// @bp -> local var top
+//             :
+//        local var end
+//        argment passed by register (if any)
+//        old @bp
+//        return address
+//        argment passed by stack
+
+## Function arguments are discarded by the caller
+
+Function arguments are discarded at the caller. CC68 and Fuzix CC discard them at the called function.
+
+The caller needs stack trimming code (INS).
+Because functions are called more times than they are defined, "caller trimming" takes more bytes.
+
+This implementation supports register arguments, so the first parameter doesn't need to be PUSHed/discarded.
+
+Tradeoffs vary with number of arguments.
+
+One argument: more efficient, no PUSH needed.
+Two: one PUSH is removed, but an INS is required. Equivalent.
+Three or more: more INS, less efficient.
+
+Register arguments are saved in the function prologue, and accessed like local variables within the function. There is still room for optimization here.
+
+
 ---
 Below is Rui's original README.md.
 
