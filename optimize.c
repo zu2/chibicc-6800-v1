@@ -210,6 +210,11 @@ Node *optimize_expr(Node *node)
     }
     return node;
   case ND_MUL:
+    if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
+      lhs->val *= rhs->val;
+        return lhs;
+    }
+    return node;
   case ND_BITAND:
   case ND_BITOR:
   case ND_BITXOR:
