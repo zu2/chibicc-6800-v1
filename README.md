@@ -47,13 +47,14 @@ This compiler uses a frame pointer to access local variables and arguments. It's
 
 chibicc supports alloca/VLA, so it needs a frame pointer.
 
-Therefore, the frame pointer is saved and restored in the function prologue/epilogue. Functions are a bit slower.
+The frame pointer is saved and restored in the function prologue/epilogue. Functions are a bit slower.
 
 CC68 and Fuzix CC don't have a frame pointer, they use SP.
 This is more efficient, but requires tracking of SP.
 
 In the future, I may drop alloca/VLA support and switch to SP only.
 
+```
 // @bp points old @bp,argument
 //
 // SP  -> stack top
@@ -65,23 +66,24 @@ In the future, I may drop alloca/VLA support and switch to SP only.
 //        old @bp
 //        return address
 //        argment passed by stack
+```
 
 ## Function arguments are discarded by the caller
 
 Function arguments are discarded at the caller. CC68 and Fuzix CC discard them at the called function.
 
-The caller needs stack trimming code (INS).
-Because functions are called more times than they are defined, "caller trimming" takes more bytes.
+The caller needs stack adjusting code (INS).
+Because functions are called more times, "caller trimming" takes more bytes.
 
-This implementation supports register arguments, so the first parameter doesn't need to be PUSHed/discarded.
+This implementation supports register arguments, so the first parameter doesn't need to be PUSH/INS.
 
 Tradeoffs vary with number of arguments.
 
-One argument: more efficient, no PUSH needed.
-Two: one PUSH is removed, but an INS is required. Equivalent.
-Three or more: more INS, less efficient.
+- One argument: more efficient, no PUSH needed.
+- Two: one PUSH is removed, but an INS is required. Equivalent.
+- Three or more: more INS, less efficient.
 
-Register arguments are saved in the function prologue, and accessed like local variables within the function. There is still room for optimization here.
+Register arguments are saved at the function prologue, and accessed like local variables within the function. There is still room for optimization here.
 
 
 ---
