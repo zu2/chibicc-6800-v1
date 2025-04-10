@@ -2008,6 +2008,7 @@ static void gen_expr(Node *node) {
     }
     println("; ND_ASSIGN: test_addr_x fail");
     gen_addr(node->lhs);
+#if 0
     if (node->rhs->kind == ND_NUM) {
       if (node->rhs->val == 0) {
 	 // TODO: Multiple assignments may be strange
@@ -2063,6 +2064,7 @@ static void gen_expr(Node *node) {
       }
       // Complex types will be dealt with later
     }
+#endif
     push();
     gen_expr(node->rhs);
 
