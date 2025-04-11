@@ -1206,15 +1206,18 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
       if (!test_addr_x(rhs)) return 0;
       if(rhs->var->is_local){
         println("; gen_direct_sub ND_VAR %s is local",rhs->var->name);
-        if (test) return 1;
 	if (rhs->ty->kind==TY_ARRAY) {
 	  return 0;
 	}
         int off = gen_addr_x(rhs,true);
         if (rhs->ty->kind==TY_CHAR){
+          if (test) {
+            return rhs->ty->is_unsigned;
+	  }
           println("\t%s %d,x",opb,off);
           println("\t%s #0",opa);
         }else{
+          if (test) return 1;
           println("\t%s %d,x",opb,off+1);
           println("\t%s %d,x",opa,off);
         }
@@ -2637,8 +2640,11 @@ static void gen_expr(Node *node) {
     node->rhs = optimize_expr(node->rhs);
     gen_expr(node->lhs);
     println("; ND_ADD gen_direct? %s,%d",__FILE__,__LINE__);
-    if (gen_direct(node->rhs,"addb","adca"))
-      return;
+    if (can_direct(node->rhs)){
+      if (gen_direct(node->rhs,"addb","adca")){
+        return;
+      }
+    }
     if (node->rhs->kind     == ND_CAST
     &&  node->rhs->ty->kind == TY_ARRAY
     &&  node->rhs->lhs->kind == ND_VAR
