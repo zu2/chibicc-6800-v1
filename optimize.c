@@ -144,7 +144,7 @@ Node *optimize_expr(Node *node)
   case ND_CAST:
     node->lhs = optimize_expr(node->lhs);
 //    return node;
-#if 1
+#if 0
 #if 0
 //    println("; ND_CAST: node->lhs->ty->kind %d, node->ty->kind %d, %s %d",node->lhs->ty->kind,node->ty->kind,__FILE__,__LINE__);
 //    println("; ND_CAST: node->lhs->ty %p, node->ty %p",node->lhs->ty,node->ty);
@@ -182,8 +182,8 @@ Node *optimize_expr(Node *node)
       return optimize_expr(node->lhs);
     }
 #endif
-    return node;
 #endif
+    return node;
   case ND_MEMZERO:
   case ND_COND:
   case ND_FUNCALL:
