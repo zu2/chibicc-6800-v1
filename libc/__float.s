@@ -53,6 +53,7 @@ __texp:	.byte	0	; TOS's exp
 __lexp:	.byte	0	; @long's exp
 __expdiff:
 	.word	0	; texp - lexp
+__check:.byte	0	; working area for check Inf,NaN,etc
 __work: .word	0	; working area
 	.word	0
 	.code
@@ -311,7 +312,7 @@ __f32mInf:		; ff80 0000
 	stab	@long
 	jmp     __pullret
 ;
-;	load plus/minus NaN into @long
+;	load plus/minus qNaN into @long
 ;
 __f32retNaN:
 	ldab	__sign
@@ -452,6 +453,38 @@ __subf32tos:
 ;	pull TOS
 ;
 __addf32tos:
+	clr	__check
+	ldx	#long
+	jsr	__f32isNaNorInf
+	jcs	__f32retNaN
+	bne	__addftos01
+	inc	__check
+__addftos01:
+	tsx
+	inx
+	inx
+	jsr	__f32isNaNorInfx
+	jcs	__f32retNaN
+	bne	__addftos07
+	tst	__check
+	beq	__addftos05
+	;			; TOS == Inf, @long == Inf
+	clr	__sign
+	jmp	__f32retNaN	; return qNaN
+__addftos05:			; TOS == Inf, @long != Inf
+	tsx
+	inx
+	inx
+	jsr	__load32x	; return TOS
+	jmp	__pullret
+__addftos07:			; TOS != Inf, check @long
+	tst	__check
+	beq	__addftos09
+	;			; @long == Inf, TOS != Inf
+	ldx	#long
+	jsr	__load32x	; return @long
+	jmp	__pullret
+__addftos09:			; TOS & @long are not NaN/Inf
         ldx     #long
         jsr     __f32iszerox
 	bne	__addf32tos3
@@ -487,10 +520,10 @@ __addf32tos4:			; neither of @long and TOS was not 0.0, simply add them.
 	andb	#$80
 	stab	__sign
 	jsr	__setup_both	; get both exp to texp, lexp. AccB = texp - lexp
-	bne	__addf32tos5
+	bne	__addf32tos9
 	;
 	bra	__addf32tos11	; texp==lexp, Simply add it.
-__addf32tos5:
+__addf32tos9:
 	bcc	__addf32tos10
 	;			; TOS < @long
 	negb
