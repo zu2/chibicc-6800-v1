@@ -311,6 +311,18 @@ __f32mInf:		; ff80 0000
 	stab	@long
 	jmp     __pullret
 ;
+;	load plus/minus NaN into @long
+;
+__f32retNaN:
+	ldab	__sign
+	orab	#$7F
+	stab	@long
+	ldab	#$FF
+	stab	@long+1
+	stab	@long+2
+	stab	@long+3
+	jmp	__pullret	
+;
 ;	float to signed long
 ;		@long -> @long
 ;	
@@ -1069,16 +1081,26 @@ __mul8x8_zero:
 ;
 ;	@long = @long / TOS
 ;
-;	TODO: TOS==0.0
-;
 __divf32tos:
 	tsx
 	ldab	2,x
 	eorb	@long
 	andb	#$80
 	stab	__sign		; First, determine the sign
+;
+	tsx
+	inx
+	inx
+	jsr	__f32iszerox	; TOS == 0.0 ?
+	bne	__divf32tos01	; no, jump to normal operation
+	;			; TOS = 0.0
 	jsr	__f32iszero	; @long == 0.0 ?
-	jeq	__f32retzero	; return 0.0
+	jne	__f32retInf	; no, returns Inf
+	jmp	__f32retNaN	; otherwise ( 0.0 / 0.0 ), returns NaN
+__divf32tos01:
+	jsr	__f32iszero	; @long == 0.0 ?
+	jeq	__f32retzero	; 0.0 / any return 0.0
+;
 	tsx
 	jsr	__setup_both
 	clra
@@ -1203,14 +1225,23 @@ next:
 ;
 ;	@long cmp TOS
 ;
-;	condition:	return AccAB
-;	@long<TOS:	-1
-;	@long==TOS	0
-;	@long>TOS	1
+;	condition:	return AccAB and carry
+;	C=1		unordered relation (NaN)
+;	C=0:
+;	  @long<TOS	-1
+;	  @long==TOS	0
+;	  @long>TOS	1
 ;
-;	TODO: NaN check with compiler
 ;
 __cmpf32tos:
+	jsr	__f32isNaNorInf
+	jcs	__pullret
+	tsx
+	inx
+	inx
+	jsr	__f32isNaNorInfx
+	jcs	__pullret
+;
         jsr     __f32iszero	; @long == 0.0 ?
 	bne	__cmpf32tos_10	; branch if @long!=0.0
 	tsx
@@ -1245,6 +1276,7 @@ __cmpf32tos_gt:			; @long > TOS
 	clra
 	jmp	__pullret
 __cmpf32tos_lt:			; @long < TOS
-	ldab	#$ff
+	clrb			; C=0 for not unordered relation
+	decb
 	tba
 	jmp	__pullret

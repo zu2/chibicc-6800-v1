@@ -2378,7 +2378,21 @@ static void gen_expr(Node *node) {
     case ND_LE:
     case ND_GT:
     case ND_GE: {
+      char L_cmpf1[32];
+      char L_cmpf2[32];
+      int c = count();
+      sprintf(L_cmpf1, "L_%d_1_cmpf",c);
+      sprintf(L_cmpf2, "L_%d_2_cmpf",c);
       println("\tjsr __cmpf32tos	; @long cmp  TOS");
+      println("\tbcc %s",L_cmpf1);	// when carry=1, compare NaN
+      if (node->kind == ND_NE) {
+        println("\tldab #1");
+      }else{
+        println("\tclrb");
+      }
+      println("\tclra");
+      println("\tbra %s",L_cmpf2);
+      println("%s:",L_cmpf1);
       if (node->kind == ND_EQ) {
         println("; ND_EQ");
 	println("\tclra");
@@ -2412,6 +2426,7 @@ static void gen_expr(Node *node) {
       }
       println("\tclra");
       println("\tandb #1");
+      println("%s:",L_cmpf2);
       depth -= 4;
       IX_Dest = IX_None;
       return;
