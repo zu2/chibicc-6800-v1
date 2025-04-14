@@ -1,7 +1,6 @@
 # chibicc-6800-v1: A Small C Compiler for MC6800
 
-This is a fork of @rui314 Rui Ueyama's chibicc to create a compiler
-for the Motorola MC6800.
+This project is a fork of @rui314's chibicc, adapted to create a C compiler for the Motorola MC6800 architecture. Key features include:
 
 It was created to study compilers for the MC6800, and contains a lot of unnecessary code and comments.
 
@@ -12,14 +11,11 @@ However, it is a compiler that works reasonably well. I hope it will be helpful 
 ----
 # Topics
 
-- int and pointer size are 16-bit.
-- long and float size are 32-bit.
-- double and long long, 64-bit or more are not supported.
-- passing/returning struct/union by value and bit fields have been implemented.
-- function parameter is passed via registers (A/B/@long)
-    - if the first parameter is struct/union, all parameter passed via stack.
-    - if the function returns a struct/union, the address of the struct/union is passed in a register as an implicit argument.
-- The case of large local variable areas (>255) is poorly coded/tested.
+- **Data types:** `int` and pointers are 16-bit; `long` and `float` are 32-bit. `double` and `long long` (64-bit or more) are unsupported.
+- **Structs/unions:** Passing/returning by value and bit fields are implemented.
+- **Function parameters:** Passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
+- **Return values:** Struct/union return values pass their address as an implicit argument in a register.
+- **Limitations:** Handling of large local variable areas (>255 bytes) is poorly tested and coded.
 
 The basic float library is written in assembler.
 There are still issues with precision and exception handling.
@@ -38,33 +34,38 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
 - https://github.com/EtchedPixels/Fuzix-Bintools
 - https://github.com/EtchedPixels/Fuzix-Compiler-Kit
 
-# How to install
+# Installation
 
-- install Fuzix-Bintools & Fuzix-Compiler-Kit
-- git clone https://github.com/zu2/chibicc-6800-v1.git
-- make
-- make install
-- add "/opt/chibicc/bin:/opt/fcc/bin" to $PATH
-- chibicc a.c
-- To run the test programs
-    - cd ztest; ./runall
-    - cd ztest; ./onetest some-test-program.c
+Follow these steps to set up the compiler:
+
+1. Install **Fuzix-BinTools** and **Fuzix-Compiler-Kit**.
+2. install Fuzix-Bintools & Fuzix-Compiler-Kit
+3. Clone this repository:
+   git clone https://github.com/zu2/chibicc-6800-v1.git
+4. Build and install:
+   cd chibicc-6800-v1
+   make
+   make install
+5. Add the following paths to your `$PATH`:
+   export PATH="/opt/chibicc/bin:/opt/fcc/bin:$PATH"
+6. test compile a C file using:
+   cd ztest
+   ./onetest 9018-asciiartf.c
+7. To run the test programs
+    cd ztest; ./runall
+    cd ztest; ./onetest some-test-program.c
 
 ---
 # Memo
 
 ## Stack frame
 
-This compiler uses a frame pointer to access local variables and arguments. It's named @bp because it's inherited from x86.
+This compiler uses a frame pointer (`@bp`) for accessing local variables and arguments, following conventions from x86. Key points:
 
-chibicc supports alloca/VLA, so it needs a frame pointer.
-
-The frame pointer is saved and restored in the function prologue/epilogue. Functions are a bit slower.
-
-CC68 and Fuzix CC don't have a frame pointer, they use SP.
-This is more efficient, but requires tracking of SP.
-
-In the future, I may drop alloca/VLA support and switch to SP only.
+- **Frame Pointer Usage:** Required for supporting `alloca` and Variable-Length Arrays (VLA).
+- **Performance Tradeoff:** Functions with a frame pointer are slightly slower due to saving/restoring it during prologue/epilogue.
+- **Comparison with Other Compilers:** CC68 and Fuzix CC use the stack pointer (SP) directly, which is more efficient but requires precise SP tracking.
+- **Future Plans:** Support for `alloca`/VLA may be removed in favor of SP-only implementation for simplicity.
 
 ```
 // @bp points old @bp,argument
@@ -80,22 +81,19 @@ In the future, I may drop alloca/VLA support and switch to SP only.
 //        argment passed by stack
 ```
 
-## Function arguments are discarded by the caller
+### Function Arguments Handling
 
-Function arguments are discarded at the caller. CC68 and Fuzix CC discard them at the called function.
+In this implementation:
 
-The caller needs stack adjusting code (INS).
-Because functions are called more times, "caller trimming" takes more bytes.
+1. Function arguments are discarded by the caller (unlike CC68/Fuzix CC where this happens in the callee).
+2. The caller performs stack adjustment using `INS`, which increases code size due to frequent calls.
 
-This implementation supports register arguments, so the first parameter doesn't need to be PUSH/INS.
+#### Tradeoffs:
+- **1 Argument:** Efficient; no `PUSH` needed.
+- **2 Arguments:** Equivalent; one `PUSH` removed but requires an `INS`.
+- **3+ Arguments:** Less efficient due to additional `INS`.
 
-Tradeoffs vary with number of arguments.
-
-- One argument: more efficient, no PUSH needed.
-- Two: one PUSH is removed, but an INS is required. Equivalent.
-- Three or more: more INS, less efficient.
-
-Register arguments are saved at the function prologue, and accessed like local variable within the function. There is still room for optimization here.
+Register-based arguments are saved during the prologue and accessed as local variables within functions. Further optimizations in this area are possible.
 
 ## float/long in zero page
 
