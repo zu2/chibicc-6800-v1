@@ -2471,9 +2471,9 @@ static void gen_expr(Node *node) {
 	}
 	assert(0);
       }
-      gen_expr(node->rhs);
-      pushl();
       gen_expr(node->lhs);
+      pushl();
+      gen_expr(node->rhs);
       println("\tjsr __sub32tos  ; @long = TOS - @long, pull TOS");
       depth -= 4;
       IX_Dest = IX_None;
