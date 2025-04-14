@@ -48,12 +48,12 @@
 	.export __texp
 	.export __lexp
 	.export __expdiff
-__sign:	.byte	0	; sign of reslut
+__zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
+__sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
 __texp:	.byte	0	; TOS's exp
 __lexp:	.byte	0	; @long's exp
 __expdiff:
 	.word	0	; texp - lexp
-__check:.byte	0	; working area for check Inf,NaN,etc
 __work: .word	0	; working area
 	.word	0
 	.code
@@ -288,12 +288,12 @@ __i3280000000:
 ;
 ;	load plus/minus Inf into @long
 ;
-__f32retInf:
+__f32retInfs:
 	ldab	__sign
-__f32Inf:		; AccB(Sign)+7f80 0000
+__f32retInf:		; AccB(Sign)+7f80 0000
 	tstb
-	bmi	__f32mInf
-__f32pInf:		; 7f80 0000
+	bmi	__f32retmInf
+__f32retpInf:		; 7f80 0000
 	ldab	#$7f
 	stab	@long
 	incb
@@ -302,7 +302,7 @@ __f32pInf:		; 7f80 0000
 	stab	@long+2
 	stab	@long+3
 	jmp     __pullret
-__f32mInf:		; ff80 0000
+__f32retmInf:		; ff80 0000
 	ldab	#$80
 	stab	@long+1
 	clrb
@@ -324,13 +324,36 @@ __f32retNaN:
 	stab	@long+3
 	jmp	__pullret	
 ;
+__f32retZerox:
+	ldab	2,x
+	bra	__f32retZero
+__f32retZerol:
+	ldab	@long
+	bra	__f32retZero
+__f32retmZero:
+	ldab	#$80
+	bra	__f32retZero
+__f32retpZero:
+	clrb
+	bra	__f32retZero
+__f32retZeros:
+	ldab	__sign
+__f32retZero:
+	andb	#$80
+	stab	@long
+	clrb
+	stab	@long+1
+	stab	@long+2
+	stab	@long+3
+	jmp	__pullret
+;
 ;	float to signed long
 ;		@long -> @long
 ;	
 __f32toi32:
 	ldx	#long
 	jsr	__f32iszerox
-	beq	__u32zero
+	jeq	__u32zero
 	ldab	0,x
 	stab	__sign		; save sign
 	ldaa	1,x
@@ -343,8 +366,8 @@ __f32toi32_1:
 	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
 	bcs	__f32toi32_2
 	tst	__sign
-	bpl	__i327fffffff
-	bra	__i3280000000	; return 4,294,967,295
+	jpl	__i327fffffff
+	jmp	__i3280000000	; return 4,294,967,295
 __f32toi32_2:
 	clr	0,x
 	ldaa	1,x		; recover hidden bit
@@ -453,63 +476,52 @@ __subf32tos:
 ;	pull TOS
 ;
 __addf32tos:
-	clr	__check
-	ldx	#long
-	jsr	__f32isNaNorInf
-	jcs	__f32retNaN
-	bne	__addftos01
-	inc	__check
-__addftos01:
 	tsx
-	inx
-	inx
-	jsr	__f32isNaNorInfx
-	jcs	__f32retNaN
-	bne	__addftos07
-	tst	__check
-	beq	__addftos05
-	;			; TOS == Inf, @long == Inf
-	clr	__sign
-	jmp	__f32retNaN	; return qNaN
-__addftos05:			; TOS == Inf, @long != Inf
-	tsx
-	inx
-	inx
-	jsr	__load32x	; return TOS
-	jmp	__pullret
-__addftos07:			; TOS != Inf, check @long
-	tst	__check
-	beq	__addftos09
-	;			; @long == Inf, TOS != Inf
-	ldx	#long
-	jsr	__load32x	; return @long
-	jmp	__pullret
-__addftos09:			; TOS & @long are not NaN/Inf
-        ldx     #long
-        jsr     __f32iszerox
-	bne	__addf32tos3
-	tsx			; @long = 0.0, check TOS
-	inx
-	inx
-        jsr     __f32iszerox
-	beq	__addf32tos1
-	jsr	__load32x	; @long == 0.0, TOS != 0.0, return TOS
-	jmp	__pullret
-__addf32tos1:
-	;			; both are 0, -0 is returned only if -0 + -0
-	ldab	0,x		; get TOS's sign
-	andb	@long		;   and @long's
-	stab	@long		; value is $00 or $80, so return it as is.
-	jmp	__pullret
-__addf32tos3:			; @long != 0.0, check TOS
-	tsx
-	inx
-	inx
-        jsr     __f32iszerox
-	bne	__addf32tos4
-	jmp	__pullret	; TOS = 0.0, return @long
+	jsr	__is_zin	; TOS & @long is zero/Inf/NaN?
+;	ldab	__zin
+	andb	#$03		; TOS or @long is NaN?
+	jne	__f32retNaN	; Yes: return NaN
 ;
-__addf32tos4:			; neither of @long and TOS was not 0.0, simply add them.
+	ldab	__zin
+	andb	#$0C		; TOS or @long is Inf?
+	jeq	__addftos_s20
+	cmpb	#$0C		; TOS and @long are Inf?
+	bne	__addftos_s10
+	ldab	__sign		; each sign are same?
+	jmi	__f32retNaN	; No: return NaN
+__addftos_s05:
+	ldab	@long		; return Inf, sign is the same as @long
+	jmp	__f32retInf
+	;
+__addftos_s10:
+	ldab	__zin		; Either TOS or @long is Inf.
+	cmpb	#$04		; @long is Inf?
+	bne	__addftos_s05	; No, return Inf, sign is same as @long
+	tsx
+	ldab	2,x
+	jmp	__f32retInf	; return Inf, The sign is the same as TOS
+;
+__addftos_s20:			; TOS and @long is not NaN,Inf.
+	ldab	__zin
+	andb	#$30		; TOS or @long == 0.0?
+	beq	__addf32tos1	; No
+	cmpb	#$30		; TOS and @long == 0.0?
+	jne	__addftos_s50
+	tst	__sign		; Yes. same sign?
+	jne	__f32retpZero	; Not same sign. return +0.0
+	jmp	__f32retZerol	; return 0.0, sign is same as @long
+;
+__addftos_s50:			; TOS or @long == 0.0
+	cmpb	#$20		; TOS == 0.0?
+	beq	__addftos_s51	; Yes, return @long (do nothing)
+	tsx			; No,  return TOS
+	inx
+	inx
+	jsr	__load32x	; @long <= (0-3,x)
+__addftos_s51:
+	jmp	__pullret
+;
+__addf32tos1:			; neither of @long and TOS was not 0.0, simply add them.
 	tsx
 	ldab	2,x		; get MSB of TOS
 	eorb	@long
@@ -701,6 +713,68 @@ __abscmp:	; compare: abs(tos) - abs(@long)
 __abscmp_ret:
 	rts	; TOS<@long: C=1 (BCS), TOS==@long: Z=1 (BEQ), other TOS>@long: C=0,Z=0 (BHI)
 ;
+;	check both Inf and NaN
+;	2,x = TOS top
+;
+;	__sign: TOS and @long has different sign? same:b7=0, differ:b7=1
+;
+;	__zin and AccB:
+;		b7	TOS's   sign
+;		b6	@long's sign
+;		b5	TOS   is Zero
+;		b4	@long is Zero
+;		b3	TOS   is Inf?
+;		b2	@long is Inf?
+;		b1	TOS   is NaN?
+;		b0	@long is NaN?
+;
+__is_zin:
+	ldab	2,x
+	eorb	@long
+	andb	#$80
+	stab	__sign		; First, determine the sign
+;
+	ldab	2,x
+	aslb
+	ldab	@long
+	rorb			; bit7: TOS's sign, bit6: @long's sign
+	andb	#$C0		; mask 1100 0000
+;
+	pshb
+	jsr	__f32iszerox	; TOS == 0.0?
+	pulb
+	bne	__is_zin_10
+	orab	#$20		; b5: TOS is 0.0
+	bra	__is_zin_50
+__is_zin_10:
+	pshb
+	jsr	__f32isNaNorInfx ; TOS == Inf or NaN?
+	pulb
+	bne	__is_zin_20
+	orab	#$08		; b3: TOS is Inf
+__is_zin_20:
+	bcc	__is_zin_50
+	orab	#$02		; b1: TOS is NaN
+;
+__is_zin_50:
+	pshb
+	jsr	__f32iszero	; @long == 0.0 ?
+	pulb
+	bne	__is_zin_60
+	orab	#$10		; b4: @long is 0.0
+	bra	__is_zin_99
+__is_zin_60:
+	pshb
+	jsr	__f32isNaNorInf	; @long == Inf or NaN
+	pulb
+	bne	__is_zin_70
+	orab	#$04		; b2: @long is Inf
+__is_zin_70:
+	bcc	__is_zin_99
+	orab	#$01		; b0: @long is NaN
+__is_zin_99:
+	stab	__zin
+	rts
 ;
 ;
 __setup_both:			; get both exp, set hidden bit
@@ -879,26 +953,22 @@ __pullret:
 ;
 __mulf32tos:
 	tsx
-	ldab	2,x
-	eorb	@long
-	andb	#$80
-	stab	__sign		; First, determine the sign
+	jsr	__is_zin	; TOS & @long is zero/Inf/NaN?
 	;
-	inx			; TOS = 0.0 ?
-	inx
-        jsr     __f32iszerox
-	bne	__mulf32tos4
-	;
-        ldx     #long		; @long = 0.0 ?
-        jsr     __f32iszerox
-	bne	__mulf32tos4
-	;
-__f32retzero:			; TOS or long = 0.0, return 0.0
-	jsr	__f32zero	
-	ldab	__sign
-	orb	@long
-	stab	@long
-	jmp	__pullret
+;	ldab	__zin
+	andb	#$03		; TOS or @long is NaN?
+	jne	__f32retNaN	; Yes: return NaN
+	ldab	__zin
+	andb	#$0C		; TOS or @long is Inf?
+	beq	__mulf32_s10
+	ldab	__zin
+	andb	#$30		; TOS or @long is zero?
+	jeq	__f32retInf	; No, Inf x (not zero) returns Inf. 
+	jmp	__f32retNaN
+__mulf32_s10:			; TOS and @long is not Inf,NaN
+	ldab	__zin
+	andb	#$30
+	jne	__f32retZeros	; TOS or @long is zero
 ;
 __mulf32tos4:
 	tsx
@@ -917,7 +987,7 @@ __mulf32tos4:
 	bpl	__mulf32tos02
 	cmpb	#$E8		; underflow
 	bcc	__mulf32tos03
-	jmp	__f32retzero
+	jmp	__f32retZeros
 __mulf32tos02:			; overflow
 	jmp	__f32retInf
 ;
@@ -1132,7 +1202,7 @@ __divf32tos:
 	jmp	__f32retNaN	; otherwise ( 0.0 / 0.0 ), returns NaN
 __divf32tos01:
 	jsr	__f32iszero	; @long == 0.0 ?
-	jeq	__f32retzero	; 0.0 / any return 0.0
+	jeq	__f32retZeros	; 0.0 / any return 0.0
 ;
 	tsx
 	jsr	__setup_both
@@ -1148,7 +1218,7 @@ __divf32tos01:
 	bpl	__divf32tos02
 	cmpb	#$E9		; underflow
 	bcc	__divf32tos03
-	jmp	__f32retzero
+	jmp	__f32retZeros
 __divf32tos02:			; overflow
 	jmp	__f32retInf
 __divf32tos03:
