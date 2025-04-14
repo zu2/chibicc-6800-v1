@@ -733,12 +733,6 @@ __setup_zin:
 	andb	#$80
 	stab	__sign		; First, determine the sign
 ;
-	ldab	2,x
-	aslb
-	ldab	@long
-	rorb			; bit7: TOS's sign, bit6: @long's sign
-	andb	#$C0		; mask 1100 0000
-;
 	inx
 	inx
 	pshb
@@ -1207,7 +1201,7 @@ __divf32tos:
 ;
 __divf32_s10:			; TOS or @long is Inf and finite numbers 
 	ldab	__zin
-	bitb	#$80		; TOS == Inf?
+	bitb	#$08		; TOS == Inf?
 	jne	__f32retZeros	; num/Inf returns 0.0 with __sign
 	jmp	__f32retInfs	; Inf/num returns Inf with __sign
 ;
