@@ -90,14 +90,15 @@ This compiler uses a frame pointer (`@bp`) for accessing local variables and arg
 //        argment passed by stack
 ```
 
-### Function Arguments Handling
+## Function Arguments Handling
 
 In this implementation:
 
 1. Function arguments are discarded by the caller (unlike CC68/Fuzix CC where this happens in the callee).
 2. The caller performs stack adjustment using `INS`, which increases code size due to frequent calls.
 
-#### Tradeoffs:
+### Tradeoffs:
+
 - **1 Argument:** Efficient; no `PUSH` needed.
 - **2 Arguments:** Equivalent; one `PUSH` removed but requires an `INS`.
 - **3+ Arguments:** Less efficient due to additional `INS`.
@@ -137,7 +138,7 @@ On the other hand, AccA/B are fragile, so they may need to be saved and restored
 
 In the chibicc-6800, everything is on the zero page for clarity.
 
-# Conditional branch
+## Conditional branch
 
 Integer's conditional branching is fast. It uses direct comparisons (not subroutines). 
 
