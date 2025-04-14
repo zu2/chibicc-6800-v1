@@ -479,10 +479,9 @@ __addf32tos:
 	tsx
 	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
 ;	ldab	__zin
-	andb	#$03		; TOS or @long is NaN?
+	bitb	#$03		; TOS or @long is NaN?
 	jne	__f32retNaN	; Yes: return NaN
 ;
-	ldab	__zin
 	andb	#$0C		; TOS or @long is Inf?
 	jeq	__addftos_s20
 	cmpb	#$0C		; TOS and @long are Inf?
@@ -740,6 +739,8 @@ __setup_zin:
 	rorb			; bit7: TOS's sign, bit6: @long's sign
 	andb	#$C0		; mask 1100 0000
 ;
+	inx
+	inx
 	pshb
 	jsr	__f32iszerox	; TOS == 0.0?
 	pulb
@@ -956,15 +957,15 @@ __mulf32tos:
 	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
 	;
 ;	ldab	__zin
-	andb	#$03		; TOS or @long is NaN?
+	bitb	#$03		; TOS or @long is NaN?
 	jne	__f32retNaN	; Yes: return NaN
-	ldab	__zin
 	andb	#$0C		; TOS or @long is Inf?
 	beq	__mulf32_s10
 	ldab	__zin
 	andb	#$30		; TOS or @long is zero?
-	jeq	__f32retInf	; No, Inf x (not zero) returns Inf. 
-	jmp	__f32retNaN
+	jeq	__f32retInfs	; No, Inf * (not zero) returns Inf with __sign.
+	jmp	__f32retNaN	; Inf*0.0 returns NaN
+;
 __mulf32_s10:			; TOS and @long is not Inf,NaN
 	ldab	__zin
 	andb	#$30
@@ -1186,26 +1187,42 @@ __mul8x8_zero:
 ;
 __divf32tos:
 	tsx
-	jsr	XXX
-
-	tsx
-	ldab	2,x
-	eorb	@long
-	andb	#$80
-	stab	__sign		; First, determine the sign
+	jsr	__setup_zin
+;	ldab	__zin
+	bitb	#$03
+	jne	__f32retNaN	; TOS or @long is NaN, return NaN
 ;
-	tsx
-	inx
-	inx
-	jsr	__f32iszerox	; TOS == 0.0 ?
-	bne	__divf32tos01	; no, jump to normal operation
-	;			; TOS = 0.0
-	jsr	__f32iszero	; @long == 0.0 ?
-	jne	__f32retInf	; no, returns Inf
-	jmp	__f32retNaN	; otherwise ( 0.0 / 0.0 ), returns NaN
+	andb	#$0C		; TOS or @long is Inf?
+	beq	__divf32_s20
+	cmpb	#$0C		; TOS and @long is Inf?
+	jeq	__f32retNaN	; Yes, Inf/Inf returns NaN
+;
+	ldab	__zin
+	bitb	#$30		; TOS or @long is 0.0 ?
+	jeq	__divf32_s10
+	;			; One is Inf and the other is 0.0
+	bitb	#$20		; TOS==0.0?
+	jeq	__f32retNaN	; Yes, Inf/0.0 returns NaN
+	jmp	__f32retZeros	; 0.0/Inf return 0.0 with __sign
+;
+__divf32_s10:			; TOS or @long is Inf and finite numbers 
+	ldab	__zin
+	bitb	#$80		; TOS == Inf?
+	jne	__f32retZeros	; num/Inf returns 0.0 with __sign
+	jmp	__f32retInfs	; Inf/num returns Inf with __sign
+;
+__divf32_s20:
+	ldab	__zin
+	andb	#$30
+	beq	__divf32tos01
+	cmpb	#$30		; 0.0/0.0?
+	jeq	__f32retNaN
+	cmpb	#$20		; num/0.0?
+	jeq     __f32retInfs	; Yes, returns Inf with __sign
+	cmpb	#$10		; 0.0/num?
+	jeq	__f32retZeros	; Yes, returns 0.0 with __sign
+;	
 __divf32tos01:
-	jsr	__f32iszero	; @long == 0.0 ?
-	jeq	__f32retZeros	; 0.0 / any return 0.0
 ;
 	tsx
 	jsr	__setup_both
