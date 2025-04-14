@@ -3,6 +3,15 @@
 This is a fork of @rui314 Rui Ueyama's chibicc to create a compiler
 for the Motorola MC6800.
 
+It was created to study compilers for the MC6800, and contains a lot of unnecessary code and comments.
+
+There are many aspects of the object code generation method and speed that cannot be understood without actually creating it. It is also used as a test.
+
+However, it is a compiler that works reasonably well. I hope it will be helpful for you to create another fork.
+
+----
+# Topics
+
 - int and pointer size are 16-bit.
 - long and float size are 32-bit.
 - double and long long, 64-bit or more are not supported.
