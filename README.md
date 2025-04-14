@@ -39,21 +39,30 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
 Follow these steps to set up the compiler:
 
 1. Install **Fuzix-BinTools** and **Fuzix-Compiler-Kit**.
-2. install Fuzix-Bintools & Fuzix-Compiler-Kit
-3. Clone this repository:
+2. Clone this repository:
+```
    git clone https://github.com/zu2/chibicc-6800-v1.git
-4. Build and install:
+```
+3. Build and install:
+```
    cd chibicc-6800-v1
    make
    make install
-5. Add the following paths to your `$PATH`:
+```
+4. Add the following paths to your `$PATH`:
+```
    export PATH="/opt/chibicc/bin:/opt/fcc/bin:$PATH"
-6. test compile a C file using:
+```
+5. test compile a C file using:
+```
    cd ztest
    ./onetest 9018-asciiartf.c
-7. To run the test programs
+```
+6. To run the test programs
+```
     cd ztest; ./runall
     cd ztest; ./onetest some-test-program.c
+```
 
 ---
 # Memo
