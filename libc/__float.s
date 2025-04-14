@@ -477,7 +477,7 @@ __subf32tos:
 ;
 __addf32tos:
 	tsx
-	jsr	__is_zin	; TOS & @long is zero/Inf/NaN?
+	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
 ;	ldab	__zin
 	andb	#$03		; TOS or @long is NaN?
 	jne	__f32retNaN	; Yes: return NaN
@@ -728,7 +728,7 @@ __abscmp_ret:
 ;		b1	TOS   is NaN?
 ;		b0	@long is NaN?
 ;
-__is_zin:
+__setup_zin:
 	ldab	2,x
 	eorb	@long
 	andb	#$80
@@ -743,36 +743,36 @@ __is_zin:
 	pshb
 	jsr	__f32iszerox	; TOS == 0.0?
 	pulb
-	bne	__is_zin_10
+	bne	__setup_zin_10
 	orab	#$20		; b5: TOS is 0.0
-	bra	__is_zin_50
-__is_zin_10:
+	bra	__setup_zin_50
+__setup_zin_10:
 	pshb
 	jsr	__f32isNaNorInfx ; TOS == Inf or NaN?
 	pulb
-	bne	__is_zin_20
+	bne	__setup_zin_20
 	orab	#$08		; b3: TOS is Inf
-__is_zin_20:
-	bcc	__is_zin_50
+__setup_zin_20:
+	bcc	__setup_zin_50
 	orab	#$02		; b1: TOS is NaN
 ;
-__is_zin_50:
+__setup_zin_50:
 	pshb
 	jsr	__f32iszero	; @long == 0.0 ?
 	pulb
-	bne	__is_zin_60
+	bne	__setup_zin_60
 	orab	#$10		; b4: @long is 0.0
-	bra	__is_zin_99
-__is_zin_60:
+	bra	__setup_zin_99
+__setup_zin_60:
 	pshb
 	jsr	__f32isNaNorInf	; @long == Inf or NaN
 	pulb
-	bne	__is_zin_70
+	bne	__setup_zin_70
 	orab	#$04		; b2: @long is Inf
-__is_zin_70:
-	bcc	__is_zin_99
+__setup_zin_70:
+	bcc	__setup_zin_99
 	orab	#$01		; b0: @long is NaN
-__is_zin_99:
+__setup_zin_99:
 	stab	__zin
 	rts
 ;
@@ -953,7 +953,7 @@ __pullret:
 ;
 __mulf32tos:
 	tsx
-	jsr	__is_zin	; TOS & @long is zero/Inf/NaN?
+	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
 	;
 ;	ldab	__zin
 	andb	#$03		; TOS or @long is NaN?
@@ -1185,6 +1185,9 @@ __mul8x8_zero:
 ;	@long = @long / TOS
 ;
 __divf32tos:
+	tsx
+	jsr	XXX
+
 	tsx
 	ldab	2,x
 	eorb	@long
