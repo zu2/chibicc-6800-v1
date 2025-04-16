@@ -6,6 +6,7 @@
 	.export __load32x
 	.export __store32x
 	.export __push32
+	.export __push32x
 	.export __pop32
 	.export __neg32
 	.export __neg32x
@@ -96,6 +97,24 @@ __push32:
 	ldab @long
 	pshb
 	jmp 0,x
+;
+;	__push32x	push 0-3,x
+;
+__push32x:
+	pulb
+	stab	@tmp1
+	pulb
+	stab	@tmp1+1
+	ldab	3,x
+	pshb
+	ldab	2,x
+	pshb
+	ldab	1,x
+	pshb
+	ldab	0,x
+	pshb
+	ldx	@tmp1
+	jmp	0,x
 ;
 ;	__pop32		pul @long
 ;
@@ -212,7 +231,7 @@ __add32tos:
 ;	__lsubtos	@long = TOS - @long, pull TOS
 ;
 __sub32tos:
-	pula
+	pula		; pull return address
 	pulb
 	stab	@tmp1+1
 	staa	@tmp1
