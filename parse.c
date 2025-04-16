@@ -362,6 +362,7 @@ static Obj *new_anon_gvar(Type *ty) {
 static Obj *new_string_literal(char *p, Type *ty) {
   Obj *var = new_anon_gvar(ty);
   var->init_data = p;
+  var->is_literal = 1;
   return var;
 }
 
@@ -1441,15 +1442,31 @@ static uint64_t read_buf(char *buf, int sz) {
 }
 
 static void write_buf(char *buf, uint64_t val, int sz) {
-  if (sz == 1)
+  char *p = (char *)&val;
+
+  if (sz == 1) {
     *buf = val;
-  else if (sz == 2)
-    *(uint16_t *)buf = val;
-  else if (sz == 4)
-    *(uint32_t *)buf = val;
-  else if (sz == 8)
-    *(uint64_t *)buf = val;
-  else
+  }else if (sz == 2) {
+    buf[0] = p[1];
+    buf[1] = p[0];
+//    *(uint16_t *)buf = val;
+  }else if (sz == 4) {
+    buf[0] = p[3];
+    buf[1] = p[2];
+    buf[2] = p[1];
+    buf[3] = p[0];
+//    *(uint32_t *)buf = val;
+  }else if (sz == 8) {
+    buf[0] = p[7];
+    buf[1] = p[6];
+    buf[2] = p[5];
+    buf[3] = p[4];
+    buf[4] = p[3];
+    buf[5] = p[2];
+    buf[6] = p[1];
+    buf[7] = p[0];
+//    *(uint64_t *)buf = val;
+  }else
     unreachable();
 }
 
@@ -3323,12 +3340,12 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
   // [https://www.sigbus.info/n1570#6.4.2.2p1] "__func__" is
   // automatically defined as a local variable containing the
   // current function name.
-  push_scope("__func__")->var =
+  Obj *function_name_obj = 
     new_string_literal(fn->name, array_of(ty_char, strlen(fn->name) + 1));
+  push_scope("__func__")->var = function_name_obj;
 
   // [GNU] __FUNCTION__ is yet another name of __func__.
-  push_scope("__FUNCTION__")->var =
-    new_string_literal(fn->name, array_of(ty_char, strlen(fn->name) + 1));
+  push_scope("__FUNCTION__")->var = function_name_obj;
 
   fn->body = compound_stmt(&tok, tok);
   fn->locals = locals;
