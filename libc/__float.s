@@ -40,10 +40,12 @@
 	.export __cmpf32tos
 	.export __f32iszero
 ;	.export __f32iszerox
-;	.export __f32isNaNorInf
+	.export __f32isNaNorInf
 ;	.export __f32isNaNorInfx
 	.export __fdiv32x32
+	.export	__setup_long
 	.data
+	.export	__zin
 	.export __sign
 	.export __texp
 	.export __lexp
