@@ -436,9 +436,7 @@ static void convert_pp_number(Token *tok) {
   long double val = strtold(tok->loc, &end);
 
   Type *ty;
-#if 1
-  ty = ty_float;
-#else
+
   if (*end == 'f' || *end == 'F') {
     ty = ty_float;
     end++;
@@ -446,9 +444,8 @@ static void convert_pp_number(Token *tok) {
     ty = ty_ldouble;
     end++;
   } else {
-    ty = ty_double;
+    ty = ty_float; // ty_double;
   }
-#endif
 
   if (tok->loc + tok->len != end)
     error_tok(tok, "invalid numeric constant");
