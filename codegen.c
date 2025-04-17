@@ -1033,7 +1033,7 @@ static int push_args(Node *node, Node *last_pushed_arg) {
 //    println("; push_args gp=%d, %s %d",gp,__FILE__,__LINE__);
       if (gp++ >= 1) {
         arg->pass_by_stack = true;
-        stack+=arg->ty->size;
+        stack+=(ty->kind==TY_ARRAY)? 2: arg->ty->size;
       }else
 	arg->pass_by_stack = false;
     }
