@@ -1,9 +1,11 @@
+#include "common.h"
+
 struct complex {
     int r;
     int i;
 };
 
-#if 0
+#if 1
 struct complex complex_add(struct complex com_1, struct complex com_2, struct complex *com_3){
     struct complex ret;
 
@@ -31,22 +33,42 @@ void complex_pluseq2(struct complex *com_1, struct complex *com_2, struct comple
 
 struct complex sub(struct complex c)
 {
+#if	0
+	putstr("sub: &c="); puthexi(&c);putchar('\n');
+	print(c.r);
+	print(c.i);
+#endif
+	c.r = c.r+1;
+	c.i = c.i+1;
+#if	0
 	++c.r;
 	++c.i;
+#endif
 
 	return c;
 }
 
-main(){
+main(int argc,char **argv)
+{
         struct complex com01, com02, com03;
 
         com01.r=2;
         com01.i=3;
+#if	0
+	putstr("main 1\n");
+	print(com01.r);
+	print(com01.i);
+#endif
 	com02 = sub(com01);
 
-	return com02.r+com02.i;
+	putstr("main 2\n");
+	print(com01.r);
+	print(com01.i);
+	print(com02.r);
+	print(com02.i);
+	return com02.r+com02.i != 7;
 
-#if	0
+#if	1
         com02.r=4;
         com02.i=8;
 
