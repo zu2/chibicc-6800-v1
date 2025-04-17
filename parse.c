@@ -1416,12 +1416,12 @@ static Node *lvar_initializer(Token **rest, Token *tok, Obj *var) {
   // that unspecified elements are set to 0. Here, we simply
   // zero-initialize the entire memory region of a variable before
   // initializing it with user-supplied values.
-  Node *rhs = create_lvar_init(init, var->ty, &desg, tok);
+  Node *lhs, *rhs = create_lvar_init(init, var->ty, &desg, tok);
   switch(var->ty->kind){
   case TY_ARRAY:
   case TY_STRUCT:
   case TY_UNION:
-    Node *lhs = new_node(ND_MEMZERO, tok);
+    lhs = new_node(ND_MEMZERO, tok);
     lhs->var = var;
 
     return new_binary(ND_COMMA, lhs, rhs, tok);
