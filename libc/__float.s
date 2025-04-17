@@ -49,14 +49,14 @@
 	.export __sign
 	.export __texp
 	.export __lexp
-	.export __expdiff
+	.export __exp2
 __zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
 __sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
 __texp:	.byte	0	; TOS's exp
 __lexp:	.byte	0	; @long's exp
-__expdiff:
-	.word	0	; texp - lexp
-__work: .word	0	; working area
+__exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
+__work: .word	0	; working area 48bit
+	.word	0
 	.word	0
 	.code
 ;
@@ -505,7 +505,7 @@ __addftos_s10:
 __addftos_s20:			; TOS and @long is not NaN,Inf.
 	ldab	__zin
 	andb	#$30		; TOS or @long == 0.0?
-	beq	__addf32tos1	; No
+	beq	__addf32_1	; No
 	cmpb	#$30		; TOS and @long == 0.0?
 	jne	__addftos_s50
 	tst	__sign		; Yes. same sign?
@@ -522,32 +522,32 @@ __addftos_s50:			; TOS or @long == 0.0
 __addftos_s51:
 	jmp	__pullret
 ;
-__addf32tos1:			; neither of @long and TOS was not 0.0, simply add them.
+__addf32_1:			; neither of @long and TOS was not 0.0, simply add them.
 	tsx
 	ldab	2,x		; get MSB of TOS
 	eorb	@long
 	andb	#$80		; sign equal?
-	jne	__addf32tos50
+	jne	__addf32_50
 	;			; sign equal, add it
 	ldab	@long		; save sign
 	andb	#$80
 	stab	__sign
 	jsr	__setup_both	; get both exp to texp, lexp. AccB = texp - lexp
-	bne	__addf32tos9
+	bne	__addf32_9
 	;
-	bra	__addf32tos11	; texp==lexp, Simply add it.
-__addf32tos9:
-	bcc	__addf32tos10
-	;			; TOS < @long
+	bra	__addf32_11	; texp==lexp, Simply add it.
+__addf32_9:
+	bcc	__addf32_10
+	;			; texp < lexp
 	negb
 	jsr	__lsr_tos	;   shift TOS right by AccB, align the bit.
 	ldaa	__lexp
-	jmp	__addf32tos11
-__addf32tos10:			; TOS > @long
+	jmp	__addf32_11
+__addf32_10:			; TOS > @long
 	jsr	__lsr_long	;   shift @long right by AccB, align the bit
 	ldaa	__texp
-__addf32tos11:
-	ldab	@long+3		; @long = @long + TOS
+__addf32_11:
+	ldab	@long+3		; @long = @long + TOS , 32bit version
 	addb	5,x
 	stab	@long+3
 	ldab	@long+2
@@ -559,34 +559,44 @@ __addf32tos11:
 	ldab	@long
 	adcb	2,x
 	stab	@long
-	bcc	__addf32tos20	; over flow?
+	bcc	__addf32_20	; over flow?
         ror     @long		; shift one bit
-        ror     @long+1		; shift one bit
+        ror     @long+1
         ror     @long+2
         ror     @long+3
 	inca			; exp++
-__addf32tos20:			; even number rounding
+	cmpa	#$FF
+	jeq	__f32retInfs
+__addf32_20:			; even number rounding
 	ldab	@long+3		; check guard bit
-	bpl	__addf32tos29	;   G=0, do nothing
+	bpl	__addf32_29	;   G=0, do nothing
 	andb	#$7f		; check sticky
-	bne	__addf32tos21
+	bne	__addf32_21
 	ldab	@long+2		; check LSB bit
 	asrb
-	bcc	__addf32tos29
-__addf32tos21:
+	bcc	__addf32_29
+__addf32_21:
 	inc	@long+2		; inc mant
-	bne	__addf32tos29
+	bne	__addf32_29
 	inc	@long+1
-	bne	__addf32tos29
+	bne	__addf32_29
 	inc	@long+0
-	bne	__addf32tos29
+	bne	__addf32_29
 	;			; over flow
         ror     @long		; shift one bit
         ror     @long+1		; shift one bit
         ror     @long+2
         ror     @long+3
 	inca			; exp++
-__addf32tos29:
+	cmpa	#$FF
+	jeq	__f32retInfs
+__addf32_29:
+	cmpa	#1		; sub normal number?
+	bne	__addf32_30
+	tst	@long		; check hiden bit, when 1 convert to normal
+	bmi	__addf32_30
+	clra
+__addf32_30:
 	jsr	__lsr8_long	; Put it back in the right position
 ;
 	asl	@long+1		; exp's LSB set to @long+1
@@ -599,21 +609,21 @@ __addf32tos29:
 ;	TOS and @long have different signs, do subtract
 ;	(note: TOS:rhs, @long:lhs)
 ;
-__addf32tos50:
+__addf32_50:
 	jsr	__abscmp	; compare: abs(tos) - abs(@long)
-	bne	__addf32tos51	; different sign, but value equal
+	bne	__addf32_51	; different sign, but value equal
 	jsr	__f32zero	;   return +0.0
 	jmp	__pullret
-__addf32tos51:
-	bcs	__addf32tos60	; jump if TOS<@long
+__addf32_51:
+	bcs	__addf32_60	; jump if TOS<@long
 	;
 	ldab	2,x		; abs(TOS) > abs(@long), result sign=TOS's sign
 	andb	#$80
 	stab	__sign
 	jsr	__setup_both	; AccB = TOS'exp - @long's exp
-	beq	__addf32tos52	; AccB ==0,  simply substract
+	beq	__addf32_52	; Both exp were equal,  simply substract
 	jsr	__lsr_long	; shift @long right by AccB
-__addf32tos52:
+__addf32_52:
 	ldaa	__texp
 	;			; substract @long = TOS - @long
 	ldab	5,x
@@ -628,38 +638,40 @@ __addf32tos52:
 	ldab	2,x
 	sbcb	@long
 	stab	@long
+__addf32_54:
+	bmi	__addf32_542	; hidden bit on?
 	;
-__addf32tos54:
-	bmi	__addf32tos542
-__addf32tos541:
-	deca			; while hidden bit ==0 do asl @long, AccA--
-	beq	__addf32tos542	; subnormal number
+__addf32_541:
+	deca
+	beq	__addf32_542	; subnormal number. stop shift
 	asl	@long+3
 	rol	@long+2
 	rol	@long+1
 	rol	@long+0
-	bpl	__addf32tos541
-__addf32tos542:
+	jpl	__addf32_541	; hidden bit become 1 ?
+;
+__addf32_542:
 ;
 ;	TODO: This part is not strictly correct. fix it later.
 ;
 	ldab	@long+3		; check guard bit
-	bpl	__addf32tos55	;   G=0, do nothing
+	bpl	__addf32_55	;   G=0, do nothing
 	andb	#$7f		; check sticky
-	bne	__addf32tos543
+	bne	__addf32_543
 	ldab	@long+2		; check LSB bit
 	asrb
-	bcc	__addf32tos55
+	bcc	__addf32_55
 ;
-__addf32tos543:
+__addf32_543:
 	inc	@long+2		; inc mant
-	bne	__addf32tos55
+	bne	__addf32_55
 	inc	@long+1
-	bne	__addf32tos55
+	bne	__addf32_55
 	inc	@long+0
-	bne	__addf32tos55
+	bne	__addf32_55
 	swi			; TODO:
-__addf32tos55:
+;
+__addf32_55:
 	jsr	__lsr8_long
 	asl	@long+1		; exp's LSB into @long+1
 	lsra
@@ -667,16 +679,17 @@ __addf32tos55:
 	ora	__sign		; recover sign bit
 	staa	@long
 	jmp	__pullret
-__addf32tos60:
-	;			; abs(TOS) < abs(@long), result sign=@long's sign
+;
+__addf32_60:
+;				; abs(TOS) < abs(@long), return @long's sign
 	ldab	@long
 	andb	#$80
 	stab	__sign
 	jsr	__setup_both	; AccB = TOS'exp - @long's exp
-	beq	__addf32tos61	; AccB == 0, simply substract
+	beq	__addf32_61	; AccB == 0, simply substract
 	negb
 	jsr	__lsr_tos	; shift TOS right by AccB
-__addf32tos61:
+__addf32_61:
 	ldaa	__lexp
 	;			; substract @long = @long - TOS
 	ldab	@long+3
@@ -692,8 +705,8 @@ __addf32tos61:
 	sbcb	2,x
 	stab	@long
 	;
-	jmp	__addf32tos54
-;
+	jmp	__addf32_54
+
 ;
 ;
 __abscmp:	; compare: abs(tos) - abs(@long)
@@ -791,7 +804,7 @@ __setup_long:			; @long's exp->AccA, set hidden bit of @long
 	sec			; set hidden bit of TOS
 	bne	__setup_long_1	; subnormal number?
 	inca
-	clc
+	clc			; if subnormal, hidden bit not set
 __setup_long_1:
 	rorb
 	stab	@long+1
@@ -969,181 +982,147 @@ __mulf32_s10:			; TOS and @long is not Inf,NaN
 ;
 __mulf32tos4:
 	tsx
-	jsr	__setup_both	; mant: 2-4,x and @long to @long+2
-	clra
-	ldab	__lexp
-	addb	__texp
-	adca	#0
-	subb	#127
-	sbca	#0
-	; 			; TODO:	exception check
-	stab	__expdiff+1	; saveit
-	staa	__expdiff
+	inx
+	inx
+	jsr	__adj_subnormal	; if subnormal, adjust it. exp into AccAB.
+	stab	__exp2+1
+	staa	__exp2
 ;
-	beq	__mulf32tos03
-	bpl	__mulf32tos02
-	cmpb	#$E8		; underflow
-	bcc	__mulf32tos03
-	jmp	__f32retZeros
-__mulf32tos02:			; overflow
-	jmp	__f32retInf
+	ldx	#long
+	jsr	__adj_subnormal
+	addb	__exp2+1
+	adca	__exp2
+	stab	__exp2+1
+	staa	__exp2
+;
+	subb	#<128		; sum of exp>127? (>=128)
+	sbca	#>128
+	jge	__f32retInfs	; Overflow, returns Inf with __sign.
+;
+	ldab	__exp2+1
+	ldaa	__exp2
+	subb	#<-149		; sum of exp < -149?
+	sbca	#>-149
+	jlt	__f32retZeros	; Underflow, return zero with __sign.
 ;
 __mulf32tos03:
 ;
-	clr	@tmp2+3		; clear working area 32bit
-	clr	@tmp2+2
-	clr	@tmp2+1
-	clr	@tmp2
-;	clr	__work+3	; clear working area 32bit for carry
+	clr	__work+5	; clear working area 48bit
+	clr	__work+4
+	clr	__work+3
 	clr	__work+2
 	clr	__work+1
 	clr	__work
 ;
-	ldab	@long+1
-	ldaa	4,x
-	jsr	__mul8x8
-;	adda	@tmp2+3		; Just after clearing, so @tmp2+3==0
-	staa	@tmp2+3
-;
-	ldab	@long+2
-	ldaa	3,x
-	jsr	__mul8x8
-	adda	@tmp2+3
-	staa	@tmp2+3
-	bcc	__mulf32tos30
-	inc	__work+2
+	tsx
+	ldab	#24		; loop count
+	stab	@tmp3
+	bra	__mulf32tos31
 ;
 __mulf32tos30:
-	ldab	@long
-	ldaa	4,x
-	jsr	__mul8x8
-	addb	@tmp2+3
-	stab	@tmp2+3
-	adca	@tmp2+2
-	staa	@tmp2+2
-	bcc	__mulf32tos31
-	inc	__work+1
-;
+	asl	__work+5
+	rol	__work+4
+	rol	__work+3
+	rol	__work+2
+	rol	__work+1
+	rol	__work
 __mulf32tos31:
-	ldab	@long+1
-	ldaa	3,x
-	jsr	__mul8x8
-	addb	@tmp2+3
-	stab	@tmp2+3
-	adca	@tmp2+2
-	staa	@tmp2+2
+	asl	5,x
+	rol	4,x
+	rol	3,x
 	bcc	__mulf32tos32
-	inc	__work+1
-;
-__mulf32tos32:
+	ldab	@long+3
+	addb	__work+5
+	stab	__work+5
 	ldab	@long+2
-	ldaa	2,x
-	jsr	__mul8x8
-	addb	@tmp2+3
-	stab	@tmp2+3
-	adca	@tmp2+2
-	staa	@tmp2+2
-	bcc	__mulf32tos40
-	inc	__work+1
-;
-__mulf32tos40:
-	ldab	@long
-	ldaa	3,x
-	jsr	__mul8x8
-	addb	@tmp2+2
-	stab	@tmp2+2
-	adca	@tmp2+1
-	staa	@tmp2+1
-	bcc	__mulf32tos41
-	inc	__work
-;
-__mulf32tos41:
-;
+	adcb	__work+4
+	stab	__work+4
 	ldab	@long+1
-	ldaa	2,x
-	jsr	__mul8x8
-	addb	@tmp2+2
-	stab	@tmp2+2
-	adca	@tmp2+1
-	staa	@tmp2+1
-	bcc	__mulf32tos50
+	adcb	__work+3
+	stab	__work+3
+	bcc	__mulf32tos32
+	inc	__work+2
+	bne	__mulf32tos32
+	inc	__work+1
+	bne	__mulf32tos32
 	inc	__work
-
-__mulf32tos50:
-	ldab	@long
-	ldaa	2,x
-	jsr	__mul8x8
-	addb	@tmp2+1
-	stab	@tmp2+1		; TODO:
-	adca	@tmp2
-	staa	@tmp2
-	bcc	__mulf32tos60
-	swi	;  TODO: overflow check needed???
-__mulf32tos60:
-	ldab	__work+2
-	addb	@tmp2+2
-	stab	@tmp2+2
-	ldab	__work+1
-	adcb	@tmp2+1
-	stab	@tmp2+1
-	ldab	__work
-	adcb	@tmp2
-	stab	@tmp2
-	bcc	__mulf32tos65
-	swi	; TODO: overflow check needed???
-__mulf32tos65:
-	ldaa	__expdiff+1
-	tst	__expdiff
-	bmi	__mulf32tos69	; subnormal number
-	jne	__f32retInf	; overflow
-	cmpa	#$FF
-	jeq	__f32retInf
-	bra	__mulf32tos70
-	;
+__mulf32tos32:
+	dec	@tmp3
+	bne	__mulf32tos30
+;
+__mulf32tos65:			; end of mant*mant multiply
+	ldab	__exp2+1
+	ldaa	__exp2
+	tst	__work		; carryover of the MSB bit?
+	bpl	__mulf32tos70
 __mulf32tos69:
-	lsr	@tmp2
-	ror	@tmp2+1
-	ror	@tmp2+2
-	ror	@tmp2+3
-	inca
-	bne	__mulf32tos69
-	bra	__mulf32tos80
-;
+	addb	#1
+	adca	#0
+	stab	__exp2+1
+	staa	__exp2
+	bra	__mulf32tos71
 __mulf32tos70:
-	tsta
-	beq	__mulf32tos80	; subnormal number
-	clrb
-	tst	@tmp2		; hidden bit set?
-	bpl	__mulf32tos72
-	inca
-	jeq	__f32retInf
-	cmpa	#$ff
-	jeq	__f32retInf
-	bra	__mulf32tos80
-__mulf32tos72:
-	ldab	@tmp2+3
-	orab	@tmp2+2
-	orab	@tmp2+1
-	orab	@tmp2
-	bne	__mulf32tos73
-;	;			; The mantissa is all 0, so the value is 0.
-	clra
-	bra	__mulf32tos90
-__mulf32tos73:
-	asl	@tmp2+3
-	rol	@tmp2+2
-	rol	@tmp2+1
-	rol	@tmp2
-	bpl	__mulf32tos72
+	asl	__work+5
+	rol	__work+4
+	rol	__work+3
+	rol	__work+2
+	rol	__work+1
+	rol	__work
+__mulf32tos71:
 ;
-__mulf32tos80:
-	;	TODO: round
-__mulf32tos90:
-	ldab	@tmp2+2
+	subb	#<128		; sum of exp>127? (>=128?)
+	sbca	#>128
+	jge	__f32retInfs	; Overflow, returns Inf with __sign.
+;
+	ldab	__exp2+1
+	ldaa	__exp2
+	subb	#<-149		; sum of exp < -149?
+	sbca	#>-149
+	jlt	__f32retZeros	; Underflow, return zero with __sign.
+;
+	tst	__work+3	; TODO: Exact rounding operations
+	bpl	__mulf32tos72
+	ldab	__work+2
+	bitb	#1
+	beq	__mulf32tos72
+	addb	#1
+	stab	__work+3
+	bcc	__mulf32tos72
+	inc	__work+2
+	bne	__mulf32tos72
+	inc	__work+1
+	bne	__mulf32tos72
+	inc	__work
+;
+__mulf32tos72:
+	ldab	__work+3
+	orab	__work+2
+	orab	__work+1
+	orab	__work
+	jeq	__f32retZeros	; The mantissa is all 0, so the value is 0.
+;
+	ldab	__exp2+1
+	ldaa	__exp2
+	subb	#<-126
+	sbca	#>-126
+	jge	__mulf32tos74
+	;			; subnormal
+__mulf32tos73:
+	lsr	__work		; 1bit shift right
+	ror	__work+1
+	ror	__work+2
+	incb
+	bne	__mulf32tos73
+	ldab	#-127
+	stab	__exp2+1
+__mulf32tos74:
+	ldab	__work+2
 	stab	@long+3
-	ldab	@tmp2+1
+	ldab	__work+1
 	stab	@long+2
-	ldab	@tmp2
+	ldab	__work
+	ldaa	__exp2+1
+	adda	#127
 	aslb
 	lsra
 	rorb
@@ -1228,8 +1207,8 @@ __divf32tos01:
 	sbca	#0
 	addb	#127
 	adca	#0
-	stab	__expdiff+1	; expdiff = lexp - texp + 127
-	staa	__expdiff
+	stab	__exp2+1	; expdiff = lexp - texp + 127
+	staa	__exp2
 	beq	__divf32tos03
 	bpl	__divf32tos02
 	cmpb	#$E9		; underflow
@@ -1240,9 +1219,9 @@ __divf32tos02:			; overflow
 __divf32tos03:
 	;			; TODO: exception check
 	jsr	__fdiv32x32	; @tmp3:@tmp3+1:@tmp4:@tmp4+1 = @long / TOS
-	ldaa	__expdiff+1
+	ldaa	__exp2+1
 	beq	__divf32tos04
-	tst	__expdiff
+	tst	__exp2
 	bpl	__divf32tos08
 __divf32tos04:
 	; 			; subnormal number: shift right
@@ -1399,3 +1378,77 @@ __cmpf32tos_lt:			; @long < TOS
 	decb
 	tba
 	jmp	__pullret
+;
+;	if float is subnormal, mantissa into normal form.
+;	unbiased exp is returned in AccAB.
+;	bit 23 turn on (| 0x00800000)
+;	parameter:
+;	  (0,x) - (3,x): subnormal float
+;
+__adj_subnormal:
+	ldaa	1,x
+	ldab	0,x
+	asla
+	rolb		; get exp in b
+	bne	__adj_subn_ret
+	ldab	#<-126	; least minimum nomal number
+	ldaa	#>-126
+__adj_subn_01:
+	subb	#1
+	sbca	#0
+	asl	3,x
+	rol	2,x
+	rol	1,x
+	bpl	__adj_subn_01
+	rts
+__adj_subn_ret:
+	ldaa	1,x
+	ora	#$80
+	staa	1,x
+	clra
+	subb	#127	; un bias
+	sbca	#0
+	rts
+;
+;	if float's exp < -126, do subnomarlize
+;	parameter:
+;	  AccAB: unbiased exp
+;	  (1,x) - (3,x): mantissa
+;
+__subnormaize:
+	pshb
+	psha
+	cmpb	#<-126
+	sbca	#>-126
+	jge	__subnormaize_ret
+	clr	@tmp1		; gard bit
+__subnormaize_loop:
+	lsr	1,x
+	ror	2,x
+	ror	3,x
+	ror	@tmp1
+	incb
+	bne	__subnormaize_loop
+	tst	@tmp1
+	bpl	__subnormaize_10
+	inc	3,x
+	bne	__subnormaize_10
+	inc	2,x
+	bne	__subnormaize_10
+	inc	1,x
+	bne	__subnormaize_10
+	ldab	#<-126		; to normal float
+	ldab	#>-126
+	rts
+__subnormaize_10:
+	ldab	#<-127
+	ldaa	#>-127
+	ins
+	ins
+	rts
+__subnormaize_ret:
+	pula
+	pulb
+	rts
+
+
