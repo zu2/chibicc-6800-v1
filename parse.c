@@ -2439,6 +2439,10 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
   }
 
   // ptr + num
+#if	1
+  rhs = new_binary(ND_MUL, rhs, new_long(lhs->ty->base->size, tok), tok);
+  return new_binary(ND_ADD, lhs, rhs, tok);
+#else
   if (lhs->ty->base && is_integer(rhs->ty)) {
     if (lhs->ty->base->size!=1){
       rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
@@ -2447,6 +2451,7 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
     return new_binary(ND_ADD, lhs, rhs, tok);
   }
   error_tok(tok, "invalid operands");
+#endif
 }
 
 // Like `+`, `-` is overloaded for the pointer type.
