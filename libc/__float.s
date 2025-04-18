@@ -533,19 +533,16 @@ __addf32_1:			; neither of @long and TOS was not 0.0, simply add them.
 	andb	#$80
 	stab	__sign
 	jsr	__setup_both	; get both exp to texp, lexp. AccB = texp - lexp
-	bne	__addf32_9
-	;
-	bra	__addf32_11	; texp==lexp, Simply add it.
-__addf32_9:
-	bcc	__addf32_10
-	;			; texp < lexp
-	negb
-	jsr	__lsr_tos	;   shift TOS right by AccB, align the bit.
-	ldaa	__lexp
+	beq	__addf32_11	; texp==lexp, Simply add it (AccA has __texp).
+	bcc	__addf32_10	; jump if texp > lexp
+	;			
+	negb			; texp < lexp
+	jsr	__lsr_tos	; shift TOS right by AccB, align the bit.
+	ldaa	__lexp		; @long is larger, use its exponent.
 	jmp	__addf32_11
-__addf32_10:			; TOS > @long
-	jsr	__lsr_long	;   shift @long right by AccB, align the bit
-	ldaa	__texp
+__addf32_10:			; texp > lexp
+	jsr	__lsr_long	; shift @long right by AccB, align the bit
+	ldaa	__texp		; TOS is larger, use its exponent.
 __addf32_11:
 	ldab	@long+3		; @long = @long + TOS , 32bit version
 	addb	5,x
@@ -560,12 +557,12 @@ __addf32_11:
 	adcb	2,x
 	stab	@long
 	bcc	__addf32_20	; over flow?
-        ror     @long		; shift one bit
+        ror     @long		; shift one bit with carry
         ror     @long+1
         ror     @long+2
         ror     @long+3
 	inca			; exp++
-	cmpa	#$FF
+	cmpa	#$FF		; biased exponent exceeds 254, so it is Inf.
 	jeq	__f32retInfs
 __addf32_20:			; even number rounding
 	ldab	@long+3		; check guard bit
@@ -786,6 +783,17 @@ __setup_zin_99:
 	stab	__zin
 	rts
 ;
+;	Change @long and (2-5,x) floating point number for easier calculations.
+;	  Put the exponent in __lexp, __texp (1 byte, biased)
+;	    If the biased exponent is 00 (subnormal), it becomes 01.
+;	  Set a hidden bit for normal number (without subnormal).
+;	  Shift the mantissa to the left by 8 bits
+;	    and put 0 in the tail byte. // @long+3 and (5,x)
+;
+;	Note:   to use @long+0 or 2,x as the last byte is faster than 
+;		to move the whole thing, but this is easier to understand.
+;
+;	Special numbers ( Inf, NaN ) cannot be handled here.
 ;
 __setup_both:			; get both exp, set hidden bit
 	jsr	__setup_long	; @long's exp->AccA, set hidden bit of @long
@@ -793,7 +801,7 @@ __setup_both:			; get both exp, set hidden bit
 	jsr	__asl8_both
 	ldab	__texp
 	subb	__lexp		; AccB = TOS'exp - @long's exp
-	rts
+	rts			; (now, AccA has __texp)
 ;
 __setup_long:			; @long's exp->AccA, set hidden bit of @long
 	ldab	@long+1		; get TOS's exp to a
@@ -915,7 +923,7 @@ __asl_tos:		; asl TOS (2-5,x) by AccB
 __normalize_done:
 	rts
 ;
-__normalize_long:		; if hidden bit==0, lsr @long, AccA--
+__normalize_long:		; if hidden bit==0, asl @long, AccA--
 	tst	@long+3
 	bne	__normalize_2
 	tst	@long+2
@@ -930,7 +938,7 @@ __normalize_2:
 	rol	@long+1
 	deca
 	bra	__normalize_2
-__normalize_tos:		; if hidden bit==0, lsr @long, AccA--
+__normalize_tos:		; if hidden bit==0, asl @long, AccA--
 	tst	5,x
 	bne	__normalize_3
 	tst	4,x
