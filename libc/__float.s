@@ -349,6 +349,23 @@ __f32retZero:
 	stab	@long+3
 	jmp	__pullret
 ;
+;	pull TOS into @long, and return
+;
+__f32retTOS:
+	tsx
+	ldx	0,x
+	ins
+	ins
+	pulb
+	stab	@long
+	pulb
+	stab	@long+1
+	pulb
+	stab	@long+2
+	pulb
+	stab	@long+3
+	jmp	0,x
+;
 ;	float to signed long
 ;		@long -> @long
 ;	
@@ -894,6 +911,9 @@ __asl8_tos:
 	rts
 ;
 ;	shift right by AccB
+;
+;	TODO: If the shift>=32, return 0 is faster,
+;	      If it is 8/16/24 bits, byte shifting is faster.
 ;
 __lsr_long:		; lsr @long by AccB
 	lsr	@long+0
