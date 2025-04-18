@@ -629,7 +629,7 @@ __addf32_50:
 	jsr	__abscmp	; compare: abs(tos) - abs(@long)
 	jeq	__f32retpZero	; different sign, but value equal, return +0.0
 __addf32_51:
-	bcs	__addf32_60	; jump if TOS<@long
+	jcs	__addf32_60	; jump if TOS<@long
 	;
 	ldab	2,x		; abs(TOS) > abs(@long), result sign is TOS's
 	andb	#$80
@@ -653,18 +653,24 @@ __addf32_52:
 	sbcb	@long
 	stab	@long
 __addf32_54:
-	bmi	__addf32_542	; hidden bit on?
+	bmi	__addf32_543	; hidden bit on?
 	;
 __addf32_541:
 	deca
-	beq	__addf32_542	; subnormal number. stop shift
-	asl	@long+3
+	beq	__addf32_543	; subnormal number. stop shift
+	ldab	@long+3
+	bitb	#$1F
+	beq	__addf32_542
+	ora	#$10		; sticky
+__addf32_542:
+	aslb
+	stab	@long+3
 	rol	@long+2
 	rol	@long+1
 	rol	@long+0
 	jpl	__addf32_541	; hidden bit become 1 ?
 ;
-__addf32_542:
+__addf32_543:
 	ldab	@long+2
 	lsrb			; LSB -> Carry
 	ldab	@long+3
