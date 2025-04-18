@@ -2871,7 +2871,6 @@ static Node *new_inc_dec(Node *node, Token *tok, int addend) {
 
   if (!node->ty->is_atomic
   &&  (node->ty == ty_char || node->ty == ty_int) ){
-    fprintf(stderr,"new_inc_dec: ND_POST_INCDEC\n");
     node = new_add(node,new_num(addend,tok), tok);
     node->kind = ND_POST_INCDEC;
     node->ty = node->lhs->ty;
