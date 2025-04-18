@@ -608,8 +608,7 @@ __addf32_30:
 ;
 __addf32_50:
 	jsr	__abscmp	; compare: abs(tos) - abs(@long)
-	bne	__addf32_51	; different sign, but value equal
-	jsr	__f32retpZero	;   return +0.0
+	jeq	__f32retpZero	; different sign, but value equal, return +0.0
 __addf32_51:
 	bcs	__addf32_60	; jump if TOS<@long
 	;
@@ -839,13 +838,14 @@ __setup_tos_1:
 	staa	__texp
 	rts
 ;
-;
-;
-;
-;	@long shift right 8bit
+;	@long/TOS shift right 8bit
+;	  messing up AccB
 ;
 __lsr8_both:
 	bsr	__lsr8_tos
+;
+;	@long shift right 8bit
+;
 __lsr8_long:
 	ldab	@long+2
 	stab	@long+3
@@ -856,6 +856,8 @@ __lsr8_long:
 	clr	@long
 	rts
 ;
+;	TOS:(2-5,x) shift right 8bit
+;
 __lsr8_tos:
 	ldab	4,x
 	stab	5,x
@@ -865,6 +867,9 @@ __lsr8_tos:
 	stab	3,x
 	clr	2,x
 	rts
+;
+;	@long/TOS shift left 8bit
+;	  messing up AccB
 ;
 __asl8_both:
 	bsr	__asl8_tos
@@ -924,39 +929,8 @@ __asl_tos:		; asl TOS (2-5,x) by AccB
 	rol	2,x
 	decb
 	bne	__lsr_tos
-__normalize_done:
 	rts
 ;
-__normalize_long:		; if hidden bit==0, asl @long, AccA--
-	tst	@long+3
-	bne	__normalize_2
-	tst	@long+2
-	bne	__normalize_2
-	tst	@long+1
-	beq	__normalize_done	; all 0, return
-__normalize_2:
-	tst	@long+1		; hidden bit set?	TODO: 1bit lost...
-	bmi	__normalize_done
-	asl	@long+3
-	rol	@long+2
-	rol	@long+1
-	deca
-	bra	__normalize_2
-__normalize_tos:		; if hidden bit==0, asl @long, AccA--
-	tst	5,x
-	bne	__normalize_3
-	tst	4,x
-	bne	__normalize_3
-	tst	3,x
-	beq	__normalize_done	; all 0, return
-__normalize_3:
-	tst	3,x		; hidden bit set?	TODO: 1bit lost...
-	bmi	__normalize_done
-	asl	5,x
-	rol	4,x
-	rol	3,x
-	deca
-	bra	__normalize_3
 ;
 __pullret:
 	tsx
