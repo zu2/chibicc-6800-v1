@@ -15,14 +15,12 @@
 
 ;
 ;	TODO:
+;		Changed variable names in division routines
+;		Improved accuracy of division routines
+;
 ;		more test
 ;		refactoring
-;		Signed zero
-;		Subnormal numbers (Gradual Underflow)
-;		Infinities
-;		NaNs
 ;		Exception handling
-;		Calculation precision
 ;		Speed up
 ;
 
@@ -45,15 +43,11 @@
 	.export __fdiv32x32
 	.export	__setup_long
 	.data
-	.export	__zin
-	.export __sign
-	.export __texp
-	.export __lexp
-	.export __exp2
 __zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
 __sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
 __texp:	.byte	0	; TOS's exp
 __lexp:	.byte	0	; @long's exp
+__expdiff:.byte	0	; TOS's exp - @long's exp
 __exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
 __work: .word	0	; working area 48bit
 	.word	0
@@ -519,7 +513,7 @@ __addftos_s10:
 	ldab	2,x
 	jmp	__f32retInf	; return Inf, The sign is the same as TOS
 ;
-__addftos_s20:			; TOS and @long is not NaN,Inf.
+__addftos_s20:			; TOS and @long are not NaN,Inf.
 	ldab	__zin
 	andb	#$30		; TOS or @long == 0.0?
 	beq	__addf32_1	; No
@@ -582,28 +576,30 @@ __addf32_11:
 	cmpa	#$FF		; biased exponent exceeds 254, so it is Inf.
 	jeq	__f32retInfs
 __addf32_20:			; even number rounding
-	ldab	@long+3		; check guard bit
-	bpl	__addf32_29	;   G=0, do nothing
-	andb	#$7f		; check sticky
-	bne	__addf32_21
-	ldab	@long+2		; check LSB bit
-	asrb
-	bcc	__addf32_29
-__addf32_21:
-	inc	@long+2		; inc mant
+	ldab	@long+2
+	lsrb			; LSB -> Carry
+	ldab	@long+3
+	rorb			; b7:LSB, b6:G, b5:R, b4:S
+	bitb	#$40		; b6:G==0?
+	beq	__addf32_29	;   Yes, do nothng
+	andb	#$F0
+	cmpb	#$40		; 0100:only G is 1?
+	beq	__addf32_29	;   Yes, do nothng
+;
+	inc	@long+2		; round up
 	bne	__addf32_29
 	inc	@long+1
 	bne	__addf32_29
 	inc	@long+0
 	bne	__addf32_29
-	;			; over flow
-        ror     @long		; shift one bit
-        ror     @long+1		; shift one bit
-        ror     @long+2
-        ror     @long+3
-	inca			; exp++
+;
+	inca
 	cmpa	#$FF
 	jeq	__f32retInfs
+	lsr	@long+0
+	ror	@long+1
+	ror	@long+2
+;
 __addf32_29:
 	cmpa	#1		; sub normal number?
 	bne	__addf32_30
@@ -663,25 +659,29 @@ __addf32_541:
 	jpl	__addf32_541	; hidden bit become 1 ?
 ;
 __addf32_542:
+	ldab	@long+2
+	lsrb			; LSB -> Carry
+	ldab	@long+3
+	rorb			; b7:LSB, b6:G, b5:R, b4:S
+	bitb	#$40		; b6:G==0?
+	beq	__addf32_55	;   Yes, do nothng
+	andb	#$F0
+	cmpb	#$40		; 0100:only G is 1?
+	beq	__addf32_55	;   Yes, do nothng
 ;
-;	TODO: This part is not strictly correct. fix it later.
-;
-	ldab	@long+3		; check guard bit
-	bpl	__addf32_55	;   G=0, do nothing
-	andb	#$7f		; check sticky
-	bne	__addf32_543
-	ldab	@long+2		; check LSB bit
-	asrb
-	bcc	__addf32_55
-;
-__addf32_543:
-	inc	@long+2		; inc mant
+	inc	@long+2		; round up
 	bne	__addf32_55
 	inc	@long+1
 	bne	__addf32_55
 	inc	@long+0
 	bne	__addf32_55
-	swi			; TODO:
+;
+	inca
+	cmpa	#$FF
+	jeq	__f32retInfs
+	lsr	@long+0
+	ror	@long+1
+	ror	@long+2
 ;
 __addf32_55:
 	jsr	__lsr8_long
@@ -821,7 +821,8 @@ __setup_both:			; get both exp, set hidden bit
 	jsr	__asl8_both
 	ldab	__texp
 	subb	__lexp		; AccB = TOS'exp - @long's exp
-	rts			; (now, AccA has __texp)
+	stab	__expdiff	; save it
+	rts			; (note: AccA has __texp from __setup_tos)
 ;
 __setup_long:			; @long's exp->AccA, set hidden bit of @long
 	ldab	@long+1		; get TOS's exp to a
@@ -910,26 +911,44 @@ __asl8_tos:
 	clr	5,x
 	rts
 ;
-;	shift right by AccB
+;	shift right by AccB with G/R/S bit
+;	mess AccA
 ;
-;	TODO: If the shift>=32, return 0 is faster,
-;	      If it is 8/16/24 bits, byte shifting is faster.
+;	TODO: If the shift>=24, This will result in unnecessary shifts.
 ;
-__lsr_long:		; lsr @long by AccB
+;
+__lsr_long:			; lsr @long by AccB
+	ldaa	@long+3
+__lsr_long_1:
 	lsr	@long+0
 	ror	@long+1
 	ror	@long+2
-	ror	@long+3
+	rora
+	bita	#$3F		; check stick
+	bne	__lsr_long_2
+	oraa	#$20
+__lsr_long_2:
 	decb
-	bne	__lsr_long
+	bne	__lsr_long_1
+	anda	#$e0
+	staa	@long+3
 	rts
-__lsr_tos:		; lsr TOS (2-5,x) by AccB
+;
+__lsr_tos:			; lsr TOS (2-5,x) by AccB
+	ldaa	5,x
+__lsr_tos_1:
 	lsr	2,x
 	ror	3,x
 	ror	4,x
-	ror	5,x
+	rora
+	bita	#$3F
+	bne	__lsr_tos_2
+	oraa	#$20
+__lsr_tos_2:
 	decb
-	bne	__lsr_tos
+	bne	__lsr_tos_1
+	anda	#$e0
+	staa	5,x
 	rts
 ;
 ;	shift left by AccB
@@ -1086,19 +1105,42 @@ __mulf32tos71:
 	sbca	#>-149
 	jlt	__f32retZeros	; Underflow, return zero with __sign.
 ;
-	tst	__work+3	; TODO: Exact rounding operations
-	bpl	__mulf32tos72
-	ldab	__work+2
-	bitb	#1
-	beq	__mulf32tos72
-	addb	#1
-	stab	__work+3
-	bcc	__mulf32tos72
-	inc	__work+2
+;	even number rounding
+;
+	ldab	__work+3
+	bpl	__mulf32tos72	; G=0, do nothing
+	andb	#$3F		; make sticky bit
+	pshb
+	orab	__work+4
+	orab	__work+5
+	pulb
+	beq	__mulf32tos721
+	orab	#$20
+__mulf32tos721:
+	pshb
+	ldab	__work+2	; check LSB
+	lsrb			; LSB -> Carry
+	pulb
+	rorb			; b7:LSB, b6:G, b5:R, b4:S
+	bitb	#$40		; b6:G==0?
+	beq	__mulf32tos72	;   Yes, do nothng
+	andb	#$F0
+	cmpb	#$40		; 0100:only G is 1?
+	beq	__mulf32tos72	;   Yes, do nothng
+;
+	inc	__work+2		; round up
 	bne	__mulf32tos72
 	inc	__work+1
 	bne	__mulf32tos72
-	inc	__work
+	inc	__work+0
+	bne	__mulf32tos72
+;
+	inca
+	cmpa	#$FF
+	jeq	__f32retInfs
+	lsr	__work+0
+	ror	__work+1
+	ror	__work+2
 ;
 __mulf32tos72:
 	ldab	__work+3
@@ -1254,9 +1296,9 @@ __divf32tos30:
 	jmp	__pullret
 ;
 ;	@tmp3:@tmp4		= @long / TOS
-;	@tmp1+1:AccA:AccB	= @long % TOS
+;	@tmp1:AccA:AccB		= @long % TOS
 ;	@tmp2: loop counter
-;	brake @long
+;	mess @long
 ;
 __fdiv32x32:
 	ldab #32
