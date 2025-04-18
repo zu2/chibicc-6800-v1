@@ -609,12 +609,11 @@ __addf32_30:
 __addf32_50:
 	jsr	__abscmp	; compare: abs(tos) - abs(@long)
 	bne	__addf32_51	; different sign, but value equal
-	jsr	__f32zero	;   return +0.0
-	jmp	__pullret
+	jsr	__f32retpZero	;   return +0.0
 __addf32_51:
 	bcs	__addf32_60	; jump if TOS<@long
 	;
-	ldab	2,x		; abs(TOS) > abs(@long), result sign=TOS's sign
+	ldab	2,x		; abs(TOS) > abs(@long), result sign is TOS's
 	andb	#$80
 	stab	__sign
 	jsr	__setup_both	; AccB = TOS'exp - @long's exp
@@ -705,12 +704,17 @@ __addf32_61:
 	jmp	__addf32_54
 
 ;
+;	compare: abs(tos) - abs(@long)
 ;
-__abscmp:	; compare: abs(tos) - abs(@long)
+;	  TOS<@long:  return C=1 (BCS)
+;	  TOS==@long: return Z=1 (BEQ)
+;	  TOS>@long:  C=0,Z=0    (BHI)
+;
+__abscmp:
 	ldaa	2,x
-	anda	#$7f
+	anda	#$7f		; ignore sign bit
 	ldab	@long
-	andb	#$7f
+	andb	#$7f		; ignore sign bit
 	sba
 	bne	__abscmp_ret
 	ldab	3,x
@@ -722,7 +726,7 @@ __abscmp:	; compare: abs(tos) - abs(@long)
 	ldab	5,x
 	subb	@long+3
 __abscmp_ret:
-	rts	; TOS<@long: C=1 (BCS), TOS==@long: Z=1 (BEQ), other TOS>@long: C=0,Z=0 (BHI)
+	rts
 ;
 ;	check both Inf and NaN
 ;	2,x = TOS top
