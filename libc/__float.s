@@ -571,7 +571,13 @@ __addf32_11:
         ror     @long		; shift one bit with carry
         ror     @long+1
         ror     @long+2
-        ror     @long+3
+        ldab	@long+3		; sticky
+	rorb
+	bitb	#$3F	
+	beq	__addf32_12
+	orab	#$20
+__addf32_12:
+	stab	@long+3
 	inca			; exp++
 	cmpa	#$FF		; biased exponent exceeds 254, so it is Inf.
 	jeq	__f32retInfs
