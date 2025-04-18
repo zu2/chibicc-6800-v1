@@ -1,10 +1,10 @@
 # chibicc-6800-v1: A Small C Compiler for MC6800
 
-This project is a fork of @rui314's chibicc, adapted to create a C compiler for the Motorola MC6800 architecture. Key features include:
+This project is a fork of @rui314's chibicc, adapted to create a C compiler for the Motorola MC6800 architecture.
 
 It was created to study compilers for the MC6800, and contains a lot of unnecessary code and comments.
 
-There are many aspects of the object code generation method and speed that cannot be understood without actually creating it. It is also used as a test.
+There are many aspects of the object code generation method and speed that cannot be understood without actually creating it. There may be unnecessary parts added for testing code generation.
 
 However, it is a compiler that works reasonably well. I hope it will be helpful for you to create another fork.
 
@@ -13,8 +13,8 @@ However, it is a compiler that works reasonably well. I hope it will be helpful 
 
 - **Data types:** `int` and pointers are 16-bit; `long` and `float` are 32-bit. `double` and `long long` (64-bit or more) are unsupported.
 - **Structs/unions:** Passing/returning by value and bit fields are implemented.
-- **Function parameters:** Passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
-- **Return values:** Struct/union return values pass their address as an implicit argument in a register.
+- **Function parameters:** Only first one parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
+- **Return values:** Struct/union return values pass their address as an implicit first argument in a register. all other normal arguments are passed on the stack.
 - **Limitations:** Handling of large local variable areas (>255 bytes) is poorly tested and coded.
 
 The basic float library is written in assembler.
@@ -69,7 +69,9 @@ Follow these steps to set up the compiler:
 
 ## Stack frame
 
-This compiler uses a frame pointer (`@bp`) for accessing local variables and arguments, following conventions from x86. Key points:
+This compiler, like the x86 version, uses the frame pointer (`@bp`) to access local variables and arguments.
+
+### Key points:
 
 - **Frame Pointer Usage:** Required for supporting `alloca` and Variable-Length Arrays (VLA).
 - **Performance Tradeoff:** Functions with a frame pointer are slightly slower due to saving/restoring it during prologue/epilogue.
