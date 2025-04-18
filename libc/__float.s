@@ -733,8 +733,8 @@ __abscmp_ret:
 ;	__sign: TOS and @long has different sign? same:b7=0, differ:b7=1
 ;
 ;	__zin and AccB:
-;		b7	TOS's   sign
-;		b6	@long's sign
+;		b7	xor @long/TOS's sign. same as __sign
+;		b6	(not used)
 ;		b5	TOS   is Zero
 ;		b4	@long is Zero
 ;		b3	TOS   is Inf?
@@ -1116,33 +1116,6 @@ __mulf32tos74:
 	oraa	__sign
 	staa	@long
 	jmp	__pullret
-;
-;	Multiply 8x8
-;		@tmp1:	work
-;		@tmp1+1:loop counter
-;
-__mul8x8:
-	tsta
-	beq	__mul8x8_zero
-	stab	@tmp1
-	beq	__mul8x8_zero
-	ldab	#8
-	stab	@tmp1+1
-	clrb
-__mul8x8_1:
-	aslb
-	rola
-	bcc	__mul8x8_2
-	addb	@tmp1
-	adca	#0
-__mul8x8_2:
-	dec	@tmp1+1
-	bne	__mul8x8_1
-	rts
-__mul8x8_zero:
-	clrb
-	clra
-	rts
 ;
 ;	@long = @long / TOS
 ;
