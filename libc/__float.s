@@ -27,6 +27,7 @@
 	.zp
 	.data
 	.export	__i16tof32
+	.export	__u16tof32
 	.export	__i32tof32
 	.export	__f32tou32
 	.export	__f32toi32
@@ -134,21 +135,47 @@ __i16tof32_1:
 	sbca	#0
 	;
 __i16tof32_10:
-	clr	@long+3
 	stab	@long+2
-	staa	@long+1
 	ldab	#$8f		; exp ($8e+1), if i32>=32768 then exp=$8E
 __i16tof32_20:			; Shift left until the most significant bit becomes 1
 	decb
 	asl	@long+2
-	rol	@long+1
+	rola
 	bcc	__i16tof32_20	; loop until C=1 (hidden bit check)
 __i16tof32_21:
 	lsrb
-	ror	@long+1		; shifted one more bit, return 1bit right and set exp's LSB
+	rora			; shifted over 1bit, fix it.
 	ror	@long+2
+	staa	@long+1
 	orab	__sign
 	stab	@long
+	clr	@long+3
+	rts
+;
+;	uint16 to float32
+;
+__u16tof32:
+	tstb
+	bne	__u16tof32_1
+	tsta
+	jeq	__f32zero	; load 0.0 and return
+	;
+__u16tof32_1:
+	stab	@long+2
+	ldab	#$8f
+__u16tof32_20:			; Shift left until most significant bit to 1
+	decb
+	asl	@long+2
+	rola
+	bcc	__u16tof32_20	; loop until C=1 (hidden bit check)
+__u16tof32_21:
+	lsrb
+	rora			; shifted over 1bit, fix it.
+	ror	@long+2
+	staa	@long+1
+	orab	__sign
+	stab	@long
+	clr	@long+3
 	rts
 ;
 ;
@@ -451,7 +478,8 @@ __f32tou16:
 	ldx	#long
 __f32tou16x:
 	jsr	__f32iszerox
-	jeq	__u16zero
+	beq	__u16zero
+__f32tou16_0:
 	ldab	0,x
 	bmi	__u16zero	; if x<0 then return 0
 	ldaa	1,x
@@ -461,38 +489,27 @@ __f32tou16x:
 	rora			; A = MSB
 	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
 	bcc	__f32tou16_1
-	jmp	__u16zero
-__f32tou16_1:
-	cmpb	#$8f		; if exp>=$8f (x >= 65536)
-	bcs	__f32tou16_2
-	jmp	__u16ffff	; return 65535
-__f32tou16_2:
-	clr	0,x
-	ldaa	1,x		; recover hidden bit
-	ora	#$80
-	staa	1,x
-	subb	#$8e		; TODO:
-	beq	__f32tou16_ret
-	bcs	__f32tou16_4
-__f32tou16_3:
-	asl	3,x
-	rol	2,x
-	rol	1,x
-	rol	0,x
-	decb
-	bne	__f32tou16_3
-__f32tou16_ret:
-	ldab	2,x
-	ldaa	1,x
+__u16zero:
+	clrb
+	clra
 	rts
-__f32tou16_4:
-	lsr	0,x
-	ror	1,x
+;
+__f32tou16_1:
+	subb	#$8f		; if exp>=$8f (x >= 65536)
+	jcc	__u16ffff	; return 65535
+;
+	incb			; exp==$8e ?
+	beq	__f32tou16_ret
+__f32tou16_3:
+	lsra
 	ror	2,x
 	ror	3,x
 	incb
-	bne	__f32tou16_4
-	bra	__f32tou16_ret
+	bne	__f32tou16_3
+__f32tou16_ret:
+	ldab	2,x
+;	ldaa	1,x
+	rts
 ;
 ;	float to signed short/int
 ;		@long -> AccA:B
@@ -548,10 +565,6 @@ __f32toi16_ret:
 __f32toi16_ret2:
 	rts
 ;
-__u16zero:
-	clrb
-	clra
-	rts
 __u16ffff:
 	ldab	#$FF
 	tba

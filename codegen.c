@@ -674,12 +674,15 @@ static char u8u32[]  = "jsr __u8to32";
 static char i16i32[] = "jsr __s16to32";
 static char i16u32[] = "jsr __s16to32";
 static char u16i32[] = "jsr __u16to32";
+static char u16i64[] = ";jsr __u16i64 " __FILE__;
 //static char u16u32[] = "jsr __u16to32";
-//static char u16f32[] = "jsr __u16tof32";
+static char u16f32[] = "jsr __u16tof32";
+static char u16f64[] = ";jsr __u16tof32" __FILE__;
 
 static char i16i64[] = ";jsr __i16i64 " __FILE__;
 static char i16f32[] = "jsr __i16tof32";
 static char i16f64[] = "; jsr __i16f64 " __FILE__;
+
 static char i32i8[] = "ldab @long+3";
 static char i32u8[] = "ldab @long+3";
 static char i32i16[] = "ldab @long+3\n\tldaa @long+2";
@@ -738,7 +741,7 @@ static char *cast_table[][11] = {
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   i64f32, i64f64, NULL}, // i64
 
   {NULL,  NULL,   u8i32,  i16i64, NULL,  NULL,   u8u32,  i16i64, i16f32, i16f64, NULL}, // u8
-  {NULL,  NULL,   u16i32, i16i64, NULL,  NULL,   u16i32, i16i64, i16f32, i16f64, NULL}, // u16
+  {NULL,  NULL,   u16i32, i16i64, NULL,  NULL,   u16i32, u16i64, u16f32, u16f64, NULL}, // u16
   {i32i8, i32i16, NULL,   u32i64, i32u8, i32u16, NULL,   u32i64, u32f32, u32f64, NULL}, // u32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   u64f32, u64f64, NULL}, // u64
 
