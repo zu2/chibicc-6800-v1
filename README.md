@@ -188,6 +188,14 @@ Branches "if (x\>y)" are converted to jge (bge) instructions.
 	ins
 ```
 
+## Float
+
+IEEE754 format 32-bit float is implemented. Double is not supported.
+
+Real number arithmetic code is written in assembler, which is faster than code written in C. There are still issues with accuracy (boundary conditions) and exception handling.
+
+Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (fsqrt) are implemented. Other functions are under consideration for addition.
+
 # Reference compilers
 
 Other compilers that may be useful to study.
