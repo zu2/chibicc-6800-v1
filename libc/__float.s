@@ -31,6 +31,7 @@
 	.export	__f32tou32
 	.export	__f32toi32
 	.export	__f32tou16
+	.export	__f32toi16
 	.export	__addf32tos
 	.export __subf32tos
 	.export __mulf32tos
@@ -164,13 +165,11 @@ __f32minint:			; -2147483648 (0x8000 0000) = CF00 0000
 ;
 __i32tof32:
 	ldx	#long
+__i32tof32x:
 	ldab	0,x
-	bne	__i32tof32_1
-	ldab	1,x
-	bne	__i32tof32_1
-	ldab	2,x
-	bne	__i32tof32_1
-	ldab	3,x
+	orab	1,x
+	orab	2,x
+	orab	3,x
 	jeq	__f32zero	;   return +0.0
 __i32tof32_1:
 	ldab	0,x
@@ -183,14 +182,38 @@ __i32tof32_2:
 	beq	__i32tof32_left	; need left shift
 ;
 	ldab	#$96		; exp.
+	clr	__work
 __i32tof32_right:		; right shift is required until the MSB byte becomes 0
 	incb
 	lsra
 	ror	1,x
 	ror	2,x
 	ror	3,x
+	ror	__work		; save R/S bit
 	tsta
 	bne	__i32tof32_right
+	ldaa	__work
+	bpl	__i32tof32_done	; if R==0 no round up.
+	anda	#$7F		; get sticky
+	bne	__i32tof32_done	; if S==1 do round up.
+	ldaa	3,x
+	lsra
+	bcc	__i32tof32_done	; LSB==0?
+;				; R==1 && (sticy || LSB==1)
+__i32tof32_roundup:
+	inc	3,x
+	bne	__i32tof32_done
+	inc	2,x
+	bne	__i32tof32_done
+	inc	1,x
+	bne	__i32tof32_done
+;				; carry occurred from rounding. Shift 1bit
+;	sec			; MSB is hidden bit, it doesn't need to be set.
+	ror	1,x
+	ror	2,x
+	ror	3,x
+	incb			; exp++
+;
 __i32tof32_done:
 	asl	1,x		; clear hidden bit and set exp's LSB
 	lsrb
@@ -200,7 +223,7 @@ __i32tof32_done:
 	rts
 __i32tof32_left:		; left shift is required until hidden bit==1
 	ldab	#$96
-	tst	1,x		; hidden bit set?
+	tst	1,x		; MSB bit already set?
 	bmi	__i32tof32_done
 __i32tof32_left2:
 	decb
@@ -365,6 +388,7 @@ __f32retTOS:
 ;	
 __f32toi32:
 	ldx	#long
+__f32toi32x:
 	jsr	__f32iszerox
 	jeq	__u32zero
 	ldab	0,x
@@ -421,17 +445,20 @@ __f32toi32_4:
 	bra	__f32toi32_ret
 ;
 ;	float to unsigned int
-;		@long -> @long
+;		@long -> AccA:B
 ;	
 __f32tou16:
 	ldx	#long
+__f32tou16x:
 	jsr	__f32iszerox
-	beq	__u16zero
+	jeq	__u16zero
 	ldab	0,x
 	bmi	__u16zero	; if x<0 then return 0
 	ldaa	1,x
 	asla
 	rolb			; B = exp
+	sec
+	rora			; A = MSB
 	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
 	bcc	__f32tou16_1
 	jmp	__u16zero
@@ -466,6 +493,61 @@ __f32tou16_4:
 	incb
 	bne	__f32tou16_4
 	bra	__f32tou16_ret
+;
+;	float to signed short/int
+;		@long -> AccA:B
+;	
+__f32toi16:
+	ldx	#long
+__f32toi16x:
+	jsr	__f32iszerox
+	beq	__s16zero
+	ldab	0,x
+	ldaa	1,x
+	asla
+	rolb			; B = exp
+	sec			; set hidden bit
+	rora			; A = MSB
+	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
+	bcc	__f32toi16_1
+__s16zero:
+	clrb
+	clra
+	rts
+;
+__f32toi16_1:
+	cmpb	#$8e		; if exp>=$8e (x > 32767)
+	bcs	__f32toi16_2
+	ldaa	0,x
+	bmi	__s16_8000	; x <= -32768
+__s16_7fff:			; x > 32767, return 32767
+	ldab	#$FF
+	ldaa	#$7F
+	rts
+__s16_8000:			; x <= -32768, return -32768
+	clrb
+	ldaa	#$80
+	rts
+;
+__f32toi16_2:			; AccA:MSB, AccB:exp (biased)
+	subb	#$8E
+	beq	__f32toi16_ret
+__f32toi16_4:
+	lsra
+	ror	2,x
+	incb
+	bne	__f32toi16_4
+__f32toi16_ret:
+	ldab	2,x
+;	ldaa	1,x
+	tst	0,x
+	bpl	__f32toi16_ret2
+	nega
+	negb
+	sbca	#0
+__f32toi16_ret2:
+	rts
+;
 __u16zero:
 	clrb
 	clra
