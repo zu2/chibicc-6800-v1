@@ -190,7 +190,13 @@ Branches "if (x\>y)" are converted to jge (bge) instructions.
 
 # Reference compilers
 
-Other compilers that may be useful.
+Other compilers that may be useful to study.
+
+slimcc and widcc are forks of chibicc. They add features and clean up the code.
+
+Fuzix C and CC6303 contain compilers for the MC6800. The former also has float.
+
+acwj and mc09 are compilers for the MC6809.
 
 - [fuhsnn/slimcc: C11 compiler with C23/C2y/GNU extensions for x86-64 Linux/BSD](https://github.com/fuhsnn/slimcc)
 - [fuhsnn/widcc: Simple C compiler for x86-64 Linux able to build real-world projects including Curl, GCC, Git, PHP, Perl, Python, PostgreSQL etc](https://github.com/fuhsnn/widcc)
