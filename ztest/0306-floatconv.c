@@ -42,9 +42,9 @@ int ucheck(unsigned int ui)
   float f;
 
   f = ui;
-  if ((int)f != ui){
+  if ((unsigned int)f != ui){
     print(ui);
-    print((int)f);
+    print((unsigned int)f);
     puthexf(f);
     putchar('\n');
     return 1;
