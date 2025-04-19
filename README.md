@@ -187,6 +187,18 @@ Branches "if (x\>y)" are converted to jge (bge) instructions.
 	ins
 	ins
 ```
+
+# Reference compilers
+
+Other compilers that may be useful.
+
+- [fuhsnn/slimcc: C11 compiler with C23/C2y/GNU extensions for x86-64 Linux/BSD](https://github.com/fuhsnn/slimcc)
+- [fuhsnn/widcc: Simple C compiler for x86-64 Linux able to build real-world projects including Curl, GCC, Git, PHP, Perl, Python, PostgreSQL etc](https://github.com/fuhsnn/widcc)
+- [EtchedPixels/Fuzix-Compiler-Kit: Fuzix C Compiler Project](https://github.com/EtchedPixels/Fuzix-Compiler-Kit/)
+- [zu2/CC6303: A C compiler for the 6800 series processors](https://github.com/zu2/CC6303)
+- [acwj/64\_6809\_Target at master · DoctorWkt/acwj](https://github.com/DoctorWkt/acwj/tree/master/64_6809_Target)
+- [sbc09/mc09 at os9lv2 · shinji-kono/sbc09](https://github.com/shinji-kono/sbc09/tree/os9lv2/mc09)
+
 ----
 ----
 Below is Rui's original README.md.
