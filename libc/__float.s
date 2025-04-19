@@ -173,7 +173,6 @@ __u16tof32_21:
 	rora			; shifted over 1bit, fix it.
 	ror	@long+2
 	staa	@long+1
-	orab	__sign
 	stab	@long
 	clr	@long+3
 	rts
