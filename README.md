@@ -13,7 +13,7 @@ However, it is a compiler that works reasonably well. I hope it will be helpful 
 
 - **Data types:** `int` and pointers are 16-bit; `long` and `float` are 32-bit. `double` and `long long` (64-bit or more) are unsupported.
 - **Structs/unions:** Passing/returning by value and bit fields are implemented.
-- **Function parameters:** Only first one parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
+- **Function parameters:** Only the first parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
 - **Return values:** Struct/union return values pass their address as an implicit first argument in a register. all other normal arguments are passed on the stack.
 - **Limitations:** Handling of large local variable areas (>255 bytes) is poorly tested and coded.
 
@@ -113,7 +113,7 @@ Register-based arguments are saved during the prologue and accessed as local var
 
 long/float are handled as 4byte variables (@long) on the zero page.
 
-This is different from the CC68 and Fuzix CC methods. They handled as AccA/B and 2byte on zero page.
+This is different from the CC68 and Fuzix CC methods. They are handled using AccA/B and as 2-byte values on the zero page.
 
 When Acc A/B are used together, long/int mixed operations are advantageous.
 
