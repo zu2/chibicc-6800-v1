@@ -1404,67 +1404,110 @@ __divf32_s20:
 __divf32tos01:
 ;
 	tsx
-	jsr	__setup_both
-	clra
-	ldab	__lexp
-	subb	__texp
-	sbca	#0
-	addb	#127
-	adca	#0
-	stab	__exp2+1	; expdiff = lexp - texp + 127
-	staa	__exp2
-	beq	__divf32tos03
-	bpl	__divf32tos02
-	cmpb	#$E9		; underflow
-	bcc	__divf32tos03
-	jmp	__f32retZeros
-__divf32tos02:			; overflow
-	jmp	__f32retInf
+	inx
+	inx
+	jsr	__adj_subnormal	; do normalize,AccAB = unbiased exp
+	stab	__expdiff+1
+	staa	__expdiff
+	ldx	#long
+	jsr	__adj_subnormal
+	subb	__expdiff+1
+	sbca	__expdiff
+	stab	__expdiff+1	; expdiff = long's exp - TOS's exp
+	staa	__expdiff
+;
+	subb	#<128
+	sbca	#>128
+	jge	__f32retInfs	; overflow
+;
+	ldab	__expdiff+1
+	ldaa	__expdiff
+	subb	#<-149
+	sbca	#>-149
+	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
+;
+	tsx
+        jsr     __asl8_both     
+;
+;	Since division 24bit is done in 32-bit,
+;	  the result will never be 0 (Dividend 0 is already excluded)
+;
 __divf32tos03:
-	;			; TODO: exception check
 	jsr	__fdiv32x32	; @tmp3:@tmp3+1:@tmp4:@tmp4+1 = @long / TOS
-	ldaa	__exp2+1
-	beq	__divf32tos04
-	tst	__exp2
-	bpl	__divf32tos08
+	ldab	__expdiff+1
+	ldaa	__expdiff
+	tst	@tmp3
+	bmi	__divf32tos04		; MSB==1 needn't shitft
+;
+__divf32_0301:
+	subb	#1			; exp++
+	sbca	#0
+	asl	@tmp4+1
+	rol	@tmp4
+	rol	@tmp3+1
+	rol	@tmp3
+	bpl	__divf32tos20
+	stab	__expdiff+1
+	staa	__expdiff
+;
 __divf32tos04:
-	; 			; subnormal number: shift right
-	deca
+	subb	#<-126			; subnormal?
+	sbca	#>-126
+	jge	__divf32tos20		; no, it's normal number
+;
 __divf32tos05:
 	lsr	@tmp3
 	ror	@tmp3+1
 	ror	@tmp4
 	ror	@tmp4+1
-	inca
+	incb
 	bne	__divf32tos05
-	bra	__divf32tos30	; skip normalize
-__divf32tos08:
-	tst	@tmp3		; hidden bit set?
-	bmi	__divf32tos20
-__divf32tos10:
-	deca
-	beq	__divf32tos30	; under flow
-	asl	@tmp4+1
-	rol	@tmp4
-	rol	@tmp3+1
-	rol	@tmp3
-	bpl	__divf32tos10
-__divf32tos20:
-;				; TODO: round
-	ldab	@tmp4+1
-	bpl	__divf32tos30
-	andb	#$7f
-	bne	__divf32tos22
-	ldab	@tmp4
-	asrb
-	bcc	__divf32tos30
-__divf32tos22:
+;
+	ldab	#<-127			; subnormal's exp
+	ldaa	#>-127
+;					; round up check (subnormal)
+	bsr	__divf32_rup_check	; if C==1, need round up
+	bcc	__divf32_done
+;	
 	inc	@tmp4
-	bne	__divf32tos30
-	ldx	@tmp3
-	inx	
-	stx	@tmp3
-__divf32tos30:
+	bne	__divf32_done
+	inc	@tmp3+1
+	bne	__divf32_done
+	inc	@tmp3
+	bpl	__divf32_done		; Still subnormal
+;
+;	annoying thing here is:
+;	  round up carry from the subnormal results in a normal number.
+;
+	ldab	#<-126
+	ldaa	#>-126
+	stab	__expdiff+1
+	staa	__expdiff
+	bra	__divf32_done
+;
+__divf32tos20:				; round up check (normal)
+	ldab	__expdiff+1
+	ldaa	__expdiff
+	bsr	__divf32_rup_check	; C==1, need round up
+	bcc	__divf32_done
+;
+__divf32_rup:
+	inc	@tmp4
+	bne	__divf32_done
+	inc	@tmp3+1
+	bne	__divf32_done
+	inc	@tmp3
+	bne	__divf32_done
+;
+	lsr	@tmp3
+	ror	@tmp3+1
+	ror	@tmp4
+	addb	#1
+	adca	#0
+;
+__divf32_done:
+	addb	#127
+	tba
 	ldab	@tmp4
 	stab	@long+3
 	ldab	@tmp3+1
@@ -1477,6 +1520,27 @@ __divf32tos30:
 	oraa	__sign
 	staa	@long
 	jmp	__pullret
+;
+;	round up check, @tmp4 and @tmp4+1
+;
+__divf32_rup_check:
+	pshb
+	ldab	@tmp4+1	
+	bpl	__divf32_rup_none	; G==0, no round up
+	aslb				; (bitb #$7F)
+	bne	__divf32_rup_occur	; R or S==1, do round up
+	ldab	@tmp4
+	asrb
+	pulb
+	rts				; if LSB==0, no round up
+__divf32_rup_none:
+	pulb
+	clc
+	rts
+__divf32_rup_occur:
+	pulb
+	sec
+	rts
 ;
 ;	@tmp3:@tmp4		= @long / TOS
 ;	@tmp1:AccA:AccB		= @long % TOS
