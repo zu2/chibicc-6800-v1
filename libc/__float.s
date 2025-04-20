@@ -291,12 +291,12 @@ __u32tof32_right:		; right shift is required until the MSB byte becomes 0
 	ldaa	__work
 	bpl	__u32tof32_done	; if R==0 no round up.
 	anda	#$7F		; get sticky
-	bne	__u32tof32_done	; if S==1 do round up.
+	bne	__u32tof32_rup	; if S==1 do round up.
 	ldaa	3,x
 	lsra
 	bcc	__u32tof32_done	; LSB==0?
 ;				; R==1 && (sticy || LSB==1)
-__u32tof32_roundup:
+__u32tof32_rup:
 	inc	3,x
 	bne	__u32tof32_done
 	inc	2,x
@@ -494,7 +494,7 @@ __f32toi32x:
 	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
 	jcs	__u32zero
 __f32toi32_1:
-	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
+	cmpb	#$9E		; if exp>=$9E (x > 2,147,483,647)
 	bcs	__f32toi32_2
 	tst	__sign
 	jpl	__i327fffffff	; return +2,147,483,647
