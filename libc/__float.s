@@ -29,6 +29,7 @@
 	.export	__i16tof32
 	.export	__u16tof32
 	.export	__i32tof32
+	.export	__u32tof32
 	.export	__f32tou32
 	.export	__f32toi32
 	.export	__f32tou16
@@ -102,6 +103,8 @@ iszerox_ret:
 ;
 ;	negate 32bit long
 ;
+__negi32:
+	ldx	#long
 __negi32x:
 	com	0,x	
 	com	1,x	
@@ -202,7 +205,7 @@ __i32tof32_1:
 	andb	#$80
 	stab	__sign		; b7:sign bit
 	bpl	__i32tof32_2
-	jsr	__negi32x	; negate @long
+	jsr	__negi32x	; negate (0-3,x)
 __i32tof32_2:
 	ldaa	0,x
 	beq	__i32tof32_left	; need left shift
@@ -258,6 +261,72 @@ __i32tof32_left2:
 	rol	1,x
 	bpl	__i32tof32_left2
 	bra	__i32tof32_done
+;
+;	uint32 to float32
+;		TODO: round up/down
+;
+__u32tof32:
+	ldx	#long
+__u32tof32x:
+	ldab	0,x
+	orab	1,x
+	orab	2,x
+	orab	3,x
+	jeq	__f32zero	;   return +0.0
+;
+	ldaa	0,x
+	beq	__u32tof32_left	; need left shift
+;
+	ldab	#$96		; exp.
+	clr	__work
+__u32tof32_right:		; right shift is required until the MSB byte becomes 0
+	incb
+	lsra
+	ror	1,x
+	ror	2,x
+	ror	3,x
+	ror	__work		; save R/S bit
+	tsta
+	bne	__u32tof32_right
+	ldaa	__work
+	bpl	__u32tof32_done	; if R==0 no round up.
+	anda	#$7F		; get sticky
+	bne	__u32tof32_done	; if S==1 do round up.
+	ldaa	3,x
+	lsra
+	bcc	__u32tof32_done	; LSB==0?
+;				; R==1 && (sticy || LSB==1)
+__u32tof32_roundup:
+	inc	3,x
+	bne	__u32tof32_done
+	inc	2,x
+	bne	__u32tof32_done
+	inc	1,x
+	bne	__u32tof32_done
+;				; carry occurred from rounding. Shift 1bit
+;	sec			; MSB is hidden bit, it doesn't need to be set.
+	ror	1,x
+	ror	2,x
+	ror	3,x
+	incb			; exp++
+;
+__u32tof32_done:
+	asl	1,x		; clear hidden bit and set exp's LSB
+	lsrb
+	ror	1,x
+	stab	0,x
+	rts
+__u32tof32_left:		; left shift is required until hidden bit==1
+	ldab	#$96
+	tst	1,x		; MSB bit already set?
+	bmi	__u32tof32_done
+__u32tof32_left2:
+	decb
+	asl	3,x
+	rol	2,x
+	rol	1,x
+	bpl	__u32tof32_left2
+	bra	__u32tof32_done
 ;
 ;	float to unsigned long
 ;		@long -> @long
@@ -423,21 +492,20 @@ __f32toi32x:
 	asla
 	rolb			; B = exp
 	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
-	bcc	__f32toi32_1
-	jmp	__u32zero
+	jcs	__u32zero
 __f32toi32_1:
 	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
 	bcs	__f32toi32_2
 	tst	__sign
-	jpl	__i327fffffff
-	jmp	__i3280000000	; return 4,294,967,295
+	jpl	__i327fffffff	; return +2,147,483,647
+	jmp	__i3280000000	; return -2,147,483,648
 __f32toi32_2:
 	clr	0,x
-	ldaa	1,x		; recover hidden bit
-	ora	#$80
+	sec			; recover hidden bit
+	rora
 	staa	1,x
-	subb	#$96		; TODO:
-	beq	__f32toi32_ret
+	subb	#$96		; exp==2^23?
+	beq	__f32toi32_ret	; 24bit mantissa can be interpreted as long.
 	bcs	__f32toi32_4
 __f32toi32_3:
 	asl	3,x
@@ -448,26 +516,35 @@ __f32toi32_3:
 	bne	__f32toi32_3
 __f32toi32_ret:
 	tst	__sign
-	bpl	__f32toi32_ret2
-	com	0,x
-	com	1,x
-	com	2,x
-	neg	3,x
-	bne	__f32toi32_ret2
-	inc	2,x
-	bne	__f32toi32_ret2
-	inc	1,x
-	bne	__f32toi32_ret2
-	inc	0,x
+	jmi	__negi32x	; negate (0-3,x) and return
 __f32toi32_ret2:
 	rts
 __f32toi32_4:
+	clra
+__f32toi32_5:
 	lsr	0,x
 	ror	1,x
 	ror	2,x
 	ror	3,x
+	rora			; G/S bit
 	incb
-	bne	__f32toi32_4
+	bne	__f32toi32_5
+	tsta
+	bpl	__f32toi32_ret	; G=0, no round up
+	bitb	#$7F
+	bne	__f32toi32_6	; round up
+	ldaa	3,x
+	lsra
+	bcc	__f32toi32_ret	; S=0, LSB=0, no round up
+;
+__f32toi32_6:
+	inc	3,x		; round up
+	bne	__f32toi32_ret
+	inc	2,x
+	bne	__f32toi32_ret
+	inc	1,x
+	bne	__f32toi32_ret
+	inc	0,x
 	bra	__f32toi32_ret
 ;
 ;	float to unsigned int
