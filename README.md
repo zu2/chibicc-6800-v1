@@ -34,6 +34,7 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
 - https://github.com/EtchedPixels/Fuzix-Bintools
 - https://github.com/EtchedPixels/Fuzix-Compiler-Kit
 
+---
 # Installation
 
 Follow these steps to set up the compiler:
@@ -86,7 +87,7 @@ This compiler, like the x86 version, uses the frame pointer (`@bp`) to access lo
 // @bp -> local var top
 //             :
 //        local var end
-//        argment passed by register (if any)
+//        argment passed by register AB or @long (if any)
 //        old @bp
 //        return address
 //        argment passed by stack
@@ -98,6 +99,7 @@ In this implementation:
 
 1. Function arguments are discarded by the caller (unlike CC68/Fuzix CC where this happens in the callee).
 2. The caller performs stack adjustment using `INS`, which increases code size due to frequent calls.
+3. The first argument of the function is passed in a register. If the first argument is 8-bit, it is passed in AccB. If it is 16-bit, it is passed in AccAB. If it is long/float, it is passed with 4byte @long area in zero page.
 
 ### Tradeoffs:
 
@@ -194,8 +196,9 @@ IEEE754 format 32-bit float is implemented. Double is not supported.
 
 Real number arithmetic code is written in assembler, which is faster than code written in C. There are still issues with accuracy (boundary conditions) and exception handling.
 
-Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (fsqrt) are implemented. Other functions are under consideration for addition.
+Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (fsqrt) are implemented. Other functions are under consideration.
 
+---
 # Reference compilers
 
 Other compilers that may be useful to study.
@@ -213,8 +216,8 @@ acwj and mc09 are compilers for the MC6809.
 - [acwj/64\_6809\_Target at master · DoctorWkt/acwj](https://github.com/DoctorWkt/acwj/tree/master/64_6809_Target)
 - [sbc09/mc09 at os9lv2 · shinji-kono/sbc09](https://github.com/shinji-kono/sbc09/tree/os9lv2/mc09)
 
-----
-----
+---
+---
 Below is Rui's original README.md.
 
 # chibicc: A Small C Compiler
