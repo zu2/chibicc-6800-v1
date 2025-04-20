@@ -17,8 +17,9 @@ However, it is a compiler that works reasonably well. I hope it will be helpful 
 - **Return values:** Struct/union return values pass their address as an implicit first argument in a register. all other normal arguments are passed on the stack.
 - **Limitations:** Handling of large local variable areas (>255 bytes) is poorly tested and coded.
 
-The basic float library is written in assembler.
-32bit float can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
+IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
+
+It can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
 
 The compiler passes basic tests, but there are still many issues remaining.
 
@@ -196,7 +197,7 @@ x\>y and x>=y have different branch costs. x-y>=0 requires one bge, but x-y>0 re
 
 IEEE754 format 32-bit float is implemented. Double is not supported.
 
-Real number arithmetic code is written in assembler, which is faster than code written in C. 
+IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
 
 Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (fsqrt) are implemented. Other functions are under consideration.
 
