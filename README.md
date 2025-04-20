@@ -18,7 +18,7 @@ However, it is a compiler that works reasonably well. I hope it will be helpful 
 - **Limitations:** Handling of large local variable areas (>255 bytes) is poorly tested and coded.
 
 The basic float library is written in assembler.
-There are still issues with precision and exception handling.
+32bit float can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
 
 The compiler passes basic tests, but there are still many issues remaining.
 
@@ -196,9 +196,11 @@ x\>y and x>=y have different branch costs. x-y>=0 requires one bge, but x-y>0 re
 
 IEEE754 format 32-bit float is implemented. Double is not supported.
 
-Real number arithmetic code is written in assembler, which is faster than code written in C. There are still issues with accuracy (boundary conditions) and exception handling.
+Real number arithmetic code is written in assembler, which is faster than code written in C. 
 
 Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (fsqrt) are implemented. Other functions are under consideration.
+
+Float can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
 
 ---
 # Reference compilers
