@@ -165,6 +165,8 @@ int tarai(int x, int y, int z)
 
 Branches "if (x\>y)" are converted to jge (bge) instructions.
 
+x\>y and x>=y have different branch costs. x-y>=0 requires one bge, but x-y>0 requires multiple branch instructions. The chibicc-6800 reduces the branch cost by treating the former as !(y-x\>=0).
+
 ```
 	ldab 9,x
 	ldaa 8,x
