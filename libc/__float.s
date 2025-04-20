@@ -224,12 +224,12 @@ __i32tof32_right:		; right shift is required until the MSB byte becomes 0
 	ldaa	__work
 	bpl	__i32tof32_done	; if R==0 no round up.
 	anda	#$7F		; get sticky
-	bne	__i32tof32_done	; if S==1 do round up.
+	bne	__i32tof32_rup	; if S==1 do round up.
 	ldaa	3,x
 	lsra
 	bcc	__i32tof32_done	; LSB==0?
 ;				; R==1 && (sticy || LSB==1)
-__i32tof32_roundup:
+__i32tof32_rup:
 	inc	3,x
 	bne	__i32tof32_done
 	inc	2,x
