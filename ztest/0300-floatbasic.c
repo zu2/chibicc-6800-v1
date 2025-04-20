@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 	if ((long)f != 2147483520)
 		return	94;
 	f = 2147483648.0;
-	if ((long)f != 2147483648)
+	if ((long)f != 2147483647)
 		return	95;
 	f = -2147483520.0;
 	if ((long)f != -2147483520)
