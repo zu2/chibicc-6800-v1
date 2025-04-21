@@ -19,15 +19,13 @@
 	.export	__copy_struct
 	.export	__copy_struct2
 ;
-__copy_struct2:
-	stab	@tmp1+1		; size
-;
+__copy_struct2:			; AccAB: size
 	stx	@tmp3		; dest
 ;
 	tsx
 	ldx	2,x
 	stx	@tmp2		; src
-	bra	__copy_struct_common
+	bra	__copy_common
 ;
 __copy_struct:
 	stx	@tmp1		; size
@@ -42,25 +40,50 @@ __copy_struct:
 	ldab	@tmp1+1		; size
 	ldaa	@tmp1
 ;
-__copy_struct_comon:
+__copy_common:
+;
+	tsta
+	bne	__copy_2
+	cmpb	#1
+	beq	__copy_1byte
+;
+__copy_2:
+	lsra
+	rorb
+	ror	@tmp4		; save LSBit to @tmp's MSBit
+;
 	cmpb	#1		; if b!=0 then a++
 	sbca	#0
 	inca
+	stab	@tmp1+1
 	staa	@tmp1
 ;
 __copy_loop:
 	ldx	@tmp2
 	ldaa	0,x
+	ldab	1,x
+	inx
 	inx
 	stx	@tmp2
 	ldx	@tmp3
 	staa	0,x
+	stab	1,x
+	inx
 	inx
 	stx	@tmp3
-	decb
+	dec	@tmp1+1
 	bne	__copy_loop
 	dec	@tmp1
 	bne	__copy_loop
+;
+	tst	@tmp4
+	bpl	__copy_end
+;
+__copy_1byte:
+	ldx	@tmp2
+	ldaa	0,x
+	ldx	@tmp3
+	staa	0,x
 ;
 __copy_end:
 	tsx
