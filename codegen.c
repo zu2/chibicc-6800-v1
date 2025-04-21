@@ -474,23 +474,18 @@ static void load_x(Type *ty,int off) {
 // Store D to an address that the stack top is pointing to.
 static void store(Type *ty) {
 
-  popx();
-
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
-    println("\tstab @tmp2+1");
-    println("\tstaa @tmp2");
-    println("\tstx  @tmp3");
-    for (int i = 0; i < ty->size; i++) {
-	println("\tldx @tmp2");
-	println("\tldab %d,x",i);
-	println("\tldx @tmp3");
-	println("\tstab %d,x",i);
-        IX_Dest = IX_None;
-    }
+    if (ty->size==0)
+      return;
+    println("; store struct/union from AB to TOS, size %d in IX",ty->size);
+    println("\tldx  #%d",ty->size);
+    println("\tjsr  __copy_struct");
+    IX_Dest = IX_None;
     return;
   case TY_FLOAT:
+    popx();
     println("\tjsr __store32x   ; store @long to (0-3,x)");
     return;
   case TY_DOUBLE:
@@ -501,6 +496,7 @@ static void store(Type *ty) {
     return;
   }
 
+  popx();
   if (ty->size == 1){
     println("\tstab 0,x");
   }else if (ty->size == 2){
@@ -509,23 +505,23 @@ static void store(Type *ty) {
   }else if (ty->size == 4){
     println("\tjsr __store32x   ; store @long to (0-3,x)");
   }else
-    println("  mov %%rax, (%%rdi)");
+    assert(0);
 }
 
 static void store_x(Type *ty,int off) {
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
-    println("\tstab @tmp2+1");
-    println("\tstaa @tmp2");
-    println("\tstx  @tmp3");
-    for (int i = 0; i < ty->size; i++) {
-	println("\tldx @tmp2");
-	println("\tldab %d,x",i);
-	println("\tldx @tmp3");
-        IX_Dest = IX_None;
-	println("\tstab %d,x",i+off);
-    }
+    println("; store struct/union from TOS to IX+off, size %d",ty->size);
+    println("\tpshb");
+    println("\tpsha");
+    println("\tldab #<%d",off);
+    println("\tldaa #>%d",off);
+    println("\tjsr __adx");
+    println("\tldab #<%d",ty->size);
+    println("\tldaa #>%d",ty->size);
+    println("\tjsr  __copy_struct2");
+    IX_Dest = IX_None;
     return;
   case TY_DOUBLE:
     assert(ty->kind!=TY_DOUBLE);
@@ -1915,7 +1911,7 @@ static void gen_expr(Node *node) {
     gen_addr(node->lhs);
     return;
   case ND_ASSIGN:
-    if (test_addr_x(node->lhs)){ 
+    if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
       println("; ND_ASSIGN: test_addr_x(lhs) OK, store_x off=%d",off);
