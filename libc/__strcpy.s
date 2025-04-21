@@ -30,19 +30,24 @@ _strcpy:
 ;
 _strcpy_loop:
 	inx
+	inx
 	stx	@tmp2
 	ldx	@tmp3
 _strcpy_start:
 	ldaa	0,x
+	ldab	1,x
+	inx
 	inx
 	stx	@tmp3
 	ldx	@tmp2
 	staa	0,x
+	beq	_strcpy_ret
+	stab	1,x
 	bne	_strcpy_loop
 ;
+_strcpy_ret:
 	pula			; recover d into AccAB
 	pulb
-_strcpy_ret:
 	rts
 ;
 
