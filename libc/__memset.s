@@ -1,5 +1,5 @@
 ;
-;	memset(char *s,int c,size_t n)
+;	void *memset(void *s,int c,size_t n)
 ;	{
 ;	  char *p = s;
 ;	  while (n--){
@@ -13,14 +13,13 @@
 ;	+2 c
 ;	+4 n
 ;
-
 	.code
 	.export	_memset
 _memset:
 	tsx
 	ldx	4,x		; n==0 ?
 	beq	_memset_ret
-	pshb			; save s
+	pshb			; save s, access to the stack will add two.
 	psha
 	tsx
 	ldab	7,x		; n
