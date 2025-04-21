@@ -1867,9 +1867,13 @@ static void gen_expr(Node *node) {
 #endif
     return;
   case ND_MEMBER: {
+#if 1
+    int off = gen_addr_x(node,false);
+    load_x(node->ty,off);
+#else
     gen_addr(node);
     load(node->ty);
-
+#endif
     Member *mem = node->member;
     if (mem->is_bitfield) {
       println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s %d",
