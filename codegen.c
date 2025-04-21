@@ -976,8 +976,8 @@ static int push_args(Node *node, Node *last_pushed_arg) {
   // If the return type is a struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument (in Acc A,B).
   // MC6800: all struct/union passes the pointer
-  println("; return type is struct/union, the caller passes a pointer");
   if (node->ret_buffer) { // && node->ty->size > 16)
+    println("; return type is struct/union, the caller passes a pointer");
     println("\tldab @bp+1	; %d",node->ret_buffer->offset);
     println("\tldaa @bp");
     if (node->ret_buffer->offset) {
