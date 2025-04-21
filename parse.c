@@ -2443,10 +2443,7 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
   }
 
   // ptr + num
-  if (lhs->ty->base) {
-    if (!is_integer(rhs->ty)){
-      rhs = new_cast(rhs, ty_int);
-    }
+  if (lhs->ty->base && is_integer(rhs->ty)){
     if (lhs->ty->base->size!=1){
       rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
       return new_binary(ND_ADD, lhs, rhs, tok);	// TODO:
