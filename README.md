@@ -199,7 +199,7 @@ IEEE754 format 32-bit float is implemented. Double is not supported.
 
 IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
 
-Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (fsqrt) are implemented. Other functions are under consideration.
+Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (sqrtf) are implemented. Other functions are under consideration.
 
 Float can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
 
