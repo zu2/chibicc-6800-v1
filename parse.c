@@ -269,11 +269,12 @@ Node *new_cast(Node *expr, Type *ty) {
   &&  expr->ty->is_unsigned == ty->is_unsigned){
       return expr;
   }
+#if 0
   if (is_flonum(expr->ty) && is_flonum(ty)
   &&  expr->ty->kind == ty->kind) {
       return expr;
   }
-
+#endif
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_CAST;
   node->tok = expr->tok;
