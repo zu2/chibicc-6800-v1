@@ -167,7 +167,7 @@ Type *vla_of(Type *base, Node *len) {
 }
 
 Type *enum_type(void) {
-  return new_type(TY_ENUM, 4, 1);
+  return new_type(TY_ENUM, 2, 1);
 }
 
 Type *struct_type(void) {

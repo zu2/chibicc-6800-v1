@@ -3260,6 +3260,7 @@ static void emit_text(Obj *prog) {
 	  case TY_SHORT:
 	  case TY_INT:
 	  case TY_PTR:
+	  case TY_ENUM:
   	    save_reg_param = 1;
   	    break;
 	  }
@@ -3294,6 +3295,7 @@ static void emit_text(Obj *prog) {
 	  case TY_SHORT:
 	  case TY_INT:
 	  case TY_PTR:
+	  case TY_ENUM:
     	    println("\tpshb");
 	    println("\tpsha");
 	    break;
