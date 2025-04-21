@@ -870,21 +870,19 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     }
     break;
   case TY_FLOAT:
-    switch(args->kind){
-    case ND_NUM:
+    if (args->pass_by_stack && args->kind==ND_NUM) {
       union { float f32; uint32_t u32; } u = { args->fval };
-      println("; push float %e",u.f32);
+      println("; push float %e, %08x",u.f32,u.u32);
       gen_direct_pushl(u.u32);
       *last_pushed_arg = *args;
-      break;
-    default:
+    }else{
       gen_expr(args);
       if (args->pass_by_stack){
         pushf();
         *last_pushed_arg = *args;
       }
-      break;
     }
+    break;
   case TY_LONG:
     if (!args->pass_by_stack){
         gen_expr(args);
@@ -2248,7 +2246,7 @@ static void gen_expr(Node *node) {
   case TY_FLOAT: {
     if (node->rhs->kind == ND_NUM && node->rhs->ty->kind==TY_FLOAT) {
       union { float f32; uint32_t u32; } u = { node->rhs->fval };
-      println("; push float %e",u.f32);
+      println("; push float %e, %08x",u.f32,u.u32);
       gen_direct_pushl(u.u32);
     }else{
       gen_expr(node->rhs);	// xmm1
