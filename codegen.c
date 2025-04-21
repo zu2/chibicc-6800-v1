@@ -2611,11 +2611,21 @@ static void gen_expr(Node *node) {
     return;
   case ND_MUL:
     if (node->lhs->ty ==  node->ty){
+      if(node->lhs->kind==ND_NUM
+      && (node->lhs->ty->kind==TY_INT
+       || node->lhs->ty->kind==TY_SHORT
+       || node->lhs->ty->kind==TY_ENUM)
+      && node->rhs->kind!=ND_NUM) {
+	Node *tmp = node->lhs;
+	node->lhs = node->rhs;
+	node->rhs = tmp;
+      }
       switch(node->rhs->kind){
       case ND_NUM:
         switch (node->rhs->ty->kind) {
         case TY_INT:
         case TY_SHORT:
+        case TY_ENUM:
 	  switch(node->rhs->val){
 	  case 2:
             gen_expr(node->lhs);
@@ -2640,6 +2650,44 @@ static void gen_expr(Node *node) {
 	    println("\trola");
 	    println("\taslb");
 	    println("\trola");
+	    return;
+	  case 5:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\tstab @tmp1+1");
+	    println("\tstaa @tmp1");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taddb @tmp1+1");
+	    println("\tadca @tmp1");
+	    return;
+	  case 6:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\tstab @tmp1+1");
+	    println("\tstaa @tmp1");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taddb @tmp1+1");
+	    println("\tadca @tmp1");
+	    println("\taslb");
+	    println("\trola");
+	    return;
+	  case 7:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\tstab @tmp1+1");
+	    println("\tstaa @tmp1");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    println("\tsubb @tmp1+1");
+	    println("\tsbca @tmp1");
 	    return;
 	  case 8:
             gen_expr(node->lhs);
