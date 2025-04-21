@@ -3213,7 +3213,7 @@ static void emit_text(Obj *prog) {
     if(fn->body->kind==ND_BLOCK && fn->body->body==NULL){	// empty function
       println("\trts	; empty function");
       IX_Dest = IX_None;
-      return;
+      continue;
     }
     // Prologue
     println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
