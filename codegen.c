@@ -2558,12 +2558,21 @@ static void gen_expr(Node *node) {
   case ND_ADD:
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
-    gen_expr(node->lhs);
     if (can_direct(node->rhs)){
+      gen_expr(node->lhs);
       if (gen_direct(node->rhs,"addb","adca")){
         return;
       }
+      assert(0);
     }
+    if (can_direct(node->lhs)){
+      gen_expr(node->rhs);
+      if (gen_direct(node->lhs,"addb","adca")){
+        return;
+      }
+      assert(0);
+    }
+    gen_expr(node->lhs);
     if (node->rhs->kind     == ND_CAST
     &&  node->rhs->ty->kind == TY_ARRAY
     &&  node->rhs->lhs->kind == ND_VAR
