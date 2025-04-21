@@ -269,6 +269,10 @@ Node *new_cast(Node *expr, Type *ty) {
   &&  expr->ty->is_unsigned == ty->is_unsigned){
       return expr;
   }
+  if (is_flonum(expr->ty) && is_flonum(ty)
+  &&  expr->ty->kind == ty->kind) {
+      return expr;
+  }
 
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_CAST;
@@ -2990,7 +2994,7 @@ static Node *funcall(Token **rest, Token *tok, Node *fn) {
     } else if (arg->ty->kind == TY_FLOAT) {
       // If parameter type is omitted (e.g. in "..."), float
       // arguments are promoted to double.
-      arg = new_cast(arg, ty_double);
+      // arg = new_cast(arg, ty_double); // don't promote. we not have double
     }
 
     cur = cur->next = arg;
