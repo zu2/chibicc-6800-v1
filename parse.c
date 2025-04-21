@@ -269,12 +269,11 @@ Node *new_cast(Node *expr, Type *ty) {
   &&  expr->ty->is_unsigned == ty->is_unsigned){
       return expr;
   }
-#if 0
   if (is_flonum(expr->ty) && is_flonum(ty)
   &&  expr->ty->kind == ty->kind) {
       return expr;
   }
-#endif
+
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_CAST;
   node->tok = expr->tok;
@@ -2428,7 +2427,7 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
     return new_binary(ND_ADD, lhs, rhs, tok);
 
   if (lhs->ty->base && rhs->ty->base)
-    error_tok(tok, "invalid operands");
+    error_tok(tok, "invalid operands %s %d",__FILE__,__LINE__);
 
   // Canonicalize `num + ptr` to `ptr + num`.
   if (!lhs->ty->base && rhs->ty->base) {
@@ -2444,14 +2443,17 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
   }
 
   // ptr + num
-  if (lhs->ty->base && is_integer(rhs->ty)) {
+  if (lhs->ty->base) {
+    if (!is_integer(rhs->ty)){
+      rhs = new_cast(rhs, ty_int);
+    }
     if (lhs->ty->base->size!=1){
       rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
       return new_binary(ND_ADD, lhs, rhs, tok);	// TODO:
     }
     return new_binary(ND_ADD, lhs, rhs, tok);
   }
-  error_tok(tok, "invalid operands");
+  error_tok(tok, "invalid operands %s %d",__FILE__,__LINE__);
 }
 
 // Like `+`, `-` is overloaded for the pointer type.
@@ -2492,7 +2494,7 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
       return new_binary(ND_DIV, node, new_num(lhs->ty->base->size, tok), tok);
   }
 
-  error_tok(tok, "invalid operands");
+  error_tok(tok, "invalid operands %s %d",__FILE__,__LINE__);
 }
 
 // add = mul ("+" mul | "-" mul)*
