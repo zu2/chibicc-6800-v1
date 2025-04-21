@@ -473,12 +473,8 @@ static void load_x(Type *ty,int off) {
 }
 // Store D to an address that the stack top is pointing to.
 static void store(Type *ty) {
-  println("\ttsx");
-  println("\tldx 0,x");
-  IX_Dest = IX_None;
-  println("\tins");
-  println("\tins");
-  depth -= 2;
+
+  popx();
 
   switch (ty->kind) {
   case TY_STRUCT:
