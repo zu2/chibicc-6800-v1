@@ -196,6 +196,8 @@ Node *optimize_expr(Node *node)
     return optimize_l(node);
   // Below is a binary operator
   case ND_ADD:
+    if (!is_integer(node->ty))
+      return node;
     node = optimize_lr_swap(node);
     if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
       lhs->val +=  rhs->val;
@@ -203,6 +205,8 @@ Node *optimize_expr(Node *node)
     }
     return node;
   case ND_SUB:
+    if (!is_integer(node->ty))
+      return node;
     node = optimize_lr(node);
     if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
       lhs->val -= rhs->val;
@@ -210,6 +214,8 @@ Node *optimize_expr(Node *node)
     }
     return node;
   case ND_MUL:
+    if (!is_integer(node->ty))
+      return node;
     if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
       lhs->val *= rhs->val;
         return lhs;
