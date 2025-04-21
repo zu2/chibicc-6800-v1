@@ -4,8 +4,6 @@
 
 #include "common.h"
 
-extern	float	fsqrt(float x);
-
 int
 cmpfl(float f, unsigned long g)
 {

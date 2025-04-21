@@ -4,8 +4,6 @@
 
 #include "common.h"
 
-extern	float	fsqrt(float x);
-
 int
 cmpfl(float f, unsigned long g)
 {
@@ -228,6 +226,34 @@ int main(int argc, char **argv)
   if (scheck2(0x80000000,0x80000000))
     return 89;
 
+  if (ucheck2(0x007FFFFF,0x007FFFFF))
+    return 101;
+  if (ucheck2(0x00FFFFFF,0x00FFFFFF))
+    return 102;
+  if (ucheck2(0x01000000,0x01000000))
+    return 103;
+
+  if (ucheck2(0x01000001,0x01000000))
+    return 111;
+  if (ucheck2(0x01000003,0x01000004))
+    return 112;
+
+  if (ucheck2(0x7FFFFF80,0x7FFFFF80))
+    return 121;
+  if (ucheck2(0x7FFFFFFF,0x80000000))
+    return 122;
+
+  if (ucheck2(0x80000000,0x80000000))
+    return 131;
+  if (ucheck2(0x80000001,0x80000000))
+    return 132;
+
+  if (ucheck2(0xFFFFFF00,0xFFFFFF00))
+    return 141;
+  if (ucheck2(0xFFFFFFFF,0xFFFFFFFF))
+    return 142;
+
+    
   return 0;
 
   // The following takes a very long time
