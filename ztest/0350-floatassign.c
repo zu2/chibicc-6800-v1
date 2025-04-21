@@ -10,7 +10,7 @@ main(int argc, char **argv)
 
 	a[0] = b[0] = 999;
 
-	a[d-1] = b[d-1] = 555;
+	a[(int)(d-1)] = b[(int)(d-1)] = 555;
 
 	if (a[0]!=555)
 	  return 1;
