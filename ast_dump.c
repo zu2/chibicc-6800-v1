@@ -245,7 +245,11 @@ static void ast_dump(Node *node)
       printout("(ND_VAR TY_VLA ... )");
       return;
     }
-    printout("(ND_VAR %s %s ",type_str(node),node->var->name);
+    if (strlen(node->var->name)){
+      printout("(ND_VAR %s %s ",type_str(node),node->var->name);
+    }else{
+      printout("(ND_VAR %s no-name ",type_str(node));
+    }
     if (node->var->is_local){
       printout("+%d ",node->var->offset);
     }else{

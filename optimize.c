@@ -218,7 +218,7 @@ Node *optimize_expr(Node *node)
       return node;
     if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
       lhs->val *= rhs->val;
-        return lhs;
+      return lhs;
     }
     return node;
   case ND_BITAND:

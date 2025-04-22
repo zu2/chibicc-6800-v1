@@ -863,7 +863,13 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
     push_struct(args->ty);
     break;
   case TY_CHAR: {
-    gen_expr(args);
+      if (args->kind       == ND_CAST
+      &&  args->lhs->kind  == ND_NUM
+      &&  is_integer(args->lhs->ty)) {
+	println("\tldab #<%ld",args->lhs->val);
+      }else{
+        gen_expr(args);
+      }
       if (args->pass_by_stack){
         push1();
         *last_pushed_arg = *args;
@@ -1924,6 +1930,8 @@ static void gen_expr(Node *node) {
     gen_addr(node->lhs);
     return;
   case ND_ASSIGN:
+    node = optimize_expr(node);
+//  ast_node_dump(node);
     if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
@@ -2935,7 +2943,7 @@ static void gen_stmt(Node *node) {
     println("; gen_stmt: %s",s);
   }
 
-//  ast_node_dump(node);
+//ast_node_dump(node);
 
   switch (node->kind) {
   case ND_IF: {
@@ -3221,11 +3229,12 @@ static void emit_data(Obj *prog) {
 
       Relocation *rel = var->rel;
       int pos = 0;
+      println("; var->ty->size = %d",var->ty->size);
       while (pos < var->ty->size) {
         if (rel && rel->offset == pos) {
-          println("\t.word %s%+ld", *rel->label, rel->addend);
+          println("\t.word _%s%+ld", *rel->label, rel->addend);
           rel = rel->next;
-          pos += 8;
+          pos += 2;
         } else {
 	  if (isalnum(var->init_data[pos])){
             println("\t.byte %d	; '%c'", var->init_data[pos],
