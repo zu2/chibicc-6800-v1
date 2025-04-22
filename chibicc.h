@@ -413,6 +413,11 @@ Type *struct_type(void);
 void add_type(Node *node);
 
 //
+// ast_dump.c
+//
+void ast_node_dump(Node *node);
+
+//
 // optimize.c
 //
 Node *optimize_expr(Node *node);
@@ -423,6 +428,8 @@ Obj *optimize(Obj *prog);
 //
 __attribute__((format(printf, 1, 2)))
 void println(char *fmt, ...);
+__attribute__((format(printf, 1, 2)))
+void printout(char *fmt, ...);
 int  test_addr_x(Node *node);
 void codegen(Obj *prog, FILE *out);
 int align_to(int n, int align);

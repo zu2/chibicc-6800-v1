@@ -24,6 +24,14 @@ void println(char *fmt, ...) {
   fprintf(output_file, "\n");
 }
 
+__attribute__((format(printf, 1, 2)))
+void printout(char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(output_file, fmt, ap);
+  va_end(ap);
+}
+
 static int count(void) {
   static int i = 1;
   return i++;
@@ -471,6 +479,7 @@ static void load_x(Type *ty,int off) {
   }else
     println("  mov (%%rax), %%rax");
 }
+
 // Store D to an address that the stack top is pointing to.
 static void store(Type *ty) {
 
@@ -1986,7 +1995,6 @@ static void gen_expr(Node *node) {
     if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
       println("\tstab @tmp1+1");
       println("\tstab @tmp1");
-//    println("  mov %%rax, %%r8");
 
       // If the lhs is a bitfield, we need to read the current value
       // from memory and merge it with a new value.
@@ -2027,8 +2035,8 @@ static void gen_expr(Node *node) {
       return;
     }
 
+    println("; ND_ASSIGN store(node->ty) %s %d",__FILE__,__LINE__);
     store(node->ty);
-    println("; ND_ASSIGN end %s %d",__FILE__,__LINE__);
     return;
   case ND_STMT_EXPR:
     for (Node *n = node->body; n; n = n->next)
@@ -2252,25 +2260,21 @@ static void gen_expr(Node *node) {
     switch (node->kind) {
     case ND_ADD:
       println("\tjsr __addf32tos	; @long += TOS");
-//    println("  add%s %%xmm1, %%xmm0", sz);
       depth -= 4;
       IX_Dest = IX_None;
       return;
     case ND_SUB:
       println("\tjsr __subf32tos	; @long -= TOS");
-//    println("  sub%s %%xmm1, %%xmm0", sz);
       depth -= 4;
       IX_Dest = IX_None;
       return;
     case ND_MUL:
       println("\tjsr __mulf32tos	; @long *= TOS");
-//    println("  mul%s %%xmm1, %%xmm0", sz);
       depth -= 4;
       IX_Dest = IX_None;
       return;
     case ND_DIV:
       println("\tjsr __divf32tos	; @long /= TOS");
-//    println("  div%s %%xmm1, %%xmm0", sz);
       IX_Dest = IX_None;
       depth -= 4;
       return;
@@ -2555,6 +2559,7 @@ static void gen_expr(Node *node) {
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
     if (can_direct(node->rhs)){
+      println("; ND_ADD: can_direct(node->rhs) %s %d",__FILE__,__LINE__);
       gen_expr(node->lhs);
       if (gen_direct(node->rhs,"addb","adca")){
         return;
@@ -2562,6 +2567,7 @@ static void gen_expr(Node *node) {
       assert(0);
     }
     if (can_direct(node->lhs)){
+      println("; ND_ADD: can_direct(node->lhs) %s %d",__FILE__,__LINE__);
       gen_expr(node->rhs);
       if (gen_direct(node->lhs,"addb","adca")){
         return;
@@ -2928,6 +2934,8 @@ static void gen_stmt(Node *node) {
   if (strcmp(s,";") && s[0]){
     println("; gen_stmt: %s",s);
   }
+
+//  ast_node_dump(node);
 
   switch (node->kind) {
   case ND_IF: {
