@@ -8,6 +8,9 @@ There are many aspects of the object code generation method and speed that canno
 
 However, it is a compiler that works reasonably well. I hope it will be helpful for you to create another fork.
 
+Dhrystone works now. 
+
+- https://github.com/z88dk/z88dk/tree/master/libsrc/\_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21
 ----
 # Topics
 
