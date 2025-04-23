@@ -278,6 +278,8 @@ static void gen_addr(Node *node){
 // It's an error if a given node does not reside in memory.
 static int gen_addr_x(Node *node,bool save_d)
 {
+  int off;
+
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
@@ -309,6 +311,19 @@ static int gen_addr_x(Node *node,bool save_d)
     IX_Dest = IX_None;
     return 0;
     break;
+  case ND_DEREF:
+    switch (node->lhs->kind){
+    case ND_VAR:
+      off = gen_addr_x(node->lhs,save_d);
+      println("\tldx %d,x",off);
+      IX_Dest = IX_None;
+      return 0;
+    case ND_DEREF:
+      off = gen_addr_x(node->lhs,save_d);
+      println("\tldx %d,x",off);
+      IX_Dest = IX_None;
+      return 0;
+    }
   }
   // fallback to gen_addr()
   if (save_d)
@@ -2185,9 +2200,12 @@ static void gen_expr(Node *node) {
       println("\tjsr _%s",node->lhs->var->name);
     }else{
       int off = gen_addr_x(node->lhs,false);
-      // If the return type is a large struct/union, the caller passes
-      // a pointer to a buffer as if it were the first argument.
-      println("\tjsr %d,x",off);
+      if (node->lhs->ty->kind!=TY_FUNC) {
+        println("\tldx %d,x",off);
+        println("\tjsr 0,x");
+      }else{
+        println("\tjsr %d,x",off);
+      }
     }
     IX_Dest = IX_None;
   
