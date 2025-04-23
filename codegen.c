@@ -857,10 +857,10 @@ gen_direct_pushl(int64_t val)
    depth+=4;
 }
 
-static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
+static void push_args2(Node *args, bool first_pass ){
   if (!args)
     return;
-  push_args2(args->next, first_pass,last_pushed_arg);
+  push_args2(args->next, first_pass);
 
   if ((first_pass && !args->pass_by_stack) || (!first_pass && args->pass_by_stack))
     return;
@@ -885,7 +885,6 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
       }
       if (args->pass_by_stack){
         push1();
-        *last_pushed_arg = *args;
       }
     }
     break;
@@ -894,12 +893,10 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
       union { float f32; uint32_t u32; } u = { args->fval };
       println("; push float %e, %08x",u.f32,u.u32);
       gen_direct_pushl(u.u32);
-      *last_pushed_arg = *args;
     }else{
       gen_expr(args);
       if (args->pass_by_stack){
         pushf();
-        *last_pushed_arg = *args;
       }
     }
     break;
@@ -915,14 +912,12 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
       && args->lhs->kind != ND_NUM){
         gen_expr(args);
         pushl();
-        *last_pushed_arg = *args;
 	break;
       }
       val = args->lhs->val;
       // THRU
     case ND_NUM:
       gen_direct_pushl(val);
-      *last_pushed_arg = *args;
       break;
     case ND_VAR:
       if (test_addr_x(args)){
@@ -939,19 +934,16 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
         gen_expr(args);
         pushl();
       }
-      *last_pushed_arg = *args;
       break;
     default:
       gen_expr(args);
       pushl();
-      *last_pushed_arg = *args;
     }
     break;
   default: {
     gen_expr(args);
       if (args->pass_by_stack){
         push();
-        *last_pushed_arg = *args;
       }
     }
     break;
@@ -967,7 +959,7 @@ static void push_args2(Node *args, bool first_pass, Node *last_pushed_arg) {
 // - No alignment
 // - Other arguments are pushed onto the stack from right to left.
 //
-static int push_args(Node *node, Node *last_pushed_arg) {
+static int push_args(Node *node) {
   int stack = 0, gp = 0;
 
   // If the return type is a large struct/union, the caller passes
@@ -998,8 +990,8 @@ static int push_args(Node *node, Node *last_pushed_arg) {
 	arg->pass_by_stack = false;
     }
   }
-  push_args2(node->args, true,   last_pushed_arg);
-  push_args2(node->args, false,  last_pushed_arg);
+  push_args2(node->args, true);
+  push_args2(node->args, false);
 
   // If the return type is a struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument (in Acc A,B).
@@ -2193,13 +2185,12 @@ static void gen_expr(Node *node) {
       return;
     }
 
-    Node *last_pushed_arg = calloc(1,sizeof(Node));
-    int stack_args = push_args(node, last_pushed_arg);
-    // if passed-by-register argument, last_pushed_arg!=NULL
+    int stack_args = push_args(node);
+
     if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
       println("\tjsr _%s",node->lhs->var->name);
     }else{
-      int off = gen_addr_x(node->lhs,false);
+      int off = gen_addr_x(node->lhs,true);
       if (node->lhs->ty->kind!=TY_FUNC) {
         println("\tldx %d,x",off);
         println("\tjsr 0,x");
