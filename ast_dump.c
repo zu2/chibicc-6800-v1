@@ -235,7 +235,9 @@ static void ast_dump(Node *node)
     printout(")");
     return;
   case ND_FUNCALL:
-    printout("(ND_FUNCALL ... )\n; ");
+    printout("(ND_FUNCALL ");
+    ast_dump(node->lhs);
+    printout(" ... )\n; ");
     return;
   case ND_EXPR_STMT:
     ast_dump_unary(node,"ND_EXPR_STMT");
