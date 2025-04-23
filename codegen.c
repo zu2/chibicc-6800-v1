@@ -559,34 +559,32 @@ static void store_x(Type *ty,int off) {
 }
 
 static void cmp_zero(Type *ty) {
-  switch (ty->kind) {
-  case TY_FLOAT:
-    println("\tjsr __f32iszero");
-//  println("  xorps %%xmm1, %%xmm1");
-//  println("  ucomiss %%xmm1, %%xmm0");
-    return;
-  case TY_DOUBLE:
-    assert(ty->kind!=TY_DOUBLE);
-//  println("  xorpd %%xmm1, %%xmm1");
-//  println("  ucomisd %%xmm1, %%xmm0");
-    return;
-  case TY_LDOUBLE:
-    assert(ty->kind!=TY_LDOUBLE);
-//  println("  fldz");
-//  println("  fucomip");
-//  println("  fstp %%st(0)");
-    return;
-  }
 
-  if (is_integer(ty) && ty->size == 1){
+  switch(ty->kind){
+  case TY_BOOL:
+  case TY_CHAR:
     println("\ttstb");
-  }else if (is_integer(ty) && ty->size <= 2){
+    return;
+  case TY_SHORT:
+  case TY_INT:
+  case TY_ENUM:
+  case TY_PTR:
     println("\taba");
     println("\tadca #0");
-  }else{
+    return;
+  case TY_LONG:
     println("\tjsr __iszero32");
     IX_Dest = IX_None;
+    return;
+  case TY_FLOAT:
+    println("\tjsr __f32iszero");
+    IX_Dest = IX_None;
+    return;
+  case TY_DOUBLE:
+  case TY_LDOUBLE:
+    error("; cmp_zero ty: %d DOUBLE/LDOUBLE",ty->kind);
   }
+  error("; cmp_zero ty: %d",ty->kind);
 }
 
 enum { I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, F80 };
