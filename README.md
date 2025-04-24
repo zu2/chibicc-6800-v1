@@ -1,6 +1,6 @@
 # chibicc-6800-v1: A Small C Compiler for MC6800
 
-This project is a fork of @rui314's chibicc, adapted to create a C compiler for the Motorola MC6800 architecture.
+This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/), adapted to create a C compiler for the Motorola MC6800 architecture.
 
 It was created to study compilers for the MC6800, and contains a lot of unnecessary code and comments.
 
@@ -208,6 +208,10 @@ Float can handle subnormal, NaN and Inf values. It passes basic testing but is n
 
 ---
 # Reference compilers
+
+[@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/)
+
+- [rui314/chibicc: A small C compiler](https://github.com/rui314/chibicc/)
 
 Other compilers that may be useful to study.
 
