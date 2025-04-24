@@ -857,13 +857,11 @@ gen_direct_pushl(int64_t val)
    depth+=4;
 }
 
-static void push_args2(Node *args, bool first_pass ){
+static void push_args2(Node *args)
+{
   if (!args)
     return;
-  push_args2(args->next, first_pass);
-
-  if ((first_pass && !args->pass_by_stack) || (!first_pass && args->pass_by_stack))
-    return;
+  push_args2(args->next);
 
   switch (args->ty->kind) {
   case TY_DOUBLE:
@@ -900,7 +898,7 @@ static void push_args2(Node *args, bool first_pass ){
       }
     }
     break;
-  case TY_LONG:
+  case TY_LONG: {
     if (!args->pass_by_stack){
         gen_expr(args);
 	break;
@@ -940,11 +938,11 @@ static void push_args2(Node *args, bool first_pass ){
       pushl();
     }
     break;
-  default: {
+  } // TY_LONG
+  default:
     gen_expr(args);
-      if (args->pass_by_stack){
-        push();
-      }
+    if (args->pass_by_stack){
+      push();
     }
     break;
   }
@@ -959,39 +957,41 @@ static void push_args2(Node *args, bool first_pass ){
 // - No alignment
 // - Other arguments are pushed onto the stack from right to left.
 //
-static int push_args(Node *node) {
-  int stack = 0, gp = 0;
-
-  // If the return type is a large struct/union, the caller passes
-  // a pointer to a buffer as if it were the first argument.
-  if (node->ret_buffer)  // && node->ty->size > 16)
-    gp++;
-
-  // Load as many arguments to the registers as possible.
+static int push_args(Node *node)
+{
+  // レジスタ渡しとスタック渡しを判別し、スタックサイズを計算する
+  int reg_passable = !node->ret_buffer;
+  int stack = 0;
   for (Node *arg = node->args; arg; arg = arg->next) {
-    Type *ty = arg->ty;
-
-    arg->pass_by_stack = false;
-    switch (ty->kind) {
-    case TY_STRUCT:
-    case TY_UNION:
-        arg->pass_by_stack = true; // Arguments bigger than 2 bytes are pushed onto the stack
-        stack += ty->size;
-	break;
+    // check first parameter
+    switch (arg->ty->kind) {
+    case TY_VOID:
     case TY_DOUBLE:
     case TY_LDOUBLE:
-	error_tok(node->tok, "gen_expr: double not implemented yet");
-	break;
-    default: // TY_CHAR TY_INT TY_LONG TY_FLOAT TY_PTR
-      if (gp++ >= 1) {
-        arg->pass_by_stack = true;
-        stack+=(ty->kind==TY_ARRAY)? 2: arg->ty->size;
-      }else
-	arg->pass_by_stack = false;
+      assert(1);
+    case TY_STRUCT:
+    case TY_UNION:
+      reg_passable = 0;
+      arg->pass_by_stack = 1;
+      stack += arg->ty->size;
+      break;
+      reg_passable = 0;
+      arg->pass_by_stack = 1;
+      stack += 2;
+      break;
+    default: // TY_BOOL,CHAR,SHORT,INT,LONG,FLOAT,ENUM,PTR,FUNC,TY_ARRAY,TY_VLA
+      if (reg_passable) {
+        reg_passable = 0;
+        arg->pass_by_stack = 0;
+      }else{
+        arg->pass_by_stack = 1;
+        stack += ((arg->ty->kind==TY_ARRAY||arg->ty->kind==TY_VLA))?
+		2: arg->ty->size;
+      }
+      break;
     }
   }
-  push_args2(node->args, true);
-  push_args2(node->args, false);
+  push_args2(node->args);
 
   // If the return type is a struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument (in Acc A,B).
@@ -1177,11 +1177,15 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
 	  return 0;
         }else{
           if (test) return 1;
+#if 1
 	  int off = gen_addr_x(rhs,true);
           println("\t%s %d,x",opb,off+1);
           println("\t%s %d,x",opa,off);
-//          println("\t%s #<_%s",opb,rhs->var->name);
-//          println("\t%s #>_%s",opa,rhs->var->name);
+#else
+	  println("; gen_direct_sub %s %d",__FILE__,__LINE__);
+          println("\t%s #<_%s+1",opb,rhs->var->name);
+          println("\t%s #>_%s",opa,rhs->var->name);
+#endif
         }
         return 1;
       }
@@ -1614,31 +1618,153 @@ int can_direct_long2(Node *node)
   return 1;
 }
 
+static int isVARorNUM(Node *node)
+{
+  return (node->kind==ND_VAR || node->kind==ND_NUM);
+}
+
+static int check_in_char(Node *node)
+{
+
+  if (node->kind==ND_NUM) {
+    if (node->ty->is_unsigned) {
+      if (node->val > 255) {
+	return 0;
+      }
+    }else{ // signed
+      if (node->val<128 || node->val > 127) {
+	return 0;
+      }
+    }
+  }
+  return 1;
+}
+
+
 //
-// Evaluate condition, if false then jumps to the if_false
-//   if can't return 0
+// Compare two 8 signed/unsigned integers.
+//   Generate code that branches to if_false if the comparison result is false.
+//   Return 1 if code was generated.
+// For other types, generate no code and return 0.
+//
+static int gen_jump_if_false_8bit(Node *node,char *if_false)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+
+  if(!is_compare(node))
+    return 0;
+  if(lhs->ty->kind!=TY_CHAR || rhs->ty->kind!=TY_CHAR)
+    return 0;
+  if (lhs->ty->is_unsigned != rhs->ty->is_unsigned)
+    return 0;
+  if (!isVARorNUM(lhs) || !isVARorNUM(rhs))
+    return 0;
+  if (rhs->kind==ND_NUM && !check_in_char(rhs))
+    return 0;
+  if (lhs->kind==ND_NUM && !check_in_char(lhs))
+    return 0;
+
+  if (!can_direct(node->rhs))
+    return 0;
+
+
+  if(node->rhs->kind == ND_NUM && node->rhs->val == 0){
+    gen_expr(node->lhs);
+    if(node->kind != ND_EQ && node->kind != ND_NE)
+      println("\ttstb");
+  }else if(rhs->kind==ND_NUM) {
+    gen_expr(node->lhs);
+    println("\tcmpb #%ld",rhs->val);
+  }else if(rhs->kind==ND_VAR) {
+    if (rhs->var->ty->kind == TY_VLA) return 0;
+    if (rhs->ty->kind==TY_ARRAY)      return 0;
+    if (rhs->var->is_local) {
+      if (!test_addr_x(rhs)) return 0;
+      int off = gen_addr_x(rhs,true);
+      println("\tcmpb %d,x",off);
+    }else{ // global
+      println("\tcmpb _%s",rhs->var->name);
+    }
+  }else{
+    assert(1);
+  }
+
+  switch(node->kind){
+  case ND_EQ:
+    println("\tjne %s",if_false);
+    break;
+  case ND_NE:
+    println("\tjeq %s",if_false);
+    break;
+  case ND_LT:
+    if (node->lhs->ty->is_unsigned){
+      println("\tjcc %s",if_false);
+    }else{
+      println("\tjge %s",if_false);
+    }
+    break;
+  case ND_GE:
+    if (node->lhs->ty->is_unsigned){
+      println("\tjcs %s",if_false);
+    }else{
+      println("\tjlt %s",if_false);
+    }
+    break;
+  case ND_LE:
+    if (node->lhs->ty->is_unsigned){
+      println("\tjhi %s",if_false);
+    }else{
+      println("\tjgt %s",if_false);
+    }
+    break;
+  case ND_GT:
+    if (node->lhs->ty->is_unsigned){
+      println("\tjls %s",if_false);
+    }else{
+      println("\tjle %s",if_false);
+    }
+    break;
+  }
+  return 1;
+}
+//
+// Compare two 8- or 16-bit integers.
+//   Generate code that branches to if_false if the comparison result is false.
+//   Return 1 if code was generated.
+// For other types, generate no code and return 0.
 //
 static int gen_jump_if_false(Node *node,char *if_false)
 {
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+
   if(!is_compare(node))
     return 0;
-  if(node->lhs->ty->kind!=TY_CHAR && node->lhs->ty->kind!=TY_INT && node->lhs->ty->kind!=TY_SHORT)
+  if(lhs->ty->kind!=TY_CHAR && lhs->ty->kind!=TY_INT && lhs->ty->kind!=TY_SHORT)
     return 0;
+
+  if(lhs->ty->kind==TY_CHAR
+  && rhs->ty->kind==TY_CHAR
+  && gen_jump_if_false_8bit(node,if_false)){
+    return 1;
+  }
+
   char if_thru[32];
   int c = count();
   sprintf(if_thru,"L_thru_%d",c);
-  if (can_direct(node->rhs)){
-    gen_expr(node->lhs);
-    if(node->rhs->kind == ND_NUM && node->rhs->val == 0){
+  if (can_direct(rhs)){
+    gen_expr(lhs);
+    if(rhs->kind == ND_NUM && rhs->val == 0){
       if(node->kind != ND_EQ && node->kind != ND_NE)
         println("\ttsta");
-    }else if(!gen_direct(node->rhs,"subb","sbca")){
+    }else if(!gen_direct(rhs,"subb","sbca")){
       assert(0);
     }
   }else{
-    gen_expr(node->rhs);
+    gen_expr(rhs);
     push();
-    gen_expr(node->lhs);
+    gen_expr(lhs);
     println("\ttsx");
     IX_Dest = IX_None;
     println("\tsubb 1,x");
@@ -1659,21 +1785,21 @@ static int gen_jump_if_false(Node *node,char *if_false)
     println("\tjeq %s",if_false);
     break;
   case ND_LT:
-    if (node->lhs->ty->is_unsigned){
+    if (lhs->ty->is_unsigned){
       println("\tjcc %s",if_false);
     }else{
       println("\tjge %s",if_false);
     }
     break;
   case ND_GE:
-    if (node->lhs->ty->is_unsigned){
+    if (lhs->ty->is_unsigned){
       println("\tjcs %s",if_false);
     }else{
       println("\tjlt %s",if_false);
     }
     break;
   case ND_LE:
-    if (node->lhs->ty->is_unsigned){
+    if (lhs->ty->is_unsigned){
       println("\tjhi %s",if_false);
       println("\tbcs %s",if_thru);
       println("\ttstb");
@@ -1688,7 +1814,7 @@ static int gen_jump_if_false(Node *node,char *if_false)
     }
     break;
   case ND_GT:
-    if (node->lhs->ty->is_unsigned){
+    if (lhs->ty->is_unsigned){
       println("\tjcs %s",if_false);
       println("\tbhi %s",if_thru);
       println("\ttstb");
@@ -1705,9 +1831,12 @@ static int gen_jump_if_false(Node *node,char *if_false)
   }
   return 1;
 }
+
 //
-// Evaluate condition, if false then jumps to the specified label.
-//   if can't return 0
+// Compare two 8- or 16-bit integers.
+//   Generate code that branches to if_true if the comparison result is true.
+//   Return 1 if code was generated.
+// For other types, generate no code and return 0.
 //
 static int gen_jump_if_true(Node *node,char *if_true)
 {
