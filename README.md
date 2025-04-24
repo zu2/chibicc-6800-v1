@@ -209,6 +209,10 @@ Float can handle subnormal, NaN and Inf values. It passes basic testing but is n
 ---
 # Reference compilers
 
+[@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/)
+
+- [rui314/chibicc: A small C compiler](https://github.com/rui314/chibicc/)
+
 Other compilers that may be useful to study.
 
 slimcc and widcc are forks of chibicc. They add features and clean up the code.
