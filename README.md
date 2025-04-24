@@ -1,6 +1,6 @@
 # chibicc-6800-v1: A Small C Compiler for MC6800
 
-This project is a fork of [https://www.sigbus.info/](@rui314)'s [https://github.com/rui314/chibicc/https://github.com/rui314/chibicc/](chibicc), adapted to create a C compiler for the Motorola MC6800 architecture.
+This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/), adapted to create a C compiler for the Motorola MC6800 architecture.
 
 It was created to study compilers for the MC6800, and contains a lot of unnecessary code and comments.
 
