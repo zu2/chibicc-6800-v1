@@ -19,7 +19,7 @@
 _strlen:
 	stab	@tmp1+1
 	staa	@tmp1
-	ldx	@tmp
+	ldx	@tmp1
 	dex
 ;
 	ldab	#$ff		; low  byte of n
