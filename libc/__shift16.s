@@ -23,7 +23,7 @@ shlloop:
 	bne shlloop
 	rts
 noshift:
-	ins
+	pulb
 	rts
 zero:
 	clrb
