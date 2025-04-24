@@ -17,7 +17,7 @@
 	.code
 	.export	_strchr
 _strchr:
-	stab	@tmp1+1		; save s, access to the stack will add two.
+	stab	@tmp1+1		; save s
 	staa	@tmp1
 ;
 	tsx
