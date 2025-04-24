@@ -196,38 +196,23 @@ Node *optimize_expr(Node *node)
     return optimize_l(node);
   // Below is a binary operator
   case ND_ADD:
-    if (!is_integer(node->ty))
-      return node;
-    node = optimize_lr_swap(node);
-    if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
-      lhs->val +=  rhs->val;
-      return lhs;
-    }
-    return node;
   case ND_SUB:
-    if (!is_integer(node->ty))
-      return node;
-    node = optimize_lr(node);
-    if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
-      lhs->val -= rhs->val;
-      return lhs;
-    }
-    return node;
   case ND_MUL:
-    if (!is_integer(node->ty))
-      return node;
-    if (lhs->kind == ND_NUM && rhs->kind == ND_NUM && lhs->ty->kind == rhs->ty->kind){
-      lhs->val *= rhs->val;
-      return lhs;
+  case ND_DIV:
+  case ND_MOD:
+    node =  optimize_lr(node);
+    if (lhs->kind==ND_NUM   && rhs->kind==ND_NUM
+    &&  is_integer(lhs->ty) && is_integer(rhs->ty)){
+       node->val = eval2(node,NULL);
+       node->kind = ND_NUM;
+       return node;
     }
     return node;
+    break;
   case ND_BITAND:
   case ND_BITOR:
   case ND_BITXOR:
     return node = optimize_lr_swap(node);
-  case ND_DIV:
-  case ND_MOD:
-    return optimize_lr(node);
   case ND_EQ:
   case ND_NE:
   case ND_LT:
