@@ -221,11 +221,11 @@ Node *optimize_expr(Node *node)
   case ND_GE:
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
-    println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
+//  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
     if ( node_cost(node->lhs) < node_cost(node->rhs)
     ||  (node_cost(node->lhs) == node_cost(node->rhs)
       &&(node->kind == ND_LE || node->kind == ND_GT))){
-      println("; optimize RO %d swap_lr",node->kind);
+//    println("; optimize RO %d swap_lr",node->kind);
       node = swap_lr(node);
       switch(node->kind){
       case ND_LT:
