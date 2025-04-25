@@ -158,6 +158,7 @@ struct Obj {
   Obj *alloca_bottom;
   int stack_size;
   int function_no;
+  bool use_alloca;
 
   // Static inline function
   bool is_live;

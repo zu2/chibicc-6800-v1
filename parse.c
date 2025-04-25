@@ -910,6 +910,7 @@ static Node *declaration(Token **rest, Token *tok, Type *basety, VarAttr *attr) 
     cur = cur->next = new_unary(ND_EXPR_STMT, compute_vla_size(ty, tok), tok);
 
     if (ty->kind == TY_VLA) {
+      current_fn->use_alloca = true;
       if (equal(tok, "="))
         error_tok(tok, "variable-sized object may not be initialized");
 
@@ -3014,6 +3015,10 @@ static Node *funcall(Token **rest, Token *tok, Node *fn) {
   // to allocate a space for the return value.
   if (node->ty->kind == TY_STRUCT || node->ty->kind == TY_UNION)
     node->ret_buffer = new_lvar("", node->ty);
+
+  if (strcmp(fn->var->name,"alloca")==0) {
+    current_fn->use_alloca = 1;
+  }
   return node;
 }
 
@@ -3336,7 +3341,7 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 
   fn->params = locals;
 
-  fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
+//  fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
 
   tok = skip(tok, "{");
 
@@ -3352,6 +3357,9 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 
   fn->body = compound_stmt(&tok, tok);
   fn->locals = locals;
+  if (fn->use_alloca) {
+    fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
+  }
   leave_scope();
   resolve_goto_labels();
   return tok;

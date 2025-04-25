@@ -162,7 +162,6 @@ static void gen_addr(Node *node){
 	  println("\taddb #<%d",node->var->offset);
 	  println("\tadca #>%d",node->var->offset);
 	}
-//      println("  lea %d(%%rbp), %%rax", node->var->offset);
       return;
     }
 
@@ -968,7 +967,7 @@ static int push_args(Node *node)
     case TY_VOID:
     case TY_DOUBLE:
     case TY_LDOUBLE:
-      assert(1);
+      assert(0);
     case TY_STRUCT:
     case TY_UNION:
       reg_passable = 0;
@@ -1043,6 +1042,7 @@ static void copy_struct_mem(void) {
 }
 
 static void builtin_alloca(void) {
+  assert(current_fn->alloca_bottom);
   // Align size to 16 bytes.
   // MC6800 has no align, ignore it.
 //  println("  add $15, %%rdi");
@@ -1687,7 +1687,7 @@ static int gen_jump_if_false_8bit(Node *node,char *if_false)
       println("\tcmpb _%s",rhs->var->name);
     }
   }else{
-    assert(1);
+    assert(0);
   }
 
   switch(node->kind){
@@ -2700,7 +2700,7 @@ static void gen_expr(Node *node) {
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
     if (can_direct(node->rhs)){
-      println("; ND_ADD: can_direct(node->rhs) %s %d",__FILE__,__LINE__);
+//    println("; ND_ADD: can_direct(node->rhs) %s %d",__FILE__,__LINE__);
       gen_expr(node->lhs);
       if (gen_direct(node->rhs,"addb","adca")){
         return;
@@ -2708,7 +2708,7 @@ static void gen_expr(Node *node) {
       assert(0);
     }
     if (can_direct(node->lhs)){
-      println("; ND_ADD: can_direct(node->lhs) %s %d",__FILE__,__LINE__);
+//    println("; ND_ADD: can_direct(node->lhs) %s %d",__FILE__,__LINE__);
       gen_expr(node->rhs);
       if (gen_direct(node->lhs,"addb","adca")){
         return;
@@ -3242,9 +3242,9 @@ static void assign_lvar_offsets(Obj *prog) {
     if (!fn->is_function)
       continue;
 
-    // If a function has many parameters, some parameters are
-    // inevitably passed by stack rather than by register.
-    // The first passed-by-stack parameter resides at RBP+16.
+    // If a function has many parameters, only first one parameters is
+    // passed by register (AB or @long).
+    // The first passed-by-stack parameter resides at SP+2
     int top = 0;
 
     int gp = 0;	// if gp==0 can use reg_param.
@@ -3423,6 +3423,7 @@ static void emit_text(Obj *prog) {
     }
     // Prologue
     println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
+    println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
 
     // only one argument pass via Acc A,B, @long
     // Save passed-by-register arguments to the stack
@@ -3540,16 +3541,18 @@ static void emit_text(Obj *prog) {
       println("\ttxs");
       depth = 0;
     }
-    if (fn->alloca_bottom->offset<256){
-      println("\tstx %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
-    }else{
-      println("\taddb #<%d",fn->alloca_bottom->offset);
-      println("\tadca #>%d",fn->alloca_bottom->offset);
-      tfr_dx();
-      println("\tldab @bp+1");
-      println("\tldaa @bp");
-      println("\tstab 1,x	; save sp to __alloca_bottom__");
-      println("\tstaa 0,x");
+    if (fn->alloca_bottom) {
+      if (fn->alloca_bottom->offset<256){
+        println("\tstx %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
+      }else{
+        println("\taddb #<%d",fn->alloca_bottom->offset);
+        println("\tadca #>%d",fn->alloca_bottom->offset);
+        tfr_dx();
+        println("\tldab @bp+1");
+        println("\tldaa @bp");
+        println("\tstab 1,x	; save sp to __alloca_bottom__");
+        println("\tstaa 0,x");
+      }
     }
 //  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
     // Emit code
@@ -3569,7 +3572,8 @@ static void emit_text(Obj *prog) {
     println("L_return_%d:", fn->function_no);
     println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("; recover sp, fn->stack_size=%d reg_param_size=%d",
-		    	fn->stack_size,reg_param_size);
+	   	    	fn->stack_size,reg_param_size);
+    println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
 #if 0
     if (fn->stack_size + reg_param_size <= 255){
       println("\tldx @bp");					// 4 2 // 50 23
@@ -3588,9 +3592,18 @@ static void emit_text(Obj *prog) {
     }else
 #endif
     if (fn->stack_size + reg_param_size <= 10){
-      println("\tlds @bp");
-      for(int i=0; i<fn->stack_size + reg_param_size - 1; i++)
-	println("\tins");
+      println("; fn->stack_size %d, reg_param_size %d",fn->stack_size,reg_param_size);
+      int npops = fn->stack_size + reg_param_size - 1;
+      if (npops>=0) {
+        println("\tlds @bp");
+        for(int i=0; i<npops; i++)
+          println("\tins");
+      }else{
+	println("\tldx @bp");
+        for(int i=0; i<abs(npops)-1; i++)
+          println("\tdex");	// if use des, be corrupted when interrupt.
+        println("\ttxs");
+      }
     }else{
       switch (fn->ty->return_ty->kind){
       case TY_VOID:
