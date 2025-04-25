@@ -1767,8 +1767,11 @@ static Node *stmt(Token **rest, Token *tok) {
     return node;
   }
 
-  if (equal(tok, "asm"))
-    return asm_stmt(rest, tok);
+  if (equal(tok, "asm")) {
+    Node *node = asm_stmt(&tok, tok);
+    *rest = skip(tok,";");
+    return node;
+  }
 
   if (equal(tok, "goto")) {
     if (equal(tok->next, "*")) {

@@ -3229,7 +3229,7 @@ static void gen_stmt(Node *node) {
     gen_expr(node->lhs);
     return;
   case ND_ASM:
-    println("  %s", node->asm_str);
+    println("\t%s", node->asm_str);
     return;
   }
 
