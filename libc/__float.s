@@ -66,16 +66,14 @@ __f32isNaNorInfx:
 	ldaa	0,x
 	aslb
 	rola
-	adda	#1		; Use add to make the C=0. if usinh inc, C is result of rola
-	bne	__f32isNaN_1
-	;		; exp == 255, check mantissa
+	adda	#1
+	bne	__f32isNaN_1	; if exp!=$FF, not NaN and Inf. C=0,Z=0
+	;			; exp == 255, check mantissa
 	tstb
 	bne	__f32isNaN_2
 	tst	2,x
 	bne	__f32isNaN_2
 	tst	3,x
-	bne	__f32isNaN_2
-	tst	4,x
 	bne	__f32isNaN_2
 __f32isNaN_1:			; Z=0, C=0 not NaN,Inf
 	rts			; Z=1, C=0 Inf
