@@ -3424,6 +3424,12 @@ static void emit_text(Obj *prog) {
     // Prologue
     println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
+    if (!fn->params && !fn->stack_size) {
+      println("; function has no params & locals");
+      IX_Dest = IX_None;
+      depth = 0;
+      goto no_params_locals;
+    }
 
     // only one argument pass via Acc A,B, @long
     // Save passed-by-register arguments to the stack
@@ -3556,6 +3562,7 @@ static void emit_text(Obj *prog) {
     }
 //  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
     // Emit code
+no_params_locals:
     gen_stmt(fn->body);
 //    assert(depth == 0);
 
@@ -3574,23 +3581,11 @@ static void emit_text(Obj *prog) {
     println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 	   	    	fn->stack_size,reg_param_size);
     println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
-#if 0
-    if (fn->stack_size + reg_param_size <= 255){
-      println("\tldx @bp");					// 4 2 // 50 23
-      println("\tldx %d,x",fn->stack_size + reg_param_size);	// 6 2
-      println("\tpshb");					// 4 1
-      println("\tldab @bp+1");					// 3 2
-      println("\taddb #<%u",fn->stack_size+reg_param_size+1);	// 2 2
-      println("\tstab @bp+1");					// 4 2
-      println("\tldab @bp");					// 3 2
-      println("\tadcb #>%u",fn->stack_size+reg_param_size+1);	// 2 2
-      println("\tstab @bp");					// 4 2
-      println("\tpulb");					// 4 1
-      println("\tlds @bp");					// 4 2
-      println("\tstx @bp");					// 5 2
-      println("\trts");						// 5 1
-    }else
-#endif
+    if (!fn->params && !fn->stack_size) {
+      println("; function has no params & locals");
+      IX_Dest = IX_None;
+      goto no_params_locals2;
+    }
     if (fn->stack_size + reg_param_size <= 10){
       println("; fn->stack_size %d, reg_param_size %d",fn->stack_size,reg_param_size);
       int npops = fn->stack_size + reg_param_size - 1;
@@ -3646,6 +3641,7 @@ static void emit_text(Obj *prog) {
       println("\tins");		// 4 1
       println("\tstx @bp");	// 5 2
     }
+no_params_locals2:
     println("\trts");		// 5 1
   }
 }
