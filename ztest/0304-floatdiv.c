@@ -3,129 +3,160 @@
 //
 
 #include "common.h"
+#include "floatcheck.h"
 
-int
-cmpf(float f, float g)
-{
-	int i;
-	unsigned char *p = (unsigned char *)&f;
-	unsigned char *q = (unsigned char *)&g;
-
-	for (i=0; i<4; ++i,++p,++q){
-		if (*p != *q){
-			return	i+1;
-		}
-	}
-	return 0;
-}
-
-int
-cmpfl(float f, unsigned long g)
-{
-	int i;
-	unsigned char *p = (unsigned char *)&f;
-	unsigned char *q = (unsigned char *)&g;
-
-	for (i=0; i<4; ++i,++p,++q){
-		if (*p != *q){
-			return	i+1;
-		}
-	}
-	return 0;
-}
-
-float long2float(unsigned long x)
-{
-	return	*((float *)&x);
-}
 
 int main(int argc, char **argv)
 {
-	float	f,g,h,e,zp,zm;
+	float	f,g,h,e,pzero,mzero,pinf,minf;
 
-	zp = long2float(0x00000000);
-	zm = long2float(0x80000000);
-	f = 1.0;
-       	g = 2.0;
-	h = 4.0;
-	e = -0.5;
+	pzero = to_float(pZERO);
+	mzero = to_float(mZERO);
+	pinf  = to_float(pINFINITY);
+	minf  = to_float(mINFINITY);
 
-	if (zp/f!=0.0)
+	f = 1.0f;
+       	g = 2.0f;
+	h = 4.0f;
+	e = -0.5f;
+
+	if (pzero/f!=0.0f)
 		return 1;
-	if (zm/f!=-0.0)
+	if (mzero/f!=-0.0f)
 		return 2;
-//	putstr("+0.0/-0.5:\t");puthexf(0);putchar('\n');
-//	putstr("+0.0/-0.5=\t");puthexf(zp/e);putchar('\n');
-	if (zp/e!=0.0)
+
+	if (pzero/e!=0.0f)
 		return 3;
-	if (zm/e!=0.0)
+	if (mzero/e!=0.0f)
 		return 4;
 
-	// TODO: NaN check
-	// write it later
+	f = 1.0f;
+       	g = 2.0f;
+	h = 4.0f;
+	e = 0.5f;
 
-	f = 1.0;
-       	g = 2.0;
-	h = 4.0;
-	e = 0.5;
-
-//	putstr("1.0/2.0:\t");puthexf(0.5);putchar('\n');
-//	putstr("1.0:\t");puthexf(1.0);putchar('\n');
-//	putstr("2.0:\t");puthexf(2.0);putchar('\n');
-//	putstr("1.0/2.0=\t");puthexf(f/g);putchar('\n');
 	if (f/g!=e)
 		return 10;
-//	putstr("2.0/1.0:\t");puthexf(2.0);putchar('\n');
-//	putstr("2.0/1.0=\t");puthexf(g/f);putchar('\n');
+
 	if (g/f!=g)
 		return 11;
-//	putstr("4.0/1.0:\t");puthexf(4.0);putchar('\n');
-//	putstr("4.0/1.0=\t");puthexf(h/f);putchar('\n');
+
 	if (h/f!=h)
 		return 12;
-//	putstr("4.0/0.5:\t");puthexf(8.0);putchar('\n');
-//	putstr("4.0/0.5=\t");puthexf(h/e);putchar('\n');
-	if (h/e!=8.0)
+
+	if (h/e!=8.0f)
 		return 13;
 //	putchar('\n');
 
-	f = 1.0;
-       	g = -2.0;
-	h = -4.0;
-	e = -0.5;
-//	putstr("1.0/-2.0:\t");puthexf(-0.5);putchar('\n');
-//	putstr("1.0/-2.0=\t");puthexf(f/g);putchar('\n');
+	f = 1.0f;
+       	g = -2.0f;
+	h = -4.0f;
+	e = -0.5f;
 	if (f/g!=e)
 		return 20;
-//	putstr("-2.0/1.0:\t");puthexf(-2.0);putchar('\n');
-//	putstr("-2.0/1.0=\t");puthexf(g/f);putchar('\n');
 	if (g/f!=g)
 		return 21;
-//	putstr("-4.0/1.0:\t");puthexf(-4.0);putchar('\n');
-//	putstr("-4.0/1.0=\t");puthexf(h/f);putchar('\n');
 	if (h/f!=h)
 		return 22;
-//	putstr("-4.0/-0.5:\t");puthexf(8.0);putchar('\n');
-//	putstr("-4.0/-0.5=\t");puthexf(h/e);putchar('\n');
-	if (h/e!=8.0)
+	if (h/e!=8.0f)
 		return 23;
-//	putchar('\n');
 
-	f = 1.0;
-       	g = 0.3;
-	h = 0.003;
-	e = 9001.5;
-//	putstr("1.0/0.3:\t");puthexf(3.33333333333333);putchar('\n');
-//	putstr("1.0/0.3=\t");puthexf(f/g);putchar('\n');
+	f = 1.0f;
+       	g = 0.3f;
+	h = 0.003f;
+	e = 9001.5f;
 	if (f/g!=3.33333333333333)
 		return 31;
-//	putstr("1.0/0.003:\t");puthexf(333.333333333333);putchar('\n');
-//	putstr("1.0/0.003=\t");puthexf(f/h);putchar('\n');
-//	putstr("0.3/0.003:\t");puthexf(100.0);putchar('\n');
-//	putstr("0.3/0.003=\t");puthexf(g/h);putchar('\n');
-//	putstr("0.003/9001.5:\t");puthexf(3.33277787035494e-07);putchar('\n');
-//	putstr("0.003/9001.5=\t");puthexf(h/e);putchar('\n');
-//	putchar('\n');
 
+	f = 1.0f;
+	g = to_float(HEX_FLT_MIN_DIV2);
+	e = f/g;
+	if (isinf(e))
+		return 101;
+	if (cmpfl(e,0x7F000000))
+		return 102;
+
+	f = 1.0f;
+	g = to_float(HEX_FLT_MIN_DIV4);
+	e = f/g;
+	if (!isinf(e))
+		return 111;
+	if (isinf(e)!=1)
+		return 112;
+
+	f = -1.0f;
+	g = to_float(HEX_FLT_MIN_DIV4);
+	e = f/g;
+	if (!isinf(e))
+		return 121;
+	if (isinf(e)!=-1)
+		return 122;
+
+	f = to_float(HEX_FLT_MIN_DIV2);
+	g = 2.0f;
+	e = f/g;
+	if (e != to_float(HEX_FLT_MIN_DIV4))
+		return 131;
+	e = e/g;
+	if (e != to_float(HEX_FLT_MIN_DIV8))
+		return 132;
+
+	f = to_float(HEX_FLT_TRUE_MIN2);
+	g = to_float(HEX_FLT_TRUE_MIN);
+	e = f/g;
+	if (e!=2.0f)
+		return 141;
+
+
+	f = to_float(HEX_FLT_MIN);
+	g = 0.0;
+	e = f/g;
+	if (!isinf(e))
+		return 151;
+
+	f = to_float(HEX_FLT_TRUE_MIN);
+	g = 0.0;
+	e = f/g;
+	if (!isinf(e))
+		return 152;
+
+	f = pzero;
+	g = pzero;
+	e = f/g;
+	if (!isnan(e))
+		return 161;
+
+	f = mzero;
+	g = mzero;
+	e = f/g;
+	if (!isnan(e))
+		return 162;
+
+	f = 1.0f;
+	g = to_float(pINFINITY);
+	e = f/g;
+
+	if (e!=0.0)
+		return 171;
+
+	if (cmpfl(e,pZERO))
+		return 172;
+
+	if (!cmpfl(e,mZERO))
+		return 173;
+
+	f = 1.0f;
+	g = to_float(mINFINITY);
+	e = f/g;
+
+	if (e!=0.0)
+		return 181;
+
+	if (!cmpfl(e,pZERO))
+		return 182;
+
+	if (cmpfl(e,mZERO))
+		return 183;
+	
 	return 0;
 }
