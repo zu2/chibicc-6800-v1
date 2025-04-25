@@ -1753,6 +1753,8 @@ static int gen_jump_if_false(Node *node,char *if_false)
   char if_thru[32];
   int c = count();
   sprintf(if_thru,"L_thru_%d",c);
+  ast_node_dump(rhs);
+  println("; can_direct(rhs) %d",can_direct(rhs));
   if (can_direct(rhs)){
     gen_expr(lhs);
     if(rhs->kind == ND_NUM && rhs->val == 0){
@@ -2282,11 +2284,12 @@ static void gen_expr(Node *node) {
   case ND_LOGOR: {
     int c = count();
     gen_expr(node->lhs);
-    cmp_zero(node->lhs->ty);
+    if (!is_compare(node->lhs))
+      cmp_zero(node->lhs->ty);
     println("\tjne L_true_%d", c);
-//  println("  jne .L.true.%d", c);
     gen_expr(node->rhs);
-    cmp_zero(node->rhs->ty);
+    if (!is_compare(node->lhs))
+      cmp_zero(node->rhs->ty);
     println("\tjne L_true_%d", c);
     println("\tclrb");
     println("\tbra L_end_%d", c);
@@ -2296,12 +2299,6 @@ static void gen_expr(Node *node) {
     println("L_end_%d:", c);
     println("\tclra");
     IX_Dest = IX_None;
-//  println("  jne .L.true.%d", c);
-//  println("  mov $0, %%rax");
-//  println("  jmp .L.end.%d", c);
-//  println(".L.true.%d:", c);
-//  println("  mov $1, %%rax");
-//  println(".L.end.%d:", c);
     return;
   }
   case ND_FUNCALL: {
@@ -3071,15 +3068,18 @@ static void gen_stmt(Node *node) {
   char s[1024];
   char *p = node->loc;
   char *q = s;
-  while(*p && *p!='\r' && *p!='\n'){
-    *q++ = *p++;
-  }
-  *q = '\0';
-  if (strcmp(s,";") && s[0]){
-    println("; gen_stmt: %s",s);
-  }
+  static char *pp = NULL;
 
-//ast_node_dump(node);
+  if (pp!=p) {
+    while(*p && *p!='\r' && *p!='\n'){
+      *q++ = *p++;
+    }
+    *q = '\0';
+    if (pp!=p && strcmp(s,";") && s[0]){
+      println("; gen_stmt: %s",s);
+      pp = p;
+    }
+  }
 
   switch (node->kind) {
   case ND_IF: {
