@@ -45,6 +45,10 @@
 ;	.export __f32isNaNorInfx
 	.export __fdiv32x32
 	.export	__setup_long
+	.export __f32retpZero
+;
+	.export __sign
+	.export __work
 	.data
 __zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
 __sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
