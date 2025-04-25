@@ -1,8 +1,8 @@
 # chibicc-6800-v1: A Small C Compiler for MC6800
 
-This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/), adapted to create a C compiler for the Motorola MC6800 architecture.
+This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/), modified to create a C compiler for the Motorola MC6800 architecture.
 
-It was created to study compilers for the MC6800, and contains a lot of unnecessary code and comments.
+This project was created as a tool for studying compilers for the MC6800, and while it includes extra code and comments that may not be essential, they reflect the learning process and experimentation involved in developing the compiler.
 
 There are many aspects of the object code generation method and speed that cannot be understood without actually creating it. There may be unnecessary parts added for testing code generation.
 
@@ -74,11 +74,22 @@ Follow these steps to set up the compiler:
 
 ## Stack frame
 
-This compiler, like the x86 version, uses the frame pointer (`@bp`) to access local variables and arguments.
+This compiler, like the x86 version, uses the frame pointer (`@bp`) to access local variables and arguments.  
+On the 6800, due to the limited number of registers, `@bp` is placed in the zero page.  
+Unlike other compilers that obtain the stack position using `TSX`, chibicc-6800 uses `LDX @bp`.  
+Although this makes the instruction one byte larger, the number of cycles required is the same.  
+Furthermore, when arithmetic operations on the stack pointer are needed, omitting `STS` can offset the size difference.
+
 
 ### Key points:
 
 - **Frame Pointer Usage:** Required for supporting `alloca` and Variable-Length Arrays (VLA).
+
+Since `alloca` and VLAs use stack space and the size isn't known in advance, accessing locals and arguments via the stack pointer becomes tricky after allocation.  
+The frame pointer (@bp) helps by providing a stable reference point.  
+VLAs are accessed through a pointer saved on the stack.  
+When the function returns, the old frame pointer is used to restore the stack properly.
+
 - **Performance Tradeoff:** Functions with a frame pointer are slightly slower due to saving/restoring it during prologue/epilogue.
 - **Comparison with Other Compilers:** CC68 and Fuzix CC use the stack pointer (SP) directly, which is more efficient but requires precise SP tracking.
 - **Future Plans:** Support for `alloca`/VLA may be removed in favor of SP-only implementation for simplicity.
@@ -206,6 +217,10 @@ Currently, addition, subtraction, multiplication, division, comparison, absolute
 
 Float can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
 
+---
+# Usage in Other Projects
+
+This compiler is also used in `kwhr0`'s [bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo) project. 
 
 ---
 # Reference compilers
