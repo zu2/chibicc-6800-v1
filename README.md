@@ -84,15 +84,14 @@ Furthermore, when arithmetic operations on the stack pointer are needed, omittin
 ### Key points:
 
 - **Frame Pointer Usage:** Required for supporting `alloca` and Variable-Length Arrays (VLA).
+- **Performance Tradeoff:** Functions with a frame pointer are slightly slower due to saving/restoring it during prologue/epilogue.
+- **Comparison with Other Compilers:** CC68 and Fuzix CC use the stack pointer (SP) directly, which is more efficient but requires precise SP tracking.
+- **Future Plans:** Support for `alloca`/VLA may be removed in favor of SP-only implementation for simplicity.
 
 Since `alloca` and VLAs use stack space and the size isn't known in advance, accessing locals and arguments via the stack pointer becomes tricky after allocation.  
 The frame pointer (@bp) helps by providing a stable reference point.  
 VLAs are accessed through a pointer saved on the stack.  
 When the function returns, the old frame pointer is used to restore the stack properly.
-
-- **Performance Tradeoff:** Functions with a frame pointer are slightly slower due to saving/restoring it during prologue/epilogue.
-- **Comparison with Other Compilers:** CC68 and Fuzix CC use the stack pointer (SP) directly, which is more efficient but requires precise SP tracking.
-- **Future Plans:** Support for `alloca`/VLA may be removed in favor of SP-only implementation for simplicity.
 
 ```
 // @bp points old @bp,argument
@@ -123,6 +122,10 @@ In this implementation:
 - **3+ Arguments:** Less efficient due to additional `INS`.
 
 Register-based arguments are saved during the prologue and accessed as local variables within functions. Further optimizations in this area are possible.
+
+### Function Arguments Handling
+
+Adjusting the stack in the called function can make the return process trickier. Instead of just using `RTS`, you'll need extra instructions like `TSX/LDX 0,X/INS.../JMP 0,X`. However, if many `INS` instructions are required, the difference in how the callee restores the stack becomes less significant.
 
 ## float/long in zero page
 
@@ -156,6 +159,10 @@ L1: stx @long
 On the other hand, AccA/B are fragile, so they may need to be saved and restored when performing long/float operations.
 
 In the chibicc-6800, everything is on the zero page for clarity.
+
+
+`@long` is also used when passing function arguments via registers. If the first (most significant) argument of a function is a `long` or `float`, it is passed through `@long`. This avoids the need for a 4-byte long push and multiple `ins` instructions.
+
 
 ## Conditional branch
 
