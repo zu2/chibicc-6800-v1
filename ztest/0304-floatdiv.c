@@ -157,6 +157,19 @@ int main(int argc, char **argv)
 
 	if (cmpfl(e,mZERO))
 		return 183;
+
+	// round check. more test needed.
+	f = 2.5f;
+	g = 3.0f;
+	e = f/g;
+	if (e!=0.8333333f)
+		return 201;
+
+	f = 2.9999999f;
+	g = 3.0f;
+	e = f/g;
+	if (e != 0.99999999f)
+		return 202;
 	
 	return 0;
 }
