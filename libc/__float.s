@@ -9,7 +9,7 @@
 
 
 ;
-;	Note: his program was created for testing chibicc-6800-v1, 
+;	Note: This program was created for testing chibicc-6800-v1, 
 ;	and does not pay attention to speed, accuracy, or exception handling.
 ;
 
