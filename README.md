@@ -198,13 +198,14 @@ x\>y and x>=y have different branch costs. x-y>=0 requires one bge, but x-y>0 re
 
 ## Float
 
-IEEE754 format 32-bit float is implemented. Double is not supported.
+The `float` type follows the IEEE 754 standard for single-precision floating-point numbers, supporting both normalized and subnormal values.
 
 IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
 
 Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (sqrtf) are implemented. Other functions are under consideration.
 
 Float can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
+
 
 ---
 # Reference compilers
