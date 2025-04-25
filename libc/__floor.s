@@ -10,8 +10,8 @@
 ;	and does not pay attention to speed, accuracy, or exception handling.
 ;
 ;
-	.export	_floor
-	.export	_ceil
+	.export	_floorf
+	.export	_ceilf
 	.data
 __floor_or_ceil:
 	.byte	0	; floor:0, ceil:$80
@@ -24,10 +24,10 @@ __floor_or_ceil:
 ;	@long = ceil(@long)
 ;		parameter passed by @long
 ;
-_floor:
+_floorf:
 	clr	__floor_or_ceil
 	bra	__floor_common
-_ceil:
+_ceilf:
 	ldab	#$80
 	stab	__floor_or_ceil
 __floor_common:
