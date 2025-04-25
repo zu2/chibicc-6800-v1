@@ -6,6 +6,7 @@
 
 extern	float	fabs(float x);
 extern	float	floor(float x);
+extern	float	ceil(float x);
 
 
 int
@@ -76,6 +77,50 @@ int main(int argc, char **argv)
 
 	if (floor(-8388608.0f) != -8388608.0f)
 		return 27;
+
+	if (ceil(0.0f) != 0.0f)
+		return 51;
+
+	if (ceil(0.5f) != 1.0f)
+		return 52;
+
+	if (ceil(1.0f) != 1.0f)
+		return 53;
+
+	if (ceil(1.5f) != 2.0f)
+		return 54;
+
+	if (ceil(2.5f) != 3.0f)
+		return 55;
+
+	if (ceil(8388607.5f) != 8388608.0f)
+		return 56;
+
+	if (ceil(8388608.0f) != 8388608.0f)
+		return 57;
+
+	if (-0.0f != 0.0f)
+		return 60;
+	if (ceil(-0.0f) != 0.0f)
+		return 61;
+
+	if (ceil(-0.5f) != 0.0f)
+		return 62;
+
+	if (ceil(-1.0f) != -1.0f)
+		return 63;
+
+	if (ceil(-1.5f) != -1.0f)
+		return 64;
+
+	if (ceil(-2.5f) != -2.0f)
+		return 65;
+
+	if (ceil(-8388607.5f) != -8388607.0f)
+		return 66;
+
+	if (ceil(-8388608.0f) != -8388608.0f)
+		return 67;
 
 	return 0;
 }

@@ -11,13 +11,26 @@
 ;
 ;
 	.export	_floor
+	.export	_ceil
 	.data
+__floor_or_ceil:
+	.byte	0	; floor:0, ceil:$80
+;
 	.code
 ;
 ;	@long = floor(@long)
 ;		parameter passed by @long
 ;
+;	@long = ceil(@long)
+;		parameter passed by @long
+;
 _floor:
+	clr	__floor_or_ceil
+	bra	__floor_common
+_ceil:
+	ldab	#$80
+	stab	__floor_or_ceil
+__floor_common:
 	jsr	__f32iszero
 	bne	_floor_non_zero
 	rts
@@ -28,11 +41,15 @@ _floor_non_zero:
 	rolb
 	cmpb	#150
 	bcc	__floor_ret
-	subb	#126		; if exp<=126 return +0.0 or -1.0;
+	subb	#126		; if exp<=126 return +0.0/+1.0 or -1.0/0.0
 	bhi	__floor_trunc
 ;
 	ldx	#0
 	stx	@long+2
+	ldaa	__floor_or_ceil
+	bmi	__ceil_lt1
+;
+__floor_lt1:			; floor(x): if x < 1.0
 	ldaa	@long
 	bpl	__floor_p0
 	ldx	#$BF80		; -1.0
@@ -40,6 +57,16 @@ __floor_p0:
 	stx	@long		; +0.0
 __floor_ret:
 	rts
+;
+__ceil_lt1:
+	ldaa	@long
+	bpl	__ceil_p1
+	ldx	#$8000		; -0.0
+	bra	__floor_p0
+__ceil_p1:
+	ldx	#$3F80		; +1.0
+	bra	__floor_p0
+;	
 __floor_trunc:
 	subb	#24
 	ldaa	#$ff
@@ -52,7 +79,10 @@ __floor_loop:
 	incb
 	bne	__floor_loop
 	clrb			; Check if any bit in the mask is 1
-	tst	@long
+	pshb
+	ldab	@long
+	eorb	__floor_or_ceil
+	pulb
 	bpl	__floor_mask
 ;
 	tab
@@ -82,15 +112,29 @@ __floor_mask:
 	anda	@long+1
 	staa	@long+1
 ;
-	tstb
+	tstb			; Check if any of the masked bits are set.
 	beq	__floor_ret
+	ldab	__floor_or_ceil
+	bmi	__floor_p1	; ceil
 ;
+__floor_m1:
 	clrb			; add -1.0
 	pshb
 	pshb
 	ldab	#$80
 	pshb
 	ldab	#$bf
+	pshb
+	jsr	__addf32tos
+	rts
+;
+__floor_p1:
+	clrb			; add +1.0
+	pshb
+	pshb
+	ldab	#$80
+	pshb
+	ldab	#$3f
 	pshb
 	jsr	__addf32tos
 	rts
