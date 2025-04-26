@@ -2244,8 +2244,6 @@ static void gen_expr(Node *node) {
     println("\tldab #1");
     println("L_end_%d:", c);
     println("\tclra");
-//  println("  sete %%al");
-//  println("  movzx %%al, %%rax");
     return;
   }
   case ND_BITNOT:
@@ -2288,7 +2286,7 @@ static void gen_expr(Node *node) {
       cmp_zero(node->lhs->ty);
     println("\tjne L_true_%d", c);
     gen_expr(node->rhs);
-    if (!is_compare(node->lhs))
+    if (!is_compare(node->rhs))
       cmp_zero(node->rhs->ty);
     println("\tjne L_true_%d", c);
     println("\tclrb");
