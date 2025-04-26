@@ -4,7 +4,7 @@
 
 #include "common.h"
 
-extern	float	fabs(float x);
+extern	float	fabsf(float x);
 extern	float	floorf(float x);
 extern	float	ceilf(float x);
 extern	float	roundf(float x);
@@ -28,11 +28,11 @@ cmpfl(float f, unsigned long g)
 
 int main(int argc, char **argv)
 {
-	if (fabs(1.0f) != 1.0f)
+	if (fabsf(1.0f) != 1.0f)
 		return 1;
-	if (fabs(-1.0f) != 1.0f)
+	if (fabsf(-1.0f) != 1.0f)
 		return 2;
-	if (fabs(0.0) == 1.0f)
+	if (fabsf(0.0) == 1.0f)
 		return 3;
 
 	if (floorf(0.0f) != 0.0f)

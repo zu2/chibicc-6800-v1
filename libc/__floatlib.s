@@ -10,14 +10,14 @@
 ;	and does not pay attention to speed, accuracy, or exception handling.
 ;
 ;
-	.export	_fabs
+	.export	_fabsf
 	.data
 	.code
 ;
 ;	@long = fabs(@long)
 ;		parameter passed by @long
 ;
-_fabs:
+_fabsf:
 	asl	@long		; sign bit = 0
 	lsr	@long
 	rts

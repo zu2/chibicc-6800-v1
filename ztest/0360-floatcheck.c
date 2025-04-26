@@ -4,6 +4,9 @@
 #define FLT_MIN (1.175494351e-38)
 #define FLT_EPSILON (1.192092896e-07)
 
+extern	float	fabsf(float x);
+extern	int	isnan(float x);
+
 
 int is_nan(float x) {
     return x != x;
@@ -43,22 +46,13 @@ is_infinity(float x) {
     return (exponent == 0xFF && mantissa == 0);
 }
 
-float fabs(float x)
-{
-	if (x==0)
-		return 0;
-	if (x>0)
-		return x;
-	return -x;
-
-}
 
 int main(int argc, char **argv)
 {
     float a = 1.0;
     float b = 1e-7;
     float c = a + b;
-    if (fabs(c - 1.0000001) >= FLT_EPSILON) {
+    if (fabsf(c - 1.0000001) >= FLT_EPSILON) {
         return 1;
     }
 

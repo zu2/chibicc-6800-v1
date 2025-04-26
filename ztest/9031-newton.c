@@ -53,7 +53,7 @@ puthexf(float f)
 #define df2(x) (mulf(2.0,x))
 
 extern	void	cpu_counter();
-extern	float	fabs(float x);
+extern	float	fabsf(float x);
 
 int main(int argc, char **argv)
 {
@@ -65,9 +65,9 @@ int main(int argc, char **argv)
         return 1;
     if (xn!=11.0)
         return 2;
-    if (fabs(xn - xo)!=1.0)
+    if (fabsf(xn - xo)!=1.0)
 	return 3;
-    while(fabs(xn - xo) > EPS){
+    while(fabsf(xn - xo) > EPS){
         xo = xn;
         xn = -f(xo) / df(xo) + xo;
     }
@@ -77,6 +77,6 @@ int main(int argc, char **argv)
     putstr("2.0:");puthexf(2.0);putchar('\n');
     putchar('\n');
 
-    return fabs((xn*xn)-2.0)>0.000001;
+    return fabsf((xn*xn)-2.0)>0.000001;
 }
 
