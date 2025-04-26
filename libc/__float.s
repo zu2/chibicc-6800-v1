@@ -39,6 +39,7 @@
 	.export __mulf32tos
 	.export __divf32tos
 	.export __cmpf32tos
+	.export __cmpf32x
 	.export __f32iszero
 ;	.export __f32iszerox
 	.export __f32isNaNorInf
@@ -1616,38 +1617,44 @@ __cmpf32tos:
 	inx
 	inx
         jsr     __f32iszerox
-	beq	__cmpf32tos_eq	; branch if TOS==0.0
+	bne	__cmpf32tos_10
+	clrb			; ±0.0==±0.0? return eq
+	clra
+	jmp	__pullret
 __cmpf32tos_10:
 	tsx
+	bsr	__cmpf32x
+	jmp	__pullret
+__cmpf32x:			; TODO: name?
 	ldab	@long
 	cmpb	2,x
-	bgt	__cmpf32tos_gt
-	blt	__cmpf32tos_lt
+	bgt	__cmpf32x_gt
+	blt	__cmpf32x_lt
 	ldab	@long+1
 	cmpb	3,x
-	bhi	__cmpf32tos_gt
-	bcs	__cmpf32tos_lt
+	bhi	__cmpf32x_gt
+	bcs	__cmpf32x_lt
 	ldab	@long+2
 	cmpb	4,x
-	bhi	__cmpf32tos_gt
-	bcs	__cmpf32tos_lt
+	bhi	__cmpf32x_gt
+	bcs	__cmpf32x_lt
 	ldab	@long+3
 	cmpb	5,x
-	bhi	__cmpf32tos_gt
-	bcs	__cmpf32tos_lt
-__cmpf32tos_eq:			; @long == TOS
+	bhi	__cmpf32x_gt
+	bcs	__cmpf32x_lt
+__cmpf32x_eq:			; @long == TOS
 	clrb
-	clra
-	jmp	__pullret
-__cmpf32tos_gt:			; @long > TOS
-	ldab	#1
-	clra
-	jmp	__pullret
-__cmpf32tos_lt:			; @long < TOS
-	clrb			; C=0 for not unordered relation
-	decb
+	clra			; Z=1,C=0
+	rts
+__cmpf32x_gt:			; @long > TOS
+	clra			; C=0
+	ldab	#1		; Z=0
+	rts
+__cmpf32x_lt:			; @long < TOS
+	clrb			; C=0
+	decb			; Z=0
 	tba
-	jmp	__pullret
+	rts
 ;
 ;	if float is subnormal, mantissa into normal form.
 ;	unbiased exp is returned in AccAB.
