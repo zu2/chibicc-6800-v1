@@ -165,30 +165,6 @@ static void gen_addr(Node *node){
       return;
     }
 
-    if (opt_fpic) {
-      // Thread-local variable
-      if (node->var->is_tls) {
-        println("  data16 lea %s@tlsgd(%%rip), %%rdi", node->var->name);
-        println("  .value 0x6666");
-        println("  rex64");
-        println("  call __tls_get_addr@PLT");
-        return;
-      }
-
-      // Function or global variable
-//      println("  mov %s@GOTPCREL(%%rip), %%rax", node->var->name);
-      println("\tldab #<%s",node->var->name);
-      println("\tldaa #>%s",node->var->name);
-      return;
-    }
-
-    // Thread-local variable
-    if (node->var->is_tls) {
-      println("  mov %%fs:0, %%rax");
-      println("  add $%s@tpoff, %%rax", node->var->name);
-      return;
-    }
-
     // Here, we generate an absolute address of a function or a global
     // variable. Even though they exist at a certain address at runtime,
     // their addresses are not known at link-time for the following
@@ -3646,9 +3622,7 @@ static void emit_data(Obj *prog) {
       println(";");
       println(";\t.type %s, @object", var->name);
       println(";\t.size %s, %d", var->name, var->ty->size);
-      if (var->is_tls)
-        println("\t.section .tdata,\"awT\",@progbits");
-      else if (var->is_literal)
+      if (var->is_literal)
         println("\t.literal");
       else
         println("\t.data");
@@ -3677,10 +3651,7 @@ static void emit_data(Obj *prog) {
     }
 
     // .bss or .tbss
-    if (var->is_tls)
-      println("\t.section .tbss,\"awT\",@nobits");
-    else
-      println("\t.bss");
+    println("\t.bss");
 
     println("_%s:", var->name);
     for (int i=0; i<var->ty->size; i++){

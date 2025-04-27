@@ -44,7 +44,6 @@ typedef struct {
   bool is_static;
   bool is_extern;
   bool is_inline;
-  bool is_tls;
   int align;
 } VarAttr;
 
@@ -442,8 +441,11 @@ static Type *declspec(Token **rest, Token *tok, VarAttr *attr) {
 
   while (is_typename(tok)) {
     // Handle storage class specifiers.
+    if (equal(tok, "_Thread_local") || equal(tok, "__thread"))
+      error_tok(tok, "Thread local storage is not supported");
+
     if (equal(tok, "typedef") || equal(tok, "static") || equal(tok, "extern") ||
-        equal(tok, "inline") || equal(tok, "_Thread_local") || equal(tok, "__thread")) {
+        equal(tok, "inline")) {
       if (!attr)
         error_tok(tok, "storage class specifier is not allowed in this context");
 
@@ -455,11 +457,9 @@ static Type *declspec(Token **rest, Token *tok, VarAttr *attr) {
         attr->is_extern = true;
       else if (equal(tok, "inline"))
         attr->is_inline = true;
-      else
-        attr->is_tls = true;
 
       if (attr->is_typedef &&
-          attr->is_static + attr->is_extern + attr->is_inline + attr->is_tls > 1)
+          attr->is_static + attr->is_extern + attr->is_inline > 1)
         error_tok(tok, "typedef may not be used together with static,"
                   " extern, inline, __thread or _Thread_local");
       tok = tok->next;
@@ -3391,13 +3391,12 @@ static Token *global_variable(Token *tok, Type *basety, VarAttr *attr) {
     Obj *var = new_gvar(get_ident(ty->name), ty);
     var->is_definition = !attr->is_extern;
     var->is_static = attr->is_static;
-    var->is_tls = attr->is_tls;
     if (attr->align)
       var->align = attr->align;
 
     if (equal(tok, "="))
       gvar_initializer(&tok, tok->next, var);
-    else if (!attr->is_extern && !attr->is_tls)
+    else if (!attr->is_extern)
       var->is_tentative = true;
   }
   return tok;
