@@ -715,13 +715,13 @@ static void cast(Type *from, Type *to) {
     cmp_zero(from);
     int c = count();
     println("\tbeq L_false_%d", c);
-    println("\tclrb");
+    println("\tclra");
+    println("\tldab #1");
     println("\tbra L_end_%d", c);
     println("L_false_%d:", c);
-    println("\tldab #1");
+    println("\tclra");
+    println("\tclrb");
     println("L_end_%d:", c);
-//  println("  setne %%al");
-//  println("  movzx %%al, %%eax");
     return;
   }
 
@@ -1112,7 +1112,7 @@ static void builtin_alloca(void) {
   //println("  mov %%rax, %d(%%rbp)", current_fn->alloca_bottom->offset);
 }
 
-static bool is_compare(Node *node)
+bool is_compare(Node *node)
 {
     switch(node->kind){
     case ND_EQ:
@@ -1121,6 +1121,38 @@ static bool is_compare(Node *node)
     case ND_LE:
     case ND_GT:
     case ND_GE:
+      return 1;
+    }
+    return 0;
+}
+
+bool is_compare_or_not(Node *node)
+{
+    switch(node->kind){
+    case ND_EQ:
+    case ND_NE:
+    case ND_LT:
+    case ND_LE:
+    case ND_GT:
+    case ND_GE:
+    case ND_NOT:
+      return 1;
+    }
+    return 0;
+}
+
+bool is_boolean_result(Node *node)
+{
+    switch(node->kind){
+    case ND_EQ:
+    case ND_NE:
+    case ND_LT:
+    case ND_LE:
+    case ND_GT:
+    case ND_GE:
+    case ND_NOT:
+    case ND_LOGAND:
+    case ND_LOGOR:
       return 1;
     }
     return 0;
@@ -2221,7 +2253,7 @@ static void gen_expr(Node *node) {
   case ND_COND: {
     int c = count();
     gen_expr(node->cond);
-    if (!is_compare(node->cond))
+    if (!is_compare_or_not(node->cond))
       cmp_zero(node->cond->ty);
     println("\tjeq L_else_%d", c);
     gen_expr(node->then);
@@ -2235,6 +2267,11 @@ static void gen_expr(Node *node) {
   }
   case ND_NOT: {
     gen_expr(node->lhs);
+    if (is_compare_or_not(node->lhs)) {
+      println("\tdecb");
+      println("\tnegb");
+      return;
+    }
     cmp_zero(node->lhs->ty);
     int c = count();
     println("\tbeq L_false_%d", c);
@@ -2250,7 +2287,6 @@ static void gen_expr(Node *node) {
     gen_expr(node->lhs);
     println("\tcomb");
     println("\tcoma");
-//  println("  not %%rax");
     return;
   case ND_LOGAND: {
     int c = count();
@@ -2260,42 +2296,43 @@ static void gen_expr(Node *node) {
     sprintf(L_end,  "L_end_%d",c);
     if (!gen_jump_if_false(node->lhs,L_false)){
       gen_expr(node->lhs);
-      if (!is_compare(node->lhs))
+      if (!is_compare_or_not(node->lhs))
         cmp_zero(node->lhs->ty);
       println("\tjeq %s",L_false);
     }
     if (!gen_jump_if_false(node->rhs,L_false)){
       gen_expr(node->rhs);
-      if (!is_compare(node->rhs))
+      if (!is_compare_or_not(node->rhs))
         cmp_zero(node->rhs->ty);
       println("\tbeq %s",L_false);
     }
+    println("\tclra");
     println("\tldab #1");
     println("\tbra %s",L_end);
     println("%s:",L_false);
+    println("\tclra");
     println("\tclrb");
     println("L_end_%d:", c);
-    println("\tclra");
     IX_Dest = IX_None;
     return;
   }
   case ND_LOGOR: {
     int c = count();
     gen_expr(node->lhs);
-    if (!is_compare(node->lhs))
+    if (!is_compare_or_not(node->lhs))
       cmp_zero(node->lhs->ty);
     println("\tjne L_true_%d", c);
     gen_expr(node->rhs);
-    if (!is_compare(node->rhs))
+    if (!is_compare_or_not(node->rhs))
       cmp_zero(node->rhs->ty);
     println("\tjne L_true_%d", c);
+    println("\tclra");
     println("\tclrb");
     println("\tbra L_end_%d", c);
-    println("\tclrb");
     println("L_true_%d:", c);
+    println("\tclra");
     println("\tldab #1");
     println("L_end_%d:", c);
-    println("\tclra");
     IX_Dest = IX_None;
     return;
   }
@@ -3094,7 +3131,7 @@ static void gen_stmt(Node *node) {
     node->cond = optimize_expr(node->cond);
     if (!gen_jump_if_false(node->cond,L_else)){
       gen_expr(node->cond);
-      if (!is_compare(node->cond))
+      if (!is_compare_or_not(node->cond))
         cmp_zero(node->cond->ty);
       println("\tjeq %s",L_else);
     }
@@ -3119,7 +3156,7 @@ static void gen_stmt(Node *node) {
     if (node->cond) {
       if (!gen_jump_if_false(node->cond,node->brk_label)){
         gen_expr(node->cond);
-        if (!is_compare(node->cond))
+        if (!is_compare_or_not(node->cond))
           cmp_zero(node->cond->ty);
         println("\tjeq %s", node->brk_label);
       }
@@ -3142,7 +3179,7 @@ static void gen_stmt(Node *node) {
     println("%s:", node->cont_label);
     node->cond = optimize_expr(node->cond);
     gen_expr(node->cond);
-    if (!is_compare(node->cond))
+    if (!is_compare_or_not(node->cond))
       cmp_zero(node->cond->ty);
     println("\tjne L_begin_%d", c);
     println("%s:", node->brk_label);

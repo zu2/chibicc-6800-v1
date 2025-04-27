@@ -435,6 +435,9 @@ void printout(char *fmt, ...);
 int  test_addr_x(Node *node);
 void codegen(Obj *prog, FILE *out);
 int align_to(int n, int align);
+bool is_compare(Node *node);
+bool is_compare_or_not(Node *node);
+bool is_boolean_result(Node *node);
 
 //
 // unicode.c

@@ -40,6 +40,31 @@ static char *type_str(Node *node)
   assert(0);
 }
 
+static Node *negate_condition(Node *node)
+{
+  switch(node->kind){
+  case ND_EQ:
+    node->kind = ND_NE;
+    return node;
+  case ND_NE:
+    node->kind = ND_EQ;
+    return node;
+  case ND_LT:
+    node->kind = ND_GE;
+    return node;
+  case ND_LE:
+    node->kind = ND_GT;
+    return node;
+  case ND_GT:
+    node->kind = ND_LE;
+    return node;
+  case ND_GE:
+    node->kind = ND_LT;
+    return node;
+  }
+  assert(0);
+}
+
 static Node *swap_lr(Node *node)
 {
   Node *tmp;
@@ -143,6 +168,10 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_CAST:
     node->lhs = optimize_expr(node->lhs);
+    if (node->ty->kind==TY_BOOL
+    &&  is_boolean_result(node->lhs)){
+      return node->lhs;
+    }
 //    return node;
 #if 0
 #if 0
@@ -189,7 +218,19 @@ Node *optimize_expr(Node *node)
   case ND_FUNCALL:
   case ND_LABEL_VAL:
     return node;
+  // If the ND_NOT negates the result of a relational operator,
+  // rewrite the relational operator.
+  // In the case of float, rewriting is not possible because there is NaN.
   case ND_NOT:
+    if (node->lhs->kind==ND_NOT) {	// !!
+	return optimize_expr(node->lhs->lhs);
+    }
+    if (is_compare(node->lhs)
+    &&  is_integer(node->lhs->lhs->ty)
+    &&  is_integer(node->lhs->rhs->ty)){
+      return negate_condition(optimize_l(node->lhs));
+    }
+    return optimize_l(node);
   case ND_BITNOT:
   case ND_LOGAND:
   case ND_LOGOR:

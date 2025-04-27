@@ -227,7 +227,7 @@ Float can handle subnormal, NaN and Inf values. It passes basic testing but is n
 ---
 # Usage in Other Projects
 
-This compiler is also used in `kwhr0`'s [bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo) project. 
+This compiler is also used in `kwhr0`'s [bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo), [kwhr0/bm2-chibicc-demo](https://github.com/kwhr0/bm2-chibicc-demo) project. 
 
 ---
 # Reference compilers
