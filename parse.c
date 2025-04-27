@@ -198,6 +198,14 @@ static Node *new_node(NodeKind kind, Token *tok) {
   return node;
 }
 
+Node *new_copy(Node *node)
+{
+  Node *new = calloc(1, sizeof(Node));
+  *new = *node;
+
+  return new;
+}
+
 static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs, Token *tok) {
   Node *node = new_node(kind, tok);
   node->lhs = lhs;

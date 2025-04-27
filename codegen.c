@@ -1785,7 +1785,6 @@ static int gen_jump_if_false(Node *node,char *if_false)
   char if_thru[32];
   int c = count();
   sprintf(if_thru,"L_thru_%d",c);
-  ast_node_dump(rhs);
   println("; can_direct(rhs) %d",can_direct(rhs));
   if (can_direct(rhs)){
     gen_expr(lhs);
@@ -1874,7 +1873,103 @@ static int gen_jump_if_false(Node *node,char *if_false)
 //
 static int gen_jump_if_true(Node *node,char *if_true)
 {
- return 0; // XXX : not yet implemented
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+
+  if(!is_compare(node))
+    return 0;
+  if(lhs->ty->kind!=TY_CHAR && lhs->ty->kind!=TY_INT && lhs->ty->kind!=TY_SHORT)
+    return 0;
+
+#if 0
+  if(lhs->ty->kind==TY_CHAR
+  && rhs->ty->kind==TY_CHAR
+  && gen_jump_if_false_8bit(node,if_false)){
+    return 1;
+  }
+#endif
+
+  char if_thru[32];
+  int c = count();
+  sprintf(if_thru,"L_thru_%d",c);
+  println("; can_direct(rhs) %d",can_direct(rhs));
+  if (can_direct(rhs)){
+    gen_expr(lhs);
+    if(rhs->kind == ND_NUM && rhs->val == 0){
+      if(node->kind != ND_EQ && node->kind != ND_NE)
+        println("\ttsta");
+    }else if(!gen_direct(rhs,"subb","sbca")){
+      assert(0);
+    }
+  }else{
+    gen_expr(rhs);
+    push();
+    gen_expr(lhs);
+    println("\ttsx");
+    IX_Dest = IX_None;
+    println("\tsubb 1,x");
+    println("\tsbca 0,x");
+    println("\tins");
+    println("\tins");
+    depth -= 2;
+  }
+  switch(node->kind){
+  case ND_EQ:
+    println("\taba");
+    println("\tadca #0");
+    println("\tjeq %s",if_true);
+    break;
+  case ND_NE:
+    println("\taba");
+    println("\tadca #0");
+    println("\tjne %s",if_true);
+    break;
+  case ND_LT:
+    if (lhs->ty->is_unsigned){
+      println("\tjcs %s",if_true);
+    }else{
+      println("\tjlt %s",if_true);
+    }
+    break;
+  case ND_GE:
+    if (lhs->ty->is_unsigned){
+      println("\tjcc %s",if_true);
+    }else{
+      println("\tjge %s",if_true);
+    }
+    break;
+  case ND_LE:
+    if (lhs->ty->is_unsigned){
+      println("\tjcs %s",if_true);
+      println("\tjhi %s",if_thru);
+      println("\ttstb");
+      println("\tjeq %s",if_true);
+      println("%s:",if_thru);
+    }else{
+      println("\tjlt %s",if_true);
+      println("\tbgt %s",if_thru);
+      println("\ttstb");
+      println("\tjeq %s",if_true);
+      println("%s:",if_thru);
+    }
+    break;
+  case ND_GT:
+    if (lhs->ty->is_unsigned){
+      println("\tjhi %s",if_true);
+      println("\tbcs %s",if_thru);
+      println("\ttstb");
+      println("\tjne %s",if_true);
+      println("%s:",if_thru);
+    }else{
+      println("\tjgt %s",if_true);
+      println("\tblt %s",if_thru);
+      println("\ttstb");
+      println("\tjne %s",if_true);
+      println("%s:",if_thru);
+    }
+    break;
+  }
+  return 1;
 }
 
 
@@ -2099,7 +2194,6 @@ static void gen_expr(Node *node) {
     return;
   case ND_ASSIGN:
     node = optimize_expr(node);
-//  ast_node_dump(node);
     if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
@@ -2266,6 +2360,7 @@ static void gen_expr(Node *node) {
     return;
   }
   case ND_NOT: {
+    node = optimize_expr(node);
     gen_expr(node->lhs);
     if (is_compare_or_not(node->lhs)) {
       println("\tdecb");
@@ -2290,49 +2385,86 @@ static void gen_expr(Node *node) {
     return;
   case ND_LOGAND: {
     int c = count();
+    int need_bool = 0;
     char L_false[32];
     char L_end[32];
     sprintf(L_false,"L_false_%d",c);
     sprintf(L_end,  "L_end_%d",c);
-    if (!gen_jump_if_false(node->lhs,L_false)){
+
+    if (gen_jump_if_false(node->lhs,L_false)){
+      need_bool = 1;
+    }else{
       gen_expr(node->lhs);
-      if (!is_compare_or_not(node->lhs))
+      if (is_compare_or_not(node->lhs)) {
+        println("\tjeq %s",L_end);
+      }else{
         cmp_zero(node->lhs->ty);
-      println("\tjeq %s",L_false);
+        need_bool = 1;
+        println("\tjeq %s",L_false);
+      }
     }
-    if (!gen_jump_if_false(node->rhs,L_false)){
+    if (gen_jump_if_false(node->rhs,L_false)){
+      need_bool = 1;
+    }else{
       gen_expr(node->rhs);
-      if (!is_compare_or_not(node->rhs))
+      if (is_compare_or_not(node->rhs)) {
+        println("\tbra %s",L_end);
+      }else{
         cmp_zero(node->rhs->ty);
-      println("\tbeq %s",L_false);
+        println("\tbeq %s",L_false);
+	need_bool = 1;
+      }
     }
-    println("\tclra");
-    println("\tldab #1");
-    println("\tbra %s",L_end);
-    println("%s:",L_false);
-    println("\tclra");
-    println("\tclrb");
+    if (need_bool) {
+      println("\tclra");
+      println("\tldab #1");
+      println("\tbra %s",L_end);
+      println("%s:",L_false);
+      println("\tclra");
+      println("\tclrb");
+    }
     println("L_end_%d:", c);
     IX_Dest = IX_None;
     return;
   }
   case ND_LOGOR: {
     int c = count();
-    gen_expr(node->lhs);
-    if (!is_compare_or_not(node->lhs))
-      cmp_zero(node->lhs->ty);
-    println("\tjne L_true_%d", c);
-    gen_expr(node->rhs);
-    if (!is_compare_or_not(node->rhs))
-      cmp_zero(node->rhs->ty);
-    println("\tjne L_true_%d", c);
-    println("\tclra");
-    println("\tclrb");
-    println("\tbra L_end_%d", c);
-    println("L_true_%d:", c);
-    println("\tclra");
-    println("\tldab #1");
-    println("L_end_%d:", c);
+    int need_bool = 0;
+    char L_true[32], L_end[32];
+    sprintf(L_true,"L_true_%d",c);
+    sprintf(L_end, "L_end_%d" ,c);
+
+    if (gen_jump_if_true(node->lhs,L_true)) {
+      need_bool = 1;
+    }else{
+      gen_expr(node->lhs);
+      if (is_compare_or_not(node->lhs)) {
+        println("\tjne %s",L_end);
+      }else{
+        cmp_zero(node->lhs->ty);
+        println("\tjne %s",L_true);
+        need_bool = 1;
+      }
+    }
+    if (gen_jump_if_true(node->rhs,L_true)) {
+      need_bool = 1;
+    }else{
+      gen_expr(node->lhs);
+      if (!is_compare_or_not(node->rhs)){
+        cmp_zero(node->rhs->ty);
+        need_bool = 1;
+        println("\tbne %s",L_true);
+      }
+    }
+    if (need_bool) {
+      println("\tclra");
+      println("\tclrb");
+      println("\tbra %s",L_end);
+      println("%s:",L_true);
+      println("\tclra");
+      println("\tldab #1");
+    }
+    println("%s:", L_end);
     IX_Dest = IX_None;
     return;
   }

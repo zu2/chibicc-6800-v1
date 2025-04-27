@@ -45,24 +45,26 @@ static Node *negate_condition(Node *node)
   switch(node->kind){
   case ND_EQ:
     node->kind = ND_NE;
-    return node;
+    break;
   case ND_NE:
     node->kind = ND_EQ;
-    return node;
+    break;
   case ND_LT:
     node->kind = ND_GE;
-    return node;
+    break;
   case ND_LE:
     node->kind = ND_GT;
-    return node;
+    break;
   case ND_GT:
     node->kind = ND_LE;
-    return node;
+    break;
   case ND_GE:
     node->kind = ND_LT;
-    return node;
+    break;
+  default:
+    assert(0);
   }
-  assert(0);
+  return node;
 }
 
 static Node *swap_lr(Node *node)
@@ -222,9 +224,11 @@ Node *optimize_expr(Node *node)
   // rewrite the relational operator.
   // In the case of float, rewriting is not possible because there is NaN.
   case ND_NOT:
-    if (node->lhs->kind==ND_NOT) {	// !!
+#if 0
+    if (node->lhs->kind==ND_NOT) {	// !! need boolize
 	return optimize_expr(node->lhs->lhs);
     }
+#endif
     if (is_compare(node->lhs)
     &&  is_integer(node->lhs->lhs->ty)
     &&  is_integer(node->lhs->rhs->ty)){
@@ -232,9 +236,10 @@ Node *optimize_expr(Node *node)
     }
     return optimize_l(node);
   case ND_BITNOT:
+    return optimize_l(node);
   case ND_LOGAND:
   case ND_LOGOR:
-    return optimize_l(node);
+    return optimize_lr(node);
   // Below is a binary operator
   case ND_ADD:
   case ND_SUB:

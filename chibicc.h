@@ -122,6 +122,7 @@ Token *preprocess(Token *tok);
 // parse.c
 //
 int64_t eval2(Node *node, char ***label);
+Node *new_copy(Node *node);
 
 // Variable or function
 typedef struct Obj Obj;
