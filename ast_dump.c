@@ -145,7 +145,9 @@ static void ast_dump(Node *node)
     ast_dump_unary(node,"ND_ADDR");
     return;
   case ND_DEREF:
-    ast_dump_unary(node,"ND_DEREF");
+    printout("(ND_DEREF %s ",type_str(node));
+    ast_dump(node->lhs);
+    printout(")");
     return;
   case ND_NOT:
     ast_dump_unary(node,"!");

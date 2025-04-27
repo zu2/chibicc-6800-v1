@@ -332,6 +332,15 @@ static int gen_addr_x(Node *node,bool save_d)
       }
     }
     break;
+  //  (ND_CAST TY_PTR(10) 61120)
+  case ND_CAST:
+    if (node->ty->kind == TY_PTR
+    &&  node->lhs->kind == ND_NUM
+    &&  is_integer(node->lhs->ty)) {
+      println("\tldx #%ld",node->lhs->val);
+      return 0;
+    }
+    break;
   }
   // fallback to gen_addr()
   if (save_d)
@@ -479,21 +488,21 @@ static void load_x(Type *ty,int off) {
     return;
   }
 
-// char *insn = ty->is_unsigned ? "movz" : "movs";
-
   // When we load a char or a short value to a register, we always
   // extend them to the size of int, so we can assume the lower half of
   // a register always contains a valid value. The upper half of a
   // register for char, short and int may contain garbage. When we load
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
-    println("\tclra");
+//  println("\tclra");
     println("\tldab %d,x",off);
+#if 0
     if (!ty->is_unsigned){
       println("\tasrb");
       println("\trolb");
       println("\tsbca #0");
     }
+#endif
   }else if (ty->size == 2){
     println("\tldab %d,x",off+1);
     println("\tldaa %d,x",off);
@@ -640,8 +649,12 @@ static int getTypeId(Type *ty) {
 }
 
 // The table for type casts
+static char i8i16[]  = "clra\n\tasrb\n\trolb\n\tsbca #0";
+static char i8u16[]  = "clra\n\tasrb\n\trolb\n\tsbca #0";
 static char i8i32[]  = "jsr __s8to32";
 static char i8u32[]  = "jsr __s8to32";
+static char u8i16[]  = "clra";
+static char u8u16[]  = "clra";
 static char u8i32[]  = "jsr __u8to32";
 static char u8u32[]  = "jsr __u8to32";
 static char i16i32[] = "jsr __s16to32";
@@ -708,12 +721,12 @@ static char f64f32[] = "cvtsd2ss %xmm0, %xmm0";
 // ex. i32i16: i32->i16
 static char *cast_table[][11] = {
   // i8   i16     i32     i64     u8     u16     u32     u64     f32     f64     f80
-  {NULL,  NULL,   i8i32,  i16i64, NULL,  NULL,   i8u32,  i16i64, i16f32, i16f64, NULL}, // i8
+  {NULL,  i8i16,   i8i32,  i16i64, NULL,  i8u16,   i8u32,  i16i64, i16f32, i16f64, NULL}, // i8
   {NULL,  NULL,   i16i32, i16i64, NULL,  NULL,   i16u32, i16i64, i16f32, i16f64, NULL}, // i16
   {i32i8, i32i16, NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, NULL}, // i32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   i64f32, i64f64, NULL}, // i64
 
-  {NULL,  NULL,   u8i32,  i16i64, NULL,  NULL,   u8u32,  i16i64, i16f32, i16f64, NULL}, // u8
+  {NULL,  u8i16,   u8i32,  i16i64, NULL,  u8u16,   u8u32,  i16i64, i16f32, i16f64, NULL}, // u8
   {NULL,  NULL,   u16i32, i16i64, NULL,  NULL,   u16i32, u16i64, u16f32, u16f64, NULL}, // u16
   {i32i8, i32i16, NULL,   u32i64, i32u8, i32u16, NULL,   u32i64, u32f32, u32f64, NULL}, // u32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   u64f32, u64f64, NULL}, // u64
@@ -1175,41 +1188,41 @@ bool is_boolean_result(Node *node)
 }
 
 //
-// If rhs is a simple expression, it is computed directly without pushing it onto the stack.
+// If node is a simple expression, it is computed directly without pushing it onto the stack.
 //
-static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
+static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
 {
-  switch(rhs->kind){
+  switch(node->kind){
   case ND_NUM: {
-    switch (rhs->ty->kind) {
+    switch (node->ty->kind) {
     case TY_CHAR:		// TODO: Avoid unnecessary type promotion
     case TY_SHORT:
     case TY_INT:
     case TY_PTR:
       if (test) return 1;
-      if (rhs->val==0) {
+      if (node->val==0) {
         if (strcmp(opb,"addb")==0) {	// subb used for compare, so addb only
           return 1;
         }
       }
-      println("\t%s #<%u", opb, (uint16_t)rhs->val);
-      println("\t%s #>%u", opa, (uint16_t)rhs->val);
+      println("\t%s #<%u", opb, (uint16_t)node->val);
+      println("\t%s #>%u", opa, (uint16_t)node->val);
       return 1;
     default:
       return 0;
     }
   } // ND_NUM
   case ND_VAR: {
-    if (rhs->var->ty->kind != TY_VLA ){
-      if (!test_addr_x(rhs)) return 0;
-      if(rhs->var->is_local){
-	if (rhs->ty->kind==TY_ARRAY) {
+    if (node->var->ty->kind != TY_VLA ){
+      if (!test_addr_x(node)) return 0;
+      if(node->var->is_local){
+	if (node->ty->kind==TY_ARRAY) {
 	  return 0;
 	}
-        int off = gen_addr_x(rhs,true);
-        if (rhs->ty->kind==TY_CHAR){
+        int off = gen_addr_x(node,true);
+        if (node->ty->kind==TY_CHAR){
           if (test) {
-            return rhs->ty->is_unsigned;
+            return node->ty->is_unsigned;
 	  }
           println("\t%s %d,x",opb,off);
           println("\t%s #0",opa);
@@ -1221,18 +1234,18 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
         return 1;
       }else{
         // global
-        if (rhs->ty->kind==TY_CHAR){
+        if (node->ty->kind==TY_CHAR){
 	  return 0;
         }else{
           if (test) return 1;
 #if 1
-	  int off = gen_addr_x(rhs,true);
+	  int off = gen_addr_x(node,true);
           println("\t%s %d,x",opb,off+1);
           println("\t%s %d,x",opa,off);
 #else
 	  println("; gen_direct_sub %s %d",__FILE__,__LINE__);
-          println("\t%s #<_%s+1",opb,rhs->var->name);
-          println("\t%s #>_%s",opa,rhs->var->name);
+          println("\t%s #<_%s+1",opb,node->var->name);
+          println("\t%s #>_%s",opa,node->var->name);
 #endif
         }
         return 1;
@@ -1240,9 +1253,33 @@ static int gen_direct_sub(Node *rhs,char *opb, char *opa, int test)
     }
     return 0;
   } // ND_VAR
+  // (ND_DEREF (ND_CAST TY_PTR(10) 61120))
+  case ND_DEREF:
+    switch(node->lhs->kind){
+    case ND_CAST:
+      if (node->lhs->ty->kind  == TY_PTR
+      &&  node->lhs->lhs->kind == ND_NUM
+      &&  is_integer(node->lhs->lhs->ty)) {
+	if (test) return 1;
+	switch(node->ty->kind) {
+	case TY_BOOL:
+	case TY_CHAR:
+	  println("\t%s %ld",opb,node->lhs->lhs->val);
+	  return 1;
+	case TY_SHORT:
+	case TY_INT:
+	case TY_ENUM:
+	case TY_PTR:
+	  println("\t%s %ld+1",opb,node->lhs->lhs->val);
+	  println("\t%s %ld",opb,node->lhs->lhs->val);
+	  return 1;
+        }
+      }
+    }
+    return 0;
   case ND_CAST:
-    if(is_empty_cast(rhs->lhs->ty, rhs->ty))
-      return gen_direct_sub(rhs->lhs, opb, opa, test);
+    if(is_empty_cast(node->lhs->ty, node->ty))
+      return gen_direct_sub(node->lhs, opb, opa, test);
   default:
     return 0;
   }
@@ -1259,6 +1296,29 @@ static int can_direct(Node *rhs)
 static int gen_direct(Node *rhs,char *opb, char *opa)
 {
   return gen_direct_sub(rhs,opb,opa,0);
+}
+
+//
+// Commutative 16-bit arithmetic processing
+//
+int gen_direct_lr(Node *node, char *opb, char *opa)
+{
+    node->lhs = optimize_expr(node->lhs);
+    node->rhs = optimize_expr(node->rhs);
+
+    if (can_direct(node->rhs)){
+      gen_expr(node->lhs);
+      if (gen_direct(node->rhs,opb,opa))
+        return 1;
+      assert(0);
+    }
+    if (can_direct(node->lhs)){
+      gen_expr(node->rhs);
+      if (gen_direct(node->lhs,opb,opa))
+        return 1;
+      assert(0);
+    }
+    return 0;
 }
 
 static int gen_direct_long_and(int64_t v,char *opa, char *opb){
@@ -1463,7 +1523,7 @@ int gen_direct_shr_long(Node *node)
       int c = count();
       println("\ttst @long");
       println("\tbpl L_%d",c);
-      println("\tsbca #0");
+      println("\tdeca");
       println("L_%d:",c);
     }
   }
@@ -1686,29 +1746,6 @@ static int check_in_char(Node *node)
     }
   }
   return 1;
-}
-
-//
-// Commutative 16-bit arithmetic processing
-//
-int gen_direct_lr(Node *node, char *opb, char *opa)
-{
-    node->lhs = optimize_expr(node->lhs);
-    node->rhs = optimize_expr(node->rhs);
-
-    if (can_direct(node->rhs)){
-      gen_expr(node->lhs);
-      if (gen_direct(node->rhs,opb,opa))
-        return 1;
-      assert(0);
-    }
-    if (can_direct(node->lhs)){
-      gen_expr(node->rhs);
-      if (gen_direct(node->lhs,opb,opa))
-        return 1;
-      assert(0);
-    }
-    return 0;
 }
 
 static int gen_jump_if_true(Node *node,char *if_false);
@@ -2914,8 +2951,18 @@ static void gen_expr(Node *node) {
   case ND_ADD:
     if (gen_direct_lr(node,"addb","adca"))
       return;
-
+    if (node->lhs->kind          == ND_CAST
+    &&  node->lhs->ty->kind      == TY_PTR
+    &&  node->lhs->lhs->kind     == ND_VAR
+    &&  node->lhs->lhs->ty->kind == TY_ARRAY
+    &&  !node->lhs->lhs->var->is_local) {
+      gen_expr(node->rhs);
+      println("\taddb #<_%s",node->lhs->lhs->var->name);
+      println("\tadca #>_%s",node->lhs->lhs->var->name);
+      return;
+    }
     gen_expr(node->lhs);
+    // (+ (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) L__38 global)) (ND_CAST TY_PTR(10) (ND_VAR ty_uchar i +7 )))
     if (node->rhs->kind     == ND_CAST
     &&  node->rhs->ty->kind == TY_ARRAY
     &&  node->rhs->lhs->kind == ND_VAR
@@ -2927,6 +2974,30 @@ static void gen_expr(Node *node) {
         println("\tadca #>%d",node->rhs->lhs->var->offset);
       }
       return;
+    }
+    if (node->rhs->kind     == ND_CAST
+    &&  node->rhs->ty->kind == TY_PTR
+    &&  node->rhs->lhs->kind == ND_VAR
+    &&  node->rhs->lhs->var->is_local) {
+      switch (node->rhs->lhs->ty->kind) {
+      case TY_CHAR:
+	if (node->rhs->lhs->ty->is_unsigned) {
+          ldx_bp();
+          println("\taddb %d,x",node->rhs->lhs->var->offset);
+	  println("\tadca #0");
+	  return;
+	}
+	break;
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+        ldx_bp();
+        if (node->rhs->lhs->var->offset) {
+          println("\taddb %d,x",node->rhs->lhs->var->offset+1);
+          println("\tadca %d,x",node->rhs->lhs->var->offset);
+        }
+	return;
+      }
     }
     push();
     gen_expr(node->rhs);
@@ -3050,6 +3121,20 @@ static void gen_expr(Node *node) {
 	    println("\taslb");
 	    println("\trola");
 	    return;
+	  case 10:
+            gen_expr(node->lhs);
+            cast(node->lhs->ty, node->ty);
+	    println("\tstab @tmp1+1");
+	    println("\tstaa @tmp1");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taslb");
+	    println("\trola");
+	    println("\taddb @tmp1+1");
+	    println("\tadca @tmp1");
+	    println("\taslb");
+	    println("\trola");
+	    return;
 	  case 16:
             gen_expr(node->lhs);
             cast(node->lhs->ty, node->ty);
@@ -3136,8 +3221,9 @@ static void gen_expr(Node *node) {
     IX_Dest = IX_None;
     return;
   case ND_BITAND:
-    if (gen_direct_lr(node,"andb","andb"))
+    if (gen_direct_lr(node,"andb","anda")){
       return;
+    }
 
     gen_expr(node->lhs);
     push();
