@@ -10,9 +10,9 @@ int	count=0;
 void
 generate(unsigned char n)
 {
-	char	k;
-	char	h;
-	char	i;
+	unsigned char	k;
+	unsigned char	h;
+	unsigned char	i;
 
 	for(h=0; h<8; h++){
 		if(col[h] && up[n-h+7] && down[n+h]){
