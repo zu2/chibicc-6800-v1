@@ -39,6 +39,12 @@ int main() {
                   p(s);p(e);p(n);p(d);c('+');
 		  p(m);p(o);p(r);p(e);c('=');
 		  p(m);p(o);p(n);p(e);p(y);c('\n');
+                  if (s!=9 || e!=5 || n!=6 || d!=7)
+                    return 1;
+                  if (m!=1 || o!=0 || r!=8 || e!=5)
+                    return 2;
+                  if (m!=1 || o!=0 || n!=6 || e!=5 || y!=2)
+                    return 3;
                 }
               }
             }
@@ -47,6 +53,7 @@ int main() {
       }
     }
   }
+
   cpu_counter();
   return 0;
 }
