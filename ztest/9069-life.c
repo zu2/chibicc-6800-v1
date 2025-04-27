@@ -77,7 +77,7 @@ main(int argc, char **argv)
 
 	init();
 	display();
-	for(i=0;i<999;i++){
+	for(i=0;i<250;i++){
 		for (y=1; y<=48; y++) {
 			y1 = y-1;
 			y2 = y+1;
