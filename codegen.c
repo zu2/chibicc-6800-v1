@@ -311,18 +311,27 @@ static int gen_addr_x(Node *node,bool save_d)
     return 0;
     break;
   case ND_DEREF:
-    switch (node->lhs->kind){
+    Node *lhs = node->lhs;
+    switch (lhs->kind){
     case ND_VAR:
-      off = gen_addr_x(node->lhs,save_d);
+      off = gen_addr_x(lhs,save_d);
       println("\tldx %d,x",off);
       IX_Dest = IX_None;
       return 0;
     case ND_DEREF:
-      off = gen_addr_x(node->lhs,save_d);
+      off = gen_addr_x(lhs,save_d);
       println("\tldx %d,x",off);
       IX_Dest = IX_None;
       return 0;
+    case ND_CAST:
+      if (lhs->ty->kind == TY_PTR
+      &&  lhs->lhs->kind == ND_NUM
+      &&  is_integer(lhs->lhs->ty)) {
+        println("\tldx #%ld",lhs->lhs->val);
+        return 0;
+      }
     }
+    break;
   }
   // fallback to gen_addr()
   if (save_d)
@@ -339,6 +348,7 @@ static int gen_addr_x(Node *node,bool save_d)
 //
 int test_addr_x(Node *node)
 {
+  Node *lhs = node->lhs;
   switch (node->kind) {
   case ND_VAR: {
     // Variable-length array, which is always local.
@@ -358,16 +368,22 @@ int test_addr_x(Node *node)
     return 0;	// It's buggy.
     return 1;
   } // ND_VAR
-  case ND_DEREF: {
-    Node *lhs = node->lhs;
+  case ND_DEREF:
     switch (lhs->kind){
+    case ND_DEREF:
+      return test_addr_x(lhs);
     case ND_ADD:
       return 0;
     case ND_VAR:
       return test_addr_x(lhs);
+    case ND_CAST:
+      if (lhs->ty->kind == TY_PTR
+      &&  lhs->lhs->kind == ND_NUM
+      &&  is_integer(lhs->lhs->ty)) {
+        return 1;
+      }
+      return 0;
     }
-    return 0;
-  }
   default:
   } // switch
   return 0;
@@ -1672,6 +1688,30 @@ static int check_in_char(Node *node)
   return 1;
 }
 
+//
+// Commutative 16-bit arithmetic processing
+//
+int gen_direct_lr(Node *node, char *opb, char *opa)
+{
+    node->lhs = optimize_expr(node->lhs);
+    node->rhs = optimize_expr(node->rhs);
+
+    if (can_direct(node->rhs)){
+      gen_expr(node->lhs);
+      if (gen_direct(node->rhs,opb,opa))
+        return 1;
+      assert(0);
+    }
+    if (can_direct(node->lhs)){
+      gen_expr(node->rhs);
+      if (gen_direct(node->lhs,opb,opa))
+        return 1;
+      assert(0);
+    }
+    return 0;
+}
+
+static int gen_jump_if_true(Node *node,char *if_false);
 
 //
 // Compare two 8 signed/unsigned integers.
@@ -1684,9 +1724,9 @@ static int gen_jump_if_false_8bit(Node *node,char *if_false)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
-  if(!is_compare(node))
+  if (!is_compare(node))
     return 0;
-  if(lhs->ty->kind!=TY_CHAR || rhs->ty->kind!=TY_CHAR)
+  if (lhs->ty->kind!=TY_CHAR || rhs->ty->kind!=TY_CHAR)
     return 0;
   if (lhs->ty->is_unsigned != rhs->ty->is_unsigned)
     return 0;
@@ -1770,6 +1810,9 @@ static int gen_jump_if_false(Node *node,char *if_false)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+
+  if (node->kind==ND_NOT)
+    return gen_jump_if_true(node->lhs,if_false);
 
   if(!is_compare(node))
     return 0;
@@ -1875,6 +1918,9 @@ static int gen_jump_if_true(Node *node,char *if_true)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+
+  if (node->kind==ND_NOT)
+    return gen_jump_if_false(node->lhs,if_true);
 
   if(!is_compare(node))
     return 0;
@@ -2178,17 +2224,28 @@ static void gen_expr(Node *node) {
     }
     return;
   }
-  case ND_DEREF:
-    if (test_addr_x(node->lhs)){
-      int off = gen_addr_x(node->lhs,false);
+  case ND_DEREF: {
+    Node *lhs = node->lhs;
+    if (lhs->kind      == ND_CAST
+    &&  lhs->ty->kind  == TY_PTR
+    &&  lhs->lhs->kind == ND_NUM
+    &&  is_integer(lhs->lhs->ty)) {
+      println("\tldx #%ld",lhs->lhs->val);
+      IX_Dest = IX_None;
+      load_x(node->ty,0);
+      return;
+    }
+    if (test_addr_x(lhs)){
+      int off = gen_addr_x(lhs,false);
       println("\tldx %d,x",off);
       IX_Dest = IX_None;
       load_x(node->ty,0);
       return;
     }
-    gen_expr(node->lhs);
+    gen_expr(lhs);
     load(node->ty);
     return;
+  } // ND_DEREF:
   case ND_ADDR:
     gen_addr(node->lhs);
     return;
@@ -2279,15 +2336,10 @@ static void gen_expr(Node *node) {
       }
       println("\tstab @rdi+1");
       println("\tstaa @rdi");
-//    println("  mov %%rax, %%rdi");
-//    println("  and $%ld, %%rdi", (1L << mem->bit_width) - 1);
-//    println("  shl $%d, %%rdi", mem->bit_offset);
       println("\tpula");
       println("\tpulb");
       println("\tpshb");
       println("\tpsha");
-//    depth -= 2;
-//    println("  mov (%%rsp), %%rax");
       load(mem->ty);
 
       long mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
@@ -2295,13 +2347,9 @@ static void gen_expr(Node *node) {
       println("\tanda #>%d",(int)~mask);
       println("\torab @rdi+1");
       println("\toraa @rdi+1");
-//    println("  mov $%ld, %%r9", ~mask);
-//    println("  and %%r9, %%rax");
-//    println("  or %%rdi, %%rax");
       store(node->ty);
       println("\tldab @tmp1+1");
       println("\tldaa @tmp1");
-//    println("  mov %%r8, %%rax");
       return;
     }
 
@@ -2864,24 +2912,9 @@ static void gen_expr(Node *node) {
   // The following is a binary operator, length less than or equal to an int
   switch (node->kind) {
   case ND_ADD:
-    node->lhs = optimize_expr(node->lhs);
-    node->rhs = optimize_expr(node->rhs);
-    if (can_direct(node->rhs)){
-//    println("; ND_ADD: can_direct(node->rhs) %s %d",__FILE__,__LINE__);
-      gen_expr(node->lhs);
-      if (gen_direct(node->rhs,"addb","adca")){
-        return;
-      }
-      assert(0);
-    }
-    if (can_direct(node->lhs)){
-//    println("; ND_ADD: can_direct(node->lhs) %s %d",__FILE__,__LINE__);
-      gen_expr(node->rhs);
-      if (gen_direct(node->lhs,"addb","adca")){
-        return;
-      }
-      assert(0);
-    }
+    if (gen_direct_lr(node,"addb","adca"))
+      return;
+
     gen_expr(node->lhs);
     if (node->rhs->kind     == ND_CAST
     &&  node->rhs->ty->kind == TY_ARRAY
@@ -3103,10 +3136,12 @@ static void gen_expr(Node *node) {
     IX_Dest = IX_None;
     return;
   case ND_BITAND:
+    if (gen_direct_lr(node,"andb","andb"))
+      return;
+
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);
-//    println("  and %s, %s", di, ax);
     println("\ttsx");
     IX_Dest = IX_None;
     println("\tandb 1,x");
@@ -3116,10 +3151,12 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_BITOR:
+    if (gen_direct_lr(node,"orb","ora"))
+      return;
+
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);
-//    println("  or %s, %s", di, ax);
     println("\ttsx");
     IX_Dest = IX_None;
     println("\torab 1,x");
@@ -3129,10 +3166,12 @@ static void gen_expr(Node *node) {
     depth -= 2;
     return;
   case ND_BITXOR:
+    if (gen_direct_lr(node,"eorb","eora"))
+      return;
+
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);
-//    println("  xor %s, %s", di, ax);
     println("\ttsx");
     IX_Dest = IX_None;
     println("\teorb 1,x");
