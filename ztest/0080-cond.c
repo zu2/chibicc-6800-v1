@@ -20,13 +20,13 @@ main(int argc, char **argv)
 	  return 3;
 
 	if ((a==b) || (b==c) ||  (c==d))
-	  return 3;
-
-	if (((a==b) && (b==c)) ||  (c==d))
 	  return 4;
 
-	if (((a==b) || (b==c)) &&  (c==d))
+	if (((a==b) && (b==c)) ||  (c==d))
 	  return 5;
+
+	if (((a==b) || (b==c)) &&  (c==d))
+	  return 6;
 
 	return 0;
 }
