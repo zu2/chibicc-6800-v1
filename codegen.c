@@ -498,8 +498,8 @@ static void store(Type *ty) {
       return;
     println("; store struct/union from AB to *TOS, size %d in IX",ty->size);
     println("\tldx  #%d",ty->size);
-    println("\tjsr  __copy_struct");
-    ins(2);
+    println("\tjsr  __copy_struct");	// remove tos
+    depth -= 2;
     IX_Dest = IX_None;
     return;
   case TY_FLOAT:
