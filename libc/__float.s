@@ -63,6 +63,10 @@ __work: .word	0	; working area 48bit
 	.code
 ;
 ;	(0-3,x) is NaN? (exp==255)
+;		NaN: 7F800000-7FFFFFFF
+;		Inf: 7F800000 or FF800000
+;	C=1: NaN
+;	Z=1: Inf
 ;
 __f32isNaNorInf:
 	ldx	#long
@@ -71,20 +75,18 @@ __f32isNaNorInfx:
 	ldaa	0,x
 	aslb
 	rola
-	adda	#1
+	adda	#1		; Use adda to update the carry flag (not inca).
 	bne	__f32isNaN_1	; if exp!=$FF, not NaN and Inf. C=0,Z=0
 	;			; exp == 255, check mantissa
-	tstb
-	bne	__f32isNaN_2
-	tst	2,x
-	bne	__f32isNaN_2
-	tst	3,x
-	bne	__f32isNaN_2
+	;			; Hera, a is zero
+	sba			; a-b → 0-b
+	bne	__f32isNaN_1	; if b==0 then Z=1,C=0 else Z=0,C=1
+	cmpa	2,x		; cmpa is faster than tst
+	bne	__f32isNaN_1	; ditto
+	cmpa	3,x		
 __f32isNaN_1:			; Z=0, C=0 not NaN,Inf
 	rts			; Z=1, C=0 Inf
-__f32isNaN_2:
-	sec
-	rts			; Z=0, C=1 NaN
+				; Z=0, C=1 NaN
 ;
 ;	(0-3,x) == 0.0 ?
 ;		== 0x0000 0000 or 0x8000 0000	
@@ -94,13 +96,14 @@ __f32iszero:
 	ldx	#long
 __f32iszerox:
 	ldab	0,x		; exponent on the MSB side, to check from the top is faster
-	bitb	#$7F
+	andb	#$7F
 	bne	iszerox_ret
-	tst	1,x
+				; Here, b is zero
+	cmpb	1,x		; cmpb is faster than tst
 	bne	iszerox_ret
-	tst	2,x
+	cmpb	2,x
 	bne	iszerox_ret
-	tst	3,x
+	cmpb	3,x
 iszerox_ret:
 	rts
 ;
@@ -666,45 +669,50 @@ __addf32tos:
 	tsx
 	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
 ;	ldab	__zin
+	bitb	#$3F
+	beq	__addf32_1	; No,  normal calculation
+;
 	bitb	#$03		; TOS or @long is NaN?
-	jne	__f32retNaN	; Yes: return NaN
+	bne	__addf32_retNaN ; Yes: return NaN
 ;
 	andb	#$0C		; TOS or @long is Inf?
-	jeq	__addftos_s20
+	beq	__addf32_s20
 	cmpb	#$0C		; TOS and @long are Inf?
-	bne	__addftos_s10
+	bne	__addf32_s10
 	ldab	__sign		; each sign are same?
-	jmi	__f32retNaN	; No: return NaN
-__addftos_s05:
-	ldab	@long		; return Inf, sign is the same as @long
+	bpl	__addf32_s05	; 
+__addf32_retNaN:
+	jmp	__f32retNaN	; No,  return NaN
+__addf32_s05:
+	ldab	@long		; Yes, return Inf. sign is the same as @long
 	jmp	__f32retInf
 	;
-__addftos_s10:
+__addf32_s10:
 	ldab	__zin		; Either TOS or @long is Inf.
 	cmpb	#$04		; @long is Inf?
-	bne	__addftos_s05	; No, return Inf, sign is same as @long
+	bne	__addf32_s05	; No, return Inf, sign is same as @long
 	tsx
 	ldab	2,x
 	jmp	__f32retInf	; return Inf, The sign is the same as TOS
 ;
-__addftos_s20:			; TOS and @long are not NaN,Inf.
+__addf32_s20:			; TOS and @long are not NaN,Inf.
 	ldab	__zin
 	andb	#$30		; TOS or @long == 0.0?
 	beq	__addf32_1	; No
 	cmpb	#$30		; TOS and @long == 0.0?
-	jne	__addftos_s50
+	jne	__addf32_s50
 	tst	__sign		; Yes. same sign?
 	jne	__f32retpZero	; Not same sign. return +0.0
 	jmp	__f32retZerol	; return 0.0, sign is same as @long
 ;
-__addftos_s50:			; TOS or @long == 0.0
+__addf32_s50:			; TOS or @long == 0.0
 	cmpb	#$20		; TOS == 0.0?
-	beq	__addftos_s51	; Yes, return @long (do nothing)
+	beq	__addf32_s51	; Yes, return @long (do nothing)
 	tsx			; No,  return TOS
 	inx
 	inx
 	jsr	__load32x	; @long <= (0-3,x)
-__addftos_s51:
+__addf32_s51:
 	jmp	__pullret
 ;
 __addf32_1:			; neither of @long and TOS was not 0.0, simply add them.
@@ -1177,6 +1185,9 @@ __mulf32tos:
 	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
 	;
 ;	ldab	__zin
+	bitb	#$3F		;
+	beq	__mulf32tos4	; No, nomal calculation
+;
 	bitb	#$03		; TOS or @long is NaN?
 	jne	__f32retNaN	; Yes: return NaN
 	andb	#$0C		; TOS or @long is Inf?
@@ -1369,8 +1380,12 @@ __mulf32tos74:
 ;
 __divf32tos:
 	tsx
-	jsr	__setup_zin
+	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
 ;	ldab	__zin
+;
+	bitb	#$3F
+	beq	__divf32tos01	; No, normal calculation
+;
 	bitb	#$03
 	jne	__f32retNaN	; TOS or @long is NaN, return NaN
 ;
@@ -1686,46 +1701,3 @@ __adj_subn_ret:
 	subb	#127	; un bias
 	sbca	#0
 	rts
-;
-;	if float's exp < -126, do subnomarlize
-;	parameter:
-;	  AccAB: unbiased exp
-;	  (1,x) - (3,x): mantissa
-;
-__subnormaize:
-	pshb
-	psha
-	cmpb	#<-126
-	sbca	#>-126
-	jge	__subnormaize_ret
-	clr	@tmp1		; gard bit
-__subnormaize_loop:
-	lsr	1,x
-	ror	2,x
-	ror	3,x
-	ror	@tmp1
-	incb
-	bne	__subnormaize_loop
-	tst	@tmp1
-	bpl	__subnormaize_10
-	inc	3,x
-	bne	__subnormaize_10
-	inc	2,x
-	bne	__subnormaize_10
-	inc	1,x
-	bne	__subnormaize_10
-	ldab	#<-126		; to normal float
-	ldab	#>-126
-	rts
-__subnormaize_10:
-	ldab	#<-127
-	ldaa	#>-127
-	ins
-	ins
-	rts
-__subnormaize_ret:
-	pula
-	pulb
-	rts
-
-
