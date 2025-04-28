@@ -5,7 +5,12 @@ struct complex {
     int i;
 };
 
-#if 1
+struct large_complex {
+    long r;
+    long i;
+    char dummy[100];
+};
+
 struct complex complex_add(struct complex com_1, struct complex com_2, struct complex *com_3){
     struct complex ret;
 
@@ -29,46 +34,35 @@ void complex_pluseq2(struct complex *com_1, struct complex *com_2, struct comple
     (*com_1).r += (*com_2).r + (*com_3).r;
     (*com_1).i += (*com_2).i + (*com_3).i;
 }
-#endif
 
 struct complex sub(struct complex c)
 {
-#if	0
-	putstr("sub: &c="); puthexi(&c);putchar('\n');
-	print(c.r);
-	print(c.i);
-#endif
-	c.r = c.r+1;
-	c.i = c.i+1;
-#if	0
 	++c.r;
 	++c.i;
-#endif
 
 	return c;
+}
+
+struct large_complex large_complex_add(struct large_complex com_1, struct large_complex com_2){
+    struct large_complex ret;
+
+    ret.r = com_1.r + com_2.r;
+    ret.i = com_1.i + com_2.i;
+
+    return ret;
 }
 
 main(int argc,char **argv)
 {
         struct complex com01, com02, com03;
+        struct large_complex com11, com12, com13;
 
         com01.r=2;
         com01.i=3;
-#if	0
-	putstr("main 1\n");
-	print(com01.r);
-	print(com01.i);
-#endif
 	com02 = sub(com01);
 
-	putstr("main 2\n");
-	print(com01.r);
-	print(com01.i);
-	print(com02.r);
-	print(com02.i);
 	return com02.r+com02.i != 7;
 
-#if	1
         com02.r=4;
         com02.i=8;
 
@@ -95,7 +89,16 @@ main(int argc,char **argv)
 		return 31;
 	if (com01.i != 41)
 		return 32;
-#endif
+
+	com11.r=2;
+	com11.i=3;
+	com12.r=4;
+	com12.i=8;
+	com13 = large_complex_add(com11,com12);
+	if (com11.r + com12.r != com13.r)
+		return 101;
+	if (com11.i + com12.i != com13.i)
+		return 102;
 
 	return 0;
 }
