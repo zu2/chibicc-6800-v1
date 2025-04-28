@@ -1,19 +1,12 @@
 #include "chibicc.h"
 
 static FILE *output_file;
-static int depth;
+int depth;
 static Obj *current_fn;
+IX_Type	IX_Dest = IX_None;
 
-static void gen_expr(Node *node);
 static void gen_stmt(Node *node);
 
-typedef	enum {
-  IX_None,
-  IX_BP,
-  IX_VAR,
-} IX_Type;
-
-IX_Type	IX_Dest = IX_None;
 
 __attribute__((format(printf, 1, 2)))
 void println(char *fmt, ...) {
@@ -32,7 +25,7 @@ void printout(char *fmt, ...) {
   va_end(ap);
 }
 
-static int count(void) {
+int count(void) {
   static int i = 1;
   return i++;
 }
@@ -42,7 +35,7 @@ static void push1(void) {	// push char parameter
   depth+=1;
 }
 
-static void push(void) {
+void push(void) {
   println("\tpshb");
   println("\tpsha");
   depth+=2;
@@ -107,7 +100,11 @@ static void ldx_bp()
 {
   if (IX_Dest != IX_BP){
     println("; stack depth = %d",depth);
-    println("\tldx @bp");	// TSX cannot be used because of VLA/alloca
+    if(depth==0 && !current_fn->use_alloca) {
+      println("\ttsx");
+    }else{
+      println("\tldx @bp");	// TSX cannot be used because of VLA/alloca
+    }
   }
   IX_Dest = IX_BP;
 }
@@ -136,6 +133,22 @@ void helper(char *s)
  IX_Dest = IX_None;
 }
 
+//
+// node is global variable?
+//
+bool is_global_var(Node *node)
+{
+   if (node->kind != ND_VAR)
+     return 0;
+   if (node->var->ty->kind == TY_VLA)
+     return 0;
+   if (node->var->is_local)
+     return 0;
+   if (node->ty->kind == TY_FUNC)
+     return 0;
+
+   return 1;
+}
 
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
@@ -144,66 +157,31 @@ static void gen_addr(Node *node){
   case ND_VAR:
     // Variable-length array, which is always local.
     if (node->var->ty->kind == TY_VLA) {
-	println("\tldab @bp+1");
-	println("\tldaa @bp");
-	println("\taddb #<%d",node->var->offset);
-	println("\tadca #>%d",node->var->offset);
-	tfr_dx();
-	println("\tldab 1,x");
-	println("\tldaa 0,x");
+      println("\tldab @bp+1");
+      println("\tldaa @bp");
+      println("\taddb #<%d",node->var->offset);
+      println("\tadca #>%d",node->var->offset);
+      tfr_dx();
+      println("\tldab 1,x");
+      println("\tldaa 0,x");
       return;
     }
 
     // Local variable
     if (node->var->is_local) {
-	println("\tldab @bp+1");
-	println("\tldaa @bp");
-	if (node->var->offset) {
-	  println("\taddb #<%d",node->var->offset);
-	  println("\tadca #>%d",node->var->offset);
-	}
-      return;
-    }
-
-    // Here, we generate an absolute address of a function or a global
-    // variable. Even though they exist at a certain address at runtime,
-    // their addresses are not known at link-time for the following
-    // two reasons.
-    //
-    //  - Address randomization: Executables are loaded to memory as a
-    //    whole but it is not known what address they are loaded to.
-    //    Therefore, at link-time, relative address in the same
-    //    exectuable (i.e. the distance between two functions in the
-    //    same executable) is known, but the absolute address is not
-    //    known.
-    //
-    //  - Dynamic linking: Dynamic shared objects (DSOs) or .so files
-    //    are loaded to memory alongside an executable at runtime and
-    //    linked by the runtime loader in memory. We know nothing
-    //    about addresses of global stuff that may be defined by DSOs
-    //    until the runtime relocation is complete.
-    //
-    // In order to deal with the former case, we use RIP-relative
-    // addressing, denoted by `(%rip)`. For the latter, we obtain an
-    // address of a stuff that may be in a shared object file from the
-    // Global Offset Table using `@GOTPCREL(%rip)` notation.
-
-    // Function
-    if (node->ty->kind == TY_FUNC) {
-      if (node->var->is_definition){
-//        println("  lea %s(%%rip), %%rax", node->var->name);
-        println("\tldab #<_%s", node->var->name);
-        println("\tldaa #>_%s", node->var->name);
-      }else{
-//        println("  mov %s@GOTPCREL(%%rip), %%rax", node->var->name);
-        println("\tldab #<_%s", node->var->name);
-        println("\tldaa #>_%s", node->var->name);
+      println("\tldab @bp+1");
+      println("\tldaa @bp");
+      if (node->var->offset) {
+        println("\taddb #<%d",node->var->offset);
+        println("\tadca #>%d",node->var->offset);
       }
       return;
     }
 
-    // Global variable
-//    println("  lea %s(%%rip), %%rax", node->var->name);
+    // Here, we generate an absolute address of a function or a global
+    // variable.
+
+    // Function and Global variable
     println("\tldab #<_%s", node->var->name);
     println("\tldaa #>_%s", node->var->name);
     return;
@@ -220,7 +198,6 @@ static void gen_addr(Node *node){
       println("\taddb #<%d",node->member->offset);
       println("\tadca #>%d",node->member->offset);
     }
-//    println("  add $%d, %%rax", node->member->offset);
     return;
   case ND_FUNCALL:
     if (node->ret_buffer) {
@@ -242,7 +219,6 @@ static void gen_addr(Node *node){
       println("\taddb #<%d",node->var->offset);
       println("\tadca #>%d",node->var->offset);
     }
-//    println("  lea %d(%%rbp), %%rax", node->var->offset);
     return;
   }
 
@@ -251,7 +227,7 @@ static void gen_addr(Node *node){
 
 // Compute the absolute address of a given node in IX.
 // It's an error if a given node does not reside in memory.
-static int gen_addr_x(Node *node,bool save_d)
+int gen_addr_x(Node *node,bool save_d)
 {
   int off;
 
@@ -910,14 +886,20 @@ static void push_args2(Node *args)
     int64_t val = args->val;
     switch(args->kind){
     case ND_CAST:
-      if(!is_empty_cast(args->lhs->ty, args->ty)
-      && args->lhs->kind != ND_NUM){
-        gen_expr(args);
-        pushl();
-	break;
+      if (is_empty_cast(args->lhs->ty, args->ty)
+      &&  args->lhs->kind == ND_NUM){
+        gen_direct_pushl(args->lhs->val);
+        break;
       }
-      val = args->lhs->val;
-      // THRU
+      if (args->lhs->ty->kind==TY_INT
+      &&  args->lhs->kind==ND_NUM
+      &&  args->lhs->val>=0) {
+        gen_direct_pushl(args->lhs->val);
+        break;
+      }
+      gen_expr(args);
+      pushl();
+      break;
     case ND_NUM:
       gen_direct_pushl(val);
       break;
@@ -1020,7 +1002,7 @@ static int push_args(Node *node)
 //
 static void copy_struct_mem(void) {
   Type *ty = current_fn->ty->return_ty;
-  Obj *var = current_fn->params;
+//Obj *var = current_fn->params;
 
   println("; copy_struct_mem %s %d",__FILE__,__LINE__);
   println("\tstab @tmp2+1");
@@ -1048,10 +1030,6 @@ static void copy_struct_mem(void) {
 
 static void builtin_alloca(void) {
   assert(current_fn->alloca_bottom);
-  // Align size to 16 bytes.
-  // MC6800 has no align, ignore it.
-//  println("  add $15, %%rdi");
-//  println("  and $0xfffffff0, %%edi");
 
   // Shift the temporary area by %rdi.
   // println("; %%di has alloca size");
@@ -1087,21 +1065,6 @@ static void builtin_alloca(void) {
   println("\tbra L_%d",c1);
   println("L_%d:",c2);
   IX_Dest = IX_None;
-  //println("  mov %d(%%rbp), %%rcx", current_fn->alloca_bottom->offset);
-  //println("  sub %%rsp, %%rcx");
-  //println("  mov %%rsp, %%rax");
-  //println("  sub %%rdi, %%rsp");
-  //println("  mov %%rsp, %%rdx");
-  //println("1:");
-  //println("  cmp $0, %%rcx");
-  //println("  je 2f");
-  //println("  mov (%%rax), %%r8b");
-  //println("  mov %%r8b, (%%rdx)");
-  //println("  inc %%rdx");
-  //println("  inc %%rax");
-  //println("  dec %%rcx");
-  //println("  jmp 1b");
-  //println("2:");
 
   // Move alloca_bottom pointer.
   println("\tldx @tmp3");
@@ -1112,55 +1075,6 @@ static void builtin_alloca(void) {
   println("\tsbca @rdi");
   println("\tstab 1,x");
   println("\tstaa 0,x");
-  //println("  mov %d(%%rbp), %%rax", current_fn->alloca_bottom->offset);
-  //println("  sub %%rdi, %%rax");
-  //println("  mov %%rax, %d(%%rbp)", current_fn->alloca_bottom->offset);
-}
-
-bool is_compare(Node *node)
-{
-    switch(node->kind){
-    case ND_EQ:
-    case ND_NE:
-    case ND_LT:
-    case ND_LE:
-    case ND_GT:
-    case ND_GE:
-      return 1;
-    }
-    return 0;
-}
-
-bool is_compare_or_not(Node *node)
-{
-    switch(node->kind){
-    case ND_EQ:
-    case ND_NE:
-    case ND_LT:
-    case ND_LE:
-    case ND_GT:
-    case ND_GE:
-    case ND_NOT:
-      return 1;
-    }
-    return 0;
-}
-
-bool is_boolean_result(Node *node)
-{
-    switch(node->kind){
-    case ND_EQ:
-    case ND_NE:
-    case ND_LT:
-    case ND_LE:
-    case ND_GT:
-    case ND_GE:
-    case ND_NOT:
-    case ND_LOGAND:
-    case ND_LOGOR:
-      return 1;
-    }
-    return 0;
 }
 
 //
@@ -1210,20 +1124,20 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
         return 1;
       }else{
         // global
-        if (node->ty->kind==TY_CHAR){
+        if (node->ty->kind==TY_FUNC)
 	  return 0;
-        }else{
-          if (test) return 1;
-#if 1
-	  int off = gen_addr_x(node,true);
-          println("\t%s %d,x",opb,off+1);
-          println("\t%s %d,x",opa,off);
+        if (node->ty->kind==TY_CHAR)
+	  return 0;
+        if (test) return 1;
+#if 0
+	int off = gen_addr_x(node,true);
+        println("\t%s %d,x",opb,off+1);
+        println("\t%s %d,x",opa,off);
 #else
-	  println("; gen_direct_sub %s %d",__FILE__,__LINE__);
-          println("\t%s #<_%s+1",opb,node->var->name);
-          println("\t%s #>_%s",opa,node->var->name);
+        println("; gen_direct_sub %s %d",__FILE__,__LINE__);
+        println("\t%s _%s+1",opb,node->var->name);
+        println("\t%s _%s",opa,node->var->name);
 #endif
-        }
         return 1;
       }
     }
@@ -1262,14 +1176,14 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
   return 0;
 }
 
-static int can_direct(Node *rhs)
+bool can_direct(Node *rhs)
 {
   int r = gen_direct_sub(rhs,NULL,NULL,1);	// test mode
 
   return r;
 }
 
-static int gen_direct(Node *rhs,char *opb, char *opa)
+bool gen_direct(Node *rhs,char *opb, char *opa)
 {
   return gen_direct_sub(rhs,opb,opa,0);
 }
@@ -1626,6 +1540,7 @@ static int gen_direct_long(Node *rhs,char *opb, char *opa)
   return gen_direct_long_sub(rhs,opb,opa,0);
 }
 
+//
 int gen_direct_long2(Node *node,char *opb, char *opa)
 {
   Node *lhs = node->lhs;
@@ -1639,6 +1554,10 @@ int gen_direct_long2(Node *node,char *opb, char *opa)
   uint64_t lv;
   uint64_t rv;
 
+  //
+  // L もR もlocal変数の場合、IXは両方とも@bpになるので、これで良い
+  // 将来、IXが変化する場合は、問題になるかもしれない
+  //
   if (L==1)
     loff = gen_addr_x(lhs,false);
   else
@@ -1724,316 +1643,9 @@ static int check_in_char(Node *node)
   return 1;
 }
 
-static int gen_jump_if_true(Node *node,char *if_false);
-
-//
-// Compare two 8 signed/unsigned integers.
-//   Generate code that branches to if_false if the comparison result is false.
-//   Return 1 if code was generated.
-// For other types, generate no code and return 0.
-//
-static int gen_jump_if_false_8bit(Node *node,char *if_false)
-{
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-
-  if (!is_compare(node))
-    return 0;
-  if (lhs->ty->kind!=TY_CHAR || rhs->ty->kind!=TY_CHAR)
-    return 0;
-  if (lhs->ty->is_unsigned != rhs->ty->is_unsigned)
-    return 0;
-  if (!isVARorNUM(lhs) || !isVARorNUM(rhs))
-    return 0;
-  if (rhs->kind==ND_NUM && !check_in_char(rhs))
-    return 0;
-  if (lhs->kind==ND_NUM && !check_in_char(lhs))
-    return 0;
-
-  if (!can_direct(node->rhs))
-    return 0;
-
-
-  if(node->rhs->kind == ND_NUM && node->rhs->val == 0){
-    gen_expr(node->lhs);
-    if(node->kind != ND_EQ && node->kind != ND_NE)
-      println("\ttstb");
-  }else if(rhs->kind==ND_NUM) {
-    gen_expr(node->lhs);
-    println("\tcmpb #%ld",rhs->val);
-  }else if(rhs->kind==ND_VAR) {
-    if (rhs->var->ty->kind == TY_VLA) return 0;
-    if (rhs->ty->kind==TY_ARRAY)      return 0;
-    if (rhs->var->is_local) {
-      if (!test_addr_x(rhs)) return 0;
-      int off = gen_addr_x(rhs,true);
-      println("\tcmpb %d,x",off);
-    }else{ // global
-      println("\tcmpb _%s",rhs->var->name);
-    }
-  }else{
-    assert(0);
-  }
-
-  switch(node->kind){
-  case ND_EQ:
-    println("\tjne %s",if_false);
-    break;
-  case ND_NE:
-    println("\tjeq %s",if_false);
-    break;
-  case ND_LT:
-    if (node->lhs->ty->is_unsigned){
-      println("\tjcc %s",if_false);
-    }else{
-      println("\tjge %s",if_false);
-    }
-    break;
-  case ND_GE:
-    if (node->lhs->ty->is_unsigned){
-      println("\tjcs %s",if_false);
-    }else{
-      println("\tjlt %s",if_false);
-    }
-    break;
-  case ND_LE:
-    if (node->lhs->ty->is_unsigned){
-      println("\tjhi %s",if_false);
-    }else{
-      println("\tjgt %s",if_false);
-    }
-    break;
-  case ND_GT:
-    if (node->lhs->ty->is_unsigned){
-      println("\tjls %s",if_false);
-    }else{
-      println("\tjle %s",if_false);
-    }
-    break;
-  }
-  return 1;
-}
-//
-// Compare two 8- or 16-bit integers.
-//   Generate code that branches to if_false if the comparison result is false.
-//   Return 1 if code was generated.
-// For other types, generate no code and return 0.
-//
-static int gen_jump_if_false(Node *node,char *if_false)
-{
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-
-  if (node->kind==ND_NOT)
-    return gen_jump_if_true(node->lhs,if_false);
-
-  if(!is_compare(node))
-    return 0;
-  if(lhs->ty->kind!=TY_CHAR && lhs->ty->kind!=TY_INT && lhs->ty->kind!=TY_SHORT)
-    return 0;
-
-  if(lhs->ty->kind==TY_CHAR
-  && rhs->ty->kind==TY_CHAR
-  && gen_jump_if_false_8bit(node,if_false)){
-    return 1;
-  }
-
-  char if_thru[32];
-  int c = count();
-  sprintf(if_thru,"L_thru_%d",c);
-  println("; can_direct(rhs) %d",can_direct(rhs));
-  if (can_direct(rhs)){
-    gen_expr(lhs);
-    if(rhs->kind == ND_NUM && rhs->val == 0){
-      if(node->kind != ND_EQ && node->kind != ND_NE)
-        println("\ttsta");
-    }else if(!gen_direct(rhs,"subb","sbca")){
-      assert(0);
-    }
-  }else{
-    gen_expr(rhs);
-    push();
-    gen_expr(lhs);
-    println("\ttsx");
-    IX_Dest = IX_None;
-    println("\tsubb 1,x");
-    println("\tsbca 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
-  }
-  switch(node->kind){
-  case ND_EQ:
-    println("\taba");
-    println("\tadca #0");
-    println("\tjne %s",if_false);
-    break;
-  case ND_NE:
-    println("\taba");
-    println("\tadca #0");
-    println("\tjeq %s",if_false);
-    break;
-  case ND_LT:
-    if (lhs->ty->is_unsigned){
-      println("\tjcc %s",if_false);
-    }else{
-      println("\tjge %s",if_false);
-    }
-    break;
-  case ND_GE:
-    if (lhs->ty->is_unsigned){
-      println("\tjcs %s",if_false);
-    }else{
-      println("\tjlt %s",if_false);
-    }
-    break;
-  case ND_LE:
-    if (lhs->ty->is_unsigned){
-      println("\tjhi %s",if_false);
-      println("\tbcs %s",if_thru);
-      println("\ttstb");
-      println("\tjne %s",if_false);
-      println("%s:",if_thru);
-    }else{
-      println("\tjgt %s",if_false);
-      println("\tblt %s",if_thru);
-      println("\ttstb");
-      println("\tjne %s",if_false);
-      println("%s:",if_thru);
-    }
-    break;
-  case ND_GT:
-    if (lhs->ty->is_unsigned){
-      println("\tjcs %s",if_false);
-      println("\tbhi %s",if_thru);
-      println("\ttstb");
-      println("\tjeq %s",if_false);
-      println("%s:",if_thru);
-    }else{
-      println("\tjlt %s",if_false);
-      println("\tbgt %s",if_thru);
-      println("\ttstb");
-      println("\tjeq %s",if_false);
-      println("%s:",if_thru);
-    }
-    break;
-  }
-  return 1;
-}
-
-//
-// Compare two 8- or 16-bit integers.
-//   Generate code that branches to if_true if the comparison result is true.
-//   Return 1 if code was generated.
-// For other types, generate no code and return 0.
-//
-static int gen_jump_if_true(Node *node,char *if_true)
-{
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-
-  if (node->kind==ND_NOT)
-    return gen_jump_if_false(node->lhs,if_true);
-
-  if(!is_compare(node))
-    return 0;
-  if(lhs->ty->kind!=TY_CHAR && lhs->ty->kind!=TY_INT && lhs->ty->kind!=TY_SHORT)
-    return 0;
-
-#if 0
-  if(lhs->ty->kind==TY_CHAR
-  && rhs->ty->kind==TY_CHAR
-  && gen_jump_if_false_8bit(node,if_false)){
-    return 1;
-  }
-#endif
-
-  char if_thru[32];
-  int c = count();
-  sprintf(if_thru,"L_thru_%d",c);
-  println("; can_direct(rhs) %d",can_direct(rhs));
-  if (can_direct(rhs)){
-    gen_expr(lhs);
-    if(rhs->kind == ND_NUM && rhs->val == 0){
-      if(node->kind != ND_EQ && node->kind != ND_NE)
-        println("\ttsta");
-    }else if(!gen_direct(rhs,"subb","sbca")){
-      assert(0);
-    }
-  }else{
-    gen_expr(rhs);
-    push();
-    gen_expr(lhs);
-    println("\ttsx");
-    IX_Dest = IX_None;
-    println("\tsubb 1,x");
-    println("\tsbca 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
-  }
-  switch(node->kind){
-  case ND_EQ:
-    println("\taba");
-    println("\tadca #0");
-    println("\tjeq %s",if_true);
-    break;
-  case ND_NE:
-    println("\taba");
-    println("\tadca #0");
-    println("\tjne %s",if_true);
-    break;
-  case ND_LT:
-    if (lhs->ty->is_unsigned){
-      println("\tjcs %s",if_true);
-    }else{
-      println("\tjlt %s",if_true);
-    }
-    break;
-  case ND_GE:
-    if (lhs->ty->is_unsigned){
-      println("\tjcc %s",if_true);
-    }else{
-      println("\tjge %s",if_true);
-    }
-    break;
-  case ND_LE:
-    if (lhs->ty->is_unsigned){
-      println("\tjcs %s",if_true);
-      println("\tjhi %s",if_thru);
-      println("\ttstb");
-      println("\tjeq %s",if_true);
-      println("%s:",if_thru);
-    }else{
-      println("\tjlt %s",if_true);
-      println("\tbgt %s",if_thru);
-      println("\ttstb");
-      println("\tjeq %s",if_true);
-      println("%s:",if_thru);
-    }
-    break;
-  case ND_GT:
-    if (lhs->ty->is_unsigned){
-      println("\tjhi %s",if_true);
-      println("\tbcs %s",if_thru);
-      println("\ttstb");
-      println("\tjne %s",if_true);
-      println("%s:",if_thru);
-    }else{
-      println("\tjgt %s",if_true);
-      println("\tblt %s",if_thru);
-      println("\ttstb");
-      println("\tjne %s",if_true);
-      println("%s:",if_thru);
-    }
-    break;
-  }
-  return 1;
-}
-
 
 // Generate code for a given node.
-static void gen_expr(Node *node) {
+void gen_expr(Node *node) {
   node = optimize_expr(node);
 
   switch (node->kind) {
@@ -2378,6 +1990,17 @@ static void gen_expr(Node *node) {
     gen_expr(node->rhs);
     return;
   case ND_CAST:
+    if (node->ty->kind==TY_LONG
+    &&  node->lhs->ty->kind==TY_INT
+    &&  node->lhs->kind==ND_NUM
+    &&  node->lhs->val>=0) {
+      gen_expr(node->lhs);
+      println("\tstab @long+3");
+      println("\tstaa @long+2");
+      println("\tclr  @long+1");
+      println("\tclr  @long");
+      return;
+    }
     gen_expr(node->lhs);
     cast(node->lhs->ty, node->ty);
     return;
@@ -2856,32 +2479,20 @@ static void gen_expr(Node *node) {
       gen_expr(node->lhs);
       // Since push in the order is rhs -> lhs, the conditions are reversed.
       // Should I change the name?
+      char sc = (node->lhs->ty->is_unsigned)? 'u': 's';
       if (node->kind == ND_EQ) {
         println("\tjsr __eq32");
       } else if (node->kind == ND_NE) {
         println("\tjsr __ne32");
       } else if (node->kind == ND_LT) {
-        if (node->lhs->ty->is_unsigned)
-          println("\tjsr __gt32u");
-        else
-          println("\tjsr __gt32s");
+        println("\tjsr __gt32%c",sc);
       } else if (node->kind == ND_LE) {
-        if (node->lhs->ty->is_unsigned)
-          println("\tjsr __ge32u");
-        else
-          println("\tjsr __ge32s");
+        println("\tjsr __ge32%c",sc);
       } else if (node->kind == ND_GT) {
-        if (node->lhs->ty->is_unsigned)
-          println("\tjsr __lt32u");
-        else
-          println("\tjsr __lt32s");
+        println("\tjsr __lt32%c",sc);
       } else if (node->kind == ND_GE) {
-        if (node->lhs->ty->is_unsigned)
-          println("\tjsr __le32u");
-        else
-          println("\tjsr __le32s");
+        println("\tjsr __le32%c",sc);
       }
-//    println("  movzb %%al, %%rax");
       depth -= 4;
       IX_Dest = IX_None;
       return;

@@ -439,6 +439,27 @@ int align_to(int n, int align);
 bool is_compare(Node *node);
 bool is_compare_or_not(Node *node);
 bool is_boolean_result(Node *node);
+bool gen_direct(Node *rhs,char *opb, char *opa);
+bool can_direct(Node *rhs);
+void gen_expr(Node *node);
+int gen_addr_x(Node *node,bool save_d);
+int count(void);
+void push(void);
+
+extern int depth;
+typedef	enum {
+  IX_None,
+  IX_BP,
+  IX_VAR,
+} IX_Type;
+
+extern IX_Type	IX_Dest;
+
+//
+// gen_jump.c
+//
+int gen_jump_if_false(Node *node,char *if_false);
+int gen_jump_if_true(Node *node,char *if_true);
 
 //
 // unicode.c
