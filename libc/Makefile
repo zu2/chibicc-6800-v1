@@ -11,7 +11,8 @@ OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o \
 	__adx.o __copy_struct.o \
 	__memset.o __memcpy.o __memchr.o __memmove.o \
 	__strchr.o __strcmp.o __strcpy.o __strlen.o __strcat.o \
-	__tolower.o __toupper.o
+	__tolower.o __toupper.o \
+	__struct.o
 
 .s.o:
 	as6800 $<
