@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 	putstr("int to float\n");
 	f = 0;
 	if (f != 0.0)
-		return	101;
+		return	100;
 	f = 1;
 	if (f != 1.0)
 		return	101;
