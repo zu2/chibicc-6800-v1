@@ -83,18 +83,8 @@ static void pushl(void) {
   depth+=4;
 }
 
-static void popl() {
-  println("\tjsr __pop32");
-  depth-=4;
-  IX_Dest = IX_None;
-}
-
 static void pushf(void) {
   pushl();
-}
-
-static void popf(void) {
-  popl();
 }
 
 // Round up `n` to the nearest multiple of `align`. For instance,
@@ -506,7 +496,7 @@ static void store(Type *ty) {
   case TY_UNION:
     if (ty->size==0)
       return;
-    println("; store struct/union from AB to TOS, size %d in IX",ty->size);
+    println("; store struct/union from AB to *TOS, size %d in IX",ty->size);
     println("\tldx  #%d",ty->size);
     println("\tjsr  __copy_struct");
     ins(2);
