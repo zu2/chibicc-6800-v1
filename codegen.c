@@ -60,6 +60,15 @@ static void popx(void) {
   depth-=2;
 }
 
+static void ins(int n)
+{
+  depth -= n;
+  while (n-->0) {
+    println("\tins");
+  }
+}
+
+
 static void pushl(void) {
 //println("\tjsr __push32");
 //IX_Dest = IX_None;
@@ -500,6 +509,7 @@ static void store(Type *ty) {
     println("; store struct/union from AB to TOS, size %d in IX",ty->size);
     println("\tldx  #%d",ty->size);
     println("\tjsr  __copy_struct");
+    ins(2);
     IX_Dest = IX_None;
     return;
   case TY_FLOAT:
@@ -744,6 +754,7 @@ static int is_empty_cast(Type *from, Type *to) {
 }
 
 static void push_struct(Type *ty) {
+  println("; stack depth = %d",depth);
   int sz = ty->size;
   assert(sz != 0);
 
@@ -759,6 +770,7 @@ static void push_struct(Type *ty) {
     println("\tjsr __push_struct_x");
   }
   depth += sz;
+  println("; stack depth = %d",depth);
 }
 
 
@@ -1655,11 +1667,9 @@ static void gen_funcall(Node *node)
     println("\tstaa @tmp1");		// 4
     println("\tlds @tmp1");		// 4
     println("\tldaa @tmp2");		// 3
+    depth-=stack_args;
   }else{
-    while(stack_args--) {
-      println("\tins");
-      depth--;
-    }
+    ins(stack_args);
   }
   // If the return value is a type shorter than an int,
   // the upper bytes contain garbage, so we correct it.
@@ -2217,10 +2227,7 @@ void gen_expr(Node *node) {
       println("\tlds @tmp1");		// 4
       println("\tldaa @tmp2");		// 3
     }else{
-      while(stack_args--) {
-        println("\tins");
-        depth--;
-      }
+      ins(stack_args);
     }
     // If the return value is a type shorter than an int,
     // the upper bytes contain garbage, so we correct it.
@@ -2604,9 +2611,7 @@ void gen_expr(Node *node) {
     IX_Dest = IX_None;
     println("\taddb 1,x");
     println("\tadca 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    ins(2);
     IX_Dest = IX_None;
     return;
   case ND_SUB:
@@ -2625,9 +2630,7 @@ void gen_expr(Node *node) {
     println("\ttsx");
     println("\tsubb 1,x");
     println("\tsbca 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    ins(2);
     IX_Dest = IX_None;
     return;
   case ND_MUL:
@@ -2757,9 +2760,7 @@ void gen_expr(Node *node) {
     cast(node->lhs->ty, node->ty);
 //  println("  imul %s, %s", di, ax);
     println("\tjsr __mul16x16");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    ins(2);
     IX_Dest = IX_None;
     return;
   case ND_DIV:
@@ -2798,9 +2799,7 @@ void gen_expr(Node *node) {
     }else{
       println("\tjsr __div16x16s");
     }
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    ins(2);
     IX_Dest = IX_None;
     return;
   case ND_MOD:
@@ -2814,9 +2813,7 @@ void gen_expr(Node *node) {
     }else{
       println("\tjsr __rem16x16s");
     }
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    ins(2);
     IX_Dest = IX_None;
     return;
   case ND_BITAND:
@@ -2831,9 +2828,7 @@ void gen_expr(Node *node) {
     IX_Dest = IX_None;
     println("\tandb 1,x");
     println("\tanda 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    ins(2);
     return;
   case ND_BITOR:
     if (gen_direct_lr(node,"orb","ora"))
@@ -2846,9 +2841,7 @@ void gen_expr(Node *node) {
     IX_Dest = IX_None;
     println("\torab 1,x");
     println("\toraa 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    ins(2);
     return;
   case ND_BITXOR:
     if (gen_direct_lr(node,"eorb","eora"))
@@ -2861,9 +2854,7 @@ void gen_expr(Node *node) {
     IX_Dest = IX_None;
     println("\teorb 1,x");
     println("\teora 0,x");
-    println("\tins");
-    println("\tins");
-    depth -= 2;
+    ins(2);
     return;
   case ND_EQ:
   case ND_NE:
@@ -2883,9 +2874,7 @@ void gen_expr(Node *node) {
       IX_Dest = IX_None;
       println("\tsubb 1,x");
       println("\tsbca 0,x");
-      println("\tins");
-      println("\tins");
-      depth -= 2;
+      ins(2);
     }
     if (node->kind == ND_EQ) {
       println("\tjsr __eq16");
@@ -2921,10 +2910,8 @@ void gen_expr(Node *node) {
     gen_expr(node->lhs);
     cast(node->lhs->ty, node->ty);
     println("\tjsr __shl16");
-    println("\tins");
-    println("\tins");
+    ins(2);
     IX_Dest = IX_None;
-    depth -= 2;
 //    println("  mov %%rdi, %%rcx");
 //    println("  shl %%cl, %s", ax);
     return;
