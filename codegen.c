@@ -350,6 +350,24 @@ int test_addr_x(Node *node)
   return 0;
 }
 
+static void load_long_imm(uint32_t val)
+{
+  uint16_t hi = (uint16_t)((val>>16)&0x0ffff);
+  uint16_t lo = (uint16_t)(val&0x0ffff);
+
+  println("\tldx #%u",lo);
+  println("\tstx @long+2");
+  if (lo+1 == hi){
+    println("\tinx");
+  }else if (lo-1 == hi){
+    println("\tdex");
+  }else if (hi!=lo) {
+    println("\tldx #%u",hi);
+  }
+  println("\tstx @long");
+  IX_Dest = IX_None;
+}
+
 // Load a value from where %rax is pointing to.
 static void load(Type *ty) {
   switch (ty->kind) {
@@ -1643,6 +1661,67 @@ static int check_in_char(Node *node)
   return 1;
 }
 
+static void gen_funcall(Node *node)
+{
+  if (node->lhs->kind == ND_VAR && !strcmp(node->lhs->var->name, "alloca")) {
+    gen_expr(node->args);
+    println("; ND_FUNCALL: call builtin_alloca()  %s %d",__FILE__,__LINE__);
+    builtin_alloca();
+    return;
+  }
+
+  int stack_args = push_args(node);
+
+  if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
+    println("\tjsr _%s",node->lhs->var->name);
+  }else{
+    int off = gen_addr_x(node->lhs,true);
+    if (node->lhs->ty->kind!=TY_FUNC) {
+      println("\tldx %d,x",off);
+      println("\tjsr 0,x");
+    }else{
+      println("\tjsr %d,x",off);
+    }
+  }
+  IX_Dest = IX_None;
+  
+  // Removes pushed arguments before calling a function
+  if (stack_args*4 > 34) {
+    println("; ins*%d",stack_args);
+    println("\tstaa @tmp2");		// 4
+    println("\tsts @tmp1");		// 5
+    println("\tldaa @tmp1+1");	// 3
+    println("\tadda #<%d",stack_args);// 2
+    println("\tstaa @tmp1+1"); 	// 4
+    println("\tldaa @tmp1");		// 3
+    println("\tadca #>%d",stack_args);// 2
+    println("\tstaa @tmp1");		// 4
+    println("\tlds @tmp1");		// 4
+    println("\tldaa @tmp2");		// 3
+  }else{
+    while(stack_args--) {
+      println("\tins");
+      depth--;
+    }
+  }
+  // If the return value is a type shorter than an int,
+  // the upper bytes contain garbage, so we correct it.
+  switch (node->ty->kind) {
+  case TY_BOOL:
+    println("\tclra");
+    return;
+  case TY_CHAR:
+    println("\tclra");
+    if (!node->ty->is_unsigned){
+      println("\tasrb");
+      println("\trolb");
+      println("\tsbca #0");
+    }
+    return;
+  }
+  return;
+}
+
 
 // Generate code for a given node.
 void gen_expr(Node *node) {
@@ -1655,12 +1734,7 @@ void gen_expr(Node *node) {
     switch (node->ty->kind) {
     case TY_FLOAT: {
       union { float f32; uint32_t u32; } u = { node->fval };
-      println("\tjsr __load32i	; float %e",u.f32);
-      println("\t.word $%04x",(uint16_t)(u.u32>>16));
-      println("\t.word $%04x",(uint16_t)(u.u32&0x0ffff));
-      IX_Dest = IX_None;
-//    println("  mov $%u, %%eax  # float %Lf", u.u32, node->fval);
-//    println("  movq %%rax, %%xmm0");
+      load_long_imm(u.u32);
       return;
     }
     case TY_DOUBLE:
@@ -1696,14 +1770,7 @@ void gen_expr(Node *node) {
       }
       return;
     case TY_LONG:
-      println("\tldx #%u",(uint16_t)((node->val>>16)&0x0ffff));
-      println("\tstx @long");
-      println("\tldx #%u",(uint16_t)(node->val&0x0ffff));
-      println("\tstx @long+2");
-      IX_Dest = IX_None;
-//    println("\tjsr __load32i		; load 32bit immediate #%lu",node->val);
-//    println("\t.word %u",(uint16_t)((node->val>>16)&0x0ffff));
-//    println("\t.word %u",(uint16_t)(node->val&0x0ffff));
+      load_long_imm(node->val);
       return;
     }
     error_tok(node->tok, "gen_expr: not implemented yet token");
@@ -2153,6 +2220,8 @@ void gen_expr(Node *node) {
     return;
   }
   case ND_FUNCALL: {
+    gen_funcall(node);
+    return;
     if (node->lhs->kind == ND_VAR && !strcmp(node->lhs->var->name, "alloca")) {
       gen_expr(node->args);
       println("; ND_FUNCALL %s %d",__FILE__,__LINE__);
@@ -2211,29 +2280,15 @@ void gen_expr(Node *node) {
       }
       return;
     }
-
-    // If the return type is a small struct, a value is returned
-    // using up to two registers.
-    // MC6800: all struct/union not passed by register, so ignore it.
-#if 0
-    if (node->ret_buffer && node->ty->size <= 16) {
-      copy_ret_buffer(node->ret_buffer);
-      println("  lea %d(%%rbp), %%rax", node->ret_buffer->offset);
-    }
-#endif
-
     return;
   } // ND_FUNCALL
   case ND_LABEL_VAL:
     println("\tldab #<%s",node->unique_label);
     println("\tldaa #>%s",node->unique_label);
-//  println("  lea %s(%%rip), %%rax", node->unique_label);
     return;
-#if	0
   case ND_CAS:
   case ND_EXCH:
     assert(0);
-#endif
   }
   // Above is a unary operator
   //
