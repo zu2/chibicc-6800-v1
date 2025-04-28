@@ -5,7 +5,11 @@
 ;
 ;
 	.export __eq32
+	.export __eq32s
+	.export __eq32u
 	.export __ne32
+	.export __ne32s
+	.export __ne32u
 	.export __lt32s
 	.export __lt32u
 	.export __gt32s
@@ -14,11 +18,14 @@
 	.export __le32u
 	.export __ge32s
 	.export __ge32u
+;
 	.code
 ;
 ;	TOS == @long ?
 ;
 __eq32:
+__eq32s:
+__eq32u:
 	tsx
 	ldx	4,x
 	cpx	@long+2
@@ -27,11 +34,18 @@ __eq32:
 	ldx	2,x
 	cpx	@long
 	bne	__false
-	bra	__true
+__true:
+	tsx
+	ldx	0,x
+	clra
+	ldab	#1
+	bra	__ret
 ;
 ;	TOS != @long ?
 ;
 __ne32:
+__ne32s:
+__ne32u:
 	tsx
 	ldx	4,x
 	cpx	@long+2
@@ -65,12 +79,6 @@ __ret:
 	ins
 	ins
 	jmp	0,x
-__true:
-	tsx
-	ldx	0,x
-	clra
-	ldab	#1
-	bra	__ret
 __sublt:			; @long - TOS only cc affected
 	tsx
 	ldab	@long+3
