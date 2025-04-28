@@ -743,65 +743,22 @@ static int is_empty_cast(Type *from, Type *to) {
   return cast_table[t1][t2]==NULL;
 }
 
-#if 0
-// Structs or unions equal or smaller than 16 bytes are passed
-// using up to two registers.
-//
-// If the first 8 bytes contains only floating-point type members,
-// they are passed in an XMM register. Otherwise, they are passed
-// in a general-purpose register.
-//
-// If a struct/union is larger than 8 bytes, the same rule is
-// applied to the the next 8 byte chunk.
-//
-// This function returns true if `ty` has only floating-point
-// members in its byte range [lo, hi).
-static bool has_flonum(Type *ty, int lo, int hi, int offset) {
-  if (ty->kind == TY_STRUCT || ty->kind == TY_UNION) {
-    for (Member *mem = ty->members; mem; mem = mem->next)
-      if (!has_flonum(mem->ty, lo, hi, offset + mem->offset))
-        return false;
-    return true;
-  }
-
-  if (ty->kind == TY_ARRAY) {
-    for (int i = 0; i < ty->array_len; i++)
-      if (!has_flonum(ty->base, lo, hi, offset + ty->base->size * i))
-        return false;
-    return true;
-  }
-
-  return offset < lo || hi <= offset || ty->kind == TY_FLOAT || ty->kind == TY_DOUBLE;
-}
-
-static bool has_flonum1(Type *ty) {
-  return 0;
-//return has_flonum(ty, 0, 8, 0);
-}
-
-static bool has_flonum2(Type *ty) {
-  return 0;
-//return has_flonum(ty, 8, 16, 0);
-}
-#endif
-
 static void push_struct(Type *ty) {
-  int sz = align_to(ty->size, 8);
-//  int c = count();
-  depth += sz;
-  assert(sz <= 256);	// can't handle sz > 256
-  tfr_dx();
-  for (int i = ty->size-1; i >=0 ; i-- ){
-    println("\tldab %d,x",i);
-    println("\tpshb");
-  }
-//  println("  sub $%d, %%rsp", sz);
-//  depth += sz / 8;
+  int sz = ty->size;
+  assert(sz != 0);
 
-//  for (int i = 0; i < ty->size; i++) {
-//    println("  mov %d(%%rax), %%r10b", i);
-//    println("  mov %%r10b, %d(%%rsp)", i);
-//  }
+  tfr_dx();
+  if (ty->size<=8) {
+    for (int i = ty->size-1; i >=0 ; i-- ){
+      println("\tldab %d,x",i);
+      println("\tpshb");
+    }
+  }else{
+    println("\tldab #<%d",sz);
+    println("\tldaa #>%d",sz);
+    println("\tjsr __push_struct_x");
+  }
+  depth += sz;
 }
 
 
