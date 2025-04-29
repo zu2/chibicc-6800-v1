@@ -47,9 +47,17 @@ bool is_boolean_result(Node *node)
     return 0;
 }
 
+static int isNUM(Node *node)
+{
+  return node->kind==ND_NUM;
+}
+static int isVAR(Node *node)
+{
+  return node->kind==ND_VAR;
+}
 static int isVARorNUM(Node *node)
 {
-  return (node->kind==ND_VAR || node->kind==ND_NUM);
+  return isVAR(node) || isNUM(node);
 }
 
 static int check_in_char(Node *node)
@@ -81,12 +89,27 @@ static int gen_jump_if_false_8bit(Node *node,char *if_false)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
+  if (isVAR(node)) {
+    if (node->ty->kind != TY_CHAR)
+      return 0;				// what's happen?
+    load_var(node);
+//  This tstb is unnecessary in the current codegen.c:load_var(),
+//  but not using it may cause risky behavior in the future.
+//  println("\tstb");
+    println("\tjeq %s",if_false);
+    return 1;
+  }
+
   if (!is_compare(node))
     return 0;
+
+  fprintf(stderr,"; gen_jump_if_false_8bit check TY_CHAR\n");
   if (lhs->ty->kind!=TY_CHAR || rhs->ty->kind!=TY_CHAR)
     return 0;
+  fprintf(stderr,"; gen_jump_if_false_8bit check unsigned\n");
   if (lhs->ty->is_unsigned != rhs->ty->is_unsigned)
     return 0;
+  fprintf(stderr,"; gen_jump_if_false_8bit check VAR or NUM\n");
   if (!isVARorNUM(lhs) || !isVARorNUM(rhs))
     return 0;
   if (rhs->kind==ND_NUM && !check_in_char(rhs))
@@ -157,6 +180,7 @@ static int gen_jump_if_false_8bit(Node *node,char *if_false)
   }
   return 1;
 }
+
 //
 // Compare two 8- or 16-bit integers.
 //   Generate code that branches to if_false if the comparison result is false.
@@ -171,18 +195,26 @@ int gen_jump_if_false(Node *node,char *if_false)
   if (node->kind==ND_NOT)
     return gen_jump_if_true(node->lhs,if_false);
 
+  if (isVAR(node) && node->ty->kind==TY_CHAR)
+    return gen_jump_if_false_8bit(node,if_false);
+
   if(!is_compare(node))
     return 0;
-  if(lhs->ty->kind!=TY_CHAR && lhs->ty->kind!=TY_INT && lhs->ty->kind!=TY_SHORT)
-    return 0;
-  if(rhs->ty->kind!=TY_CHAR && rhs->ty->kind!=TY_INT && rhs->ty->kind!=TY_SHORT)
-    return 0;
 
+//println("; gen_jump_if_false lhs->ty->kind %d, rhs->ty->kind %d\n",
+//		  		lhs->ty->kind, rhs->ty->kind );
+// If one side is ND_NUM, both sides are promoted to int,
+// so this can't be optimized. TODO: Fix optimize.c
   if(lhs->ty->kind==TY_CHAR
   && rhs->ty->kind==TY_CHAR
   && gen_jump_if_false_8bit(node,if_false)){
     return 1;
   }
+
+  if(lhs->ty->kind!=TY_CHAR && lhs->ty->kind!=TY_INT && lhs->ty->kind!=TY_SHORT)
+    return 0;
+  if(rhs->ty->kind!=TY_CHAR && rhs->ty->kind!=TY_INT && rhs->ty->kind!=TY_SHORT)
+    return 0;
 
   char if_thru[32];
   char if_label[32];
@@ -378,6 +410,106 @@ int gen_jump_if_false(Node *node,char *if_false)
 }
 
 //
+// Compare two 8 signed/unsigned integers.
+//   Generate code that branches to if_false if the comparison result is false.
+//   Return 1 if code was generated.
+// For other types, generate no code and return 0.
+//
+static int gen_jump_if_true_8bit(Node *node,char *if_true)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+
+  if (isVAR(node)) {
+    if (node->ty->kind != TY_CHAR)
+      return 0;				// what's happen?
+    load_var(node);
+//  This tstb is unnecessary in the current codegen.c:load_var(),
+//  but not using it may cause risky behavior in the future.
+//  println("\tstb");
+    println("\tjne %s",if_true);
+    return 1;
+  }
+
+  if (!is_compare(node))
+    return 0;
+
+  if (lhs->ty->kind!=TY_CHAR || rhs->ty->kind!=TY_CHAR)
+    return 0;
+  if (lhs->ty->is_unsigned != rhs->ty->is_unsigned)
+    return 0;
+  if (!isVARorNUM(lhs) || !isVARorNUM(rhs))
+    return 0;
+  if (rhs->kind==ND_NUM && !check_in_char(rhs))
+    return 0;
+  if (lhs->kind==ND_NUM && !check_in_char(lhs))
+    return 0;
+
+  if (!can_direct(node->rhs))
+    return 0;
+
+
+  if(node->rhs->kind == ND_NUM && node->rhs->val == 0){
+    gen_expr(node->lhs);
+    if(node->kind != ND_EQ && node->kind != ND_NE)
+      println("\ttstb");
+  }else if(rhs->kind==ND_NUM) {
+    gen_expr(node->lhs);
+    println("\tcmpb #%ld",rhs->val);
+  }else if(rhs->kind==ND_VAR) {
+    if (rhs->var->ty->kind == TY_VLA) return 0;
+    if (rhs->ty->kind==TY_ARRAY)      return 0;
+    if (rhs->var->is_local) {
+      if (!test_addr_x(rhs)) return 0;
+      int off = gen_addr_x(rhs,true);
+      println("\tcmpb %d,x",off);
+    }else{ // global
+      println("\tcmpb _%s",rhs->var->name);
+    }
+  }else{
+    assert(0);
+  }
+
+  switch(node->kind){
+  case ND_EQ:
+    println("\tjeq %s",if_true);
+    break;
+  case ND_NE:
+    println("\tjne %s",if_true);
+    break;
+  case ND_LT:
+    if (node->lhs->ty->is_unsigned){
+      println("\tjcs %s",if_true);
+    }else{
+      println("\tjlt %s",if_true);
+    }
+    break;
+  case ND_GE:
+    if (node->lhs->ty->is_unsigned){
+      println("\tjcc %s",if_true);
+    }else{
+      println("\tjge %s",if_true);
+    }
+    break;
+  case ND_LE:
+    if (node->lhs->ty->is_unsigned){
+      println("\tjls %s",if_true);
+    }else{
+      println("\tjle %s",if_true);
+    }
+    break;
+  case ND_GT:
+    if (node->lhs->ty->is_unsigned){
+      println("\tjhi %s",if_true);
+    }else{
+      println("\tjgt %s",if_true);
+    }
+    break;
+  }
+  return 1;
+}
+
+//
 // Compare two 8- or 16-bit integers.
 //   Generate code that branches to if_true if the comparison result is true.
 //   Return 1 if code was generated.
@@ -391,18 +523,20 @@ int gen_jump_if_true(Node *node,char *if_true)
   if (node->kind==ND_NOT)
     return gen_jump_if_false(node->lhs,if_true);
 
+  if (isVAR(node) && node->ty->kind==TY_CHAR)
+    return gen_jump_if_true_8bit(node,if_true);
+
   if(!is_compare(node))
     return 0;
-  if(lhs->ty->kind!=TY_CHAR && lhs->ty->kind!=TY_INT && lhs->ty->kind!=TY_SHORT)
-    return 0;
 
-#if 0
   if(lhs->ty->kind==TY_CHAR
   && rhs->ty->kind==TY_CHAR
-  && gen_jump_if_false_8bit(node,if_false)){
+  && gen_jump_if_true_8bit(node,if_true)){
     return 1;
   }
-#endif
+
+  if(lhs->ty->kind!=TY_CHAR && lhs->ty->kind!=TY_INT && lhs->ty->kind!=TY_SHORT)
+    return 0;
 
   char if_thru[32];
   int c = count();
