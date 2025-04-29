@@ -3213,6 +3213,21 @@ static Node *primary(Token **rest, Token *tok) {
         return new_num(sc->enum_val, tok);
     }
 
+    // [https://www.sigbus.info/n1570#6.4.2.2p1] "__func__" is
+    // automatically defined as a local variable containing the
+    // current function name.
+    if (current_fn && (equal(tok, "__func__") || equal(tok, "__FUNCTION__"))) {
+      char *name = current_fn->name;
+      Obj *function_name_obj = 
+        new_string_literal(name, array_of(ty_char, strlen(name) + 1));
+
+      push_scope("__func__")->var = function_name_obj;
+ 
+      // [GNU] __FUNCTION__ is yet another name of __func__.
+      push_scope("__FUNCTION__")->var = function_name_obj;
+      return new_var_node(function_name_obj, tok);
+    }
+
     if (equal(tok->next, "("))
       error_tok(tok, "implicit declaration of a function");
     error_tok(tok, "undefined variable");
@@ -3356,6 +3371,7 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 
   tok = skip(tok, "{");
 
+#if 0
   // [https://www.sigbus.info/n1570#6.4.2.2p1] "__func__" is
   // automatically defined as a local variable containing the
   // current function name.
@@ -3365,6 +3381,7 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 
   // [GNU] __FUNCTION__ is yet another name of __func__.
   push_scope("__FUNCTION__")->var = function_name_obj;
+#endif
 
   fn->body = compound_stmt(&tok, tok);
   fn->locals = locals;
