@@ -228,6 +228,7 @@ static void gen_addr(Node *node){
 // It's an error if a given node does not reside in memory.
 int gen_addr_x(Node *node,bool save_d)
 {
+  Node *lhs = node->lhs;
   int off;
 
   switch (node->kind) {
@@ -262,7 +263,6 @@ int gen_addr_x(Node *node,bool save_d)
     return 0;
     break;
   case ND_DEREF:
-    Node *lhs = node->lhs;
     switch (lhs->kind){
     case ND_VAR:
       off = gen_addr_x(lhs,save_d);
@@ -286,9 +286,9 @@ int gen_addr_x(Node *node,bool save_d)
   //  (ND_CAST TY_PTR(10) 61120)
   case ND_CAST:
     if (node->ty->kind == TY_PTR
-    &&  node->lhs->kind == ND_NUM
-    &&  is_integer(node->lhs->ty)) {
-      println("\tldx #%ld",node->lhs->val);
+    &&  lhs->kind == ND_NUM
+    &&  is_integer(lhs->ty)) {
+      println("\tldx #%ld",lhs->val);
       return 0;
     }
     break;
@@ -463,15 +463,7 @@ static void load_x(Type *ty,int off) {
   // register for char, short and int may contain garbage. When we load
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
-//  println("\tclra");
     println("\tldab %d,x",off);
-#if 0
-    if (!ty->is_unsigned){
-      println("\tasrb");
-      println("\trolb");
-      println("\tsbca #0");
-    }
-#endif
   }else if (ty->size == 2){
     println("\tldab %d,x",off+1);
     println("\tldaa %d,x",off);
@@ -486,6 +478,28 @@ static void load_x(Type *ty,int off) {
     println("\tstab @long");
   }else
     println("  mov (%%rax), %%rax");
+}
+
+void load_var(Node *node)
+{
+  switch (node->ty->kind) {
+  case TY_ARRAY:
+  case TY_STRUCT:
+  case TY_UNION:
+  case TY_FUNC:
+  case TY_VLA:
+    gen_addr(node);
+    load(node->ty);
+    return;
+  }
+#if 1
+  int off = gen_addr_x(node,false);
+  load_x(node->ty,off);
+#else
+  gen_addr(node);
+  load(node->ty);
+#endif
+  return;
 }
 
 // Store D to an address that the stack top is pointing to.
@@ -1821,23 +1835,7 @@ void gen_expr(Node *node) {
     return;
   //   ND_NEG end
   case ND_VAR:
-    switch (node->ty->kind) {
-    case TY_ARRAY:
-    case TY_STRUCT:
-    case TY_UNION:
-    case TY_FUNC:
-    case TY_VLA:
-      gen_addr(node);
-      load(node->ty);
-      return;
-    }
-#if 1
-    int off = gen_addr_x(node,false);
-    load_x(node->ty,off);
-#else
-    gen_addr(node);
-    load(node->ty);
-#endif
+    load_var(node);
     return;
   case ND_MEMBER: {
 #if 1
