@@ -2156,8 +2156,10 @@ void gen_expr(Node *node) {
     if (gen_jump_if_true(node->rhs,L_true)) {
       need_bool = 1;
     }else{
-      gen_expr(node->lhs);
-      if (!is_compare_or_not(node->rhs)){
+      gen_expr(node->rhs);
+      if (is_compare_or_not(node->rhs)){
+        println("\tbra %s",L_end);
+      }else{
         cmp_zero(node->rhs->ty);
         need_bool = 1;
         println("\tbne %s",L_true);
