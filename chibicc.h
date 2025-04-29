@@ -445,6 +445,7 @@ void gen_expr(Node *node);
 int gen_addr_x(Node *node,bool save_d);
 int count(void);
 void push(void);
+void load_var(Node *node);
 
 extern int depth;
 typedef	enum {
