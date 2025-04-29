@@ -49,6 +49,29 @@ bool is_bitfield(Node *node) {
   return node->kind == ND_MEMBER && node->member->is_bitfield;
 }
 
+static bool is_bitfield2(Node *node, int *width) {
+  switch (node->kind) {
+  case ND_ASSIGN:
+  case ND_POST_INCDEC:
+    return is_bitfield2(node->lhs, width);
+  case ND_COMMA:
+    return is_bitfield2(node->rhs, width);
+  case ND_STMT_EXPR: {
+    Node *stmt = node->body;
+    while (stmt->next)
+      stmt = stmt->next;
+    if (stmt->kind == ND_EXPR_STMT)
+      return is_bitfield2(stmt->lhs, width);
+  }
+  case ND_MEMBER:
+    if (!node->member->is_bitfield)
+      return false;
+    *width = node->member->bit_width;
+    return true;
+  }
+  return false;
+}
+
 // add from slimcc
 bool is_redundant_cast(Node *expr, Type *ty) {
   if (expr->kind != ND_CAST)
@@ -166,12 +189,57 @@ Type *vla_of(Type *base, Node *len) {
   return ty;
 }
 
+int int_rank(Type *t) {
+  switch (t->kind) {
+    case TY_BOOL:
+    case TY_CHAR:
+    case TY_SHORT:
+      return 0;
+    case TY_INT:
+      return 1;
+    case TY_LONG:
+      return 2;
+  }
+  assert(0);
+}
+
 Type *enum_type(void) {
   return new_type(TY_ENUM, 2, 1);
 }
 
 Type *struct_type(void) {
   return new_type(TY_STRUCT, 0, 1);
+}
+
+static void int_promotion(Node **node) {
+  Type *ty = (*node)->ty;
+  int bit_width;
+
+  if (is_bitfield2(*node, &bit_width)) {
+    int int_width = ty_int->size * 8;	// byte:8bit
+
+    if (bit_width == int_width && ty->is_unsigned) {
+      *node = new_cast(*node, ty_uint);
+    } else if (bit_width <= int_width) {
+      *node = new_cast(*node, ty_int);
+    } else {
+      *node = new_cast(*node, ty);
+    }
+    return;
+  }
+
+  if (ty->size < ty_int->size) {
+    *node = new_cast(*node, ty_int);
+    return;
+  }
+
+  if (ty->size == ty_int->size && int_rank(ty) < int_rank(ty_int)) {
+    if (ty->is_unsigned)
+      *node = new_cast(*node, ty_uint);
+    else
+      *node = new_cast(*node, ty_int);
+    return;
+  }
 }
 
 static Type *get_common_type(Type *ty1, Type *ty2) {
@@ -249,9 +317,11 @@ void add_type(Node *node) {
     node->ty = node->lhs->ty;
     return;
   case ND_NEG: {
-    Type *ty = get_common_type(ty_int, node->lhs->ty);
-    node->lhs = new_cast(node->lhs, ty);
-    node->ty = ty;
+    if (!is_numeric(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (is_integer(node->lhs->ty))
+      int_promotion(&node->lhs);
+    node->ty = node->lhs->ty;
     return;
   }
   case ND_ASSIGN:
@@ -279,10 +349,18 @@ void add_type(Node *node) {
     node->ty = ty_int;	// TODO: bool?
     return;
   case ND_BITNOT:
+    if (!is_integer(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    int_promotion(&node->lhs);
     node->ty = node->lhs->ty;
     return;
   case ND_SHL:
-  case ND_SHR:		// TODO: Is it okay to use an int for the shift amount?
+  case ND_SHR:
+    if (!is_integer(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_integer(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
+    int_promotion(&node->lhs);
     node->ty = node->lhs->ty;
     return;
   case ND_VAR:

@@ -2890,19 +2890,17 @@ void gen_expr(Node *node) {
       else
         println("\tjsr __ge16s");
     }
-//    println("  movzb %%al, %%rax");
     return;
   case ND_SHL:
     gen_expr(node->rhs);
     cast(node->rhs->ty, node->ty);
     push();
     gen_expr(node->lhs);
+//  shl16: AccAB << TOS(16bit)
     cast(node->lhs->ty, node->ty);
     println("\tjsr __shl16");
     ins(2);
     IX_Dest = IX_None;
-//    println("  mov %%rdi, %%rcx");
-//    println("  shl %%cl, %s", ax);
     return;
   case ND_SHR:
     gen_expr(node->rhs);
@@ -2910,17 +2908,15 @@ void gen_expr(Node *node) {
     push();
     gen_expr(node->lhs);
     cast(node->lhs->ty, node->ty);
-//    println("  mov %%rdi, %%rcx");
+//  shr16: AccAB >> TOS(16bit)
     if (node->lhs->ty->is_unsigned){
       println("\tjsr __shr16u");
       println("\tins");
       println("\tins");
-//    println("  shr %%cl, %s", ax);
     }else{
       println("\tjsr __shr16s");
       println("\tins");
       println("\tins");
-//      println("  sar %%cl, %s", ax);
     }
     depth -= 2;
     IX_Dest = IX_None;
