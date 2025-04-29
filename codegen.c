@@ -2078,12 +2078,13 @@ void gen_expr(Node *node) {
     cmp_zero(node->lhs->ty);
     int c = count();
     println("\tbeq L_false_%d", c);
+    println("\tclra");
     println("\tclrb");
     println("\tbra L_end_%d", c);
     println("L_false_%d:", c);
+    println("\tclra");
     println("\tldab #1");
     println("L_end_%d:", c);
-    println("\tclra");
     return;
   }
   case ND_BITNOT:
