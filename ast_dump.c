@@ -153,7 +153,7 @@ static void ast_dump(Node *node)
     ast_dump_unary(node,"!");
     return;
   case ND_BITNOT:
-    ast_dump_unary(node,"!");
+    ast_dump_unary(node,"~");
     return;
   case ND_LOGAND:
     ast_dump_binary(node,"&&");
