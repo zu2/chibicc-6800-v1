@@ -2086,10 +2086,26 @@ void gen_expr(Node *node) {
     return;
   }
   case ND_BITNOT:
+    assert(is_integer(node->ty));
     gen_expr(node->lhs);
-    println("\tcomb");
-    println("\tcoma");
-    return;
+    switch(node->ty->size){
+    case 1:
+      println("\tclra");
+      println("\tcomb");
+      println("\tcoma");
+      break;
+    case 2:
+      println("\tcomb");
+      println("\tcoma");
+      return;
+    case 4:
+      println("\tcom @long+3");
+      println("\tcom @long+2");
+      println("\tcom @long+1");
+      println("\tcom @long");
+      return;
+    }
+    assert(0);
   case ND_LOGAND: {
     int c = count();
     int need_bool = 0;
