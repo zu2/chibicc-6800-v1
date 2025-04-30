@@ -118,6 +118,7 @@ Node *optimize_expr(Node *node)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+  Node *new;
 
   switch (node->kind) {
   case ND_NULL_EXPR:
@@ -165,9 +166,9 @@ Node *optimize_expr(Node *node)
     //  optimize_stmt(n);
     return node;
   case ND_COMMA:
-    //gen_expr(node->lhs);
-    //gen_expr(node->rhs);
-    return node;
+    new =  optimize_lr(node);
+    new->lhs->retval_unused = true;
+    return new;
   case ND_CAST:
     node->lhs = optimize_expr(node->lhs);
     if (node->ty->kind==TY_BOOL

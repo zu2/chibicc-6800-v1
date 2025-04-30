@@ -2052,9 +2052,12 @@ void gen_expr(Node *node) {
     return;
   case ND_COND: {
     int c = count();
-    gen_expr(node->cond);
-    if (!is_compare_or_not(node->cond))
-      cmp_zero(node->cond->ty);
+    Node *cond;
+    node->cond->bool_result_unused = true;
+    cond = optimize_expr(node->cond);
+    gen_expr(cond);
+    if (!is_compare_or_not(cond))
+      cmp_zero(cond->ty);
     println("\tjeq L_else_%d", c);
     gen_expr(node->then);
     println("\tjmp L_end_%d", c);
@@ -2964,6 +2967,7 @@ static void gen_stmt(Node *node) {
 
   switch (node->kind) {
   case ND_IF: {
+    Node *cond = node->cond;
     int c = count();
     char L_else[32];
     char L_end[32];
@@ -2974,11 +2978,12 @@ static void gen_stmt(Node *node) {
       sprintf(L_end, "L_end_%d"  ,c);
       strcpy(L_else,L_end);
     }
-    node->cond = optimize_expr(node->cond);
-    if (!gen_jump_if_false(node->cond,L_else)){
-      gen_expr(node->cond);
-      if (!is_compare_or_not(node->cond))
-        cmp_zero(node->cond->ty);
+    cond->bool_result_unused = true;
+    cond = optimize_expr(cond);
+    if (!gen_jump_if_false(cond,L_else)){
+      gen_expr(cond);
+      if (!is_compare_or_not(cond))
+        cmp_zero(cond->ty);
       println("\tjeq %s",L_else);
     }
     gen_stmt(node->then);
@@ -2993,17 +2998,19 @@ static void gen_stmt(Node *node) {
     return;
   }
   case ND_FOR: {
+    Node *cond = node->cond;
     int c = count();
     if (node->init)
       gen_stmt(node->init);
     println("L_begin_%d:", c);
     IX_Dest = IX_None;
-    node->cond = optimize_expr(node->cond);
-    if (node->cond) {
-      if (!gen_jump_if_false(node->cond,node->brk_label)){
-        gen_expr(node->cond);
-        if (!is_compare_or_not(node->cond))
-          cmp_zero(node->cond->ty);
+    if (cond) {
+      cond->bool_result_unused = true;
+      cond = optimize_expr(cond);
+      if (!gen_jump_if_false(cond,node->brk_label)){
+        gen_expr(cond);
+        if (!is_compare_or_not(cond))
+          cmp_zero(cond->ty);
         println("\tjeq %s", node->brk_label);
       }
     }
@@ -3018,15 +3025,17 @@ static void gen_stmt(Node *node) {
     return;
   }
   case ND_DO: {
+    Node *cond = node->cond;
     int c = count();
     println("L_begin_%d:", c);
     IX_Dest = IX_None;
     gen_stmt(node->then);
     println("%s:", node->cont_label);
-    node->cond = optimize_expr(node->cond);
-    gen_expr(node->cond);
-    if (!is_compare_or_not(node->cond))
-      cmp_zero(node->cond->ty);
+    cond->bool_result_unused = true;
+    cond = optimize_expr(cond);
+    gen_expr(cond);
+    if (!is_compare_or_not(cond))
+      cmp_zero(cond->ty);
     println("\tjne L_begin_%d", c);
     println("%s:", node->brk_label);
     IX_Dest = IX_None;
@@ -3107,6 +3116,7 @@ static void gen_stmt(Node *node) {
 //    println("\tjmp L_return_%s", current_fn->name);
     return;
   case ND_EXPR_STMT:
+    node->lhs->retval_unused = true;
     gen_expr(node->lhs);
     return;
   case ND_ASM:

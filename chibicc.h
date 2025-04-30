@@ -298,6 +298,10 @@ struct Node {
   // Numeric literal
   int64_t val;
   long double fval;
+
+  // optimize hint
+  bool retval_unused;
+  bool bool_result_unused;
 };
 
 Node *new_cast(Node *expr, Type *ty);
