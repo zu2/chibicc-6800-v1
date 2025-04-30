@@ -292,6 +292,9 @@ static void ast_dump(Node *node)
     return;
 //48   ND_CAS,       // Atomic compare-and-swap
 //49   ND_EXCH,      // Atomic exchange
+  case ND_POST_INCDEC:
+    ast_dump_binary(node,"ND_POST_INCDEC");
+    break;
   default:
     return;
   }

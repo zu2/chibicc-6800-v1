@@ -1748,6 +1748,7 @@ void gen_expr(Node *node) {
     return;
   }
   case ND_POST_INCDEC: {
+    println("; node->retval_unused %d", node->retval_unused);
     if (node->rhs->kind != ND_NUM){
       fprintf(stderr,"ND_POST_INCDEC: assertion failed 1\n");
       assert(0);
@@ -1759,24 +1760,41 @@ void gen_expr(Node *node) {
     }else{
       off = 0;
       gen_addr(node->lhs);
-      println("\tpshb");
-      println("\tpsha");
-      println("\ttsx");
-      println("\tldx 0,x");
-      println("\tins");
-      println("\tins");
+      tfr_dx();
     }
     switch (node->lhs->ty->kind) {
     case TY_CHAR:
       println("\tldab %d,x",off);
-      println("\taddb #%d",val);
+      switch(val){
+      case 1:
+	println("\tincb");
+	break;
+      case -1:
+	println("\tdecb");
+	break;
+      default:
+        println("\taddb #%d",val);
+	break;
+      }
       println("\tstab %d,x",off);
-      println("\tsubb #%d",val);
-      println("\tclra");
-      if (!node->lhs->ty->is_unsigned){
-        println("\tasrb");
-        println("\trolb");
-        println("\tsbca #0");
+      if (!node->retval_unused) {
+        switch(val){
+        case 1:
+          println("\tdecb");
+          break;
+        case -1:
+          println("\tincb");
+	  break;
+        default:
+          println("\tsubb #%d",val);
+          break;
+        }
+        println("\tclra");
+        if (!node->lhs->ty->is_unsigned){
+          println("\tasrb");
+          println("\trolb");
+          println("\tsbca #0");
+	}
       }
       break;
     case TY_SHORT:
@@ -1787,8 +1805,10 @@ void gen_expr(Node *node) {
       println("\tadca #>%d",val);
       println("\tstab %d,x",off+1);
       println("\tstaa %d,x",off);
-      println("\tsubb #<%d",val);
-      println("\tsbca #>%d",val);
+      if (!node->retval_unused) {
+        println("\tsubb #<%d",val);
+        println("\tsbca #>%d",val);
+      }
       break;
     default:
       fprintf(stderr,"ND_POST_INCDEC: assertion failed 1\n");
