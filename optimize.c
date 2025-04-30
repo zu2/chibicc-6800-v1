@@ -114,6 +114,19 @@ static Node *optimize_lr_swap(Node *node)
     return node;
 }
 
+void make_comma_retval_unused(Node *node, bool all)
+{
+  for ( ; node ; node=node->rhs) {
+    if (node->rhs || all) {
+      node->lhs->retval_unused = true;
+      if (node->lhs->kind == ND_COMMA) {
+	make_comma_retval_unused(node->lhs,all);
+      }
+    }
+  }
+}
+
+
 Node *optimize_expr(Node *node)
 {
   Node *lhs = node->lhs;
@@ -293,6 +306,9 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_SHL:
   case ND_SHR:
+    return optimize_lr(node);
+  case ND_POST_INCDEC:
+  case ND_PRE_INCDEC:
     return optimize_lr(node);
   }
   return node;

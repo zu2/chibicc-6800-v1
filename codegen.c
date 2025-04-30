@@ -1748,9 +1748,7 @@ void gen_expr(Node *node) {
     return;
   }
   case ND_POST_INCDEC: {
-    println("; ND_POST_INCDEC node->retval_unused %d", node->retval_unused);
     if (node->rhs->kind != ND_NUM){
-      fprintf(stderr,"ND_POST_INCDEC: assertion failed 1\n");
       assert(0);
     }
     int val = node->rhs->val;
@@ -1799,6 +1797,8 @@ void gen_expr(Node *node) {
       break;
     case TY_SHORT:
     case TY_INT:
+    case TY_ENUM:
+    case TY_PTR:
       println("\tldab %d,x",off+1);
       println("\tldaa %d,x",off);
       println("\taddb #<%d",val);
@@ -1811,7 +1811,6 @@ void gen_expr(Node *node) {
       }
       break;
     default:
-      fprintf(stderr,"ND_POST_INCDEC: assertion failed 1\n");
       assert(0);
     }
     return;
@@ -1864,7 +1863,6 @@ void gen_expr(Node *node) {
       println("\tstaa %d,x",off);
       break;
     default:
-      fprintf(stderr,"ND_PRE_INCDEC: assertion failed 1\n");
       assert(0);
     }
     return;
@@ -3081,8 +3079,10 @@ static void gen_stmt(Node *node) {
     gen_stmt(node->then);
     println("%s:", node->cont_label);
     IX_Dest = IX_None;
-    if (node->inc)
+    if (node->inc) {
+      node->inc->retval_unused = true;
       gen_expr(node->inc);
+    }
     println("\tjmp L_begin_%d", c);
     println("%s:", node->brk_label);
     IX_Dest = IX_None;

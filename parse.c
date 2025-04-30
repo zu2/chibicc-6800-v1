@@ -2903,16 +2903,26 @@ static Node *struct_ref(Node *node, Token *tok) {
 
 // Convert A++ to `(typeof A)((A += 1) - 1)`
 static Node *new_post_inc_dec(Node *node, Token *tok, int addend) {
-  add_type(node);
+  int size = 1;
+  Type *ty;
 
-  if (!node->ty->is_atomic
-  &&  (node->ty->kind == TY_CHAR
-    || node->ty->kind == TY_SHORT
-    || node->ty->kind == TY_INT) ){
-    node = new_add(node,new_num(addend,tok), tok);
-    node->kind = ND_POST_INCDEC;
-    node->ty = node->lhs->ty;
-    return node;
+  add_type(node);
+  ty = node->ty;
+  if (!ty->is_atomic) {
+    if (ty->kind == TY_CHAR
+    ||  ty->kind == TY_SHORT
+    ||  ty->kind == TY_INT
+    ||  ty->kind == TY_ENUM ) {
+      node = new_add(node,new_num(addend,tok), tok);
+      node->kind = ND_POST_INCDEC;
+      node->ty = node->lhs->ty;
+      return node;
+    }else if (ty->kind == TY_PTR) {
+      node = new_add(node,new_num(addend,tok), tok);
+      node->kind = ND_POST_INCDEC;
+      node->ty = node->lhs->ty;
+      return node;
+    }
   }
 
   return new_cast(new_add(to_assign(new_add(node, new_num(addend, tok), tok)),
