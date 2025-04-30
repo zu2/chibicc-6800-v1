@@ -1,6 +1,6 @@
 #include "common.h"
 
-char *strcpy(char *p, char *q)
+char *strcpy(unsigned char *p, unsigned char *q)
 {
 	while (*q){
 		*p++ = *q++;
