@@ -2574,6 +2574,24 @@ static Node *cast(Token **rest, Token *tok) {
 
   return unary(rest, tok);
 }
+//
+// Convert ++A to `(typeof A)(A += 1)`
+static Node *new_pre_inc_dec(Token **rest, Token *tok, int addend) {
+
+  Node *node = unary(rest, tok->next);
+  add_type(node);
+  if (!node->ty->is_atomic
+  &&  (node->ty->kind == TY_CHAR
+    || node->ty->kind == TY_SHORT
+    || node->ty->kind == TY_INT) ){
+
+    node = new_add(node,new_num(addend,tok), tok);
+    node->kind = ND_PRE_INCDEC;
+    node->ty = node->lhs->ty;
+    return node;
+  }
+  return to_assign(new_add(node, new_num(addend, tok), tok));
+}
 
 // unary = ("+" | "-" | "*" | "&" | "!" | "~") cast
 //       | ("++" | "--") unary
@@ -2614,11 +2632,13 @@ static Node *unary(Token **rest, Token *tok) {
 
   // Read ++i as i+=1
   if (equal(tok, "++"))
-    return to_assign(new_add(unary(rest, tok->next), new_num(1, tok), tok));
+    return new_pre_inc_dec(rest,tok,1);
+//  return to_assign(new_add(unary(rest, tok->next), new_num(1, tok), tok));
 
   // Read --i as i-=1
   if (equal(tok, "--"))
-    return to_assign(new_sub(unary(rest, tok->next), new_num(1, tok), tok));
+    return new_pre_inc_dec(rest,tok,-1);
+//  return to_assign(new_sub(unary(rest, tok->next), new_num(1, tok), tok));
 
   // [GNU] labels-as-values
   if (equal(tok, "&&")) {
@@ -2882,7 +2902,7 @@ static Node *struct_ref(Node *node, Token *tok) {
 }
 
 // Convert A++ to `(typeof A)((A += 1) - 1)`
-static Node *new_inc_dec(Node *node, Token *tok, int addend) {
+static Node *new_post_inc_dec(Node *node, Token *tok, int addend) {
   add_type(node);
 
   if (!node->ty->is_atomic
@@ -2961,13 +2981,13 @@ static Node *postfix(Token **rest, Token *tok) {
     }
 
     if (equal(tok, "++")) {
-      node = new_inc_dec(node, tok, 1);
+      node = new_post_inc_dec(node, tok, 1);
       tok = tok->next;
       continue;
     }
 
     if (equal(tok, "--")) {
-      node = new_inc_dec(node, tok, -1);
+      node = new_post_inc_dec(node, tok, -1);
       tok = tok->next;
       continue;
     }

@@ -231,6 +231,7 @@ typedef enum {
   ND_CAS,       // Atomic compare-and-swap
   ND_EXCH,      // Atomic exchange
   ND_POST_INCDEC,// post inc/dec (++,--)
+  ND_PRE_INCDEC, // pre  inc/dec (++,--)
 } NodeKind;
 
 // AST node type

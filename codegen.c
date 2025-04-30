@@ -1748,7 +1748,7 @@ void gen_expr(Node *node) {
     return;
   }
   case ND_POST_INCDEC: {
-    println("; node->retval_unused %d", node->retval_unused);
+    println("; ND_POST_INCDEC node->retval_unused %d", node->retval_unused);
     if (node->rhs->kind != ND_NUM){
       fprintf(stderr,"ND_POST_INCDEC: assertion failed 1\n");
       assert(0);
@@ -1815,7 +1815,60 @@ void gen_expr(Node *node) {
       assert(0);
     }
     return;
-  }
+  } // ND_POST_INCDEC
+  case ND_PRE_INCDEC: {
+    println("; ND_PRE_INCDEC node->retval_unused %d", node->retval_unused);
+    if (node->rhs->kind != ND_NUM){
+      assert(0);
+    }
+    int val = node->rhs->val;
+    int off;
+    if (test_addr_x(node->lhs)){
+      off = gen_addr_x(node->lhs,false);
+    }else{
+      off = 0;
+      gen_addr(node->lhs);
+      tfr_dx();
+    }
+    switch (node->lhs->ty->kind) {
+    case TY_CHAR:
+      println("\tldab %d,x",off);
+      switch(val){
+      case 1:
+	println("\tincb");
+	break;
+      case -1:
+	println("\tdecb");
+	break;
+      default:
+        println("\taddb #%d",val);
+	break;
+      }
+      println("\tstab %d,x",off);
+      if (!node->retval_unused) {
+        println("\tclra");
+        if (!node->lhs->ty->is_unsigned){
+          println("\tasrb");
+          println("\trolb");
+          println("\tsbca #0");
+	}
+      }
+      break;
+    case TY_SHORT:
+    case TY_INT:
+      println("\tldab %d,x",off+1);
+      println("\tldaa %d,x",off);
+      println("\taddb #<%d",val);
+      println("\tadca #>%d",val);
+      println("\tstab %d,x",off+1);
+      println("\tstaa %d,x",off);
+      break;
+    default:
+      fprintf(stderr,"ND_PRE_INCDEC: assertion failed 1\n");
+      assert(0);
+    }
+    return;
+  } // ND_PRE_INCDEC
   case ND_NEG:
     gen_expr(node->lhs);
 
@@ -1824,21 +1877,12 @@ void gen_expr(Node *node) {
       println("\tldab @long	; negate float");
       println("\teorb #$80");
       println("\tstab @long");
-//      println("  mov $1, %%rax");
-//      println("  shl $31, %%rax");
-//      println("  movq %%rax, %%xmm1");
-//      println("  xorps %%xmm1, %%xmm0");
       return;
     case TY_DOUBLE:
       error_tok(node->tok, "gen_expr: double not implemented yet");
-//      println("  mov $1, %%rax");
-//      println("  shl $63, %%rax");
-//      println("  movq %%rax, %%xmm1");
-//      println("  xorpd %%xmm1, %%xmm0");
       return;
     case TY_LDOUBLE:
       error_tok(node->tok, "gen_expr: double not implemented yet");
-//      println("  fchs");
       return;
     case TY_LONG:
       println("\tjsr __neg32");
