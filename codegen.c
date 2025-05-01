@@ -325,8 +325,11 @@ int test_addr_x(Node *node)
       return 1;
     }
     // maybe Global variable
-    return 0;	// It's buggy.
-//  return 1;
+    // Array
+    if (node->ty->kind == TY_FUNC) {
+      return 0;
+    }
+    return 1;
   } // ND_VAR
   case ND_DEREF:
     switch (lhs->kind){
@@ -1139,18 +1142,22 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
         // global
         if (node->ty->kind==TY_FUNC)
 	  return 0;
-        if (node->ty->kind==TY_CHAR)
+        if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned)
 	  return 0;
         if (test) return 1;
-#if 0
-	int off = gen_addr_x(node,true);
-        println("\t%s %d,x",opb,off+1);
-        println("\t%s %d,x",opa,off);
-#else
+        if (node->ty->kind==TY_CHAR && node->ty->is_unsigned) {
+          println("\t%s _%s",opb,node->var->name);
+          println("\t%s #0",opa,node->var->name);
+	  return 1;
+	}
+	if (node->ty->kind==TY_ARRAY) {
+          println("\t%s #<_%s",opb,node->var->name);
+          println("\t%s #>_%s",opa,node->var->name);
+	  return 1;
+	}
         println("; gen_direct_sub %s %d",__FILE__,__LINE__);
         println("\t%s _%s+1",opb,node->var->name);
         println("\t%s _%s",opa,node->var->name);
-#endif
         return 1;
       }
     }
