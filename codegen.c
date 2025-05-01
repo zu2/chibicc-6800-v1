@@ -326,7 +326,7 @@ int test_addr_x(Node *node)
     }
     // maybe Global variable
     return 0;	// It's buggy.
-    return 1;
+//  return 1;
   } // ND_VAR
   case ND_DEREF:
     switch (lhs->kind){
@@ -581,7 +581,7 @@ static void store_x(Type *ty,int off) {
     println("  mov %%rax, (%%rdi)");
 }
 
-static void cmp_zero(Type *ty) {
+void cmp_zero(Type *ty) {
 
   switch(ty->kind){
   case TY_BOOL:

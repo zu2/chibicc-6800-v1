@@ -451,6 +451,7 @@ int gen_addr_x(Node *node,bool save_d);
 int count(void);
 void push(void);
 void load_var(Node *node);
+void cmp_zero(Type *ty);
 
 extern int depth;
 typedef	enum {

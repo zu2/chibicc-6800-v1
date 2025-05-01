@@ -83,9 +83,9 @@ static int node_cost(Node *node)
   case ND_NUM:
     return 1;
   case ND_VAR:
-    if (node->var->ty->kind == TY_VLA)	return 200;
+    if (node->var->ty->kind == TY_VLA)	return 150;
     if (node->var->is_local)		return test_addr_x(node)?50:100;
-    return 20;
+    return test_addr_x(node)?160:200;
   case ND_CAST:
     return node_cost(node->lhs)+10;
   }

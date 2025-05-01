@@ -192,14 +192,20 @@ int gen_jump_if_false(Node *node,char *if_false)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
-  if (node->kind==ND_NOT)
+  if (node->kind==ND_NOT) {
+    node->lhs->bool_result_unused = true;
     return gen_jump_if_true(node->lhs,if_false);
+  }
 
   if (isVAR(node) && node->ty->kind==TY_CHAR)
     return gen_jump_if_false_8bit(node,if_false);
 
-  if(!is_compare(node))
-    return 0;
+  if(!is_compare(node)) {
+    gen_expr(node);
+    cmp_zero(node->ty);
+    println("\tjeq %s", if_false);
+    return 1;
+  }
 
 //println("; gen_jump_if_false lhs->ty->kind %d, rhs->ty->kind %d\n",
 //		  		lhs->ty->kind, rhs->ty->kind );
@@ -520,14 +526,20 @@ int gen_jump_if_true(Node *node,char *if_true)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
-  if (node->kind==ND_NOT)
+  if (node->kind==ND_NOT) {
+    node->lhs->bool_result_unused = true;
     return gen_jump_if_false(node->lhs,if_true);
+  }
 
   if (isVAR(node) && node->ty->kind==TY_CHAR)
     return gen_jump_if_true_8bit(node,if_true);
 
-  if(!is_compare(node))
-    return 0;
+  if(!is_compare(node)) {
+    gen_expr(node);
+    cmp_zero(node->ty);
+    println("\tjne %s", if_true);
+    return 1;
+  }
 
   if(lhs->ty->kind==TY_CHAR
   && rhs->ty->kind==TY_CHAR
