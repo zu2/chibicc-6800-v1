@@ -79,15 +79,21 @@ static Node *swap_lr(Node *node)
 
 static int node_cost(Node *node)
 {
+  int sign;
+
   switch(node->kind){
   case ND_NUM:
     return 1;
   case ND_VAR:
-    if (node->var->ty->kind == TY_VLA)	return 150;
-    if (node->var->is_local)		return test_addr_x(node)?50:100;
-    return test_addr_x(node)?160:200;
+    sign = !node->ty->is_unsigned;
+    if (node->var->ty->kind == TY_VLA)
+      return 150 + sign;
+    if (node->var->is_local)
+      return (test_addr_x(node)?50:100) +sign;
+    return (test_addr_x(node)?160:200) + sign;
   case ND_CAST:
-    return node_cost(node->lhs)+10;
+    sign = !node->ty->is_unsigned;
+    return node_cost(node->lhs)+10+sign;
   }
   return 255;
 }
@@ -182,53 +188,34 @@ Node *optimize_expr(Node *node)
     new =  optimize_lr(node);
     new->lhs->retval_unused = true;
     return new;
-  case ND_CAST:
+  case ND_CAST: {
     node->lhs = optimize_expr(node->lhs);
     if (node->ty->kind==TY_BOOL
     &&  is_boolean_result(node->lhs)){
       return node->lhs;
     }
-//    return node;
-#if 0
-#if 0
-//    println("; ND_CAST: node->lhs->ty->kind %d, node->ty->kind %d, %s %d",node->lhs->ty->kind,node->ty->kind,__FILE__,__LINE__);
-//    println("; ND_CAST: node->lhs->ty %p, node->ty %p",node->lhs->ty,node->ty);
-      println("; ND_CAST: lhs:%s node:%s",type_str(node->lhs),type_str(node));
-      println("; ND_CAST: lhs->ty->size:%d node->ty->size:%d",node->lhs->ty->size,node->ty->size);
-      println("; ND_CAST: lhs->ty->is_integer:%d node->ty->is_integer:%d",is_integer(node->lhs->ty),is_integer(node->ty));
-      println("; ND_CAST: lhs->ty->is_unsigned:%d node->ty->is_unsigned:%d",node->lhs->ty->is_unsigned,node->ty->is_unsigned);
-#endif
-    if (is_integer(node->ty) && is_integer(node->lhs->ty)){
-      if (node->ty->size == node->lhs->ty->size
-      &&  (node->ty->is_unsigned == node->lhs->ty->is_unsigned)){
-	println("; delete ND_CAST");
-        return optimize_expr(node->lhs);
+    if (is_integer(node->ty)
+    &&  node->lhs->kind==ND_NUM
+    &&  is_integer(node->lhs->ty)) {
+      Node *new = new_copy(node->lhs);
+      uint64_t val = node->lhs->val;
+      switch (node->ty->size) {
+      case 1:
+	val =  node->ty->is_unsigned ? (uint8_t)val : (int8_t)val;
+	break;
+      case 2:
+	val =  node->ty->is_unsigned ? (uint16_t)val : (int16_t)val;
+	break;
+      case 4:
+	val =  node->ty->is_unsigned ? (uint32_t)val : (int32_t)val;
+	break;
       }
+      new->val = val;
+      new->ty  = node->ty;
+      return new;
     }
-    if (node->lhs->ty == node->ty){
-      println("; delete ND_CAST");
-      return optimize_expr(node->lhs);
-    }
-    if (node->lhs->ty->kind==4 && node->ty->kind==5){
-//      println("; ND_CAST: int to long");
-      if (node->lhs->kind == ND_NUM){
-	node->lhs->ty = node->ty;
-	return node->lhs;
-      }
-    }
-    if (node->lhs->ty->kind==4 && node->ty->kind==10){
-      println("; ND_CAST: int to ptr: skip cast");
-      return optimize_expr(node->lhs);
-    }
-#if 1
-    if (node->lhs->ty->kind==4 && node->ty->kind==4
-    &&  node->lhs->ty->is_unsigned != node->ty->is_unsigned){
-      node->lhs->ty->is_unsigned = node->ty->is_unsigned;
-      return optimize_expr(node->lhs);
-    }
-#endif
-#endif
     return node;
+  } // ND_CAST
   case ND_MEMZERO:
   case ND_COND:
   case ND_FUNCALL:

@@ -1117,6 +1117,7 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
   case ND_VAR: {
     if (node->var->ty->kind != TY_VLA ){
       if (!test_addr_x(node)) return 0;
+      println("; test_addr_x(node) test failed");
       if(node->var->is_local){
 	if (node->ty->kind==TY_ARRAY) {
 	  return 0;
@@ -1180,8 +1181,15 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
     }
     return 0;
   case ND_CAST:
-    if(is_empty_cast(node->lhs->ty, node->ty))
-      return gen_direct_sub(node->lhs, opb, opa, test);
+    // (ND_CAST TY_INT(4) (ND_VAR ty_uchar uc +2 ))
+    if (is_empty_cast(node->lhs->ty, node->ty)
+    &&  gen_direct_sub(node->lhs, opb, opa, test))
+      return 1;
+    if (node->ty->kind == TY_INT
+    &&  node->lhs->ty->kind == TY_CHAR
+    &&  gen_direct_sub(node->lhs, opb, opa, test))
+      return 1;
+    return 0;
   default:
     return 0;
   }
