@@ -492,6 +492,27 @@ void load_var(Node *node)
     load(node->ty);
     return;
   }
+  if (is_global_var(node)){
+    switch(node->ty->size) {
+    case 1:
+      println("\tldab _%s",  node->var->name);
+      break;
+    case 2:
+      println("\tldab _%s+1",node->var->name);
+      println("\tldaa _%s",  node->var->name);
+      break;
+    case 4:
+      println("\tldx _%s+2",node->var->name);
+      println("\tstx @long+2");
+      println("\tldx _%s",  node->var->name);
+      println("\tstx @long");
+      IX_Dest = IX_None;
+      break;
+    default:
+      assert(0);
+    }
+    return;
+  }
 #if 1
   int off = gen_addr_x(node,false);
   load_x(node->ty,off);
