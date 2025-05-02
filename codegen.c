@@ -1147,7 +1147,7 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
         if (test) return 1;
         if (node->ty->kind==TY_CHAR && node->ty->is_unsigned) {
           println("\t%s _%s",opb,node->var->name);
-          println("\t%s #0",opa,node->var->name);
+          println("\t%s #0",opa);
 	  return 1;
 	}
 	if (node->ty->kind==TY_ARRAY) {
@@ -3514,23 +3514,23 @@ static void emit_text(Obj *prog) {
       }
     }
     // make base pointer
-    if (fn->stack_size<=6){
+    if (fn->stack_size<=5){			// 5 for speed, 13 for size
       for(int i=0; i<fn->stack_size; i++)
-        println("\tdes");
-      println("\ttsx");
-      println("\tstx @bp");
+        println("\tdes");			// 4 1	
+      println("\ttsx");				// 4 1
+      println("\tstx @bp");			// 5 2
       IX_Dest = IX_BP;
-    }else{
-      println("\tsts @bp");			// make new bp
-      println("\tldab @bp+1");
-      println("\tldaa @bp");
-      println("\tsubb #<%u",fn->stack_size-1);
-      println("\tsbca #>%u",fn->stack_size-1);
-      println("\tstab @bp+1");
-      println("\tstaa @bp");
-      println("\tldx @bp");
+    }else{					// make new bp
+      println("\tsts @bp");			// 5 2	total 31cyc,17bytes
+      println("\tldab @bp+1");			// 3 2
+      println("\tldaa @bp");			// 3 2
+      println("\tsubb #<%u",fn->stack_size-1);	// 2 2
+      println("\tsbca #>%u",fn->stack_size-1);	// 2 2
+      println("\tstab @bp+1");			// 4 2
+      println("\tstaa @bp");			// 4 2
+      println("\tldx @bp");			// 4 2
+      println("\ttxs");				// 4 1
       IX_Dest = IX_BP;
-      println("\ttxs");
       depth = 0;
     }
     if (fn->alloca_bottom) {
@@ -3546,7 +3546,6 @@ static void emit_text(Obj *prog) {
         println("\tstaa 0,x");
       }
     }
-//  println("  mov %%rsp, %d(%%rbp)", fn->alloca_bottom->offset);
     // Emit code
 no_params_locals:
     gen_stmt(fn->body);
