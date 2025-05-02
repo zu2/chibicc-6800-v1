@@ -283,6 +283,23 @@ int gen_addr_x(Node *node,bool save_d)
     println("\tldx #_%s",node->var->name);
     IX_Dest = IX_None;
     return 0;
+  // (ND_MEMBER (ND_VAR TY_STRUCT(14) com02 +8 ) +0)
+  // (ND_MEMBER (ND_VAR TY_STRUCT(14) com01 global) +0)
+  case ND_MEMBER:
+    if (lhs->kind == ND_VAR
+    &&  (lhs->ty->kind == TY_STRUCT || lhs->ty->kind == TY_UNION)) {
+      if (lhs->var->is_local) {
+        off = lhs->var->offset + node->member->offset;
+        if (off < 254) {
+          ldx_bp();
+          return  off;
+	}
+	break; // fall thru
+      }else{
+	println("\tldx	#_%s+%d",lhs->var->name,node->member->offset);
+	return 0;
+      }
+    }
     break;
   case ND_DEREF:
     switch (lhs->kind){
@@ -390,6 +407,16 @@ int test_addr_x(Node *node)
     }
     return 1;
   } // ND_VAR
+  // (= (ND_MEMBER (ND_VAR TY_STRUCT(14) com02 +8 ) +0) 4)
+  case ND_MEMBER:
+    if (lhs->kind == ND_VAR
+    && (lhs->ty->kind == TY_STRUCT || lhs->ty->kind == TY_UNION)) {
+      if (lhs->var->is_local) {
+        return lhs->var->offset + node->member->offset < 254;
+      }
+      return 1;
+    }
+    return 0;
   case ND_DEREF:
     switch (lhs->kind){
     case ND_DEREF:
