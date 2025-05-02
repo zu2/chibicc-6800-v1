@@ -217,8 +217,15 @@ Node *optimize_expr(Node *node)
     return node;
   } // ND_CAST
   case ND_MEMZERO:
+    return node;
   case ND_COND:
+    node->cond = optimize_expr(node->cond);
+    node->then = optimize_expr(node->then);
+    node->els  = optimize_expr(node->els);
+    return node;
   case ND_FUNCALL:
+    node->lhs = optimize_expr(node->lhs);
+    return node;
   case ND_LABEL_VAL:
     return node;
   // If the ND_NOT negates the result of a relational operator,
