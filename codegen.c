@@ -283,22 +283,29 @@ int gen_addr_x(Node *node,bool save_d)
     println("\tldx #_%s",node->var->name);
     IX_Dest = IX_None;
     return 0;
-  // (ND_MEMBER (ND_VAR TY_STRUCT(14) com02 +8 ) +0)
-  // (ND_MEMBER (ND_VAR TY_STRUCT(14) com01 global) +0)
   case ND_MEMBER:
     if (lhs->kind == ND_VAR
     &&  (lhs->ty->kind == TY_STRUCT || lhs->ty->kind == TY_UNION)) {
       if (lhs->var->is_local) {
         off = lhs->var->offset + node->member->offset;
+	println("; lhs->var->offset %d, node->member->offset %d", lhs->var->offset, node->member->offset);
         if (off < 254) {
           ldx_bp();
+	  println("; gen_addr_x returns %d",off);
           return  off;
 	}
 	break; // fall thru
       }else{
 	println("\tldx	#_%s+%d",lhs->var->name,node->member->offset);
+	IX_Dest = IX_None;
 	return 0;
       }
+    }
+    if (lhs->kind == ND_DEREF && test_addr_x(lhs->lhs)) {
+      off = gen_addr_x(lhs->lhs,true);
+      println("\tldx %d,x",off);
+      IX_Dest = IX_None;
+      return node->member->offset;
     }
     break;
   case ND_DEREF:
@@ -318,12 +325,19 @@ int gen_addr_x(Node *node,bool save_d)
       &&  lhs->lhs->kind == ND_NUM
       &&  is_integer(lhs->lhs->ty)) {
         println("\tldx #%ld",lhs->lhs->val);
+        IX_Dest = IX_None;
         return 0;
       }
+      if (lhs->ty->kind == TY_PTR
+      &&  lhs->lhs->kind == ND_VAR
+      &&  lhs->lhs->ty->kind == TY_ARRAY
+      &&  !lhs->lhs->var->is_local) {
+        println("\tldx #_%s",lhs->lhs->var->name);
+        IX_Dest = IX_None;
+        return 0;
+      }
+      break;
     case ND_ADD:
-      //  (ND_DEREF ty_uchar 
-      //    (+ (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) ua1 global))
-      //       (ND_CAST TY_PTR(10) 0)))
       if (lhs->lhs->kind == ND_CAST
       &&  lhs->lhs->ty->kind == TY_PTR
       &&  lhs->lhs->lhs->kind == ND_VAR
@@ -332,13 +346,15 @@ int gen_addr_x(Node *node,bool save_d)
       &&  lhs->rhs->kind == ND_CAST
       &&  lhs->rhs->ty->kind == TY_PTR
       &&  lhs->rhs->lhs->kind == ND_NUM) {
-	off = lhs->rhs->lhs->val * lhs->rhs->ty->size;
+	off = lhs->rhs->lhs->val; // * lhs->rhs->ty->size;
 	if (off < 252 ) {
 	  println("\tldx #_%s",lhs->lhs->lhs->var->name);
+          IX_Dest = IX_None;
 	  return off;
         }
 	println("\tldx #_%s+%ld",lhs->lhs->lhs->var->name,
                        lhs->rhs->lhs->val * lhs->rhs->ty->size);
+        IX_Dest = IX_None;
 	return 0;
       }
       if (lhs->lhs->kind == ND_CAST
@@ -349,27 +365,30 @@ int gen_addr_x(Node *node,bool save_d)
       &&  lhs->rhs->kind == ND_CAST
       &&  lhs->rhs->ty->kind == TY_PTR
       &&  lhs->rhs->lhs->kind == ND_NUM) {
-	off = lhs->rhs->lhs->val * lhs->rhs->ty->size;
+	off = lhs->rhs->lhs->val; //  * lhs->rhs->ty->size;
         if (off < 252) {
 	  ldx_bp();
 	  println("\tldx %d,x", lhs->lhs->var->offset);
+	  IX_Dest = IX_None;
 	  return off;
 	}
       }
+      println("; ND_DEREF ND_ADD fail");
       break;
     } // ND_DEREF
     break;
-  //  (ND_CAST TY_PTR(10) 61120)
   case ND_CAST:
     if (node->ty->kind == TY_PTR
     &&  lhs->kind == ND_NUM
     &&  is_integer(lhs->ty)) {
       println("\tldx #%ld",lhs->val);
+      IX_Dest = IX_None;
       return 0;
     }
     break;
   }
   // fallback to gen_addr()
+  println("; fall back to gen_addr() save_d %d",save_d);
   if (save_d)
     push();
   gen_addr(node);
@@ -407,7 +426,6 @@ int test_addr_x(Node *node)
     }
     return 1;
   } // ND_VAR
-  // (= (ND_MEMBER (ND_VAR TY_STRUCT(14) com02 +8 ) +0) 4)
   case ND_MEMBER:
     if (lhs->kind == ND_VAR
     && (lhs->ty->kind == TY_STRUCT || lhs->ty->kind == TY_UNION)) {
@@ -416,15 +434,15 @@ int test_addr_x(Node *node)
       }
       return 1;
     }
+    println("; ND_MEMBER ND_DEREF %d",test_addr_x(lhs->lhs));
+    if (lhs->kind == ND_DEREF)
+      return test_addr_x(lhs->lhs);
     return 0;
   case ND_DEREF:
     switch (lhs->kind){
     case ND_DEREF:
       return test_addr_x(lhs);
     case ND_ADD:
-      //  (ND_DEREF ty_uchar 
-      //    (+ (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) ua1 global))
-      //       (ND_CAST TY_PTR(10) 0)))
       if (lhs->lhs->kind == ND_CAST
       &&  lhs->lhs->ty->kind == TY_PTR
       &&  lhs->lhs->lhs->kind == ND_VAR
@@ -442,7 +460,7 @@ int test_addr_x(Node *node)
       &&  lhs->rhs->kind == ND_CAST
       &&  lhs->rhs->ty->kind == TY_PTR
       &&  lhs->rhs->lhs->kind == ND_NUM
-      &&  lhs->rhs->lhs->val * lhs->rhs->ty->size < 252) {
+      &&  lhs->rhs->lhs->val) { //  * lhs->rhs->ty->size < 252) {
 	 return test_addr_x(lhs->lhs->lhs);
       }
       return 0;
@@ -1281,7 +1299,6 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
     }
     return 0;
   } // ND_VAR
-  // (ND_DEREF (ND_CAST TY_PTR(10) 61120))
   case ND_DEREF:
     switch(node->lhs->kind){
     case ND_CAST:
@@ -1306,7 +1323,6 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
     }
     return 0;
   case ND_CAST:
-    // (ND_CAST TY_INT(4) (ND_VAR ty_uchar uc +2 ))
     if (is_empty_cast(node->lhs->ty, node->ty)
     &&  gen_direct_sub(node->lhs, opb, opa, test))
       return 1;
@@ -1803,7 +1819,9 @@ static void gen_funcall(Node *node)
     println("\tjsr _%s",node->lhs->var->name);
   }else{
     int off = gen_addr_x(node->lhs,true);
-    if (node->lhs->ty->kind!=TY_FUNC) {
+    if (node->lhs->kind==ND_DEREF && node->lhs->ty->kind==TY_FUNC) {
+      println("\tjsr %d,x",off);
+    } else if (node->lhs->ty->kind!=TY_FUNC) {
       println("\tldx %d,x",off);
       println("\tjsr 0,x");
     }else{
@@ -2734,7 +2752,6 @@ void gen_expr(Node *node) {
       return;
     }
     gen_expr(node->lhs);
-    // (+ (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) L__38 global)) (ND_CAST TY_PTR(10) (ND_VAR ty_uchar i +7 )))
     if (node->rhs->kind     == ND_CAST
     &&  node->rhs->ty->kind == TY_ARRAY
     &&  node->rhs->lhs->kind == ND_VAR
@@ -3275,7 +3292,7 @@ static void gen_stmt(Node *node) {
     return;
   case ND_EXPR_STMT:
     node->lhs->retval_unused = true;
-    gen_expr(node->lhs);
+    gen_expr(optimize_expr(node->lhs));
     return;
   case ND_ASM:
     println("\t%s", node->asm_str);
