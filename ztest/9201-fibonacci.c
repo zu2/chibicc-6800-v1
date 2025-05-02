@@ -20,5 +20,6 @@ int main(int argc,char **argv)
         return i;
     }
 
+    cpu_counter();
     return 0;
 }
