@@ -26,8 +26,7 @@ It can handle subnormal, NaN and Inf values. It passes basic testing but is not 
 
 The compiler passes basic tests, but there are still many issues remaining.
 
-In the original chibicc, the code is compiled as a stack machine on x86.
-On the 6800, this is very inefficient, so a simple optimization is done:
+The original chibicc compiles C source code using stack-based operations, but also makes use of the many registers available on x64. This is inefficient on the MC6800, which has few registers and limited stack support. chibicc-6800-v1 optimizes code generation for the MC6800.
 
 I've only just started reading the original chibicc code, 
 so there are probably many bugs and inaccuracies I added.
