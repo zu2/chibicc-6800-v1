@@ -182,6 +182,7 @@ is_var_array(Node *node)
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
 static void gen_addr(Node *node){
+
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
@@ -2084,7 +2085,7 @@ void gen_expr(Node *node) {
     load_var(node);
     return;
   case ND_MEMBER: {
-#if 1
+#if 0
     int off = gen_addr_x(node,false);
     load_x(node->ty,off);
 #else
