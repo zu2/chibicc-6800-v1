@@ -160,6 +160,9 @@ Node *optimize_expr(Node *node)
       }
     }
   case ND_VAR:
+    if (!node->ty)	// why??
+      return node;
+
     switch (node->ty->kind) {
     case TY_ARRAY:
     case TY_STRUCT:
