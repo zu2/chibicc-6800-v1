@@ -8,9 +8,9 @@ echo  "compiling:" $s
 ../chibicc $OPT -S $s.c
 err=$?
 if [ $err -ne 0 ] ; then
-	echo $?
+	echo $err
 	rm -f $s.o $s.s $s.bin
-	exit 0;
+	exit $err;
 fi
 as6800 $s.s
 ld6800 -v -b -C256 -Z0 -m $s.map -o $s.bin ../crt0.o $s.o ../libc/libc.a #../libfp/libfp.a

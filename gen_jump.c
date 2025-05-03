@@ -207,8 +207,6 @@ int gen_jump_if_false(Node *node,char *if_false)
     return 1;
   }
 
-//println("; gen_jump_if_false lhs->ty->kind %d, rhs->ty->kind %d\n",
-//		  		lhs->ty->kind, rhs->ty->kind );
 // If one side is ND_NUM, both sides are promoted to int,
 // so this can't be optimized. TODO: Fix optimize.c
   if(lhs->ty->kind==TY_CHAR
@@ -235,7 +233,7 @@ int gen_jump_if_false(Node *node,char *if_false)
         int off = gen_addr_x(lhs,false);
         sprintf(if_cond,"%d,x",off);
       }else if (!lhs->var->is_local && lhs->ty->kind!=TY_FUNC) {
-         sprintf(if_cond,"_%s",node->var->name);
+         sprintf(if_cond,"_%s",lhs->var->name);
       }
       switch(node->kind) {
       case ND_EQ:
