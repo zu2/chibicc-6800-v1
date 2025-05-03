@@ -25,12 +25,31 @@ __q:	.word	0
 __itoa:
 	tsx
 	ldx 2,x
+	stx __p
+	bne __itoa_not_null
 ;
-	stab __value+1		; save value and check zero
-	bne __itoa_not_0
-	tsta
+__itoa_ret_null:
+	clrb
+	clra
+	rts
+;
+__itoa_not_null:
+	stab __value+1		; save value
+	staa __value		;
+;
+	tsx
+	tst 4,x			; check radix high byte
+	bne __itoa_ret_null
+	ldab 5,x		; check radix low byte
+	cmpb #2
+	bcs __itoa_ret_null
+	cmpb #37
+	bcc __itoa_ret_null
+;
+	ldx __value
 	bne __itoa_not_0
 ;
+	ldx __p
 	ldab #$30		; '0'
 	stab 0,x
 	inx
@@ -43,16 +62,14 @@ __itoa_ret_str:
 	rts
 ;
 __itoa_not_0:
-	stx __p
-;
 	tsx
-	ldab 5,x		; check radix
-	ldx __p
+	ldab 5,x		; check radix==10?
 	cmpb #10
-	bne __itoa_chk_0
-	tsta			; AccA has high byte of value
-	bpl __itoa_chk_0
+	bne __itoa_not_minus
+	tsta
+	bpl __itoa_not_minus
 ;				; radix==10 && value < 0
+	ldx __p
 	ldab #$2D		; '-'
 	stab 0,x
 	inx
@@ -62,16 +79,13 @@ __itoa_not_0:
 	negb
 	sbca #0
 	stab __value+1		; save value
-__itoa_chk_0:
-	ldab __value+1
 	staa __value
+__itoa_not_minus:
+	ldx __p
 	stx __q			; most significant digit
-	bra __itoa_start;
-__itoa_pre1:
-	ldaa @tmp2
-__itoa_pre2:
-	staa __value
-__itoa_start:
+__itoa_loop:
+	ldab __value+1
+	ldaa __value
 	tsx
 	pshb
 	psha
@@ -81,24 +95,23 @@ __itoa_start:
 	ins
 	ins
 ;
-	cmpb #10		; < 10?
+	cmpb #10		; (value % radix) < 10?
 	bcc __itoa_hex
-	addb #$30		; '0'
+	addb #$30		; +'0'
 	bra __itoa_store
 ;
 __itoa_hex:
-	addb #$57		; 'a'-10
+	addb #$57		; +'a'-10
 __itoa_store:
 	ldx __p
 	stab 0,x
 	inx
 	stx __p
-	ldab @tmp2+1
-	stab __value+1
-	bne __itoa_pre1
-	ldaa @tmp2
-	bne __itoa_pre2
+	ldx @tmp2		; value /= radix
+	stx __value
+	bne __itoa_loop
 ;
+	ldx __p
 	clr 0,x
 	dex			; least significant digit
 	stx __p
