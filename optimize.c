@@ -139,6 +139,9 @@ Node *optimize_expr(Node *node)
   Node *rhs = node->rhs;
   Node *new;
 
+  if (!node)
+    return node;
+
   switch (node->kind) {
   case ND_NULL_EXPR:
   case ND_NUM:
