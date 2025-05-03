@@ -121,5 +121,6 @@ int main(int argc, char **argv)
 	if (ul!=1)
 	  return 54;
 
+	cpu_counter();
 	return 0;
 }
