@@ -29,7 +29,7 @@ _memset:
 	inca
 	staa	@tmp1
 ;
-	ldaa	4,x		; c
+	ldaa	5,x		; c
 ;
 	ldx	0,x		; saved s
 ;

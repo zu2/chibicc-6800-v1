@@ -18,7 +18,7 @@ int	sum(int n)
 	int	i;
 	int	sum;
 
-	for (sum=0,i=0; i<0x0101; i++){
+	for (sum=0,i=0; i<n; i++){
 		sum += buf[0];
 	}
 
@@ -65,6 +65,14 @@ int	main(int argc, char **argv)
 	if (buf[0x101]==0)
 		return 33;
 
+	p = memset(buf,0,0x0200);
+	p = memset(buf,1,0x0100);
+	if (p!=buf)
+		return 41;
+	if (sum(0x100)!=256)
+		return 42;
+	if (buf[0x101])
+		return 43;
 
 	return	0;
 }
