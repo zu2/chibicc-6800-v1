@@ -2117,9 +2117,13 @@ void gen_expr(Node *node) {
     }
     if (test_addr_x(lhs)){
       int off = gen_addr_x(lhs,false);
-      println("\tldx %d,x",off);
-      IX_Dest = IX_None;
-      load_x(node->ty,0);
+      if (lhs->kind == ND_VAR && lhs->ty->kind == TY_ARRAY){
+	load_x(node->ty,off);
+      }else{
+        println("\tldx %d,x",off);
+        IX_Dest = IX_None;
+        load_x(node->ty,0);
+      }
       return;
     }
     gen_expr(lhs);
@@ -3275,7 +3279,7 @@ static void gen_stmt(Node *node) {
     return;
   case ND_RETURN:
     if (node->lhs) {
-      gen_expr(node->lhs);
+      gen_expr(optimize_expr(node->lhs));
       Type *ty = node->lhs->ty;
       switch (ty->kind) {
       case TY_STRUCT:
