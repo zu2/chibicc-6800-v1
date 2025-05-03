@@ -171,12 +171,102 @@ bool is_global_var_or_array(Node *node)
    return 1;
 }
 
+Type *is_integer_constant(Node *node, int64_t *val)
+{
+  if (node->kind != ND_NUM)
+    return NULL;
+  if (!is_integer(node->ty))
+    return NULL;
+
+  *val = node->val;
+
+  return node->ty;
+}
+
 //
 // node is array name?
 //
-is_var_array(Node *node)
+bool is_var_array(Node *node)
 {
   return (node->kind == ND_VAR && node->ty->kind == TY_ARRAY);
+}
+
+
+bool gen_shl(Type *ty, uint64_t val)
+{
+  if (!is_integer(ty))
+    return false;
+  if (val<0)
+    return false;
+  if (val>=ty->size*8)
+    return false;
+  switch(ty->size){
+  case 1:
+    for (int i=0; i<val; i++) {
+      println("\taslb");
+    } 
+    return true;
+  case 2:
+    for (int i=0; i<val; i++) {
+      println("\taslb");
+      println("\trola");
+    } 
+    return true;
+  case 4:
+    // TODO:
+    for (int i=0; i<val; i++) {
+      println("\tasl @long+3");
+      println("\trol @long+2");
+      println("\trol @long+1");
+      println("\trol @long");
+    } 
+    return true;
+  }
+  assert(0); // what's?
+}
+
+bool gen_shr(Type *ty, uint64_t val)
+{
+  if (!is_integer(ty))
+    return false;
+  if (val<0)
+    return false;
+  if (val>=ty->size*8)
+    return false;
+  switch(ty->size){
+  case 1:
+    for (int i=0; i<val; i++) {
+      if (ty->is_unsigned) {
+        println("\tlsrb");
+      }else{
+        println("\tasrb");
+      } 
+    }
+    return true;
+  case 2:
+    for (int i=0; i<val; i++) {
+      if (ty->is_unsigned) {
+        println("\tlsra");
+      }else{
+        println("\tasra");
+      }
+      println("\trorb");
+    }
+    return true;
+  case 4:
+    for (int i=0; i<val; i++) {
+      if (ty->is_unsigned) {
+        println("\tlsr @long");
+      }else{
+        println("\tasr @long");
+      }
+      println("\trol @long+1");
+      println("\trol @long+2");
+      println("\trol @long+3");
+    } 
+    return true;
+  }
+  assert(0); // what's?
 }
 
 // Compute the absolute address of a given node.
@@ -3103,7 +3193,19 @@ void gen_expr(Node *node) {
         println("\tjsr __ge16s");
     }
     return;
-  case ND_SHL:
+  case ND_SHL: {
+    int64_t val;
+
+    if (is_integer_constant(node->rhs, &val)){
+      gen_expr(node->lhs);
+      if (gen_shl(node->lhs->ty,val)) {
+        cast(node->lhs->ty, node->ty);
+	return;
+      }
+      println("\tclrb");
+      println("\tclra");
+      return;
+    }
     gen_expr(node->rhs);
     cast(node->rhs->ty, node->ty);
     push();
@@ -3114,7 +3216,20 @@ void gen_expr(Node *node) {
     ins(2);
     IX_Dest = IX_None;
     return;
-  case ND_SHR:
+  } // ND_SHL
+  case ND_SHR: {
+    int64_t val;
+
+    if (is_integer_constant(node->rhs, &val)){
+      gen_expr(node->lhs);
+      if (gen_shr(node->lhs->ty,val)) {
+        cast(node->lhs->ty, node->ty);
+	return;
+      }
+      println("\tclrb");
+      println("\tclra");
+      return;
+    }
     gen_expr(node->rhs);
     cast(node->rhs->ty, node->ty);
     push();
@@ -3133,8 +3248,9 @@ void gen_expr(Node *node) {
     depth -= 2;
     IX_Dest = IX_None;
     return;
+  } // ND_SHR
+  default:
   }
-
   error_tok(node->tok, "invalid expression");
 }
 
