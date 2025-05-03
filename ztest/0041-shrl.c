@@ -25,6 +25,14 @@ int main(int argc, char **argv)
 	if (sc!=1)
 	  return 4;
 
+	sc <<= 2;
+	if (sc!=4)
+	  return 3;
+
+	sc >>= 2;
+	if (sc!=1)
+	  return 4;
+
 	uc <<= 7;
 	if (uc!=128)
 	  return 11;
@@ -37,7 +45,15 @@ int main(int argc, char **argv)
 	if (uc!=1)
 	  return 13;
 
-	sc >>= 0;
+	uc >>= 0;
+	if (sc!=1)
+	  return 14;
+
+	uc <<= 2;
+	if (uc!=4)
+	  return 13;
+
+	uc >>= 2;
 	if (sc!=1)
 	  return 14;
 
