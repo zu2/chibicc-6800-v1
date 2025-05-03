@@ -382,7 +382,7 @@ int gen_addr_x(Node *node,bool save_d)
 	off = lhs->rhs->lhs->val; //  * lhs->rhs->ty->size;
         if (off < 252) {
 	  ldx_bp();
-	  println("\tldx %d,x", lhs->lhs->var->offset);
+	  println("\tldx %d,x", lhs->lhs->lhs->var->offset);
 	  IX_Dest = IX_None;
 	  return off;
 	}
