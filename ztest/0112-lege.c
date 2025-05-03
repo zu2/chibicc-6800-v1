@@ -1,13 +1,13 @@
-long lt(long a, long b)
+long le(long a, long b)
 {
 	return a<=b;
 }
-long gt(long a, long b)
+long ge(long a, long b)
 {
 	return a>=b;
 }
 
 int main(int argc, char **argv)
 {
-	return lt(1,0) + gt(0,1);
+	return le(1,0) + ge(0,1);
 }
