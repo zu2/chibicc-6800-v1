@@ -171,6 +171,14 @@ bool is_global_var_or_array(Node *node)
    return 1;
 }
 
+//
+// node is array name?
+//
+is_var_array(Node *node)
+{
+  return (node->kind == ND_VAR && node->ty->kind == TY_ARRAY);
+}
+
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
 static void gen_addr(Node *node){
@@ -303,9 +311,13 @@ int gen_addr_x(Node *node,bool save_d)
     }
     if (lhs->kind == ND_DEREF && test_addr_x(lhs->lhs)) {
       off = gen_addr_x(lhs->lhs,true);
-      println("\tldx %d,x",off);
-      IX_Dest = IX_None;
-      return node->member->offset;
+      if (is_var_array(lhs->lhs)) {
+	return off;
+      }else{
+        println("\tldx %d,x",off);
+        IX_Dest = IX_None;
+        return node->member->offset;
+      }
     }
     break;
   case ND_DEREF:
@@ -317,6 +329,9 @@ int gen_addr_x(Node *node,bool save_d)
       return 0;
     case ND_VAR:
       off = gen_addr_x(lhs,save_d);
+      if (is_var_array(lhs)) {
+        return off;
+      }
       println("\tldx %d,x",off);
       IX_Dest = IX_None;
       return 0;
@@ -329,8 +344,7 @@ int gen_addr_x(Node *node,bool save_d)
         return 0;
       }
       if (lhs->ty->kind == TY_PTR
-      &&  lhs->lhs->kind == ND_VAR
-      &&  lhs->lhs->ty->kind == TY_ARRAY
+      &&  is_var_array(lhs->lhs)
       &&  !lhs->lhs->var->is_local) {
         println("\tldx #_%s",lhs->lhs->var->name);
         IX_Dest = IX_None;
@@ -340,8 +354,7 @@ int gen_addr_x(Node *node,bool save_d)
     case ND_ADD:
       if (lhs->lhs->kind == ND_CAST
       &&  lhs->lhs->ty->kind == TY_PTR
-      &&  lhs->lhs->lhs->kind == ND_VAR
-      &&  lhs->lhs->lhs->ty->kind == TY_ARRAY
+      &&  is_var_array(lhs->lhs->lhs)
       &&  !lhs->lhs->lhs->var->is_local
       &&  lhs->rhs->kind == ND_CAST
       &&  lhs->rhs->ty->kind == TY_PTR
@@ -2117,7 +2130,7 @@ void gen_expr(Node *node) {
     }
     if (test_addr_x(lhs)){
       int off = gen_addr_x(lhs,false);
-      if (lhs->kind == ND_VAR && lhs->ty->kind == TY_ARRAY){
+      if (is_var_array(lhs)) {
 	load_x(node->ty,off);
       }else{
         println("\tldx %d,x",off);
