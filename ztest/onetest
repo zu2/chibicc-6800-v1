@@ -1,10 +1,11 @@
 #!/bin/sh
 
 PATH=/opt/fcc/bin:$PATH
-OPT=
+OPT="-vv -O"
 
 s=$(basename $1 .c)
 echo  "compiling:" $s
+../chibicc $OPT -c $s.c
 ../chibicc $OPT -S $s.c
 err=$?
 if [ $err -ne 0 ] ; then
@@ -12,7 +13,6 @@ if [ $err -ne 0 ] ; then
 	rm -f $s.o $s.s $s.bin
 	exit $err;
 fi
-as6800 $s.s
 ld6800 -v -b -C256 -Z0 -m $s.map -o $s.bin ../crt0.o $s.o ../libc/libc.a #../libfp/libfp.a
 echo emu6800 -d 6800 $s.bin $s.map
 emu6800 6800 $s.bin $s.map
