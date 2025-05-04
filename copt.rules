@@ -1,5 +1,5 @@
 #
-#
+#	jmp & bra
 #
 
 	jmp %1
@@ -62,3 +62,53 @@
 	ldx 0,x
 =
 	ldx %1
+
+#
+#
+#
+	ldab 0,x
+	tstb
+=
+	ldab 0,x
+
+
+	clra
+	aba
+	adca #0
+=
+	tstb
+
+
+	addb #<%1
+	adca #>%1
+	addb #<%2
+	adca #>%2
+=
+	addb #<%1+%2
+	adca #>%1+%2
+
+
+	ldab #<%1
+	ldaa #>%1
+	addb #<%2
+	adca #>%2
+=
+	ldab #<%1+%2
+	ldaa #>%1+%2
+
+
+	ldab #<%1
+	ldaa #>%1
+	jsr __load16
+=
+	ldab %1+1
+	ldaa %1
+
+
+	ldab #<%1
+	ldaa #>%1
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+=
+	ldx #%1

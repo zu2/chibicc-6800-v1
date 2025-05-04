@@ -187,7 +187,7 @@ Node *optimize_expr(Node *node)
     node->lhs = optimize_expr(node->lhs);
     return node;
   case ND_ASSIGN:
-    node->lhs = optimize_expr(node->lhs);
+    node = optimize_lr(node);
     return node;
   case ND_STMT_EXPR:
     //for (Node *n = node->body; n; n = n->next)

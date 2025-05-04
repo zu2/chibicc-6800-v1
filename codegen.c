@@ -387,10 +387,8 @@ int gen_addr_x(Node *node,bool save_d)
     &&  (lhs->ty->kind == TY_STRUCT || lhs->ty->kind == TY_UNION)) {
       if (lhs->var->is_local) {
         off = lhs->var->offset + node->member->offset;
-	println("; lhs->var->offset %d, node->member->offset %d", lhs->var->offset, node->member->offset);
         if (off < 254) {
           ldx_bp();
-	  println("; gen_addr_x returns %d",off);
           return  off;
 	}
 	break; // fall thru
@@ -477,7 +475,6 @@ int gen_addr_x(Node *node,bool save_d)
 	  return off;
 	}
       }
-      println("; ND_DEREF ND_ADD fail");
       break;
     } // ND_DEREF
     break;
@@ -538,7 +535,6 @@ int test_addr_x(Node *node)
       }
       return 1;
     }
-    println("; ND_MEMBER ND_DEREF %d",test_addr_x(lhs->lhs));
     if (lhs->kind == ND_DEREF)
       return test_addr_x(lhs->lhs);
     return 0;
@@ -2241,7 +2237,10 @@ void gen_expr(Node *node) {
   case ND_ADDR:
     gen_addr(node->lhs);
     return;
-  case ND_ASSIGN:
+  case ND_ASSIGN: {
+    Type    *ty;
+    int64_t val;
+
     node = optimize_expr(node);
     if (is_global_var(node->lhs)
     &&  is_integer(node->lhs->ty)
@@ -2249,6 +2248,26 @@ void gen_expr(Node *node) {
     &&  can_direct(node->lhs)) {
       gen_expr(node->rhs);
       gen_direct(node->lhs,"stab","staa");
+      return;
+    }
+    if ((ty = is_integer_constant(node->rhs,&val))
+    &&  ty->size <= 2
+    &&  is_integer(node->rhs->ty)
+    &&  node->ty->size <= 2) {
+      if (can_direct(node->lhs)) {
+        println("; can_direct");
+        gen_direct(node->rhs,"ldab","ldaa");
+        gen_direct(node->lhs,"stab","staa");
+      }else if (test_addr_x(node->lhs)){
+        int off = gen_addr_x(node->lhs,true);
+	gen_expr(node->rhs);
+        store_x(node->ty,off);
+      }else{
+	gen_addr(node->lhs);
+	tfr_dx();
+        gen_direct(node->rhs,"ldab","ldaa");
+	store_x(node->ty,0);
+      }
       return;
     }
     if (test_addr_x(node->lhs)){
@@ -2297,6 +2316,7 @@ void gen_expr(Node *node) {
 
     store(node->ty);
     return;
+  } // ND_ASSIGN
   case ND_STMT_EXPR:
     for (Node *n = node->body; n; n = n->next)
       gen_stmt(n);
