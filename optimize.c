@@ -132,12 +132,24 @@ void make_comma_retval_unused(Node *node, bool all)
   }
 }
 
+Node *optimize_const_expr(Node *node)
+{
+    int64_t val;
+
+    if (is_const_expr(node)) {
+      val = eval(node);
+      Node *new = new_node(ND_NUM, node->tok);
+      new->val = val;
+      new->ty = node->lhs->ty;
+      return new;
+    }
+    return node;
+}
 
 Node *optimize_expr(Node *node)
 {
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
   Node *new;
+  int64_t val;
 
   if (!node)
     return node;
@@ -147,25 +159,12 @@ Node *optimize_expr(Node *node)
   case ND_NUM:
     return node;
   case ND_NEG:
-    if (node->lhs->kind == ND_NUM){
-      switch(node->lhs->ty->kind){
-      case TY_CHAR:
-      case TY_SHORT:
-      case TY_INT:
-      case TY_LONG:
-	node->lhs->val = -node->lhs->val;
-	return node->lhs;
-      case TY_FLOAT:
-      case TY_DOUBLE:
-      case TY_LDOUBLE:
-      default:
-	return node;
-      }
+    node = optimize_l(node);
+    if (is_integer_constant(node->lhs,&val)) {
+      return optimize_const_expr(node);
     }
+    return node;
   case ND_VAR:
-    if (!node->ty)	// why??
-      return node;
-
     switch (node->ty->kind) {
     case TY_ARRAY:
     case TY_STRUCT:
@@ -238,49 +237,48 @@ Node *optimize_expr(Node *node)
   // rewrite the relational operator.
   // In the case of float, rewriting is not possible because there is NaN.
   case ND_NOT:
-#if 0
-    if (node->lhs->kind==ND_NOT) {	// !! need boolize
-	return optimize_expr(node->lhs->lhs);
-    }
-#endif
     if (is_compare(node->lhs)
     &&  is_integer(node->lhs->lhs->ty)
     &&  is_integer(node->lhs->rhs->ty)){
       return negate_condition(optimize_l(node->lhs));
     }
-    return optimize_l(node);
+    node = optimize_l(node);
+    return optimize_const_expr(node);
   case ND_BITNOT:
-    return optimize_l(node);
+    node =  optimize_l(node);
+    return optimize_const_expr(node);
+  // Below is a binary operator
   case ND_LOGAND:
   case ND_LOGOR:
-    return optimize_lr(node);
-  // Below is a binary operator
+    node = optimize_lr(node);
+    return optimize_const_expr(node);
   case ND_ADD:
   case ND_SUB:
   case ND_MUL:
   case ND_DIV:
-  case ND_MOD:
-    node =  optimize_lr(node);
-    if (lhs->kind==ND_NUM   && rhs->kind==ND_NUM
-    &&  is_integer(lhs->ty) && is_integer(rhs->ty)){
-       node->val = eval2(node,NULL);
-       node->kind = ND_NUM;
-       return node;
+  case ND_MOD: {
+    int64_t val;
+
+    node = optimize_lr(node);
+    if (is_integer_constant(node->lhs,&val)
+    &&  is_integer_constant(node->rhs,&val)) {
+      return optimize_const_expr(node);
     }
+
     return node;
-    break;
+  } // ND_ADD,SUB,MUL,DIV,MOD
   case ND_BITAND:
   case ND_BITOR:
   case ND_BITXOR:
-    return node = optimize_lr_swap(node);
+    node = optimize_lr(node);
+    return optimize_const_expr(node);
   case ND_EQ:
   case ND_NE:
   case ND_LT:
   case ND_LE:
   case ND_GT:
   case ND_GE:
-    node->lhs = optimize_expr(node->lhs);
-    node->rhs = optimize_expr(node->rhs);
+    node = optimize_lr(node);
 //  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
     if ( node_cost(node->lhs) < node_cost(node->rhs)
     ||  (node_cost(node->lhs) == node_cost(node->rhs)
@@ -306,24 +304,8 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_SHL: {
   case ND_SHR:
-    int64_t val;
-    int64_t lval;
-    int64_t rval;
-
     node = optimize_lr(node);
-    if (is_const_expr(node)) {
-      val = eval(node);
-      switch (lhs->ty->size) {
-      case 1: val =  lhs->ty->is_unsigned ? (uint8_t)val : (int8_t)val;
-      case 2: val =  lhs->ty->is_unsigned ? (uint16_t)val : (int16_t)val;
-      case 4: val =  lhs->ty->is_unsigned ? (uint32_t)val : (int32_t)val;
-      }
-      Node *new = new_node(ND_NUM, node->tok);
-      new->val = val;
-      new->ty = lhs->ty;
-      return new;
-    }
-    return node;
+    return optimize_const_expr(node);
   } // ND_SHL, ND_SHR
   case ND_POST_INCDEC:
   case ND_PRE_INCDEC:
