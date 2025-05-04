@@ -3,15 +3,27 @@
 //	test common routine
 //
 
+#if defined(__clang__) || defined(__GNUC__)
+#include <stdio.h>
+#include <math.h>
+#include <float.h>
+#define print(i)	printf("%d\n",i)
+#else
+// chibicc, fcc, cc68
 extern	void print(int i);
 extern	void putchar(int ch);
 extern	void cpu_counter(void);
+#endif
 
+#if defined(__clang__) || defined(__GNUC__)
+#define putstr(s) fputs(s,stdout)
+#else
 void putstr(unsigned char *s)
 {
 	while (*s)
 		putchar(*s++);
 }
+#endif
 
 void
 puthexc(unsigned int ch)
