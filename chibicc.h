@@ -122,7 +122,9 @@ Token *preprocess(Token *tok);
 // parse.c
 //
 int64_t eval2(Node *node, char ***label);
+int64_t eval(Node *node);
 Node *new_copy(Node *node);
+bool is_const_expr(Node *node);
 
 // Variable or function
 typedef struct Obj Obj;
@@ -308,6 +310,7 @@ struct Node {
 Node *new_cast(Node *expr, Type *ty);
 int64_t const_expr(Token **rest, Token *tok);
 Obj *parse(Token *tok);
+Node *new_node(NodeKind kind, Token *tok);
 
 //
 // type.c
@@ -452,6 +455,7 @@ int count(void);
 void push(void);
 void load_var(Node *node);
 void cmp_zero(Type *ty);
+Type *is_integer_constant(Node *node, int64_t *val);
 
 extern int depth;
 typedef	enum {

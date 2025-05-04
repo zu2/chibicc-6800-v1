@@ -304,9 +304,27 @@ Node *optimize_expr(Node *node)
       return node;
     }
     return node;
-  case ND_SHL:
+  case ND_SHL: {
   case ND_SHR:
-    return optimize_lr(node);
+    int64_t val;
+    int64_t lval;
+    int64_t rval;
+    node = optimize_lr(node);
+    if (is_integer_constant(lhs, &lval)
+    &&  is_integer_constant(rhs, &rval)){
+      val = eval(node);
+      switch (lhs->ty->size) {
+      case 1: val =  lhs->ty->is_unsigned ? (uint8_t)val : (int8_t)val;
+      case 2: val =  lhs->ty->is_unsigned ? (uint16_t)val : (int16_t)val;
+      case 4: val =  lhs->ty->is_unsigned ? (uint32_t)val : (int32_t)val;
+      }
+      Node *new = new_node(ND_NUM, node->tok);
+      new->val = val;
+      new->ty = lhs->ty;
+      return new;
+    }
+    return node;
+  } // ND_SHL, ND_SHR
   case ND_POST_INCDEC:
   case ND_PRE_INCDEC:
     return optimize_lr(node);

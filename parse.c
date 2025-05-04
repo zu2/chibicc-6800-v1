@@ -123,10 +123,10 @@ static Node *compound_stmt(Token **rest, Token *tok);
 static Node *stmt(Token **rest, Token *tok);
 static Node *expr_stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
-static int64_t eval(Node *node);
+int64_t eval(Node *node);
 int64_t eval2(Node *node, char ***label);
 static int64_t eval_rval(Node *node, char ***label);
-static bool is_const_expr(Node *node);
+bool is_const_expr(Node *node);
 static Node *assign(Token **rest, Token *tok);
 static Node *logor(Token **rest, Token *tok);
 static double eval_double(Node *node);
@@ -189,7 +189,7 @@ static Type *find_tag(Token *tok) {
   return NULL;
 }
 
-static Node *new_node(NodeKind kind, Token *tok) {
+Node *new_node(NodeKind kind, Token *tok) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
   node->tok = tok;
@@ -1898,7 +1898,7 @@ static Node *expr(Token **rest, Token *tok) {
   return node;
 }
 
-static int64_t eval(Node *node) {
+int64_t eval(Node *node) {
   return eval2(node, NULL);
 }
 
@@ -2027,7 +2027,7 @@ static int64_t eval_rval(Node *node, char ***label) {
   error_tok(node->tok, "invalid initializer");
 }
 
-static bool is_const_expr(Node *node) {
+bool is_const_expr(Node *node) {
   add_type(node);
 
   switch (node->kind) {
