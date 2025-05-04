@@ -64,6 +64,37 @@ Follow these steps to set up the compiler:
     cd ztest; ./runall
     cd ztest; ./onetest some-test-program.c
 ```
+---
+# Performance
+
+## Integer Operations
+- **Dhrystone benchmark:** 234 seconds at 1MHz on MC6800, equivalent to approximately 0.05 DMIPS.
+- **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks
+/dhrystone21/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21)
+
+## Floating-Point Operations
+- **Mandelbrot ASCII renderer (`asciiartf`):** 266 seconds  
+- **Source code:** [`ztest/9018-asciiartf.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9018-asciiartf.c)  
+- *Note: Whetstone benchmark is not yet supported because trigonometric and exponential/logarithmic functions are not implemented.*
+
+## Function Calls and Branching
+- Despite the slow function prologue and epilogue, overall performance remains high.
+- For `char` and `int`, direct branching is generated without relying on subroutines.
+- For `long`, optimized subroutines are used for comparison, providing relatively fast execution.
+- Recursive functions such as Ackermann ([`9005-ack.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9005-ack.c)) and Takeuchi's tarai ([`9100-tarai.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9100-tarai.c)) run efficiently, even with the overhead of function call setup and teardown.
+
+## Details of Integer Arithmetic
+- The MC6800 cannot directly transfer between AccAB and IX registers, and IX is required for stack data operations.
+- A naive stack machine implementation would be slow, so chibicc-6800-v1 uses the IX register for address calculations whenever possible.
+- For global variables and local variables with fixed offsets, AccAB is avoided as much as possible.
+- Supports 32-bit `long`; does not support 64-bit `long long`.
+
+## Details of Floating-Point Arithmetic
+- Supports IEEE754 32-bit single-precision `float`.
+- Only round-to-nearest mode is supported.
+- Handles subnormal numbers.
+- Does not support `double` or `long double`.
+- Currently implements addition, subtraction, multiplication, division, `fabsf`, `fsqrtf`, `floorf`, and `ceilf`. Other functions may be supported in the future.
 
 ---
 # Memo
