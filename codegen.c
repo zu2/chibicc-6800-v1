@@ -1372,7 +1372,9 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
             return node->ty->is_unsigned;
 	  }
           println("\t%s %d,x",opb,off);
-          println("\t%s #0",opa);
+	  if (strcmp(opb,"stab")) {
+            println("\t%s #0",opa);
+	  }
         }else{
           if (test) return 1;
           println("\t%s %d,x",opb,off+1);
@@ -1388,7 +1390,9 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
         if (test) return 1;
         if (node->ty->kind==TY_CHAR && node->ty->is_unsigned) {
           println("\t%s _%s",opb,node->var->name);
-          println("\t%s #0",opa);
+	  if (strcmp(opb,"stab")) {
+            println("\t%s #0",opa);
+	  }
 	  return 1;
 	}
 	if (node->ty->kind==TY_ARRAY) {
@@ -2239,6 +2243,14 @@ void gen_expr(Node *node) {
     return;
   case ND_ASSIGN:
     node = optimize_expr(node);
+    if (is_global_var(node->lhs)
+    &&  is_integer(node->lhs->ty)
+    &&  node->ty->size <= 2
+    &&  can_direct(node->lhs)) {
+      gen_expr(node->rhs);
+      gen_direct(node->lhs,"stab","staa");
+      return;
+    }
     if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
