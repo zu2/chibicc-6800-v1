@@ -165,6 +165,10 @@ Node *optimize_expr(Node *node)
     }
     return node;
   case ND_VAR:
+    if (!node->ty) {
+      fprintf(stderr,"; need debug %s %d\n",__FILE__,__LINE__);
+      return node;
+    }
     switch (node->ty->kind) {
     case TY_ARRAY:
     case TY_STRUCT:
