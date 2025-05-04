@@ -12,6 +12,7 @@
 ;
 	.export	_floorf
 	.export	_ceilf
+	.export _truncf
 	.data
 __floor_or_ceil:
 	.byte	0	; floor:0, ceil:$80
@@ -24,6 +25,12 @@ __floor_or_ceil:
 ;	@long = ceil(@long)
 ;		parameter passed by @long
 ;
+;	@long = truncf(@long)
+;		parameter passed by @long
+;
+_truncf:
+	tst	@long
+	bmi	_ceilf
 _floorf:
 	clr	__floor_or_ceil
 	bra	__floor_common
