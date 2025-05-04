@@ -1,4 +1,6 @@
 #include "chibicc.h"
+#include <unistd.h>
+#include <fcntl.h>
 
 typedef enum {
   FILE_NONE, FILE_C, FILE_ASM, FILE_OBJ, FILE_AR, FILE_DSO,
@@ -23,6 +25,10 @@ static bool opt_shared;
 static char *opt_MF;
 static char *opt_MT;
 static char *opt_o;
+static int  opt_v = 0;
+static char *opt_O;
+#define copt_path  "/opt/fcc/bin/copt"
+#define copt_rules "/opt/chibicc/lib/copt.rules"
 
 static StringArray ld_extra_args;
 static StringArray std_include_paths;
@@ -34,13 +40,14 @@ static StringArray input_paths;
 static StringArray tmpfiles;
 
 static void usage(int status) {
-  fprintf(stderr, "chibicc [ -o <path> ] <file>\n");
+  fprintf(stderr, "chibicc [-D name][-o <path>][-I dir][-v] <file>\n");
   exit(status);
 }
 
 static bool take_arg(char *arg) {
   char *x[] = {
     "-o", "-I", "-idirafter", "-include", "-x", "-MF", "-MT", "-Xlinker",
+    "-v", "-D", "-O",
   };
 
   for (int i = 0; i < sizeof(x) / sizeof(*x); i++)
@@ -309,9 +316,32 @@ static void parse_args(int argc, char **argv) {
       exit(0);
     }
 
+    if (!strncmp(argv[i], "-v", 2)) {
+      if (argv[i][2]=='\0') {
+	opt_v++;
+      } else if (isdigit(argv[i][2])) {
+	opt_v = atoi(&argv[i][2]);
+      } else {
+	for (int j=1; argv[i][j]; j++) {
+	  if (argv[i][j]=='v') {
+	    opt_v++;
+	  }else
+            error("unknown argument: %s", argv[i]);
+	}
+      }
+      continue;
+    }
+    if (!strncmp(argv[i], "-O", 2)) {
+      if (argv[i][2]=='\0') {
+	opt_O = &argv[i][1];
+      }else{
+	opt_O = &argv[i][2];
+      }
+      continue;
+    }
+
     // These options are ignored for now.
-    if (!strncmp(argv[i], "-O", 2) ||
-        !strncmp(argv[i], "-W", 2) ||
+    if (!strncmp(argv[i], "-W", 2) ||
         !strncmp(argv[i], "-g", 2) ||
         !strncmp(argv[i], "-std=", 5) ||
         !strcmp(argv[i], "-ffreestanding") ||
@@ -382,26 +412,47 @@ static char *create_tmpfile(void) {
   return path;
 }
 
-static void run_subprocess(char **argv) {
+static void run_subprocess(char **argv, char *redirect_in, char *redirect_out) {
   // If -### is given, dump the subprocess's command line.
   if (opt_hash_hash_hash) {
-    fprintf(stderr, "%s", argv[0]);
+    fprintf(stderr, "\"%s\"", argv[0]);
     for (int i = 1; argv[i]; i++)
-      fprintf(stderr, " %s", argv[i]);
+      fprintf(stderr, " \"%s\"", argv[i]);
     fprintf(stderr, "\n");
   }
 
   if (fork() == 0) {
     // Child process. Run a new command.
+    if (opt_v>1) {
+      for (int i=0; argv[i]; i++) {
+        fprintf(stderr,"%s ",argv[i]);
+      }
+      fprintf(stderr,"\n");fflush(stdout);
+    }
+    if (redirect_in) {
+      int fd = open(redirect_in, O_RDONLY);
+      if (fd<0) {
+	error("can't open input file %s for %s",argv[0],redirect_in);
+      }
+      dup2(fd, STDIN_FILENO);
+      close(fd);
+    }
+    if (redirect_out) {
+      int fd = open(redirect_out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      if (fd<0) {
+	error("can't open input file %s for %s",argv[0],redirect_in);
+      }
+      dup2(fd, STDOUT_FILENO);
+      close(fd);
+    }
     execvp(argv[0], argv);
-    fprintf(stderr, "exec failed: %s: %s\n", argv[0], strerror(errno)); // XXX
+    fprintf(stderr, "exec failed: %s: %s\n", argv[0], strerror(errno));
     _exit(1);
   }
 
   // Wait for the child process to finish.
   int status;
-  while (wait(&status) > 0);
-  if (status != 0){
+  if (wait(&status) <=0 ||status != 0){
     fprintf(stderr,"Wait for the child process to finish. status=%d\n",status);
     exit(1);
   }
@@ -422,7 +473,7 @@ static void run_cc1(int argc, char **argv, char *input, char *output) {
     args[argc++] = output;
   }
 
-  run_subprocess(args);
+  run_subprocess(args,NULL,NULL);
 }
 
 // Print tokens to stdout. Used for -E.
@@ -563,10 +614,29 @@ static void cc1(void) {
   fclose(out);
 }
 
+int can_copt(void)
+{
+  return access(copt_path,F_OK)==0 && access(copt_path,X_OK) == 0;
+}
+
+
+static void run_copt(char *input, char *output) {
+  char **args = calloc(10, sizeof(char *));
+  int argc=0;
+
+  args[argc++] = copt_path;
+  if (access("copt.rules",F_OK)==0 && access("copt.rules",X_OK) == 0) {
+    args[argc++] = "rules.chibicc";
+  }else{
+    args[argc++] = copt_rules;
+  }
+  run_subprocess(args,input,output);
+}
+
 static void assemble(char *input, char *output) {
 //  char *cmd[] = {"as6800", "-c", input, "-o", output, NULL};
   char *cmd[] = {"as6800", "-o", output, input,  NULL};
-  run_subprocess(cmd);
+  run_subprocess(cmd,NULL,NULL);
 }
 
 static char *find_file(char *pattern) {
@@ -699,7 +769,7 @@ static void run_linker(StringArray *inputs, char *output) {
 #endif
   strarray_push(&arr, NULL);
 
-  run_subprocess(arr.data);
+  run_subprocess(arr.data,NULL,NULL);
 }
 
 static FileType get_file_type(char *filename) {
@@ -787,7 +857,13 @@ int main(int argc, char **argv) {
 
     // Compile
     if (opt_S) {
-      run_cc1(argc, argv, input, output);
+      if (opt_O && can_copt()) {
+	char *tmp3 = create_tmpfile();
+        run_cc1(argc, argv, input, tmp3);
+	run_copt(tmp3,output);
+      }else{
+        run_cc1(argc, argv, input, output);
+      }
       continue;
     }
 
@@ -795,6 +871,11 @@ int main(int argc, char **argv) {
     if (opt_c) {
       char *tmp = create_tmpfile();
       run_cc1(argc, argv, input, tmp);
+      if (opt_O && can_copt()) {
+	char *tmp3 = create_tmpfile();
+	run_copt(tmp,tmp3);
+	tmp = tmp3;
+      }
       assemble(tmp, output);
       continue;
     }
@@ -803,6 +884,11 @@ int main(int argc, char **argv) {
     char *tmp1 = create_tmpfile();
     char *tmp2 = create_tmpfile();
     run_cc1(argc, argv, input, tmp1);
+    if (opt_O && can_copt()) {
+      char *tmp3 = create_tmpfile();
+      run_copt(tmp1,tmp3);
+      tmp1 = tmp3;
+    }
     assemble(tmp1, tmp2);
     strarray_push(&ld_args, tmp2);
     continue;

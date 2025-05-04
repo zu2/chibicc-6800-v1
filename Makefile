@@ -20,6 +20,7 @@ install:
 	install -c chibicc /opt/chibicc/bin
 	install -c crt0.o /opt/chibicc/lib
 	install -c libc/libc.a /opt/chibicc/lib
+	install -c copt.rules  /opt/chibicc/lib
 	
 
 # Stage 1
