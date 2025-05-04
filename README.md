@@ -77,6 +77,10 @@ Follow these steps to set up the compiler:
 - **Source code:** [`ztest/9018-asciiartf.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9018-asciiartf.c)  
 - *Note: Whetstone benchmark is not yet supported because trigonometric and exponential/logarithmic functions are not implemented.*
 
+## String and Memory Operations
+- `strcmp`, `strcpy`, and `strcat` operate on two bytes at a time, resulting in high performance.
+- Other `str*` and `mem*` functions are also implemented to minimize the number of comparisons and branches, further improving efficiency.
+
 ## Function Calls and Branching
 - Despite the slow function prologue and epilogue, overall performance remains high.
 - For `char` and `int`, direct branching is generated without relying on subroutines.
