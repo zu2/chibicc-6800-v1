@@ -309,9 +309,9 @@ Node *optimize_expr(Node *node)
     int64_t val;
     int64_t lval;
     int64_t rval;
+
     node = optimize_lr(node);
-    if (is_integer_constant(lhs, &lval)
-    &&  is_integer_constant(rhs, &rval)){
+    if (is_const_expr(node)) {
       val = eval(node);
       switch (lhs->ty->size) {
       case 1: val =  lhs->ty->is_unsigned ? (uint8_t)val : (int8_t)val;
