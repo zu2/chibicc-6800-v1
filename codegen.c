@@ -2360,7 +2360,6 @@ void gen_expr(Node *node) {
       println("\tinx");
       println("\tdecb");
       println("\tbne L_memzero_%d", c);
-      break;
     }
     IX_Dest = IX_None;
     return;
