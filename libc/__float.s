@@ -1170,7 +1170,7 @@ __asl_long:		; asl @long by AccB
 	rol	@long+1
 	rol	@long+0
 	decb
-	bne	__lsr_long
+	bne	__asl_long
 	rts
 __asl_tos:		; asl TOS (2-5,x) by AccB
 	asl	5,x
@@ -1178,7 +1178,7 @@ __asl_tos:		; asl TOS (2-5,x) by AccB
 	rol	3,x
 	rol	2,x
 	decb
-	bne	__lsr_tos
+	bne	__asl_tos
 	rts
 ;
 ;
