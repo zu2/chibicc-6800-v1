@@ -530,13 +530,15 @@ __f32toi32_2:
 	subb	#$96		; exp==2^23?
 	beq	__f32toi32_ret	; 24bit mantissa can be interpreted as long.
 	bcs	__f32toi32_4
+	ldaa	3,x
 __f32toi32_3:
-	asl	3,x
+	asla
 	rol	2,x
 	rol	1,x
 	rol	0,x
 	decb
 	bne	__f32toi32_3
+	staa	3,x
 __f32toi32_ret:
 	tst	__sign
 	jmi	__negi32x	; negate (0-3,x) and return
