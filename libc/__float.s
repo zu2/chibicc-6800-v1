@@ -1162,25 +1162,6 @@ __lsr_tos_2:
 	staa	5,x
 	rts
 ;
-;	shift left by AccB
-;
-__asl_long:		; asl @long by AccB
-	asl	@long+3
-	rol	@long+2
-	rol	@long+1
-	rol	@long+0
-	decb
-	bne	__asl_long
-	rts
-__asl_tos:		; asl TOS (2-5,x) by AccB
-	asl	5,x
-	rol	4,x
-	rol	3,x
-	rol	2,x
-	decb
-	bne	__asl_tos
-	rts
-;
 ;
 __pullret:
 	tsx
