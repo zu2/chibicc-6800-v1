@@ -66,7 +66,7 @@ __itoa_not_0:
 	ldab 5,x		; check radix==10?
 	cmpb #10
 	bne __itoa_not_minus
-	tsta
+	tsta			; value < 0 ?
 	bpl __itoa_not_minus
 ;				; radix==10 && value < 0
 	ldx __p
@@ -74,12 +74,14 @@ __itoa_not_0:
 	stab 0,x
 	inx
 	stx __p
+;
 	ldab __value+1
 	nega
 	negb
 	sbca #0
 	stab __value+1		; save value
 	staa __value
+;
 __itoa_not_minus:
 	ldx __p
 	stx __q			; most significant digit
@@ -137,7 +139,3 @@ __itoa_rev_loop:
 	stx __q
 	bra	__itoa_rev_loop
 ;
-
-	
-
-

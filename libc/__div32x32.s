@@ -6,7 +6,8 @@
 	.export __div32x32s
 	.export __rem32x32u
 	.export __rem32x32s
-	.export __div32x32
+	.export __div32x32	; @long / TOS
+	.export __div32x32x	; @long / (2-5,x)
 	.code
 
 ;
@@ -28,7 +29,7 @@ __rem32x32s_10:
 	jsr __neg32
 __rem32x32s_20:
 	tsx
-	jsr __div32x32
+	jsr __div32x32x
 	stab @long+3
 	staa @long+2
 	ldab @tmp1+1
@@ -44,7 +45,7 @@ __rem32x32s_20:
 ;
 __rem32x32u:
 	tsx
-	jsr __div32x32
+	jsr __div32x32x
 	stab @long+3
 	staa @long+2
 	ldab @tmp1+1
@@ -71,7 +72,7 @@ __div32x32s_10:
 	jsr __neg32
 __div32x32s_20:
 	tsx
-	jsr __div32x32
+	jsr __div32x32x
 	ldab @tmp2+1
 	bpl __pullret
 	jsr __neg32
@@ -81,7 +82,7 @@ __div32x32s_20:
 ;
 __div32x32u:
 	tsx
-	jsr __div32x32
+	jsr __div32x32x
 __pullret:
 	ldx 0,x
 	ins
@@ -92,11 +93,13 @@ __pullret:
 	ins
 	jmp 0,x
 ;
-;	@long = @long / TOS
+;	@long = @long / (2-5,x)
 ;	@tmp1:AccAB = @long % TOS
 ;	@tmp2: loop counter
 ;
 __div32x32:
+	tsx
+__div32x32x:
 	ldab #32
 	stab @tmp2
 	clra		; work area clear

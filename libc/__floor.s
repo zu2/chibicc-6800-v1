@@ -10,23 +10,23 @@
 ;	and does not pay attention to speed, accuracy, or exception handling.
 ;
 ;
-	.export	_floorf
-	.export	_ceilf
-	.export _truncf
-	.data
+        .export	_floorf
+        .export	_ceilf
+        .export	_truncf
+        .data
 __floor_or_ceil:
-	.byte	0	; floor:0, ceil:$80
+        .byte   0	; floor:0, ceil:$80
 ;
-	.code
+        .code
 ;
-;	@long = floor(@long)
-;		parameter passed by @long
+;       @long = floor(@long)
+;               parameter passed by @long
 ;
-;	@long = ceil(@long)
-;		parameter passed by @long
+;       @long = ceil(@long)
+;               parameter passed by @long
 ;
-;	@long = truncf(@long)
-;		parameter passed by @long
+;       @long = truncf(@long)
+;               parameter passed by @long
 ;
 _truncf:
 	tst	@long

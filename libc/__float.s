@@ -47,6 +47,12 @@
 	.export __fdiv32x32
 	.export	__setup_long
 	.export __f32retpZero
+	.export __setup_zin
+	.export __f32NaN
+	.export __f32NaNx
+	.export __f32zeros
+	.export __adj_subnormal
+	.export __asl8_both
 ;
 	.export __sign
 	.export __work
@@ -379,6 +385,13 @@ __f32tou32_4:
 	bne	__f32tou32_4
 	rts
 ;
+__f32zeros:
+	bsr	__f32zero
+	ldab	__sign
+	andb	#$80
+	orab	@long
+	stab	@long
+	rts
 __f32zero:
 __i32zero:
 __u32zero:
@@ -435,14 +448,18 @@ __f32retmInf:		; ff80 0000
 ;	load plus/minus qNaN into @long
 ;
 __f32retNaN:
-	ldab	__sign
-	orab	#$7F
-	stab	@long
-	ldab	#$FF
-	stab	@long+1
-	stab	@long+2
-	stab	@long+3
+	bsr	__f32NaN
 	jmp	__pullret	
+__f32NaN:
+	ldx	#long
+__f32NaNx:
+	ldab	#$7F		; only +NaN return
+	stab	0,x
+	ldab	#$FF
+	stab	1,x
+	stab	2,x
+	stab	3,x
+	rts
 ;
 __f32retZerox:
 	ldab	2,x
@@ -1659,15 +1676,15 @@ __cmpf32x:			; TODO: name?
 	bcs	__cmpf32x_lt
 __cmpf32x_eq:			; @long == TOS
 	clrb
-	clra			; Z=1,C=0
+	clra			; Z=1,C=0, N=0
 	rts
 __cmpf32x_gt:			; @long > TOS
 	clra			; C=0
-	ldab	#1		; Z=0
+	ldab	#1		; Z=0, N=0
 	rts
 __cmpf32x_lt:			; @long < TOS
 	clrb			; C=0
-	decb			; Z=0
+	decb			; Z=0, N=1
 	tba
 	rts
 ;
