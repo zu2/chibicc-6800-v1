@@ -10,6 +10,7 @@
 #include <time.h>
 #define print(i)	printf("%d\n",i)
 #define cpu_counter()	{ clock_t t; t=clock();printf("CPU = %.6f sec\n",(double)t/CLOCKS_PER_SEC); }
+#define	fmodf(x,y)	fmod(x,y)
 #else
 // chibicc, fcc, cc68
 extern	void print(int i);
