@@ -1078,16 +1078,30 @@ gen_direct_pushl_sub(int val)
 void
 gen_direct_pushl(int64_t val)
 {
-   int v0 = (int)(val & 0x000000FF);
-   int v1 = (int)((val & 0x0000FF00)>>8);
-   int v2 = (int)((val & 0x00FF0000)>>16);
-   int v3 = (int)((val & 0xFF000000)>>24);
-   gen_direct_pushl_sub(-1);
-   gen_direct_pushl_sub(v0);
-   gen_direct_pushl_sub(v1);
-   gen_direct_pushl_sub(v2);
-   gen_direct_pushl_sub(v3);
-   depth+=4;
+  int v0 = (int)(val & 0x000000FF);
+  int v1 = (int)((val & 0x0000FF00)>>8);
+  int v2 = (int)((val & 0x00FF0000)>>16);
+  int v3 = (int)((val & 0xFF000000)>>24);
+  gen_direct_pushl_sub(-1);
+  gen_direct_pushl_sub(v0);
+  gen_direct_pushl_sub(v1);
+  gen_direct_pushl_sub(v2);
+  gen_direct_pushl_sub(v3);
+  depth+=4;
+}
+
+void
+gen_direct_pushlx(int off)
+{
+  println("\tldab %d,x",off+3);
+  println("\tpshb");
+  println("\tldab %d,x",off+2);
+  println("\tpshb");
+  println("\tldab %d,x",off+1);
+  println("\tpshb");
+  println("\tldab %d,x",off);
+  println("\tpshb");
+  depth+=4;
 }
 
 static void push_args2(Node *args)
@@ -1159,14 +1173,7 @@ static void push_args2(Node *args)
     case ND_VAR:
       if (test_addr_x(args)){
         int off = gen_addr_x(args,false);
-	println("\tldab %d,x",off+3);
-	println("\tpshb");
-	println("\tldab %d,x",off+2);
-	println("\tpshb");
-	println("\tldab %d,x",off+1);
-	println("\tpshb");
-	println("\tldab %d,x",off);
-	println("\tpshb");
+	gen_direct_pushlx(off);
       }else{
         gen_expr(args);
         pushl();
@@ -2718,8 +2725,21 @@ void gen_expr(Node *node) {
       IX_Dest = IX_None;
       return;
     case ND_MUL:
-      gen_expr(node->lhs);
-      pushl();
+      switch (node->lhs->kind) {
+      case ND_NUM:
+        gen_direct_pushl(node->lhs->val);
+        break;
+      case ND_VAR:
+        if (test_addr_x(node->lhs)){
+          int off = gen_addr_x(node->lhs,false);
+  	  gen_direct_pushlx(off);
+	  break;
+        }
+	// THRU
+      default:
+        gen_expr(node->lhs);
+        pushl();
+      }
       gen_expr(node->rhs);
       println("\tjsr __mul32tos ; @long *= TOS, pull TOS");
 //  println("  imul %s, %s", di, ax);
