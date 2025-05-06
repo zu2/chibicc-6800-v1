@@ -81,18 +81,10 @@ __sqrtf_10:
 	rorb
 	stab	__exp		; After a right shift, result fits in one byte
 ;
-	ldab	@long+3		; mant<<=2
-	aslb
-	stab	@long+3
-	ldab	@long+2
-	rolb
-	stab	@long+2
-	ldab	@long+1
-	rolb
-	stab	@long+1
-	ldab	@long
-	rolb
-	stab	@long
+	asl	@long+3		; mant <<= 2
+	rol	@long+2
+	rol	@long+1
+	rol	@long
 ;
 	ldx	#$0100
 	stx	__r
