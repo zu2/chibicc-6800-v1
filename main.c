@@ -60,6 +60,7 @@ static void add_default_include_paths(char *argv0) {
   // We expect that chibicc-specific include files are installed
   // to ./include relative to argv[0].
   strarray_push(&include_paths, format("%s/include", dirname(strdup(argv0))));
+  strarray_push(&include_paths, "/opt/chibicc/include");
 
   // Add standard include paths.
   strarray_push(&include_paths, "/usr/local/include");
