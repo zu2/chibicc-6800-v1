@@ -1917,10 +1917,60 @@ static int check_in_char(Node *node)
 
 static void gen_funcall(Node *node)
 {
-  if (node->lhs->kind == ND_VAR && !strcmp(node->lhs->var->name, "alloca")) {
+  if (node->lhs->kind == ND_VAR
+  && !strcmp(node->lhs->var->name, "alloca")) {
     gen_expr(node->args);
     println("; ND_FUNCALL: call builtin_alloca()  %s %d",__FILE__,__LINE__);
     builtin_alloca();
+    return;
+  }
+  if (node->lhs->kind == ND_VAR
+  && !strcmp(node->lhs->var->name, "__builtin_va_start_addr")) {
+    println("; __builtin_va_start_addr: current_fn->params");
+    for (Obj *var = current_fn->params; var; var = var->next) {
+      println("; '%s', kind:%d",var->name, var->ty->kind);
+    }
+    println(";__builtin_va_start_addr(var)");
+    for (Node *arg = node->args; arg && arg->var; arg = arg->next) {
+      println("; '%s', kind:%d",arg->var->name, arg->ty->kind);
+    }
+    if (!current_fn->ty->is_variadic) {
+      error_tok(node->tok, "__builtin_va_start_addr: not variadic function");
+    }
+    if (node->args->kind != ND_VAR
+    ||  !node->args->var->is_local
+    ||  node->args->var->ty->kind == TY_VLA) {
+      error_tok(node->tok, "__builtin_va_start_addr: bad arg");
+    }
+    // var is the first parameter and pass-by-register ?
+    int passed_by_reg = 0;
+    if (!strcmp(current_fn->params->name,node->args->var->name)) {
+      passed_by_reg = 1;
+      switch (current_fn->params->ty->kind) {
+      case TY_STRUCT:
+      case TY_UNION:
+      case TY_DOUBLE:
+      case TY_LDOUBLE:
+	passed_by_reg = 0;
+      }
+      if (current_fn->ty->return_ty->kind == TY_STRUCT
+      ||  current_fn->ty->return_ty->kind == TY_UNION  ){
+        passed_by_reg = 0;
+      }
+    }
+    // If the specified variable is passed in a register,
+    //    the remaining variable arguments (varargs) are located
+    //    at the top of the stack.
+    // If the specified variable is passed on the stack, 
+    //   the remaining variable arguments (varargs) reside in the stack memory
+    //   starting at its address plus the size of the variable.
+    int next_offset = node->args->var->offset
+	            + node->args->var->ty->size
+		    + (passed_by_reg? 4: 0);	// skip @bp and return address
+    println("\tldab @bp+1");
+    println("\tldaa @bp");
+    println("\taddb #<%d",next_offset);
+    println("\tadca #>%d",next_offset);
     return;
   }
 
@@ -2516,66 +2566,9 @@ void gen_expr(Node *node) {
     IX_Dest = IX_None;
     return;
   }
-  case ND_FUNCALL: {
+  case ND_FUNCALL:
     gen_funcall(node);
     return;
-    if (node->lhs->kind == ND_VAR && !strcmp(node->lhs->var->name, "alloca")) {
-      gen_expr(node->args);
-      println("; ND_FUNCALL %s %d",__FILE__,__LINE__);
-      println("; call builtin_alloca()");
-      //println("  mov %%rax, %%rdi");
-      builtin_alloca();
-      return;
-    }
-
-    int stack_args = push_args(node);
-
-    if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
-      println("\tjsr _%s",node->lhs->var->name);
-    }else{
-      int off = gen_addr_x(node->lhs,true);
-      if (node->lhs->ty->kind!=TY_FUNC) {
-        println("\tldx %d,x",off);
-        println("\tjsr 0,x");
-      }else{
-        println("\tjsr %d,x",off);
-      }
-    }
-    IX_Dest = IX_None;
-  
-    // Removes pushed arguments before calling a function
-    if (stack_args*4 > 34) {
-      println("; ins*%d",stack_args);
-      println("\tstaa @tmp2");		// 4
-      println("\tsts @tmp1");		// 5
-      println("\tldaa @tmp1+1");	// 3
-      println("\tadda #<%d",stack_args);// 2
-      println("\tstaa @tmp1+1"); 	// 4
-      println("\tldaa @tmp1");		// 3
-      println("\tadca #>%d",stack_args);// 2
-      println("\tstaa @tmp1");		// 4
-      println("\tlds @tmp1");		// 4
-      println("\tldaa @tmp2");		// 3
-    }else{
-      ins(stack_args);
-    }
-    // If the return value is a type shorter than an int,
-    // the upper bytes contain garbage, so we correct it.
-    switch (node->ty->kind) {
-    case TY_BOOL:
-      println("\tclra");
-      return;
-    case TY_CHAR:
-      println("\tclra");
-      if (!node->ty->is_unsigned){
-	  println("\tasrb");
-	  println("\trolb");
-	  println("\tsbca #0");
-      }
-      return;
-    }
-    return;
-  } // ND_FUNCALL
   case ND_LABEL_VAL:
     println("\tldab #<%s",node->unique_label);
     println("\tldaa #>%s",node->unique_label);

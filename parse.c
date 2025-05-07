@@ -104,6 +104,7 @@ static char *cont_label;
 static Node *current_switch;
 
 static Obj *builtin_alloca;
+static Obj *builtin_va_start_addr;
 
 static bool is_typename(Token *tok);
 static Type *declspec(Token **rest, Token *tok, VarAttr *attr);
@@ -3494,6 +3495,12 @@ static void declare_builtin_functions(void) {
   ty->params = copy_type(ty_int);
   builtin_alloca = new_gvar("alloca", ty);
   builtin_alloca->is_definition = false;
+
+  Type *ty2 = func_type(pointer_to(ty_uchar));
+  ty2->params = NULL;
+  ty2->is_variadic = true;
+  builtin_va_start_addr = new_gvar("__builtin_va_start_addr", ty2);
+  builtin_va_start_addr->is_definition = false;
 }
 
 // program = (typedef | function-definition | global-variable)*
