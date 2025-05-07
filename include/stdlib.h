@@ -6,6 +6,8 @@
 
 #include <stddef.h> // for size_t
 
+#define RAND_MAX 32767
+
 // Convert string to int
 int atoi(const char *nptr);
 
@@ -43,7 +45,7 @@ void exit(int status);
 void abort(void);
 
 // Environment support (may be stubbed)
-char *getenv(const char *name);
+//char *getenv(const char *name);
 
 // Sorting and searching
 void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));
