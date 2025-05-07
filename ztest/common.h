@@ -3,6 +3,8 @@
 //	test common routine
 //
 
+#if !defined(__CHIBICC_COMMON_H__)
+#define __CHIBICC_COMMON_H__
 #if defined(__clang__) || defined(__GNUC__)
 #include <stdio.h>
 #include <math.h>
@@ -12,6 +14,7 @@
 #define cpu_counter()	{ clock_t t; t=clock();printf("CPU = %.6f sec\n",(double)t/CLOCKS_PER_SEC); }
 #define	fmodf(x,y)	fmod(x,y)
 #else
+#if defined(__chibicc_6800__)
 // chibicc, fcc, cc68
 extern	void print(int i);
 extern	void putchar(int ch);
@@ -65,3 +68,5 @@ puthexf(float f)
 	puthexc(*(p+2));
 	puthexc(*(p+3));
 }
+#endif
+#endif
