@@ -36,6 +36,8 @@ start:
 ;
 ;	No atexit support yet
 ;
+_exit:
+_abort:
 doexit:
 	lds exitsp
 	stab $feff
