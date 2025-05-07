@@ -705,31 +705,6 @@ static void run_linker(StringArray *inputs, char *output) {
 
 
   strarray_push(&arr, format("%s/crt0.o", libpath));
-#if 0
-  if (opt_shared) {
-    strarray_push(&arr, format("%s/crt0.o", libpath));
-    strarray_push(&arr, format("%s/crtbeginS.o", gcc_libpath));
-  } else {
-    strarray_push(&arr, format("%s/crt1.o", libpath));
-    strarray_push(&arr, format("%s/crti.o", libpath));
-    strarray_push(&arr, format("%s/crtbegin.o", gcc_libpath));
-  }
-#endif
-
-#if 0
-  strarray_push(&arr, format("-L%s", gcc_libpath));
-//  strarray_push(&arr, "-L/usr/lib/x86_64-linux-gnu");
-//  strarray_push(&arr, "-L/usr/lib64");
-//  strarray_push(&arr, "-L/lib64");
-//  strarray_push(&arr, "-L/usr/lib/x86_64-linux-gnu");
-//  strarray_push(&arr, "-L/usr/lib/x86_64-pc-linux-gnu");
-//  strarray_push(&arr, "-L/usr/lib/x86_64-redhat-linux");
-//  strarray_push(&arr, "-L/usr/lib");
-//  strarray_push(&arr, "-L/lib");
-  strarray_push(&arr, "-L/opt/chibicc/lib");
-#else
-  strarray_push(&arr, "/opt/chibicc/lib/libc.a");
-#endif
 
 #if 0
   if (!opt_static) {
@@ -768,6 +743,8 @@ static void run_linker(StringArray *inputs, char *output) {
 
   strarray_push(&arr, format("%s/crtn.o", libpath));
 #endif
+  strarray_push(&arr, "/opt/chibicc/lib/libc.a");
+
   strarray_push(&arr, NULL);
 
   run_subprocess(arr.data,NULL,NULL);

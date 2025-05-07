@@ -2,9 +2,11 @@ CFLAGS=-std=c11 -g -fno-common -Wall -Wno-switch -g3 -std=c99
 
 SRCS=$(wildcard *.c)
 OBJS=$(SRCS:.c=.o)
+INCS=$(wildcard include/*.h)
 
 TEST_SRCS=$(wildcard test/*.c)
-TESTS=$(TEST_SRCS:.c=.exe)
+TESTS=$(TEST_SRCS:.c=.bin)
+
 
 all: chibicc lib crt0.o
 
@@ -17,10 +19,12 @@ crt0.o: crt0.s
 install:
 	mkdir -p /opt/chibicc/bin
 	mkdir -p /opt/chibicc/lib
+	mkdir -p /opt/chibicc/include
 	install -c chibicc /opt/chibicc/bin
 	install -c crt0.o /opt/chibicc/lib
 	install -c libc/libc.a /opt/chibicc/lib
 	install -c copt.rules  /opt/chibicc/lib
+	install -c $(INCS)  /opt/chibicc/include
 	
 
 # Stage 1

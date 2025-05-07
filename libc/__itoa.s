@@ -20,8 +20,10 @@
 __value:.word	0
 __p:	.word	0
 __q:	.word	0
+	.export _itoa
 	.export __itoa
 	.code
+_itoa:
 __itoa:
 	tsx
 	ldx 2,x

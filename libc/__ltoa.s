@@ -18,8 +18,10 @@
 	.data
 __p:	.word	0
 __q:	.word	0
+	.export _ltoa
 	.export __ltoa
 	.code
+_ltoa:
 __ltoa:
 	tsx
 	ldx 2,x
