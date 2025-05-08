@@ -5,6 +5,18 @@
 ;
 	.export __mul32tos
 	.code
+shift8:	ldab	@long+1
+	stab	@long
+	ldab	@long+2
+	stab	@long+1
+	ldab	@long+3
+	stab	@long+2
+	clr	long+3
+	ldab	@tmp3
+	subb	#8
+	stab	@tmp3
+	rts
+;
 __mul32tos:
 	ldab #32
 	stab @tmp3
@@ -13,10 +25,30 @@ __mul32tos:
 	; 2-5,x TOS
 	clra
 	clrb
-	clr	@tmp2+1
-	clr	@tmp2
+	stab	@tmp2+1
+	staa	@tmp2
+;
+	tst	@long
+	bne	first
+;
+	tst	@long+1
+	bne	skip8	; @long[0] == 0, skip 8bit
+;
+	tst	@long+2
+	bne	skip16	; @long[0..1] ==0, skip 16bit
+;
+	tst	@long+3
+	bne	skip24	; @long[0..2] ==0, skip 24bit
+;	; all 0! return 0
+	bra	ret
+;
+skip24:	bsr	shift8
+skip16:	bsr	shift8
+skip8:	bsr	shift8
+	clrb
 	bra	first
-	; Rotate through the number
+;
+;	Rotate through the number
 nextbit:
 	aslb
 	rola
@@ -47,6 +79,7 @@ noadd:
 	stab	@long+1
 	ldab	@tmp2
 	stab	@long
+ret:
 	ldx	0,x
 	ins
 	ins
