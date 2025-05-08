@@ -67,7 +67,7 @@ static Node *negate_condition(Node *node)
   return node;
 }
 
-static Node *swap_lr(Node *node)
+Node *swap_lr(Node *node)
 {
   Node *tmp;
   tmp = node->lhs;

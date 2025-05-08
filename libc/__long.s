@@ -340,8 +340,9 @@ __u8to32:
 __u16to32:
 	stab	@long+3
 	staa	@long+2
-	clr	@long+1
-	clr	@long
+	clra
+	staa	@long+1
+	staa	@long
 	rts
 __s8to32:
 	clra

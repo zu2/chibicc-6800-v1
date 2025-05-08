@@ -434,6 +434,7 @@ void ast_node_dump(Node *node);
 //
 Node *optimize_expr(Node *node);
 Obj *optimize(Obj *prog);
+Node *swap_lr(Node *node);
 
 //
 // codegen.c

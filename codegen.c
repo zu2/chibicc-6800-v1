@@ -1795,6 +1795,23 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
     if(is_empty_cast(rhs->lhs->ty, rhs->ty))
       return gen_direct_long_sub(rhs->lhs, opb, opa, test);
   default:
+    if (test_addr_x(rhs)) {
+      if (test) return 1;
+      int off = gen_addr_x(rhs,false);
+      println("\tldab @long+3");
+      println("\t%s %d,x",opb,off+3);
+      println("\tstab @long+3");
+      println("\tldaa @long+2");
+      println("\t%s %d,x",opa,off+2);
+      println("\tstaa @long+2");
+      println("\tldaa @long+1");
+      println("\t%s %d,x",opa,off+1);
+      println("\tstaa @long+1");
+      println("\tldaa @long");
+      println("\t%s %d,x",opa,off);
+      println("\tstaa @long");
+      return 1;
+    }
     return 0;
   }
   return 0;
@@ -2686,6 +2703,9 @@ void gen_expr(Node *node) {
   case TY_LONG: {
     switch (node->kind) {
     case ND_ADD:
+      if (test_addr_x(node->lhs) && !test_addr_x(node->rhs)){
+	node = swap_lr(node);
+      }
       if (can_direct_long2(node)){
         gen_direct_long2(node,"addb","adca");
         return;
