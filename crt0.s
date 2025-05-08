@@ -32,8 +32,8 @@ start:
 ;
 	ldab #<__bss
 	ldaa #>__bss
-	addb #>__bss_size
-	adca #<__bss_size
+	addb #<__bss_size
+	adca #>__bss_size
 	stab @tmp1+1
 	staa @tmp1
 	clrb
