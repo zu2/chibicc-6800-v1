@@ -72,6 +72,7 @@ static void add_default_include_paths(char *argv0) {
     strarray_push(&std_include_paths, include_paths.data[i]);
 }
 
+#if 0
 static void define(char *str) {
   char *eq = strchr(str, '=');
   if (eq)
@@ -79,6 +80,16 @@ static void define(char *str) {
   else
     define_macro(str, "1");
 }
+#else
+static void define(char *str) {
+  char *eq = strchr(str, '=');
+  if (eq) {
+    define_macro_cli(strndup(str, eq - str), eq + 1);
+  }else {
+    define_macro(str, "1");
+  }
+}
+#endif
 
 static FileType parse_opt_x(char *s) {
   if (!strcmp(s, "c"))

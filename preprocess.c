@@ -990,6 +990,15 @@ static Token *preprocess2(Token *tok) {
   return head.next;
 }
 
+void define_macro_cli(char *name, char *body)
+{
+  char *buf = format("%s %s\n", name, body);
+  Token *tok = tokenize(new_file("<command-line>", 1, buf));
+
+  Token *rest;
+  read_macro_definition(&rest, tok);
+}
+
 void define_macro(char *name, char *buf) {
   Token *tok = tokenize(new_file("<built-in>", 1, buf));
   add_macro(name, true, tok);

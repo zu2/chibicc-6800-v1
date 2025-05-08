@@ -114,6 +114,7 @@ Token *tokenize_file(char *filename);
 
 char *search_include_paths(char *filename);
 void init_macros(void);
+void define_macro_cli(char *name, char *buf);
 void define_macro(char *name, char *buf);
 void undef_macro(char *name);
 Token *preprocess(Token *tok);
