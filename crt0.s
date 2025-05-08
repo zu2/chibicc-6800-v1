@@ -26,6 +26,24 @@ rdi:	.word	0
 start:
 	sts exitsp
 	lds #$7fff
+	ldx #__bss_size
+	beq call_main
+	ldx #__bss
+;
+	ldab #<__bss
+	ldaa #>__bss
+	addb #>__bss_size
+	adca #<__bss_size
+	stab @tmp1+1
+	staa @tmp1
+	clrb
+bss_clear:
+	stab 0,x
+	inx
+	cpx @tmp1
+	bne bss_clear
+;
+call_main:
 	clra
 	clrb
 	pshb

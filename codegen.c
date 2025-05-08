@@ -3589,7 +3589,7 @@ static void emit_data(Obj *prog) {
 		break;
 	default:println("\t.blkb %d",var->ty->size);
 		break;
-//	default:assert(var->ty->size < 8);	// XXX
+//	default:assert(var->ty->size < 8);
 //		break;
 	}
       continue;
@@ -3633,11 +3633,7 @@ static void emit_data(Obj *prog) {
 
     // .bss or .tbss
     println("\t.bss");
-
-    println("_%s:", var->name);
-    for (int i=0; i<var->ty->size; i++){
-      println("\t.byte 0");
-    }
+    println("_%s:\n\t.ds %d", var->name,var->ty->size);
   }
 }
 
