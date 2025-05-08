@@ -112,3 +112,47 @@
 	ldx @tmp1
 =
 	ldx #%1
+
+# long
+
+	jsr __u16to32
+	ldab @long+3
+	pshb
+	ldab @long+2
+	pshb
+	ldab @long+1
+	pshb
+	ldab @long
+	pshb
+=
+	pshb
+	psha
+	clrb
+	pshb
+	pshb
+
+	ldab 3,x
+	stab @long+3
+	ldab 2,x
+	stab @long+2
+	ldab 1,x
+	stab @long+1
+	ldab 0,x
+	stab @long
+	ldab @long+3
+	pshb
+	ldab @long+2
+	pshb
+	ldab @long+1
+	pshb
+	ldab @long
+	pshb
+=
+	ldab 3,x
+	pshb
+	ldab 2,x
+	pshb
+	ldab 1,x
+	pshb
+	ldab 0,x
+	pshb
