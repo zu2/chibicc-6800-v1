@@ -2399,9 +2399,14 @@ void gen_expr(Node *node) {
     return;
   case ND_MEMZERO:
     // `rep stosb` is equivalent to `memset(%rdi, %al, %rcx)`.
-    println("; ND_MEMZERO %.*s size=%d, offset=%d,  %s %d",
-		    node->var->ty->name->len, node->var->ty->name->loc,
-		    node->var->ty->size, node->var->offset, __FILE__, __LINE__);
+    if (node->var->ty->name) {
+      println("; ND_MEMZERO %.*s size=%d, offset=%d,  %s %d",
+                 node->var->ty->name->len, node->var->ty->name->loc,
+                 node->var->ty->size, node->var->offset, __FILE__, __LINE__);
+    }else{
+      println("; ND_MEMZERO (noname) size=%d, offset=%d,  %s %d",
+                 node->var->ty->size, node->var->offset, __FILE__, __LINE__);
+    }
     ldx_bp();
     if(node->var->ty->size <= 4
     && node->var->ty->size + node->var->offset <= 256){
