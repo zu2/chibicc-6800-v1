@@ -7,7 +7,7 @@ typedef enum {
 } FileType;
 
 StringArray include_paths;
-bool opt_fcommon = true;
+bool opt_fcommon = false;
 
 static FileType opt_x;
 static StringArray opt_include;
