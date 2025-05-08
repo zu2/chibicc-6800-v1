@@ -754,13 +754,13 @@ void load_var(Node *node)
     }
     return;
   }
-#if 1
-  int off = gen_addr_x(node,false);
-  load_x(node->ty,off);
-#else
+  if (test_addr_x(node)) {
+    int off = gen_addr_x(node,false);
+    load_x(node->ty,off);
+    return;
+  }
   gen_addr(node);
   load(node->ty);
-#endif
   return;
 }
 
