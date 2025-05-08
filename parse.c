@@ -1525,11 +1525,13 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
     return cur;
 
   if (ty->kind == TY_FLOAT) {
-    *(float *)(buf + offset) = eval_double(init->expr);
+    float f = eval_double(init->expr);
+    write_buf(buf+offset, *(long *)&f, ty->size);
     return cur;
   }
 
   if (ty->kind == TY_DOUBLE) {
+    assert(0);
     *(double *)(buf + offset) = eval_double(init->expr);
     return cur;
   }
@@ -2904,7 +2906,6 @@ static Node *struct_ref(Node *node, Token *tok) {
 
 // Convert A++ to `(typeof A)((A += 1) - 1)`
 static Node *new_post_inc_dec(Node *node, Token *tok, int addend) {
-  int size = 1;
   Type *ty;
 
   add_type(node);
