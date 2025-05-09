@@ -2977,10 +2977,8 @@ void gen_expr(Node *node) {
 	if (node->rhs->lhs->ty->is_unsigned
 	&&  node->rhs->lhs->var->offset<=255) {
           ldx_bp();
-	  if (node->rhs->lhs->var->offset) {
-            println("\taddb %d,x",node->rhs->lhs->var->offset);
-	    println("\tadca #0");
-	  }
+          println("\taddb %d,x",node->rhs->lhs->var->offset);
+	  println("\tadca #0");
 	  return;
 	}
 	break;
@@ -2989,10 +2987,8 @@ void gen_expr(Node *node) {
       case TY_ENUM:
         if (node->rhs->lhs->var->offset<=254) {
           ldx_bp();
-	  if (node->rhs->lhs->var->offset) {
-            println("\taddb %d,x",node->rhs->lhs->var->offset+1);
-            println("\tadca %d,x",node->rhs->lhs->var->offset);
-	  }
+          println("\taddb %d,x",node->rhs->lhs->var->offset+1);
+          println("\tadca %d,x",node->rhs->lhs->var->offset);
 	  return;
         }
 	break;
