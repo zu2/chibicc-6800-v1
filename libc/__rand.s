@@ -12,6 +12,9 @@ __seed:	.byte	$de
 	.code
 	.export	_rand
 ;
+; 24bit random number generator
+; https://wimcouwenberg.wordpress.com/2020/11/15/a-fast-24-bit-prng-algorithm-for-the-6502-processor/
+;
 _prng24:
 	ldab	__seed
 	aslb
