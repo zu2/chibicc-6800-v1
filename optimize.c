@@ -40,7 +40,7 @@ static char *type_str(Node *node)
   assert(0);
 }
 
-static Node *negate_condition(Node *node)
+Node *negate_condition(Node *node)
 {
   switch(node->kind){
   case ND_EQ:
