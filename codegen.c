@@ -2992,7 +2992,7 @@ void gen_expr(Node *node) {
     }
     if (test_addr_x(node->rhs)){
       gen_expr(node->lhs);
-      int off = gen_addr_x(node->lhs,true);
+      int off = gen_addr_x(node->rhs,true);
       println("\tsubb %d+1,x",off);
       println("\tsbca %d,x",off);
       return;
