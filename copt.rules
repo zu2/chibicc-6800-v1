@@ -156,3 +156,31 @@
 	pshb
 	ldab 0,x
 	pshb
+
+
+	ldab @bp+1
+	ldaa @bp
+	pshb
+	psha
+	ldab %4,x
+	ldaa %3,x
+	aslb
+	rola
+	tsx
+	addb 1,x
+	adca 0,x
+	ins
+	ins
+=
+	ldab %4,x
+	ldaa %3,x
+	aslb
+	rola
+	addb @bp+1
+	adca @bp
+
+	jsr __load8u	; AccB = (AccAB)
+	tstb
+=
+	jsr __load8u
+
