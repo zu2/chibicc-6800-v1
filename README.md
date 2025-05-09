@@ -107,7 +107,7 @@ Follow these steps to set up the compiler:
 
 This compiler, like the x86 version, uses the frame pointer (`@bp`) to access local variables and arguments.  
 On the 6800, due to the limited number of registers, `@bp` is placed in the zero page.  
-Unlike other compilers that obtain the stack position using `TSX`, chibicc-6800 uses `LDX @bp`.  
+Unlike other 6800 compilers that obtain the stack position using `TSX`, chibicc-6800 uses `LDX @bp`.  
 Although this makes the instruction one byte larger, the number of cycles required is the same.  
 Furthermore, when arithmetic operations on the stack pointer are needed, omitting `STS` can offset the size difference.
 
@@ -191,8 +191,40 @@ On the other hand, AccA/B are fragile, so they may need to be saved and restored
 
 In the chibicc-6800, everything is on the zero page for clarity.
 
-
 `@long` is also used when passing function arguments via registers. If the first (most significant) argument of a function is a `long` or `float`, it is passed through `@long`. This avoids the need for a 4-byte long push and multiple `ins` instructions.
+
+### Passing long/float Arguments
+
+When calling a function with a long or float argument using register passing, a zero page area (@long) is used for the argument. If the return value of one function is passed directly as an argument to the next function, the call can be made without any additional cost.
+
+For example:
+
+```
+#include "float.h"
+#include "math.h"
+
+int main(int argc, char **argv)
+{
+    float x, z;
+
+    z = sqrtf(fabsf(x));
+}
+```
+
+After storing the value of x into @long, we can call fabsf and then sqrtf in sequence. There is no need to restore the stack, making the operation efficient.
+
+```
+    ldab 7,x
+    stab @long+3
+    ldab 6,x
+    stab @long+2
+    ldab 5,x
+    stab @long+1
+    ldab 4,x
+    stab @long
+    jsr _fabsf
+    jsr _sqrtf
+```
 
 
 ## Conditional branch
