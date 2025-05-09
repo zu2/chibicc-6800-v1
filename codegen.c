@@ -1123,11 +1123,11 @@ gen_direct_pushlx(int off)
   depth+=4;
 }
 
-static void push_args2(Node *args)
+static void push_args2(Node *args,bool is_variadic)
 {
   if (!args)
     return;
-  push_args2(args->next);
+  push_args2(args->next,is_variadic);
 
   switch (args->ty->kind) {
   case TY_DOUBLE:
@@ -1148,7 +1148,12 @@ static void push_args2(Node *args)
         gen_expr(args);
       }
       if (args->pass_by_stack){
-        push1();
+	if (is_variadic) {
+          cast(args->ty, ty_int);
+	  push();
+	}else{
+          push1();
+	}
       }
     }
     break;
@@ -1248,6 +1253,10 @@ static int push_args(Node *node)
       if (reg_passable) {
         reg_passable = 0;
         arg->pass_by_stack = 0;
+      }else if (node->lhs->ty->is_variadic) {
+        arg->pass_by_stack = 1;
+        stack += ((arg->ty->kind==TY_ARRAY||arg->ty->kind==TY_VLA))?
+		2: (arg->ty->size==1? 2: arg->ty->size);
       }else{
         arg->pass_by_stack = 1;
         stack += ((arg->ty->kind==TY_ARRAY||arg->ty->kind==TY_VLA))?
@@ -1256,7 +1265,7 @@ static int push_args(Node *node)
       break;
     }
   }
-  push_args2(node->args);
+  push_args2(node->args,node->lhs->ty->is_variadic);
 
   // If the return type is a struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument (in Acc A,B).
