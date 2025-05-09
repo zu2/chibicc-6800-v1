@@ -133,6 +133,19 @@ void helper(char *s)
 }
 
 //
+// node is local variable ?
+//
+bool is_local_var(Node *node)
+{
+  if (node->kind == ND_VAR
+  &&  node->var->ty->kind != TY_VLA
+  &&  node->var->is_local ) {
+    return 1;
+  }
+  return 0;
+}
+
+//
 // node is global variable?
 //
 bool is_global_var(Node *node)
@@ -370,7 +383,13 @@ int gen_addr_x(Node *node,bool save_d)
 	ldx_bp();
 	return node->var->offset;
       }
-      assert(0); // TODO:
+      if (save_d)
+        push();
+      gen_addr(node);
+      tfr_dx();
+      if (save_d)
+        pop();
+      return 0;
     }
     // Function
     if (node->ty->kind == TY_FUNC) {
@@ -2444,19 +2463,27 @@ void gen_expr(Node *node) {
     return;
   case ND_COND: {
     int c = count();
+    char L_else[30];
+    char L_end[30];
+    sprintf(L_else,"L_else_%d",c);
+    sprintf(L_end, "L_end_%d",c);
+
     Node *cond;
     node->cond->bool_result_unused = true;
     cond = optimize_expr(node->cond);
-    gen_expr(cond);
-    if (!is_compare_or_not(cond))
-      cmp_zero(cond->ty);
-    println("\tjeq L_else_%d", c);
+
+    if (!gen_jump_if_false(cond,L_else)){
+      gen_expr(cond);
+      if (!is_compare_or_not(cond))
+        cmp_zero(cond->ty);
+      println("\tjeq %s",L_else);
+    }
     gen_expr(node->then);
-    println("\tjmp L_end_%d", c);
-    println("L_else_%d:", c);
+    println("\tjmp %s",L_end);
+    println("%s:", L_else);
     IX_Dest = IX_None;
     gen_expr(node->els);
-    println("L_end_%d:", c);
+    println("%s:", L_end);
     IX_Dest = IX_None;
     return;
   }
@@ -2947,22 +2974,28 @@ void gen_expr(Node *node) {
     &&  node->rhs->lhs->var->is_local) {
       switch (node->rhs->lhs->ty->kind) {
       case TY_CHAR:
-	if (node->rhs->lhs->ty->is_unsigned) {
+	if (node->rhs->lhs->ty->is_unsigned
+	&&  node->rhs->lhs->var->offset<=255) {
           ldx_bp();
-          println("\taddb %d,x",node->rhs->lhs->var->offset);
-	  println("\tadca #0");
+	  if (node->rhs->lhs->var->offset) {
+            println("\taddb %d,x",node->rhs->lhs->var->offset);
+	    println("\tadca #0");
+	  }
 	  return;
 	}
 	break;
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
-        ldx_bp();
-        if (node->rhs->lhs->var->offset) {
-          println("\taddb %d,x",node->rhs->lhs->var->offset+1);
-          println("\tadca %d,x",node->rhs->lhs->var->offset);
+        if (node->rhs->lhs->var->offset<=254) {
+          ldx_bp();
+	  if (node->rhs->lhs->var->offset) {
+            println("\taddb %d,x",node->rhs->lhs->var->offset+1);
+            println("\tadca %d,x",node->rhs->lhs->var->offset);
+	  }
+	  return;
         }
-	return;
+	break;
       }
     }
     push();
