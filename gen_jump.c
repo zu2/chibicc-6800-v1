@@ -200,6 +200,24 @@ int gen_jump_if_false(Node *node,char *if_false)
   if (isVAR(node) && node->ty->kind==TY_CHAR)
     return gen_jump_if_false_8bit(node,if_false);
 
+  if (isVAR(node) && node->ty->kind==TY_INT) {
+    if (is_global_var(node)) {
+      println("\tldx _%s",node->var->name);
+      println("\tjeq %s",if_false);
+      IX_Dest = IX_None;
+      return 1;
+    }
+    if (is_local_var(node)
+    && node->var->offset<=255
+    && test_addr_x(node)) {
+      int off = gen_addr_x(node,false);
+      println("\tldx %d,x",off);
+      println("\tjeq %s",if_false);
+      IX_Dest = IX_None;
+      return 1;
+    }
+  }
+
   if(!is_compare(node)) {
     gen_expr(node);
     cmp_zero(node->ty);

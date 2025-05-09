@@ -3,6 +3,7 @@
 //
 
 #include "common.h"
+#include <stdlib.h>
 
 unsigned long rnd;
 
@@ -21,7 +22,7 @@ unsigned long xorshift32()
 
 int main(int argc, char **argv)
 {
-	int	i;
+	int	i,j;
 
 	rnd = 0x12345678;
 
@@ -32,6 +33,24 @@ int main(int argc, char **argv)
 	}
 	if (rnd != 0xe1d909c5)
 	  return 2;
+
+	putstr("libc/rand\n");
+	cpu_counter();
+	for (i=0; i<10; i++) {
+	  for (j=0; j<10000; j++) {
+	    rand();
+	  }
+	}
+	cpu_counter();
+
+	putstr("xorshift32 C version\n");
+	cpu_counter();
+	for (i=0; i<10; i++) {
+	  for (j=0; j<10000; j++) {
+            xorshift32();
+	  }
+	}
+	cpu_counter();
 
 	cpu_counter();
 	return 0;
