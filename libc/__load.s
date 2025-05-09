@@ -9,8 +9,8 @@ __load8u:
 	stab	@tmp1+1
 	staa	@tmp1
 	ldx	@tmp1
-	ldab 0,x
 	clra
+	ldab 0,x
 	rts
 __load8s:
 	stab	@tmp1+1
