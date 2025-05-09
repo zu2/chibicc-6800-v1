@@ -220,6 +220,7 @@ int gen_jump_if_false(Node *node,char *if_false)
   if(rhs->ty->kind!=TY_CHAR && rhs->ty->kind!=TY_INT && rhs->ty->kind!=TY_SHORT)
     return 0;
 
+
   char if_thru[32];
   char if_label[32];
   char if_cond[32];
@@ -233,7 +234,7 @@ int gen_jump_if_false(Node *node,char *if_false)
         int off = gen_addr_x(lhs,false);
         sprintf(if_cond,"%d,x",off);
       }else if (!lhs->var->is_local && lhs->ty->kind!=TY_FUNC) {
-         sprintf(if_cond,"_%s",lhs->var->name);
+        sprintf(if_cond,"_%s",lhs->var->name);
       }
       switch(node->kind) {
       case ND_EQ:
@@ -263,8 +264,14 @@ int gen_jump_if_false(Node *node,char *if_false)
           IX_Dest = IX_None;
           return 1;
         }else{
-          // 'subb #0 / sbca #0' can be substituted with 'tsta'.
+          println("; int>0 is !(int<0) && !(int==0)");
+          println("\tldx %s",if_cond);
+	  println("\tjmi %s",if_false);
+	  println("\tjeq %s",if_false);
+          IX_Dest = IX_None;
+	  return 1;
         }
+	break;
       case ND_GE:
         if (lhs->ty->is_unsigned) {
           println("; uint >= 0 is always true");
@@ -272,6 +279,7 @@ int gen_jump_if_false(Node *node,char *if_false)
         }else{
           println("\tldaa %s",if_cond);
           println("\tjmi %s",if_false);
+	  return 1;
         }
         break;
       case ND_LE:
@@ -310,7 +318,6 @@ int gen_jump_if_false(Node *node,char *if_false)
           println("; uint > 0 is true for any value other than zero.");
 	  node->kind = ND_NE;
 	}else{
-          // 'subb #0 / sbca #0' can be substituted with 'tsta'.
           println("\ttsta");
 	}
 	break;
@@ -332,6 +339,7 @@ int gen_jump_if_false(Node *node,char *if_false)
 	break;
       }
     }
+  // ↑ rhs==0
   }else if (can_direct(rhs)) {
     gen_expr(lhs);
     if(!gen_direct(rhs,"subb","sbca")){
