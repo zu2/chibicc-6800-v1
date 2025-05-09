@@ -2981,6 +2981,32 @@ void gen_expr(Node *node) {
         return;
       assert(0);
     }
+    if (can_direct(node->lhs)){
+      gen_expr(node->rhs);
+      println("\tnega");
+      println("\tnegb");
+      println("\tsbca #0");
+      if(gen_direct(node->lhs,"addb","adca"))
+        return;
+      assert(0);
+    }
+    if (test_addr_x(node->rhs)){
+      gen_expr(node->lhs);
+      int off = gen_addr_x(node->lhs,true);
+      println("\tsubb %d+1,x",off);
+      println("\tsbca %d,x",off);
+      return;
+    }
+    if (test_addr_x(node->lhs)){
+      gen_expr(node->rhs);
+      println("\tnega");
+      println("\tnegb");
+      println("\tsbca #0");
+      int off = gen_addr_x(node->lhs,true);
+      println("\taddb %d+1,x",off);
+      println("\tadca %d,x",off);
+      return;
+    }
     gen_expr(node->rhs);		// TODO: lhs to rhs
     cast(node->rhs->ty, node->ty);
     push();
