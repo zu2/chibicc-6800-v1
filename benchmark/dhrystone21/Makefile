@@ -1,4 +1,4 @@
-OPT=-vv -O -DPRINTF=1 -Ddouble_t=float "-Dscanf(x,y)={y=20000;}"
+OPT=-vv -O -DPRINTF=1 -Ddouble_t=float '-Dscanf(x,y)={*y=20000;}' -DTIMEFUNC '-Dnative_timer_start=cpu_counter' '-Dnative_timer_stop=cpu_counter'
 
 benchmark: all
 
