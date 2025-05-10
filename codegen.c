@@ -3490,31 +3490,46 @@ static void gen_stmt(Node *node) {
   }
   case ND_SWITCH:
     gen_expr(node->cond);
-
+    if (node->cond->ty->size == 2) {
+      tfr_dx();
+      IX_Dest = IX_None;
+    }
     for (Node *n = node->case_next; n; n = n->case_next) {
-      char *ax = (node->cond->ty->size == 8) ? "%rax" : "%eax";
-      char *di = (node->cond->ty->size == 8) ? "%rdi" : "%edi";
-
       // TODO: 32bit case
       if (n->begin == n->end) {
         int c = count();
-	println("\tcmpb #<%ld",n->begin);
-	println("\tbne L_case_%d",c);
-	println("\tcmpa #>%ld",n->begin);
-	println("\tjeq %s", n->label);
-	println("L_case_%d:",c);
-        IX_Dest = IX_None;
-//        println("  cmp $%ld, %s", n->begin, ax);
-//        println("  je %s", n->label);
+	switch(node->cond->ty->size) {
+	case 1:
+	  println("\tcmpb #<%ld",n->begin);
+	  println("\tjeq %s", n->label);
+	  break;
+	case 2:
+	  println("\tcpx #%ld",n->begin);
+	  println("\tjeq %s", n->label);
+	  break;
+	case 4:
+	  println("\tldx #%ld	; %ld",n->begin & 0x0ffff,n->begin);
+	  println("\tcpx @long+2");
+	  println("\tbne L_case_%d",c);
+	  println("\tldx #%ld",(n->begin>>16)&0x0ffff);
+	  println("\tcpx @long");
+	  println("\tjeq %s", n->label);
+	  println("L_case_%d:",c);
+          IX_Dest = IX_None;
+	  break;
+	default:
+	  assert(0);
+	}
         continue;
       }
 
       // [GNU] Case ranges
-      println("; TODO: Case ranges");
-      println("  mov %s, %s", ax, di);
-      println("  sub $%ld, %s", n->begin, di);
-      println("  cmp $%ld, %s", n->end - n->begin, di);
-      println("  jbe %s", n->label);
+      println("; TODO: Case ranges");	// TODO: case range
+      assert(0);
+//      println("  mov %s, %s", ax, di);
+//      println("  sub $%ld, %s", n->begin, di);
+//      println("  cmp $%ld, %s", n->end - n->begin, di);
+//      println("  jbe %s", n->label);
     }
 
     if (node->default_case)
