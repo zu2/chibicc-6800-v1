@@ -1321,28 +1321,34 @@ static void builtin_alloca(void) {
 
   // Shift the temporary area by %rdi.
   // println("; %%di has alloca size");
-  println("\tstab @tmp4+1");// The name of the work area will be decided later.
+  println("\tstab @tmp4+1	; alloca size");
   println("\tstaa @tmp4");
   // println(";	__alloca_bottom__ -> cx");
   // The area between alloca_bottom and SP is the stack currently in use. Move this.
-  println("\tldab @bp+1	; IX =  (__alloca_bottom)");
-  println("\tldaa @bp");
-  println("\taddb #<%d",current_fn->alloca_bottom->offset);
-  println("\tadca #>%d",current_fn->alloca_bottom->offset);
-  tfr_dx();
-  println("\tstx @tmp3 ; save address of __alloca_bottom__");
-  println("\tsts @tmp2 ; save current SP");
+  if (current_fn->alloca_bottom->offset) {
+    println("\tldab @bp+1	; IX =  &__alloca_bottom");
+    println("\tldaa @bp");
+    println("\taddb #<%d",current_fn->alloca_bottom->offset);
+    println("\tadca #>%d",current_fn->alloca_bottom->offset);
+    tfr_dx();	// tfr_dx uses @tmp1
+  }else{
+    ldx_bp();
+    println("\tstx @tmp1	; save __alloca_bottom");
+  }
+  println("\tsts @tmp2");	// sp -= alloca size
   println("\tldab @tmp2+1");
   println("\tldaa @tmp2");
   println("\tsubb @tmp4+1");	// alloca size
   println("\tsbca @tmp4");
   println("\tstab @tmp2+1");
   println("\tstaa @tmp2");
-  println("\tlds @tmp4 ; get new SP");
-  println("\tldx 0,x");
+  println("\tlds @tmp2	; get new SP");
   int c1 = count();
   int c2 = count();
-  println("; copy stack working area to stack top");
+  // The program moved the stack pointer to implement alloca,
+  //     so the original stack data must be copied.
+  // Push the data from __alloca_bottom to @tmp2 onto the new SP
+  println("\tldx 0,x");		// get old SP bottom
   println("L_%d:",c1);
   println("\tcpx @tmp2");
   println("\tbeq L_%d",c2);
@@ -1351,17 +1357,17 @@ static void builtin_alloca(void) {
   println("\tdex");
   println("\tbra L_%d",c1);
   println("L_%d:",c2);
-  IX_Dest = IX_None;
 
-  // Move alloca_bottom pointer.
-  println("\tldx @tmp3");
+  println("; Move alloca_bottom pointer.");
+  println("\tldx @tmp1");
   IX_Dest = IX_None;
   println("\tldab 1,x	; make new __alloca_bottom__");
   println("\tldaa 0,x");
-  println("\tsubb @rdi+1");
-  println("\tsbca @rdi");
-  println("\tstab 1,x");
+  println("\tsubb @tmp4+1	; alloca size");
+  println("\tsbca @tmp4");
+  println("\tstab 1,x");	// return alloca(size);
   println("\tstaa 0,x");
+  println(";");
 }
 
 //
