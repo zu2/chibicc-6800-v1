@@ -1,4 +1,4 @@
-;
+	;
 ;	A dummy minimal crt0.s for now
 ;
 	.zp
@@ -22,6 +22,8 @@ rdi:	.word	0
 	.export _getchar
 	.export _print
 	.export _cpu_counter
+	.export _exit
+	.export _abort
 	.code
 start:
 	sts exitsp
