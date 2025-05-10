@@ -3536,11 +3536,14 @@ static void gen_stmt(Node *node) {
       println("\tjmp %s", node->default_case->label);
 
     println("\tjmp %s", node->brk_label);
+    IX_Dest = IX_None;
     gen_stmt(node->then);
     println("%s:", node->brk_label);
+    IX_Dest = IX_None;
     return;
   case ND_CASE:
     println("%s:", node->label);
+    IX_Dest = IX_None;
     gen_stmt(node->lhs);
     return;
   case ND_BLOCK:
@@ -3559,6 +3562,7 @@ static void gen_stmt(Node *node) {
     return;
   case ND_LABEL:
     println("%s:", node->unique_label);
+    IX_Dest = IX_None;
     gen_stmt(node->lhs);
     return;
   case ND_RETURN:
