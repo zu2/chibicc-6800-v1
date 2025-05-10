@@ -34,6 +34,8 @@
 	.export	__f32toi32
 	.export	__f32tou16
 	.export	__f32toi16
+	.export	__f32tou8
+	.export	__f32toi8
 	.export	__addf32tos
 	.export __subf32tos
 	.export __mulf32tos
@@ -572,6 +574,14 @@ __f32toi32_6:
 	inc	0,x
 	bra	__f32toi32_ret
 ;
+;	float to unsigned char
+;		@long -> AccB, clear AccA
+;
+__f32tou8:
+	bsr	__f32tou16
+	clra
+	rts
+;
 ;	float to unsigned int
 ;		@long -> AccA:B
 ;	
@@ -665,6 +675,60 @@ __f32toi16_ret:
 	sbca	#0
 __f32toi16_ret2:
 	rts
+;
+;	float to signed char
+;		@long -> AccB
+;	
+__f32toi8:
+	ldx	#long
+__f32toi8x:
+	jsr	__f32iszerox
+	beq	__s8zero
+	ldab	0,x
+	ldaa	1,x
+	asla
+	rolb			; B = exp
+	sec			; set hidden bit
+	rora			; A = MSB
+	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
+	bcc	__f32toi8_1
+__s8zero:
+	clrb
+	clra
+	rts
+;
+__f32toi8_1:
+	cmpb	#$86		; if exp>=$86 (x > 127)
+	bcs	__f32toi8_2
+	ldaa	0,x		; check sign
+	bmi	__s8_80		; x <= -32768
+__s8_7f:			; x > 127, return 127
+	ldab	#$7F
+	clra
+	rts
+__s8_80:			; x <= -128, return -128
+	ldab	#$80
+	ldaa	#$FF
+	rts
+;
+__f32toi8_2:			; AccA:MSB, AccB:exp (biased)
+	subb	#$86
+	beq	__f32toi8_ret
+__f32toi8_4:
+	lsra
+	incb
+	bne	__f32toi8_4
+__f32toi8_ret:
+	tab
+	clra
+	tst	0,x
+	bpl	__f32toi8_ret2
+	negb
+	deca
+__f32toi8_ret2:
+	rts
+;
+;
 ;
 __u16ffff:
 	ldab	#$FF
