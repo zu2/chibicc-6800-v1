@@ -668,31 +668,9 @@ bool file_exists(char *path) {
 }
 
 static char *find_libpath(void) {
-#if 0
-  if (file_exists("/usr/lib/x86_64-linux-gnu/crti.o"))
-    return "/usr/lib/x86_64-linux-gnu";
-  if (file_exists("/usr/lib64/crti.o"))
-    return "/usr/lib64";
-#endif
   if (file_exists("/opt/chibicc/lib/crt0.o"))
     return "/opt/chibicc/lib";
   error("library path is not found");
-}
-
-static char *find_gcc_libpath(void) {
-  char *paths[] = {
-    "/usr/lib/gcc/x86_64-linux-gnu/*/crtbegin.o",
-    "/usr/lib/gcc/x86_64-pc-linux-gnu/*/crtbegin.o", // For Gentoo
-    "/usr/lib/gcc/x86_64-redhat-linux/*/crtbegin.o", // For Fedora
-  };
-
-  for (int i = 0; i < sizeof(paths) / sizeof(*paths); i++) {
-    char *path = find_file(paths[i]);
-    if (path)
-      return dirname(path);
-  }
-
-  error("gcc library path is not found");
 }
 
 static void run_linker(StringArray *inputs, char *output) {
@@ -700,7 +678,6 @@ static void run_linker(StringArray *inputs, char *output) {
 
 //ld6800 -v -b -C256 -Z0 -m $s.map -o $s.bin ../crt0.o $s.o ../libc/libc.a
   strarray_push(&arr, "ld6800");
-  strarray_push(&arr, "-v");
   strarray_push(&arr, "-b");
   strarray_push(&arr, "-C256");
   strarray_push(&arr, "-Z0");
@@ -712,49 +689,30 @@ static void run_linker(StringArray *inputs, char *output) {
   strarray_push(&arr, binfile);
 
   char *libpath = find_libpath();
-//  char *gcc_libpath = find_gcc_libpath();
-
 
   strarray_push(&arr, format("%s/crt0.o", libpath));
-
-#if 0
-  if (!opt_static) {
-    strarray_push(&arr, "-dynamic-linker");
-    strarray_push(&arr, "/lib64/ld-linux-x86-64.so.2");
-  }
-#endif
 
   for (int i = 0; i < ld_extra_args.len; i++)
     strarray_push(&arr, ld_extra_args.data[i]);
 
-  for (int i = 0; i < inputs->len; i++)
-    strarray_push(&arr, inputs->data[i]);
-
-#if 0
-  if (opt_static) {
-    strarray_push(&arr, "--start-group");
-    strarray_push(&arr, "-lgcc");
-    strarray_push(&arr, "-lgcc_eh");
-    strarray_push(&arr, "-lc");
-    strarray_push(&arr, "--end-group");
-  } else {
-    strarray_push(&arr, "-lc");
-    strarray_push(&arr, "-lgcc");
-    strarray_push(&arr, "--as-needed");
-    strarray_push(&arr, "-lgcc_s");
-    strarray_push(&arr, "--no-as-needed");
+  for (int i = 0; i < inputs->len; i++) {
+    if (strlen(inputs->data[i])>=3 && strncmp(inputs->data[i],"-l",2)==0) {
+      // skip -lx
+    }else{
+      strarray_push(&arr, inputs->data[i]);
+    }
   }
-#endif
 
-#if 0
-  if (opt_shared)
-    strarray_push(&arr, format("%s/crtendS.o", gcc_libpath));
-  else
-    strarray_push(&arr, format("%s/crtend.o", gcc_libpath));
-
-  strarray_push(&arr, format("%s/crtn.o", libpath));
-#endif
   strarray_push(&arr, "/opt/chibicc/lib/libc.a");
+
+  for (int i = 0; i < inputs->len; i++) {
+    printf("run_linker: %d, %s\n",i,inputs->data[i]);
+    if (strlen(inputs->data[i])>=3 && strncmp(inputs->data[i],"-l",2)==0) {
+      if (strchr(inputs->data[i],'/'))
+	continue;
+      strarray_push(&arr, format("%s/lib%s.a",libpath,inputs->data[i]+2));
+    }
+  }
 
   strarray_push(&arr, NULL);
 
