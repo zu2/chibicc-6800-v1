@@ -1335,14 +1335,14 @@ static void builtin_alloca(void) {
     ldx_bp();
     println("\tstx @tmp1	; save __alloca_bottom");
   }
-  println("\tsts @tmp2");	// sp -= alloca size
+  println("\tsts @tmp2	; save old SP");	// sp -= alloca size
   println("\tldab @tmp2+1");
   println("\tldaa @tmp2");
   println("\tsubb @tmp4+1");	// alloca size
   println("\tsbca @tmp4");
-  println("\tstab @tmp2+1");
-  println("\tstaa @tmp2");
-  println("\tlds @tmp2	; get new SP");
+  println("\tstab @tmp3+1");
+  println("\tstaa @tmp3");
+  println("\tlds @tmp3	; get new SP");
   int c1 = count();
   int c2 = count();
   // The program moved the stack pointer to implement alloca,
@@ -3540,6 +3540,7 @@ static void gen_stmt(Node *node) {
     println("\tpshb	; jmp [AccD]");
     println("\tpsha");
     println("\trts");
+    println(";");
     return;
   case ND_LABEL:
     println("%s:", node->unique_label);
@@ -3747,6 +3748,7 @@ static void emit_text(Obj *prog) {
     println("; fn->body->kind=%d",fn->body->kind);
     if(fn->body->kind==ND_BLOCK && fn->body->body==NULL){	// empty function
       println("\trts	; empty function");
+      println(";");
       IX_Dest = IX_None;
       continue;
     }
@@ -3971,6 +3973,7 @@ no_params_locals:
     }
 no_params_locals2:
     println("\trts");		// 5 1
+    println(";");
   }
 }
 
