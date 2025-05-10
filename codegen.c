@@ -1321,8 +1321,8 @@ static void builtin_alloca(void) {
 
   // Shift the temporary area by %rdi.
   // println("; %%di has alloca size");
-  println("\tstab @rdi+1");		// The name of the work area will be decided later.
-  println("\tstaa @rdi");
+  println("\tstab @tmp1+1");		// The name of the work area will be decided later.
+  println("\tstaa @tmp1");
   // println(";	__alloca_bottom__ -> cx");
   // The area between alloca_bottom and SP is the stack currently in use. Move this.
   println("\tldab @bp+1	; IX =  (__alloca_bottom)");
@@ -1332,13 +1332,12 @@ static void builtin_alloca(void) {
   tfr_dx();
   println("\tstx @tmp3 ; save address of __alloca_bottom__");
   println("\tsts @tmp2 ; save current SP");
-  println("\tsts @tmp1 ; sp -= rdi");
-  println("\tldab @tmp1+1");
-  println("\tldaa @tmp1");
-  println("\tsubb @rdi+1");
-  println("\tsbca @rdi");
-  println("\tstab @tmp1+1");
-  println("\tstaa @tmp1");
+  println("\tldab @tmp2+1");
+  println("\tldaa @tmp2");
+  println("\tsubb @tmp1+1");	// alloca size
+  println("\tsbca @tmp1");
+  println("\tstab @tmp2+1");
+  println("\tstaa @tmp2");
   println("\tlds @tmp1 ; get new SP");
   println("\tldx 0,x");
   int c1 = count();
@@ -3748,7 +3747,7 @@ static void emit_text(Obj *prog) {
     // Prologue
     println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
-    if (!fn->params && !fn->stack_size) {
+    if (!fn->params && !fn->stack_size && !fn->use_alloca) {
       println("; function has no params & locals");
       IX_Dest = IX_None;
       depth = 0;
@@ -3904,7 +3903,7 @@ no_params_locals:
     println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 	   	    	fn->stack_size,reg_param_size);
     println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
-    if (!fn->params && !fn->stack_size) {
+    if (!fn->params && !fn->stack_size & !fn->use_alloca) {
       println("; function has no params & locals");
       IX_Dest = IX_None;
       goto no_params_locals2;
