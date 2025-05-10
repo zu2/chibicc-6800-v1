@@ -34,12 +34,11 @@ chibicc: $(OBJS)
 
 $(OBJS): chibicc.h
 
-test/%.exe: chibicc test/%.c
-	./chibicc -Iinclude -Itest -c -o test/$*.o test/$*.c
-	$(CC) -pthread -o $@ test/$*.o -xc test/common
+test/%.bin: chibicc test/%.c
+	./chibicc -vvv -Ddouble=float -Iinclude -Itest -o $@ test/$*.c  benchmark/pi/my_printf.c -xc test/common 
 
 test: $(TESTS)
-	for i in $^; do echo $$i; ./$$i || exit 1; echo; done
+	for i in $^; do echo $$i; emu6800 6800 ./$$i.bin ./$$i.map || exit 1; echo; done
 	test/driver.sh ./chibicc
 
 test-all: test test-stage2
@@ -56,7 +55,7 @@ stage2/%.o: chibicc %.c
 stage2/test/%.exe: stage2/chibicc test/%.c
 	mkdir -p stage2/test
 	./stage2/chibicc -Iinclude -Itest -c -o stage2/test/$*.o test/$*.c
-	$(CC) -pthread -o $@ stage2/test/$*.o -xc test/common
+	$(CC) -o $@ stage2/test/$*.o -xc test/common
 
 test-stage2: $(TESTS:test/%=stage2/test/%)
 	for i in $^; do echo $$i; ./$$i || exit 1; echo; done
