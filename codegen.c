@@ -2028,7 +2028,7 @@ static void gen_funcall(Node *node)
 
   if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
     println("\tjsr _%s",node->lhs->var->name);
-  }else{
+  }else if (test_addr_x(node->lhs)) {
     int off = gen_addr_x(node->lhs,true);
     if (node->lhs->kind==ND_DEREF && node->lhs->ty->kind==TY_FUNC) {
       println("\tjsr %d,x",off);
@@ -2038,6 +2038,10 @@ static void gen_funcall(Node *node)
     }else{
       println("\tjsr %d,x",off);
     }
+  }else{
+    gen_expr(node->lhs);
+    tfr_dx();
+    println("\tjsr 0,x");
   }
   IX_Dest = IX_None;
   
@@ -3553,19 +3557,19 @@ static void gen_stmt(Node *node)
       switch (node->cond->ty->size) {
       case 1:
 	println("\ttba");
-	println("\tsuba #%d", n->begin);
-	println("\tcmpa #%d", n->end - n->begin);
+	println("\tsuba #%ld", n->begin);
+	println("\tcmpa #%ld", n->end - n->begin);
 	println("\tjcs _%s",   n->label);
 	break;
       case 2:
 	println("\tpshb");
 	println("\tpsha");
-	println("\tsubb #<%d", n->begin);
-	println("\tsbca #>%d", n->begin);
-	println("\tsubb #<%d", n->end - n->begin);
-	println("\tsbca #>%d", n->end - n->begin);
-	println("\pula");
-	println("\pulb");
+	println("\tsubb #<%ld", n->begin);
+	println("\tsbca #>%ld", n->begin);
+	println("\tsubb #<%ld", n->end - n->begin);
+	println("\tsbca #>%ld", n->end - n->begin);
+	println("\tpula");
+	println("\tpulb");
 	println("\tjcs _%s", n->label);
 	break;
       case 4:
