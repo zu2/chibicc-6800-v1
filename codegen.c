@@ -2463,13 +2463,14 @@ void gen_expr(Node *node) {
       println("; ND_MEMZERO (noname) size=%d, offset=%d,  %s %d",
                  node->var->ty->size, node->var->offset, __FILE__, __LINE__);
     }
-    ldx_bp();
-    if(node->var->ty->size <= 4
-    && node->var->ty->size + node->var->offset <= 256){
+    if (node->var->ty->size <= 4
+    && node->var->ty->size + node->var->offset < 256) {
+      ldx_bp();
       for (int i=0; i<node->var->ty->size; i++){
         println("\tclr %d,x",node->var->offset+i);
       }
-    }else{
+    } else if (node->var->offset < 256) {
+      ldx_bp();
       println("\tldab #%d",node->var->ty->size);
       println("\tclra");
       int c = count();
@@ -2478,8 +2479,23 @@ void gen_expr(Node *node) {
       println("\tinx");
       println("\tdecb");
       println("\tbne _L_memzero_%d", c);
+      IX_Dest = IX_None;
+    } else {
+      println("\tldab @bp+1");
+      println("\tldaa @bp");
+      println("\taddb #<%d",node->var->offset);
+      println("\tadca #>%d",node->var->offset);
+      tfr_dx();
+      println("\tldab #%d",node->var->ty->size);
+      println("\tclra");
+      int c = count();
+      println("_L_memzero_%d:", c);
+      println("\tstaa 0,x");
+      println("\tinx");
+      println("\tdecb");
+      println("\tbne _L_memzero_%d", c);
+      IX_Dest = IX_None;
     }
-    IX_Dest = IX_None;
     return;
   case ND_COND: {
     int c = count();
