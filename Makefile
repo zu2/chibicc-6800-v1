@@ -35,7 +35,7 @@ chibicc: $(OBJS)
 $(OBJS): chibicc.h
 
 test/%.bin: chibicc test/%.c
-	(cd test; ../chibicc -vvv -Ddouble=float -Iinclude -I. -o $@ $*.c  ../benchmark/pi/my_printf.c -xc common  )
+	(cd test; ../chibicc -vvv -Ddouble=float -Iinclude -I.. -I. -o $@ $*.c  ../benchmark/pi/my_printf.c -xc common  )
 
 test: $(TESTS)
 	(cd test; for i in $^; do echo $$i; emu6800 6800 ../test/$$i.bin ../test/$$i.map || exit 1; echo; done
