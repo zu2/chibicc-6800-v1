@@ -18,7 +18,6 @@ Dhrystone works now.
 - **Structs/unions:** Passing/returning by value and bit fields are implemented.
 - **Function parameters:** Only the first parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
 - **Return values:** Struct/union return values pass their address as an implicit first argument in a register. all other normal arguments are passed on the stack.
-- **Limitations:** Handling of large local variable areas (>255 bytes) is poorly tested and coded.
 
 IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
 
@@ -286,6 +285,15 @@ IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is
 Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (sqrtf) are implemented. Other functions are under consideration.
 
 Float can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
+
+
+## Large size object / local area
+
+IX addressing can only use offsets from 0 to 255, so there are limitations. If an offset greater than 255 is needed, calculations using AccAB are required, which leads to less efficient code.
+
+- When returning a struct or union from a function, its size must be less than 256 bytes.
+- When the total size of local variables and arguments is more than 252 bytes, certain limitations apply.
+- Local area refers to temporary variables, including those allocated by assignment, alloca, or variable-length arrays (VLA).
 
 ---
 # Usage in Other Projects
