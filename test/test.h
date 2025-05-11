@@ -1,5 +1,6 @@
 #define ASSERT(x, y) assert(x, y, #y)
 
+extern void _exit(int x);
 void assert(int expected, int actual, char *code);
 int printf(char *fmt, ...);
 int sprintf(char *buf, char *fmt, ...);
