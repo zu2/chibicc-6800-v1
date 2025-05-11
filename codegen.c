@@ -3420,7 +3420,7 @@ void stmt_dump(char *p)
   }
   *q = '\0';
   if (pp!=p && strcmp(s,";") && s[0]){
-    println("; gen_stmt: %s",s);
+    println("; %.75s",s);
     pp = p;
   }
 }
