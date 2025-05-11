@@ -1008,10 +1008,10 @@ static void cast(Type *from, Type *to) {
   if (to->kind == TY_BOOL) {
     cmp_zero(from);
     int c = count();
-    println("\tbeq L_false_%d", c);
+    println("\tbeq _L_false_%d", c);
     println("\tclra");
     println("\tldab #1");
-    println("\tbra L_end_%d", c);
+    println("\tbra _L_end_%d", c);
     println("_L_false_%d:", c);
     println("\tclra");
     println("\tclrb");
@@ -1351,11 +1351,11 @@ static void builtin_alloca(void) {
   println("\tldx 0,x");		// get old SP bottom
   println("_L_%d:",c1);
   println("\tcpx @tmp2");
-  println("\tbeq L_%d",c2);
+  println("\tbeq _L_%d",c2);
   println("\tldab 0,x");
   println("\tpshb");
   println("\tdex");
-  println("\tbra L_%d",c1);
+  println("\tbra _L_%d",c1);
   println("_L_%d:",c2);
 
   println("; Move alloca_bottom pointer.");
@@ -1717,7 +1717,7 @@ int gen_direct_shr_long(Node *node)
     if (!lhs->ty->is_unsigned) {
       int c = count();
       println("\ttst @long");
-      println("\tbpl L_%d",c);
+      println("\tbpl _L_%d",c);
       println("\tdeca");
       println("_L_%d:",c);
     }
@@ -2473,7 +2473,7 @@ void gen_expr(Node *node) {
       println("\tstaa %d,x",node->var->offset);
       println("\tinx");
       println("\tdecb");
-      println("\tbne L_memzero_%d", c);
+      println("\tbne _L_memzero_%d", c);
     }
     IX_Dest = IX_None;
     return;
@@ -2513,10 +2513,10 @@ void gen_expr(Node *node) {
     }
     cmp_zero(node->lhs->ty);
     int c = count();
-    println("\tbeq L_false_%d", c);
+    println("\tbeq _L_false_%d", c);
     println("\tclra");
     println("\tclrb");
-    println("\tbra L_end_%d", c);
+    println("\tbra _L_end_%d", c);
     println("_L_false_%d:", c);
     println("\tclra");
     println("\tldab #1");
@@ -2635,8 +2635,8 @@ void gen_expr(Node *node) {
     gen_funcall(node);
     return;
   case ND_LABEL_VAL:
-    println("\tldab #<%s",node->unique_label);
-    println("\tldaa #>%s",node->unique_label);
+    println("\tldab #<_%s",node->unique_label);
+    println("\tldaa #>_%s",node->unique_label);
     return;
   case ND_CAS:
   case ND_EXCH:
@@ -3459,7 +3459,9 @@ static void gen_stmt(Node *node)
   }
   case ND_FOR: {
     Node *cond = node->cond;
+    char if_false[30];
     int c = count();
+    sprintf(if_false,"_%s",node->brk_label);
     if (node->init)
       gen_stmt(node->init);
     println("_L_begin_%d:", c);
@@ -3467,23 +3469,23 @@ static void gen_stmt(Node *node)
     if (cond) {
       cond->bool_result_unused = true;
       cond = optimize_expr(cond);
-      if (!gen_jump_if_false(cond,node->brk_label)){
+      if (!gen_jump_if_false(cond,if_false)){
         gen_expr(cond);
         if (!is_compare_or_not(cond))
           cmp_zero(cond->ty);
-        println("\tjeq %s", node->brk_label);
+        println("\tjeq %s", if_false);
       }
     }
     gen_stmt(node->then);
-    println("%s:", node->cont_label);
+    println("_%s:", node->cont_label);
     IX_Dest = IX_None;
     if (node->inc) {
       stmt_dump(node->inc->loc);
       node->inc->retval_unused = true;
       gen_expr(node->inc);
     }
-    println("\tjmp L_begin_%d", c);
-    println("%s:", node->brk_label);
+    println("\tjmp _L_begin_%d", c);
+    println("%s:", if_false);
     IX_Dest = IX_None;
     return;
   }
@@ -3493,14 +3495,14 @@ static void gen_stmt(Node *node)
     println("_L_begin_%d:", c);
     IX_Dest = IX_None;
     gen_stmt(node->then);
-    println("%s:", node->cont_label);
+    println("_%s:", node->cont_label);
     cond->bool_result_unused = true;
     cond = optimize_expr(cond);
     gen_expr(cond);
     if (!is_compare_or_not(cond))
       cmp_zero(cond->ty);
-    println("\tjne L_begin_%d", c);
-    println("%s:", node->brk_label);
+    println("\tjne _L_begin_%d", c);
+    println("_%s:", node->brk_label);
     IX_Dest = IX_None;
     return;
   }
@@ -3524,20 +3526,20 @@ static void gen_stmt(Node *node)
 	switch (node->cond->ty->size) {
 	case 1:
 	  println("\tcmpb #<%ld",n->begin);
-	  println("\tjeq %s", n->label);
+	  println("\tjeq _%s", n->label);
 	  break;
 	case 2:
 	  println("\tcpx #%ld",n->begin);
-	  println("\tjeq %s", n->label);
+	  println("\tjeq _%s", n->label);
 	  break;
 	case 4: {
           int c = count();
 	  println("\tldx #%ld	; %ld",n->begin & 0x0ffff,n->begin);
 	  println("\tcpx @long+2");
-	  println("\tbne L_case_%d",c);
+	  println("\tbne _L_case_%d",c);
 	  println("\tldx #%ld",(n->begin>>16)&0x0ffff);
 	  println("\tcpx @long");
-	  println("\tjeq %s", n->label);
+	  println("\tjeq _%s", n->label);
 	  println("_L_case_%d:",c);
           IX_Dest = IX_None;
 	  break;
@@ -3553,7 +3555,7 @@ static void gen_stmt(Node *node)
 	println("\ttba");
 	println("\tsuba #%d", n->begin);
 	println("\tcmpa #%d", n->end - n->begin);
-	println("\tjcs %s",   n->label);
+	println("\tjcs _%s",   n->label);
 	break;
       case 2:
 	println("\tpshb");
@@ -3564,7 +3566,7 @@ static void gen_stmt(Node *node)
 	println("\tsbca #>%d", n->end - n->begin);
 	println("\pula");
 	println("\pulb");
-	println("\tjcs %s", n->label);
+	println("\tjcs _%s", n->label);
 	break;
       case 4:
         // TODO: case range
@@ -3573,17 +3575,17 @@ static void gen_stmt(Node *node)
     }
 
     if (node->default_case)
-      println("\tjmp %s", node->default_case->label);
+      println("\tjmp _%s", node->default_case->label);
 
-    println("\tjmp %s", node->brk_label);
+    println("\tjmp _%s", node->brk_label);
     IX_Dest = IX_None;
     gen_stmt(node->then);
-    println("%s:", node->brk_label);
+    println("_%s:", node->brk_label);
     IX_Dest = IX_None;
     return;
   } // ND_SWITCH
   case ND_CASE:
-    println("%s:", node->label);
+    println("_%s:", node->label);
     IX_Dest = IX_None;
     gen_stmt(node->lhs);
     return;
@@ -3592,7 +3594,7 @@ static void gen_stmt(Node *node)
       gen_stmt(n);
     return;
   case ND_GOTO:
-    println("\tjmp %s", node->unique_label);
+    println("\tjmp _%s", node->unique_label);
     return;
   case ND_GOTO_EXPR:
     gen_expr(node->lhs);
@@ -3602,7 +3604,7 @@ static void gen_stmt(Node *node)
     println(";");
     return;
   case ND_LABEL:
-    println("%s:", node->unique_label);
+    println("_%s:", node->unique_label);
     IX_Dest = IX_None;
     gen_stmt(node->lhs);
     return;
@@ -3620,8 +3622,8 @@ static void gen_stmt(Node *node)
       }
     }
 
-    println("\tjmp L_return_%d", current_fn->function_no);
-//    println("\tjmp L_return_%s", current_fn->name);
+    println("\tjmp _L_return_%d", current_fn->function_no);
+//    println("\tjmp _L_return_%s", current_fn->name);
     return;
   case ND_EXPR_STMT:
     node->lhs->retval_unused = true;
