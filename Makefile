@@ -35,10 +35,10 @@ chibicc: $(OBJS)
 $(OBJS): chibicc.h
 
 test/%.bin: chibicc test/%.c
-	./chibicc -vvv -Ddouble=float -Iinclude -Itest -o $@ test/$*.c  benchmark/pi/my_printf.c -xc test/common 
+	(cd test; ../chibicc -vvv -Ddouble=float -Iinclude -I. -o $@ $*.c  ../benchmark/pi/my_printf.c -xc common  )
 
 test: $(TESTS)
-	for i in $^; do echo $$i; emu6800 6800 ./$$i.bin ./$$i.map || exit 1; echo; done
+	(cd test; for i in $^; do echo $$i; emu6800 6800 ../test/$$i.bin ../test/$$i.map || exit 1; echo; done
 	test/driver.sh ./chibicc
 
 test-all: test test-stage2
