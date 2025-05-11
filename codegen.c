@@ -2103,9 +2103,11 @@ void gen_expr(Node *node) {
         println("\tldab #<%u", (uint16_t)node->val);
       }
       return;
+    case TY_BOOL:
     case TY_INT:
     case TY_SHORT:
     case TY_PTR:
+    case TY_ENUM:
       if((uint16_t)node->val==0){
         println("\tclrb");
         println("\tclra");
