@@ -1924,16 +1924,30 @@ int64_t eval2(Node *node, char ***label) {
     return eval2(node->lhs, label) - eval(node->rhs);
   case ND_MUL:
     return eval(node->lhs) * eval(node->rhs);
-  case ND_DIV:
+  case ND_DIV: {
+    int64_t lval = eval(node->lhs);
+    int64_t rval = eval(node->rhs);
+    if (!rval)
+      error_tok(node->rhs->tok, "division by zero during constant evaluation");
     if (node->ty->is_unsigned)
-      return (uint64_t)eval(node->lhs) / eval(node->rhs);
-    return eval(node->lhs) / eval(node->rhs);
+      return (uint64_t)lval / rval;
+    if (lval == INT64_MIN && rval == -1)
+      return INT64_MIN;
+    return lval / rval;
+  }
   case ND_NEG:
     return -eval(node->lhs);
-  case ND_MOD:
+  case ND_MOD: {
+    int64_t lval = eval(node->lhs);
+    int64_t rval = eval(node->rhs);
+    if (!rval)
+      error_tok(node->rhs->tok, "remainder by zero during constant evaluation");
     if (node->ty->is_unsigned)
-      return (uint64_t)eval(node->lhs) % eval(node->rhs);
-    return eval(node->lhs) % eval(node->rhs);
+      return (uint64_t)lval % rval;
+    if (lval == INT64_MIN && rval == -1)
+      return 0;
+    return lval % rval;
+  }
   case ND_BITAND:
     return eval(node->lhs) & eval(node->rhs);
   case ND_BITOR:
