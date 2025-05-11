@@ -22,7 +22,7 @@ void *memmove(void *s1, const void *s2, size_t n);
 char *strcpy(char *dest, const char *src);
 
 // Copy up to n chars from src to dest
-//char *strncpy(char *dest, const char *src, size_t n);
+char *strncpy(char *dest, const char *src, size_t n);
 
 // Concatenate src to dest
 char *strcat(char *dest, const char *src);
