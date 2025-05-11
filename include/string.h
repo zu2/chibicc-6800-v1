@@ -43,7 +43,7 @@ size_t strlen(const char *s);
 char *strchr(const char *s, int c);
 
 // Find last occurrence of c in s
-//char *strrchr(const char *s, int c);
+char *strrchr(const char *s, int c);
 
 // Find first occurrence of needle in haystack
 //char *strstr(const char *haystack, const char *needle);
