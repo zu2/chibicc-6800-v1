@@ -3392,23 +3392,36 @@ void gen_expr(Node *node) {
   error_tok(node->tok, "invalid expression");
 }
 
-
-static void gen_stmt(Node *node) {
+void stmt_dump(char *p)
+{
   char s[1024];
-  char *p = node->loc;
   char *q = s;
   static char *pp = NULL;
 
   if (pp!=p) {
-    while(*p && *p!='\r' && *p!='\n'){
-      *q++ = *p++;
-    }
-    *q = '\0';
-    if (pp!=p && strcmp(s,";") && s[0]){
-      println("; gen_stmt: %s",s);
-      pp = p;
+    if(*p && *p!=';' && *p!='\r' && *p!='\n'){
+      while(*p && *p!=';' && *p!='\r' && *p!='\n'){
+        p--;
+      }
+      p++;
+      while (isspace(*p)) {
+	p++;
+      }
     }
   }
+  while(*p && *p!='\r' && *p!='\n'){
+    *q++ = *p++;
+  }
+  *q = '\0';
+  if (pp!=p && strcmp(s,";") && s[0]){
+    println("; gen_stmt: %s",s);
+    pp = p;
+  }
+}
+
+static void gen_stmt(Node *node)
+{
+  stmt_dump(node->loc);
 
   switch (node->kind) {
   case ND_IF: {
@@ -3463,6 +3476,7 @@ static void gen_stmt(Node *node) {
     println("%s:", node->cont_label);
     IX_Dest = IX_None;
     if (node->inc) {
+      stmt_dump(node->inc->loc);
       node->inc->retval_unused = true;
       gen_expr(node->inc);
     }
@@ -3488,17 +3502,24 @@ static void gen_stmt(Node *node) {
     IX_Dest = IX_None;
     return;
   }
-  case ND_SWITCH:
+  case ND_SWITCH: {
+    bool has_case_ranges = 0;
+
+    for (Node *n = node->case_next; n; n = n->case_next) {
+      if (n->begin != n->end) {
+        has_case_ranges = 1;
+	break;
+      }
+    }
     gen_expr(node->cond);
-    if (node->cond->ty->size == 2) {
+    if (node->cond->ty->size == 2 && !has_case_ranges) {
       tfr_dx();
       IX_Dest = IX_None;
     }
     for (Node *n = node->case_next; n; n = n->case_next) {
       // TODO: 32bit case
       if (n->begin == n->end) {
-        int c = count();
-	switch(node->cond->ty->size) {
+	switch (node->cond->ty->size) {
 	case 1:
 	  println("\tcmpb #<%ld",n->begin);
 	  println("\tjeq %s", n->label);
@@ -3507,7 +3528,8 @@ static void gen_stmt(Node *node) {
 	  println("\tcpx #%ld",n->begin);
 	  println("\tjeq %s", n->label);
 	  break;
-	case 4:
+	case 4: {
+          int c = count();
 	  println("\tldx #%ld	; %ld",n->begin & 0x0ffff,n->begin);
 	  println("\tcpx @long+2");
 	  println("\tbne L_case_%d",c);
@@ -3517,19 +3539,35 @@ static void gen_stmt(Node *node) {
 	  println("L_case_%d:",c);
           IX_Dest = IX_None;
 	  break;
+	}
 	default:
 	  assert(0);
 	}
         continue;
       }
-
       // [GNU] Case ranges
-      println("; TODO: Case ranges");	// TODO: case range
-      assert(0);
-//      println("  mov %s, %s", ax, di);
-//      println("  sub $%ld, %s", n->begin, di);
-//      println("  cmp $%ld, %s", n->end - n->begin, di);
-//      println("  jbe %s", n->label);
+      switch (node->cond->ty->size) {
+      case 1:
+	println("\ttba");
+	println("\tsuba #%d", n->begin);
+	println("\tcmpa #%d", n->end - n->begin);
+	println("\tjcs %s",   n->label);
+	break;
+      case 2:
+	println("\tpshb");
+	println("\tpsha");
+	println("\tsubb #<%d", n->begin);
+	println("\tsbca #>%d", n->begin);
+	println("\tsubb #<%d", n->end - n->begin);
+	println("\tsbca #>%d", n->end - n->begin);
+	println("\pula");
+	println("\pulb");
+	println("\tjcs %s", n->label);
+	break;
+      case 4:
+        // TODO: case range
+        assert(0);
+      }
     }
 
     if (node->default_case)
@@ -3541,6 +3579,7 @@ static void gen_stmt(Node *node) {
     println("%s:", node->brk_label);
     IX_Dest = IX_None;
     return;
+  } // ND_SWITCH
   case ND_CASE:
     println("%s:", node->label);
     IX_Dest = IX_None;
@@ -3864,14 +3903,7 @@ static void emit_text(Obj *prog) {
 	    break;
           case TY_FLOAT:
           case TY_LONG:
-    	    println("\tldab @long+3");
-	    println("\tpshb");
-    	    println("\tldab @long+2");
-	    println("\tpshb");
-    	    println("\tldab @long+1");
-	    println("\tpshb");
-    	    println("\tldab @long");
-	    println("\tpshb");
+	    pushl();
 	    break;
 	  }
 	}
@@ -3895,8 +3927,8 @@ static void emit_text(Obj *prog) {
       println("\tldx @bp");			// 4 2
       println("\ttxs");				// 4 1
       IX_Dest = IX_BP;
-      depth = 0;
     }
+    depth = 0;
     if (fn->alloca_bottom) {
       if (fn->alloca_bottom->offset<256){
         println("\tstx %d,x	; save sp to __alloca_bottom__",fn->alloca_bottom->offset);
