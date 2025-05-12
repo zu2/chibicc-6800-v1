@@ -35,12 +35,11 @@ _strchr:
 ;
 _strchr_loop:
 	inx
-	ldaa	0,x
-	cba
+	cmpb	0,x
 	bne	_strchr_ne
 	stx	@tmp2
 _strchr_ne:
-	tsta
+	ldaa	0,x
 	bne	_strchr_loop
 ;
 	ldab	@tmp2+1

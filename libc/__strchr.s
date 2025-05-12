@@ -28,14 +28,13 @@ _strchr:
 ;
 _strchr_loop:
 	inx
-	ldaa	0,x
-	cba
+	cmpb	0,x
 	beq	_strchr_found
-	tsta
-	bne	_strchr_end
+	ldaa	0,x
+	bne	_strchr_loop
 _strchr_end:
 	clrb
-;	clra			; here, AccA == 0
+	clra
 	rts
 _strchr_found:
 	stx	@tmp1
