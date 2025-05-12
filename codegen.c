@@ -52,11 +52,15 @@ static void pop(void) {
 }
 
 static void popx(void) {
-  println("\ttsx	; popx()");
-  println("\tldx 0,x");
+  if (opt_O == 's') {
+    println("\ttsx");
+    println("\tldx 0,x");
+    println("\tins");
+    println("\tins");
+  } else {
+    println("\tjsr __popx");
+  }
   IX_Dest = IX_None;
-  println("\tins");
-  println("\tins");
   depth-=2;
 }
 
@@ -123,16 +127,43 @@ static void tfr_dx()
   IX_Dest = IX_None;
 }
 
+static void load32x(int off)
+{
+  if (opt_O == 's') {
+    if (off==0) {
+      println("\tjsr __load32x");
+    }else{
+      println("\tldab #<%d",off);
+      println("\tldaa #>%d",off);
+      println("\tjsr __load32dx");
+      IX_Dest = IX_None;
+    }
+  }else{
+    println("\tldab %d,x",off+3);
+    println("\tstab @long+3");
+    println("\tldab %d,x",off+2);
+    println("\tstab @long+2");
+    println("\tldab %d,x",off+1);
+    println("\tstab @long+1");
+    println("\tldab %d,x",off);
+    println("\tstab @long");
+  }
+}
+
 //
 // store @long to off,x
 //
 static void store32x(int off)
 {
   if (opt_O == 's') {
-    println("\tldab #<%d",off);
-    println("\tldaa #>%d",off);
-    println("\tjsr __store32dx");
-    IX_Dest = IX_None;
+    if (off == 0) {
+      println("\tjsr __store32x");
+    }else{
+      println("\tldab #<%d",off);
+      println("\tldaa #>%d",off);
+      println("\tjsr __store32dx");
+      IX_Dest = IX_None;
+    }
   }else{
     println("\tldab @long+3");
     println("\tstab %d,x",off+3);
@@ -727,15 +758,7 @@ static void load_x(Type *ty,int off) {
     return;
   case TY_LONG:
   case TY_FLOAT:
-
-    println("\tldab %d,x",off+3);
-    println("\tstab @long+3");
-    println("\tldab %d,x",off+2);
-    println("\tstab @long+2");
-    println("\tldab %d,x",off+1);
-    println("\tstab @long+1");
-    println("\tldab %d,x",off);
-    println("\tstab @long");
+    load32x(off);
     return;
   case TY_DOUBLE:
     assert(ty->kind!=TY_DOUBLE);
@@ -1148,7 +1171,7 @@ pushlx(int off)
   if (opt_O == 's') {
     println("\tldab #<%d",off);
     println("\tldaa #>%d",off);
-    println("\jsr __push32dx");
+    println("\tjsr __push32dx");
     IX_Dest = IX_None;
   }else{
     println("\tldab %d,x",off+3);
@@ -4065,18 +4088,14 @@ no_params_locals:
     case TY_VOID:
     case TY_LONG:
     case TY_FLOAT:
-      println("\tpulb");	// 4 1	// 16 6 + 5 1 = 21 7
-      println("\tstab @bp");	// 4 2
-      println("\tpulb");	// 4 1
-      println("\tstab @bp+1");	// 4 2
+      println("\tpulb");
+      println("\tstab @bp");
+      println("\tpulb");
+      println("\tstab @bp+1");
       break;
     default:
-      println("\ttsx");		// 4 1	// 23 7 + 5 1 = 28 8
-      println("\tldx 0,x");	// 6 2
-      IX_Dest = IX_None;
-      println("\tins");		// 4 1
-      println("\tins");		// 4 1
-      println("\tstx @bp");	// 5 2
+      popx();
+      println("\tstx @bp");
     }
 no_params_locals2:
     println("\trts");		// 5 1
