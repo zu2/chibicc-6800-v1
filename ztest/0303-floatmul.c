@@ -44,7 +44,6 @@ int main(int argc, char **argv)
 {
 	float	f,g,h,e,zp,zm;
 	
-#if 1
 	zp = long2float(0x00000000);
 	zm = long2float(0x80000000);
 
@@ -54,7 +53,6 @@ int main(int argc, char **argv)
 	e = -2.0;
 
 	// multiply 0.0
-//	putstr("0.0*0.0:\t");puthexf(zp*zp);putchar('\n');
 	if (zp*zp != 0.0)
 		return 1;
 	if (zp*zm != 0.0)
@@ -90,29 +88,15 @@ int main(int argc, char **argv)
 	h = -0.1;
 	e = -0.3;
 
-//	putstr("0.1:\t");puthexf(f);putchar('\n');
-//	putstr("0.3:\t");puthexf(g);putchar('\n');
-//	putstr("0.1*0.3:\t");puthexf(0.03);putchar('\n');
-//	putstr("0.1*0.3=\t");puthexf(f*g);putchar('\n');
-//	putstr("0.3*0.1=\t");puthexf(g*f);putchar('\n');
 	if (cmpfl(f*g,0x3CF5C290))
 		return 30;
 	if (cmpfl(g*f,0x3CF5C290))
 		return 31;
 
-#endif
-//	putstr("0.1*(-0.1):\t");puthexf(-0.01);putchar('\n');
-//	putstr("0.1*(-0.1):\t");puthexf(0.1*-0.1);putchar('\n');
-#if	1
-//	putstr("0.1*(-0.1)=\t");puthexf(f*h);putchar('\n');
-//	putstr("(-0.1)*0.1=\t");puthexf(h*f);putchar('\n');
-	if (cmpfl(f*h,0xBC23D70A))
+	if (cmpfl(f*h,0xBC23D70B))
 		return 32;
-	if (cmpfl(h*f,0xBC23D70A))
+	if (cmpfl(h*f,0xBC23D70B))
 		return 32;
-//	putstr("-0.03:\t");puthexf(-0.03);putchar('\n');
-//	putstr("0.1*(-0.3)=\t");puthexf(f*e);putchar('\n');
-//	putstr("0.3*(-0.1)=\t");puthexf(g*h);putchar('\n');
 	if (cmpfl(f*e,0xBCF5C290))
 		return 33;
 	if (cmpfl(e*f,0xBCF5C290))
@@ -121,14 +105,6 @@ int main(int argc, char **argv)
 	f = 2.0;
 	g = 10.0;
 	h = 0.1;
-//	putstr("2.0*2.0:\t");puthexf(4.0);putchar('\n');
-//	putstr("2.0*2.0=\t");puthexf(f*f);putchar('\n');
-//	putstr("10.0*10.0:\t");puthexf(100.0);putchar('\n');
-//	putstr("10.0*10.0=\t");puthexf(g*g);putchar('\n');
-//	putstr("10.0*0.1:\t");puthexf(1.0);putchar('\n');
-//	putstr("10.0*0.1=\t");puthexf(g*h);putchar('\n');
-//	putstr("10.0*0.1*2.0:\t");puthexf(2.0);putchar('\n');
-//	putstr("10.0*0.1*2.0=\t");puthexf(g*h*f);putchar('\n');
 	if (f*f!=4.0)
 		return 40;
 	if (g*g!=100.0)
@@ -137,6 +113,5 @@ int main(int argc, char **argv)
 		return 42;
 	if (g*h*f!=2.0)
 		return 42;
-#endif
 	return	0;
 }
