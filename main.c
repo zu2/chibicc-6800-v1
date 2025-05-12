@@ -706,7 +706,6 @@ static void run_linker(StringArray *inputs, char *output) {
   strarray_push(&arr, "/opt/chibicc/lib/libc.a");
 
   for (int i = 0; i < inputs->len; i++) {
-    printf("run_linker: %d, %s\n",i,inputs->data[i]);
     if (strlen(inputs->data[i])>=3 && strncmp(inputs->data[i],"-l",2)==0) {
       if (strchr(inputs->data[i],'/'))
 	continue;
