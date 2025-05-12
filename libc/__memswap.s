@@ -25,8 +25,8 @@ __memswap:
 	stab	@tmp2+1		; save p
 	staa	@tmp2
 	tsx
-	ldab	4,x		; n
-	ldaa	5,x
+	ldab	5,x		; n
+	ldaa	4,x
 	addb	3,x
 	adca	2,x
 	stab	@tmp4+1		; swap end addr (q+n)
