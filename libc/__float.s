@@ -1202,7 +1202,7 @@ __lsr_long_1:
 	ror	@long+2
 	rora
 	bita	#$3F		; check stick
-	bne	__lsr_long_2
+	beq	__lsr_long_2
 	oraa	#$20
 __lsr_long_2:
 	decb
@@ -1219,7 +1219,7 @@ __lsr_tos_1:
 	ror	4,x
 	rora
 	bita	#$3F
-	bne	__lsr_tos_2
+	beq	__lsr_tos_2
 	oraa	#$20
 __lsr_tos_2:
 	decb
