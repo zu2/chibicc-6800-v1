@@ -27,7 +27,7 @@ rdi:	.word	0
 	.code
 start:
 	sts exitsp
-	lds #$7fff
+	lds #$efff
 	ldx #__bss_size
 	beq call_main
 	ldx #__bss
