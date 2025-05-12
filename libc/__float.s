@@ -1521,19 +1521,28 @@ __divf32tos01:
 ;	  the result will never be 0 (Dividend 0 is already excluded)
 ;
 __divf32tos03:
-	jsr	__fdiv32x32	; @tmp3:@tmp3+1:@tmp4:@tmp4+1 = @long / TOS
+	jsr	__fdiv32x32		; @long = @long / TOS, @tmp1:AB = rem
+	orab	@tmp1
+	orab	@tmp1+1
+	staa	@tmp1
+	orab	@tmp1
+	beq	____divf32_norem
+	ldab	@long+3			; set sticky
+	orab	#$20
+	stab	@long+3
+____divf32_norem:
 	ldab	__expdiff+1
 	ldaa	__expdiff
-	tst	@tmp3
+	tst	@long
 	bmi	__divf32tos04		; MSB==1 needn't shitft
 ;
 __divf32_0301:
 	subb	#1			; exp--
 	sbca	#0
-	asl	@tmp4+1
-	rol	@tmp4
-	rol	@tmp3+1
-	rol	@tmp3
+	asl	@long+3
+	rol	@long+2
+	rol	@long+1
+	rol	@long
 	bpl	__divf32tos20
 	stab	__expdiff+1
 	staa	__expdiff
@@ -1544,10 +1553,10 @@ __divf32tos04:
 	jge	__divf32tos20		; no, it's normal number
 ;
 __divf32tos05:
-	lsr	@tmp3
-	ror	@tmp3+1
-	ror	@tmp4
-	ror	@tmp4+1
+	lsr	@long
+	ror	@long+1
+	ror	@long+2
+	ror	@long+3
 	incb
 	bne	__divf32tos05
 ;
@@ -1557,11 +1566,11 @@ __divf32tos05:
 	bsr	__divf32_rup_check	; if C==1, need round up
 	bcc	__divf32_done
 ;	
-	inc	@tmp4
+	inc	@long+2
 	bne	__divf32_done
-	inc	@tmp3+1
+	inc	@long+1
 	bne	__divf32_done
-	inc	@tmp3
+	inc	@long
 	bpl	__divf32_done		; Still subnormal
 ;
 ;	annoying thing here is:
@@ -1580,27 +1589,27 @@ __divf32tos20:				; round up check (normal)
 	bcc	__divf32_done
 ;
 __divf32_rup:
-	inc	@tmp4
+	inc	@long+2
 	bne	__divf32_done
-	inc	@tmp3+1
+	inc	@long+1
 	bne	__divf32_done
-	inc	@tmp3
+	inc	@long
 	bne	__divf32_done
 ;
-	lsr	@tmp3
-	ror	@tmp3+1
-	ror	@tmp4
+	lsr	@long
+	ror	@long+1
+	ror	@long+2
 	addb	#1
 	adca	#0
 ;
 __divf32_done:
 	addb	#127
 	tba
-	ldab	@tmp4
+	ldab	@long+2
 	stab	@long+3
-	ldab	@tmp3+1
+	ldab	@long+1
 	stab	@long+2
-	ldab	@tmp3
+	ldab	@long
 	aslb
 	lsra
 	rorb
@@ -1614,14 +1623,14 @@ __divf32_done:
 __divf32_rup_check:
 	pshb
 	psha
-	ldab	@tmp4+1	
+	ldab	@long+3	
 	bpl	__divf32_rup_none	; G==0, no round up
 	tba
 	anda	#$1F			; stick check
 	beq	__divf32_rup_nosticky
 	orab	#$20
 __divf32_rup_nosticky:
-	ldaa	@tmp4
+	ldaa	@long+2
 	lsra
 	rorb				; AccB b7 LSB, b6 G, b5 R, b4 S
 	andb	#$F0
@@ -1637,7 +1646,7 @@ __divf32_rup_none:
 	clc
 	rts
 ;
-;	@tmp3:@tmp4		= @long / TOS
+;	@long			= @long / TOS
 ;	@tmp1:AccA:AccB		= @long % TOS
 ;	@tmp2: loop counter
 ;	mess @long
@@ -1645,17 +1654,20 @@ __divf32_rup_none:
 __fdiv32x32:
 	ldab #32
 	stab @tmp2	; loop counter
-	ldab @long
+;
+	ldab @long	; tmp1:AccAB <- @long 24bit
 	stab @tmp1+1
-	ldab @long+2
 	ldaa @long+1
+	ldab @long+2
 	clr  @tmp1
+	clr  @long+3	; clear quotient
+	clr  @long+2
+	clr  @long+1
+	clr  @long
+;
 loop:
-	asl  @tmp4+1
-	rol  @tmp4
-	rol  @tmp3+1
-	rol  @tmp3
-	subb 4,x
+;
+	subb 4,x	; divient - divisor
 	sbca 3,x
 	pshb
 	psha
@@ -1668,20 +1680,26 @@ loop:
 	staa @tmp1
 	pula
 	pulb
-	inc @tmp4+1	; set the lower bit of the quotient
-	bra next
+	inc  @long+3	; set the lower bit of the quotient
+	bra  next
 skip:
 	pula
 	pulb		; can't substract. pull it back.
 	addb 4,x
 	adca 3,x
 next:
-	aslb
+	dec  @tmp2
+	beq  ret
+	asl  @long+3	; shift quotient
+	rol  @long+2
+	rol  @long+1
+	rol  @long
+	rolb		; shift reminder
 	rola
-	rol @tmp1+1
-	rol @tmp1
-	dec @tmp2
-	bne loop
+	rol  @tmp1+1
+	rol  @tmp1
+	bra  loop
+ret:
 	rts
 ;
 ;	@long cmp TOS
