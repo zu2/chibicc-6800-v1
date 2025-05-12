@@ -72,6 +72,20 @@ static void ins(int n)
   }
 }
 
+static void ldd_i(int n)
+{
+  if (n & 0x00ff)
+    println("\tldab #<%d",n);
+  else
+    println("\tclrb");
+  if (n & 0xff00)
+    println("\tldaa #>%d",n);
+  else if ((n & 0x00ff) == ((n & 0x0ff00)>>16))
+    println("\ttba");
+  else
+    println("\tclra");
+}
+
 
 static void pushl(void) {
   if (opt_O == 's') {
@@ -133,8 +147,7 @@ static void load32x(int off)
     if (off==0) {
       println("\tjsr __load32x");
     }else{
-      println("\tldab #<%d",off);
-      println("\tldaa #>%d",off);
+      ldd_i(off);
       println("\tjsr __load32dx");
       IX_Dest = IX_None;
     }
@@ -159,8 +172,7 @@ static void store32x(int off)
     if (off == 0) {
       println("\tjsr __store32x");
     }else{
-      println("\tldab #<%d",off);
-      println("\tldaa #>%d",off);
+      ldd_i(off);
       println("\tjsr __store32dx");
       IX_Dest = IX_None;
     }
@@ -886,8 +898,7 @@ static void store_x(Type *ty,int off) {
     println("; store struct/union from TOS to IX+off, size %d",ty->size);
     println("\tpshb");
     println("\tpsha");
-    println("\tldab #<%d",off);
-    println("\tldaa #>%d",off);
+    ldd_i(off);
     println("\tjsr __adx");
     println("\tldab #<%d",ty->size);
     println("\tldaa #>%d",ty->size);
@@ -1106,8 +1117,7 @@ static void push_struct(Type *ty) {
       println("\tpshb");
     }
   }else{
-    println("\tldab #<%d",sz);
-    println("\tldaa #>%d",sz);
+    ldd_i(sz);
     println("\tjsr __push_struct_x");
   }
   depth += sz;
@@ -1169,8 +1179,7 @@ void
 pushlx(int off)
 {
   if (opt_O == 's') {
-    println("\tldab #<%d",off);
-    println("\tldaa #>%d",off);
+    ldd_i(off);
     println("\tjsr __push32dx");
     IX_Dest = IX_None;
   }else{
@@ -2175,22 +2184,7 @@ void gen_expr(Node *node) {
     case TY_SHORT:
     case TY_PTR:
     case TY_ENUM:
-      if((uint16_t)node->val==0){
-        println("\tclrb");
-        println("\tclra");
-      }else if ((node->val&0x00ff)==0){
-        println("\tclrb");
-        println("\tldaa #>%u", (uint16_t)node->val);
-      }else if ((node->val&0xff00)==0){
-        println("\tldab #<%u", (uint16_t)node->val);
-        println("\tclra");
-      }else if (((node->val&0xff00)>>8)==(node->val&0x00ff)){
-        println("\tldab #<%u", (uint16_t)node->val);
-        println("\ttba");
-      }else{
-        println("\tldab #<%u", (uint16_t)node->val);
-        println("\tldaa #>%u", (uint16_t)node->val);
-      }
+      ldd_i((uint16_t)node->val);
       return;
     case TY_LONG:
       load_long_imm(node->val);
