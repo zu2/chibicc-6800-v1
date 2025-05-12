@@ -100,6 +100,22 @@ Follow these steps to set up the compiler:
 - Currently implements addition, subtraction, multiplication, division, `fabsf`, `fsqrtf`, `floorf`, and `ceilf`. Other functions may be supported in the future.
 
 ---
+# Optimization Options
+
+## Supported Optimization Flags
+
+- The compiler supports the `-O` and `-Os` options for optimization.  
+- You can also specify `-O0`, `-O1`, and `-O2`, but note that `-O2` is not yet implemented.  
+- The default optimization level is `-O0`.
+
+## Behavior of Each Option
+
+- **`-O0`**:  
+  No optimization is performed at this level. However, if `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization, except when `-O0` is specified, in which case no optimization is applied.
+
+- **`-Os`**:  
+  This option generates code aimed at minimizing the size of the object file. As a trade-off, the resulting code may run approximately 5% slower.
+---
 # Memo
 
 ## Stack frame
