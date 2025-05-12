@@ -1201,7 +1201,7 @@ __lsr_long_1:
 	ror	@long+1
 	ror	@long+2
 	rora
-	bita	#$3F		; check stick
+	bita	#$1F		; check stick
 	beq	__lsr_long_2
 	oraa	#$20
 __lsr_long_2:
@@ -1383,8 +1383,8 @@ __mulf32tos721:
 	lsrb			; LSB -> Carry
 	pulb
 	rorb			; b7:LSB, b6:G, b5:R, b4:S
-	bitb	#$40		; b6:G==0?
-	beq	__mulf32tos72	;   Yes, do nothng
+;	bitb	#$40		; b6:G==0?		// G must 1
+;	beq	__mulf32tos72	;   Yes, do nothng
 	andb	#$F0
 	cmpb	#$40		; 0100:only G is 1?
 	beq	__mulf32tos72	;   Yes, do nothng
@@ -1396,9 +1396,15 @@ __mulf32tos721:
 	inc	__work+0
 	bne	__mulf32tos72
 ;
-	inca
-	cmpa	#$FF
-	jeq	__f32retInfs
+	ldab	__exp2+1
+	ldaa	__exp2
+	addb	#1
+	adca	#0
+	stab	__exp2+1
+	staa	__exp2
+	subb	#<128		; sum of exp>127? (>=128?)
+	sbca	#>128
+	jge	__f32retInfs	; Overflow, returns Inf with __sign.
 	lsr	__work+0
 	ror	__work+1
 	ror	__work+2
@@ -1522,7 +1528,7 @@ __divf32tos03:
 	bmi	__divf32tos04		; MSB==1 needn't shitft
 ;
 __divf32_0301:
-	subb	#1			; exp++
+	subb	#1			; exp--
 	sbca	#0
 	asl	@tmp4+1
 	rol	@tmp4
@@ -1607,21 +1613,28 @@ __divf32_done:
 ;
 __divf32_rup_check:
 	pshb
+	psha
 	ldab	@tmp4+1	
 	bpl	__divf32_rup_none	; G==0, no round up
-	aslb				; (bitb #$7F)
-	bne	__divf32_rup_occur	; R or S==1, do round up
-	ldab	@tmp4
-	asrb
-	pulb
-	rts				; if LSB==0, no round up
-__divf32_rup_none:
-	pulb
-	clc
-	rts
-__divf32_rup_occur:
+	tba
+	anda	#$1F			; stick check
+	beq	__divf32_rup_nosticky
+	orab	#$20
+__divf32_rup_nosticky:
+	ldaa	@tmp4
+	lsra
+	rorb				; AccB b7 LSB, b6 G, b5 R, b4 S
+	andb	#$F0
+	cmpb	#$40			; only G=1 and LSB,R,S == 0 ?
+	beq	__divf32_rup_none
+	pula
 	pulb
 	sec
+	rts				; if LSB==0, no round up
+__divf32_rup_none:
+	pula
+	pulb
+	clc
 	rts
 ;
 ;	@tmp3:@tmp4		= @long / TOS
