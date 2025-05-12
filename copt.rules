@@ -184,3 +184,11 @@
 =
 	jsr __load8u
 
+#
+#	-Os fusion
+#
+	jsr __load32x
+	jsr __push32
+=
+	jsr __load32x_push
+

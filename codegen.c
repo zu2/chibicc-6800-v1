@@ -124,10 +124,10 @@ static void tfr_dx()
 //
 static void store32x(int off)
 {
-  if (opt_O == 'o') {
+  if (opt_O == 's') {
     println("\tldab #<%d",off);
     println("\tldaa #>%d",off);
-    println("\tjsr store32dx");
+    println("\tjsr __store32dx");
     IX_Dest = IX_None;
   }else{
     println("\tldab @long+3");
@@ -1141,14 +1141,21 @@ gen_direct_pushl(int64_t val)
 void
 gen_direct_pushlx(int off)
 {
-  println("\tldab %d,x",off+3);
-  println("\tpshb");
-  println("\tldab %d,x",off+2);
-  println("\tpshb");
-  println("\tldab %d,x",off+1);
-  println("\tpshb");
-  println("\tldab %d,x",off);
-  println("\tpshb");
+  if (opt_O == 's') {
+    println("\tldab #<%d",off);
+    println("\tldaa #>%d",off);
+    println("\jsr __push32dx");
+    IX_Dest = IX_None;
+  }else{
+    println("\tldab %d,x",off+3);
+    println("\tpshb");
+    println("\tldab %d,x",off+2);
+    println("\tpshb");
+    println("\tldab %d,x",off+1);
+    println("\tpshb");
+    println("\tldab %d,x",off);
+    println("\tpshb");
+  }
   depth+=4;
 }
 
@@ -2707,22 +2714,22 @@ void gen_expr(Node *node) {
     gen_expr(node->lhs);	// xmm0
     switch (node->kind) {
     case ND_ADD:
-      println("\tjsr __addf32tos	; @long += TOS");
+      println("\tjsr __addf32tos");
       depth -= 4;
       IX_Dest = IX_None;
       return;
     case ND_SUB:
-      println("\tjsr __subf32tos	; @long -= TOS");
+      println("\tjsr __subf32tos");
       depth -= 4;
       IX_Dest = IX_None;
       return;
     case ND_MUL:
-      println("\tjsr __mulf32tos	; @long *= TOS");
+      println("\tjsr __mulf32tos");
       depth -= 4;
       IX_Dest = IX_None;
       return;
     case ND_DIV:
-      println("\tjsr __divf32tos	; @long /= TOS");
+      println("\tjsr __divf32tos");
       IX_Dest = IX_None;
       depth -= 4;
       return;

@@ -8,6 +8,7 @@
 	.export __store32dx
 	.export __push32
 	.export __push32x
+	.export __push32dx
 	.export __pop32
 	.export __neg32
 	.export __neg32x
@@ -85,6 +86,12 @@ __store32x:
 	stab 0,x
 	rts
 ;
+;	__load32x & __push32
+;
+__load32x_push:
+	jsr __load32x
+        jmp __push32
+;
 ;	__push32	push @long
 ;
 __push32:
@@ -103,7 +110,10 @@ __push32:
 	jmp 0,x
 ;
 ;	__push32x	push 0-3,x
+;	__push32x	push d,x
 ;
+__push32dx:
+	jsr	__adx
 __push32x:
 	pulb
 	stab	@tmp1
@@ -377,3 +387,5 @@ __iszero32:
 	ldx	@long
 __iszero32_end:
 	rts
+
+ 
