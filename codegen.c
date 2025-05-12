@@ -53,12 +53,12 @@ static void pop(void) {
 
 static void popx(void) {
   if (opt_O == 's') {
+    println("\tjsr __popx");
+  } else {
     println("\ttsx");
     println("\tldx 0,x");
     println("\tins");
     println("\tins");
-  } else {
-    println("\tjsr __popx");
   }
   IX_Dest = IX_None;
   depth-=2;
