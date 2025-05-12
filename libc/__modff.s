@@ -78,7 +78,7 @@ __modff_make_mask:
 	negb			; B = 23 - exp,  1 < B < 23
 ;
 	ldx	#__mask
-	bsr	__mask_make	; __mask = (1U<<AccB)-1
+	jsr	__mask_make	; __mask = (1U<<AccB)-1
 ;
 	ldab	__mask+3
 	andb	@long+3
@@ -119,6 +119,14 @@ __modff_mask_done:
 ;
 ;	Normalize the fractional part using shift loop
 ;
+	ldaa	__frac+3
+	oraa	__frac+2
+	oraa	__frac+1
+	bne	__modff_need_norm
+;				; frac == 0, return 0
+	bra	__modff_normal
+
+__modff_need_norm:
 	clra			; shift count
 __modff_norm_loop:
 	deca			; Use a negative value to simplify later calc.
