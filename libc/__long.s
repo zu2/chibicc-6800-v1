@@ -6,6 +6,7 @@
 	.export __load32x
 	.export __store32x
 	.export __store32dx
+	.export __load32x_push
 	.export __push32
 	.export __push32x
 	.export __push32dx

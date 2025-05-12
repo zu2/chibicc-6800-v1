@@ -113,9 +113,13 @@ static void ldx_bp()
 
 static void tfr_dx()
 {
-  println("\tstab @tmp1+1");
-  println("\tstaa @tmp1");
-  println("\tldx @tmp1");
+  if (opt_O == 's') {
+    println("\tjsr __tfr_dx");
+  }else{
+    println("\tstab @tmp1+1");
+    println("\tstaa @tmp1");
+    println("\tldx @tmp1");
+  }
   IX_Dest = IX_None;
 }
 
@@ -691,14 +695,14 @@ static void load(Type *ty) {
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
     if (ty->is_unsigned){
-      println("\tjsr __load8u	; AccB = (AccAB)");
+      println("\tjsr __load8u");
     }else{
-      println("\tjsr __load8s	; AccB = (AccAB)");
+      println("\tjsr __load8s");
     }
   }else if (ty->size == 2){
-    println("\tjsr __load16	; AccAB = (AccAB)");
+    println("\tjsr __load16");
   }else if (ty->size == 4){
-    println("\tjsr __load32	; @long = (AccAB)");
+    println("\tjsr __load32");
   }else{
     fprintf(stderr,"; load error, ty->size=%d\n",ty->size);
     assert(0);

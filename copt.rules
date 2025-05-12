@@ -66,6 +66,13 @@
 #
 #
 #
+
+	clra
+	clra
+=
+	clra
+
+
 	ldab 0,x
 	tstb
 =
@@ -191,4 +198,11 @@
 	jsr __push32
 =
 	jsr __load32x_push
+
+	ldab #<%1
+	ldaa #>%1
+	jsr __load16
+=
+	ldab %1+1
+	ldaa %1
 
