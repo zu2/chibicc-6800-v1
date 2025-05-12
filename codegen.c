@@ -70,16 +70,19 @@ static void ins(int n)
 
 
 static void pushl(void) {
-//println("\tjsr __push32");
-//IX_Dest = IX_None;
-  println("\tldab @long+3");
-  println("\tpshb");
-  println("\tldab @long+2");
-  println("\tpshb");
-  println("\tldab @long+1");
-  println("\tpshb");
-  println("\tldab @long");
-  println("\tpshb");
+  if (opt_O == 's') {
+    println("\tjsr __push32");
+    IX_Dest = IX_None;
+  }else{
+    println("\tldab @long+3");
+    println("\tpshb");
+    println("\tldab @long+2");
+    println("\tpshb");
+    println("\tldab @long+1");
+    println("\tpshb");
+    println("\tldab @long");
+    println("\tpshb");
+  }
   depth+=4;
 }
 
@@ -114,6 +117,28 @@ static void tfr_dx()
   println("\tstaa @tmp1");
   println("\tldx @tmp1");
   IX_Dest = IX_None;
+}
+
+//
+// store @long to off,x
+//
+static void store32x(int off)
+{
+  if (opt_O == 'o') {
+    println("\tldab #<%d",off);
+    println("\tldaa #>%d",off);
+    println("\tjsr store32dx");
+    IX_Dest = IX_None;
+  }else{
+    println("\tldab @long+3");
+    println("\tstab %d,x",off+3);
+    println("\tldab @long+2");
+    println("\tstab %d,x",off+2);
+    println("\tldab @long+1");
+    println("\tstab %d,x",off+1);
+    println("\tldab @long");
+    println("\tstab %d,x",off);
+  }
 }
 
 static char *helper_savex[] = {
@@ -698,6 +723,7 @@ static void load_x(Type *ty,int off) {
     return;
   case TY_LONG:
   case TY_FLOAT:
+
     println("\tldab %d,x",off+3);
     println("\tstab @long+3");
     println("\tldab %d,x",off+2);
@@ -762,10 +788,15 @@ void load_var(Node *node)
       println("\tldaa _%s",  node->var->name);
       break;
     case 4:
-      println("\tldx _%s+2",node->var->name);
-      println("\tstx @long+2");
-      println("\tldx _%s",  node->var->name);
-      println("\tstx @long");
+      if (opt_O == 's') {
+	println("\tldx #_%s",node->var->name);
+	println("\tjsr __load32x");
+      }else{
+        println("\tldx _%s+2",node->var->name);
+        println("\tstx @long+2");
+        println("\tldx _%s",  node->var->name);
+        println("\tstx @long");
+      }
       IX_Dest = IX_None;
       break;
     default:
@@ -843,23 +874,21 @@ static void store_x(Type *ty,int off) {
     assert(ty->kind!=TY_LDOUBLE);
     return;
   }
-
-  if (ty->size == 1){
+  switch (ty->size) {
+  case 1:
     println("\tstab %d,x",off);
-  }else if (ty->size == 2){
+    break;
+  case 2:
     println("\tstab %d,x",off+1);
     println("\tstaa %d,x",off);
-  }else if (ty->size == 4){	// TY_LONG, TY_FLOAT
-    println("\tldab @long+3");
-    println("\tstab %d,x",off+3);
-    println("\tldab @long+2");
-    println("\tstab %d,x",off+2);
-    println("\tldab @long+1");
-    println("\tstab %d,x",off+1);
-    println("\tldab @long");
-    println("\tstab %d,x",off);
-  }else
+    break;
+  case 4:
+    store32x(off);	// if opt_O, destroy IX
+    break;
+  default:
     println("  mov %%rax, (%%rdi)");
+    assert(0);
+  }
 }
 
 void cmp_zero(Type *ty) {

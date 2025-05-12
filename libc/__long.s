@@ -5,6 +5,7 @@
 	.export __load32i
 	.export __load32x
 	.export __store32x
+	.export __store32dx
 	.export __push32
 	.export __push32x
 	.export __pop32
@@ -68,8 +69,11 @@ __load32x:		; load 32bit from (0-3,x)
 	stab @long+0
 	rts
 ;
-;	__lstorex	store long to 0-3,x
+;	__store32x	store long to 0-3,x
+;	__store32dx	store long to d,x  (mess IX)
 ;
+__store32dx:
+	jsr __adx
 __store32x:
 	ldab @long+3
 	stab 3,x

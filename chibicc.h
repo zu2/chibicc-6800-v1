@@ -470,6 +470,7 @@ typedef	enum {
 } IX_Type;
 
 extern IX_Type	IX_Dest;
+extern char opt_O;
 
 //
 // gen_jump.c

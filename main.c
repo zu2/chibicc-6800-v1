@@ -26,7 +26,7 @@ static char *opt_MF;
 static char *opt_MT;
 static char *opt_o;
 static int  opt_v = 0;
-static char *opt_O;
+char opt_O = '0';
 #define copt_path  "/opt/fcc/bin/copt"
 #define copt_rules "/opt/chibicc/lib/copt.rules"
 
@@ -345,9 +345,22 @@ static void parse_args(int argc, char **argv) {
     }
     if (!strncmp(argv[i], "-O", 2)) {
       if (argv[i][2]=='\0') {
-	opt_O = &argv[i][1];
+	opt_O = argv[i][1];
       }else{
-	opt_O = &argv[i][2];
+	opt_O = argv[i][2];
+      }
+      switch (opt_O) {
+      case 's':
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+	break;
+      case 'O':
+	opt_O = '1';
+	break;
+      default:
+	error("unknown optimize option: %s", argv[i]);
       }
       continue;
     }
@@ -803,7 +816,7 @@ int main(int argc, char **argv) {
 
     // Compile
     if (opt_S) {
-      if (opt_O && can_copt()) {
+      if (opt_O && opt_O != '0' && can_copt()) {
 	char *tmp3 = create_tmpfile();
         run_cc1(argc, argv, input, tmp3);
 	run_copt(tmp3,output);
@@ -817,7 +830,7 @@ int main(int argc, char **argv) {
     if (opt_c) {
       char *tmp = create_tmpfile();
       run_cc1(argc, argv, input, tmp);
-      if (opt_O && can_copt()) {
+      if (opt_O && opt_O != '0' && can_copt()) {
 	char *tmp3 = create_tmpfile();
 	run_copt(tmp,tmp3);
 	tmp = tmp3;
@@ -830,7 +843,7 @@ int main(int argc, char **argv) {
     char *tmp1 = create_tmpfile();
     char *tmp2 = create_tmpfile();
     run_cc1(argc, argv, input, tmp1);
-    if (opt_O && can_copt()) {
+    if (opt_O && opt_O != '0' && can_copt()) {
       char *tmp3 = create_tmpfile();
       run_copt(tmp1,tmp3);
       tmp1 = tmp3;
