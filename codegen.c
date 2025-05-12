@@ -1139,7 +1139,7 @@ gen_direct_pushl(int64_t val)
 }
 
 void
-gen_direct_pushlx(int off)
+pushlx(int off)
 {
   if (opt_O == 's') {
     println("\tldab #<%d",off);
@@ -1233,7 +1233,7 @@ static void push_args2(Node *args,bool is_variadic)
     case ND_VAR:
       if (test_addr_x(args)){
         int off = gen_addr_x(args,false);
-	gen_direct_pushlx(off);
+	pushlx(off);
       }else{
         gen_expr(args);
         pushl();
@@ -2849,7 +2849,7 @@ void gen_expr(Node *node) {
       case ND_VAR:
         if (test_addr_x(node->lhs)){
           int off = gen_addr_x(node->lhs,false);
-  	  gen_direct_pushlx(off);
+  	  pushlx(off);
 	  break;
         }
 	// THRU
@@ -2942,15 +2942,7 @@ void gen_expr(Node *node) {
         gen_direct_pushl(node->rhs->val);
       }else if (test_addr_x(node->rhs)){
         int off = gen_addr_x(node->rhs,false);
-	println("\tldab %d,x",off+3);
-	println("\tpshb");
-	println("\tldab %d,x",off+2);
-	println("\tpshb");
-	println("\tldab %d,x",off+1);
-	println("\tpshb");
-	println("\tldab %d,x",off);
-	println("\tpshb");
-	depth+=4;
+	pushlx(off);
       }else{
         gen_expr(node->rhs);
         pushl();
