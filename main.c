@@ -40,7 +40,7 @@ static StringArray input_paths;
 static StringArray tmpfiles;
 
 static void usage(int status) {
-  fprintf(stderr, "chibicc [-D name][-o <path>][-I dir][-v] <file>\n");
+  fprintf(stderr, "chibicc [-v][-O][-Os][-D name][-o <path>][-I dir] <file> [-lxx]\n");
   exit(status);
 }
 
