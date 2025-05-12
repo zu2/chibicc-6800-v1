@@ -74,16 +74,20 @@ static void ins(int n)
 
 static void ldd_i(int n)
 {
-  if (n & 0x00ff)
-    println("\tldab #<%d",n);
-  else
+  println("; ldd_i %d",n);
+  if ((n & 0x00ff)==0) {
     println("\tclrb");
-  if (n & 0xff00)
-    println("\tldaa #>%d",n);
-  else if ((n & 0x00ff) == ((n & 0x0ff00)>>16))
-    println("\ttba");
-  else
+  } else {
+    println("\tldab #<%d",n);
+  }
+
+  if ((n & 0x0ff00)==0) {
     println("\tclra");
+  } else if ((n & 0x00ff) == ((n & 0x0ff00)>>8)) {
+    println("\ttba");
+  } else {
+    println("\tldaa #>%d",n);
+  }
 }
 
 
@@ -900,8 +904,7 @@ static void store_x(Type *ty,int off) {
     println("\tpsha");
     ldd_i(off);
     println("\tjsr __adx");
-    println("\tldab #<%d",ty->size);
-    println("\tldaa #>%d",ty->size);
+    ldd_i(ty->size);
     println("\tjsr  __copy_struct2");
     IX_Dest = IX_None;
     return;
@@ -1460,8 +1463,12 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
           return 1;
         }
       }
-      println("\t%s #<%u", opb, (uint16_t)node->val);
-      println("\t%s #>%u", opa, (uint16_t)node->val);
+      if (strcmp(opb,"ldab")==0) {
+	ldd_i((uint16_t)node->val);
+      } else {
+        println("\t%s #<%u", opb, (uint16_t)node->val);
+        println("\t%s #>%u", opa, (uint16_t)node->val);
+      }
       return 1;
     default:
       return 0;
