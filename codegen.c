@@ -2845,7 +2845,7 @@ void gen_expr(Node *node) {
       }
       pushl();
       gen_expr(node->rhs);
-      println("\tjsr __add32tos	; @long += TOS, pull TOS");
+      println("\tjsr __add32tos");	// @long += TOS, pull TOS
       depth -= 4;
       IX_Dest = IX_None;
       return;
