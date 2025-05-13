@@ -11,6 +11,9 @@
 ;
 ;
 	.export	_fabsf
+	.export	_isinf
+	.export	_isnan
+	.export	_isfinite
 	.data
 	.code
 ;
@@ -26,7 +29,6 @@ _fabsf:
 ;	AccAB = isinf(@long)
 ;		parameter passed by @long
 ;
-	.export	_isinf
 _isinf:
 	jsr	__f32isNaNorInf
 	bne	__isinf_not_inf
@@ -37,6 +39,7 @@ _isinf:
 	rts
 __isinf_not_inf:
 __isnan_not_nan:
+__isfinite_non:
 	clrb
 	clra
 	rts
@@ -45,11 +48,29 @@ __isnan_not_nan:
 ;	AccAB = isnan(@long)
 ;		parameter passed by @long
 ;
-	.export	_isnan
 _isnan:
 	jsr	__f32isNaNorInf
 	bcc	__isnan_not_nan
 ____isinf_pInf:			; if +Inf, return 1
+__isfinite_yes:
 	clra
 	ldab	#1
 	rts
+
+;
+;	AccAB = isfinite(@long)
+;		parameter passed by @long
+;
+_isfinite:
+	jsr	__f32isNaNorInf
+	bcs	__isfinite_non
+	beq	__isfinite_non
+	bra	__isfinite_yes
+
+
+
+;	memo: __f32isNaNorInf
+;	  Z=0, C=0 not NaN,Inf
+;	  Z=1, C=0 Inf
+;	  Z=0, C=1 NaN
+
