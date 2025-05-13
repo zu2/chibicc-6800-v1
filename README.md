@@ -35,23 +35,23 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
 
 ---
 
-## Installation
+# Installation
 
 Follow the steps below to set up the environment for chibicc-6800.
 
-### 1. Install Fuzix-Bintools
+## 1. Install Fuzix-Bintools
 
 First, install [Fuzix-Bintools](https://github.com/EtchedPixels/Fuzix-Bintools).  
 Please refer to the instructions in the Fuzix-Bintools repository's README.md for details.
 
 Make sure that the installed binaries (e.g., `as6800`, `ld6800`) are available in your `$PATH`.
 
-### 2. Install Fuzix-Compiler-Kit
+## 2. Install Fuzix-Compiler-Kit
 
 Next, install [Fuzix-Compiler-Kit](https://github.com/EtchedPixels/Fuzix-Compiler-Kit).  
 Please follow the installation instructions in the Fuzix-Compiler-Kit repository's README.md.
 
-### 3. Install `emu6800` Emulator
+## 3. Install `emu6800` Emulator
 
 After installing the Fuzix-Compiler-Kit, you need to install the `emu6800` emulator for testing.
 
@@ -64,7 +64,7 @@ cp test/emu6800 /opt/fcc/bin/
 > **Note:**  
 > Make sure that `/opt/fcc/bin/` is included in your `$PATH` environment variable.
 
-### 4. Verify Installation
+## 4. Verify Installation
 
 You can verify that the tools are installed correctly by running:
 
@@ -100,7 +100,7 @@ Alternatively, you can manually compile and run a test program as follows:
 ```sh
 cd ztest
 chibicc -v -O -o 9018-asciiartf.bin 9018-asciiartf.c
-emu6800 6800 9018-asciiartf.bin
+emu6800 6800 9018-asciiartf.bin 9018-asciiartf.map
 ```
 
 This will compile the source file and execute the resulting binary using the emulator.

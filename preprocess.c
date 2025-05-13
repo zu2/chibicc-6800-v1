@@ -1068,6 +1068,8 @@ static char *format_time(struct tm *tm) {
 
 void init_macros(void) {
   // Define predefined macros
+  define_macro("__CHIBICC__", "1");
+  define_macro("__CHIBICC_6800__", "1");
   define_macro("_LP32", "1");
   define_macro("_LP64", "0");
   define_macro("__C99_MACRO_WITH_VA_ARGS", "1");
@@ -1095,8 +1097,6 @@ void init_macros(void) {
   define_macro("__alignof__", "_Alignof");
   define_macro("__amd64", "0");
   define_macro("__amd64__", "0");
-  define_macro("__chibicc__", "1");
-  define_macro("__chibicc_6800__", "1");
   define_macro("__const__", "const");
   define_macro("__gnu_linux__", "1");
   define_macro("__inline__", "inline");
