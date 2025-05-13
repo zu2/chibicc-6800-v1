@@ -1381,8 +1381,8 @@ __mulf32tos71:
 ;
 	ldab	__work+3
 	bpl	__mulf32tos72	; G=0, do nothing
-	andb	#$3F		; make sticky bit
 	pshb
+	andb	#$3F		; make sticky bit
 	orab	__work+4
 	orab	__work+5
 	pulb
@@ -1396,8 +1396,9 @@ __mulf32tos721:
 	rorb			; b7:LSB, b6:G, b5:R, b4:S
 ;	bitb	#$40		; b6:G==0?		// G must 1
 ;	beq	__mulf32tos72	;   Yes, do nothng
-	andb	#$F0
-	cmpb	#$40		; 0100:only G is 1?
+;	andb	#$F0
+;	cmpb	#$40		; 0100:only G is 1?
+	andb	#$B0		; 1011:LSB,R,S=0 ?
 	beq	__mulf32tos72	;   Yes, do nothng
 ;
 	inc	__work+2		; round up
