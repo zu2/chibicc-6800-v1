@@ -19,11 +19,11 @@ Dhrystone works now.
 - **Function parameters:** Only the first parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
 - **Return values:** Struct/union return values pass their address as an implicit first argument in a register. all other normal arguments are passed on the stack.
 
+The compiler passes basic tests, but there are still many issues remaining.
+
 IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
 
 It can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
-
-The compiler passes basic tests, but there are still many issues remaining.
 
 The original chibicc compiles C source code using stack-based operations, but also makes use of the many registers available on x64. This is inefficient on the MC6800, which has few registers and limited stack support. chibicc-6800-v1 optimizes code generation for the MC6800.
 
@@ -159,6 +159,10 @@ The IEEE754 float implementation has passed the Paranoia test for addition, subt
 
 - **`-O0`**:  
   No optimization is performed at this level. However, if `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization, except when `-O0` is specified, in which case no optimization is applied.
+
+- **`-O`, `-O1`, `-O2`**:  
+
+  if `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization
 
 - **`-Os`**:  
   This option generates code aimed at minimizing the size of the object file. As a trade-off, the resulting code may run approximately 5% slower.
