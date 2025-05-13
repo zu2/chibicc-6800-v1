@@ -271,7 +271,8 @@ For example:
 
 int main(int argc, char **argv)
 {
-    float x, z;
+    float x=-2.0;
+    float z;
 
     z = sqrtf(fabsf(x));
 }
@@ -295,7 +296,7 @@ After storing the value of x into @long, we can call fabsf and then sqrtf in seq
 
 ## Conditional branch
 
-Integer's conditional branching is fast. It uses direct comparisons (not subroutines). 
+8bit/16bit Integer's conditional branching is fast. It uses direct comparisons (not subroutines). 
 
 For longs and floats, a subroutine is called for comparisons, but the code is written to reduce the number of comparisons as much as possible, so it is fast enough.
 
@@ -351,7 +352,7 @@ IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is
 
 Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (sqrtf) are implemented. Other functions are under consideration.
 
-Float can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
+Float can handle subnormal, NaN and Inf values. It passes basic testing.
 
 
 ## Large size object / local area
