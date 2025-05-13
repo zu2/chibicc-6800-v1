@@ -2781,37 +2781,31 @@ void gen_expr(Node *node) {
       println("\tclra");
       println("\tbra %s",L_cmpf2);
       println("%s:",L_cmpf1);
+      println("\tclra");
       if (node->kind == ND_EQ) {
         println("; ND_EQ");
-	println("\tclra");
-        println("\tsubb #1");		// 00:carry, other NC
-	println("\trolb");
+        println("\teorb #1");		// 00->01, 01->00, FF->FE
       } else if (node->kind == ND_NE) {
 	println("; float ND_NE");	// EQ:AccB==0, other FF or 01
       } else if (node->kind == ND_LT) {	// AccB:FF true, other false
         println("; ND_LT");
-        println("\tclra");
-        println("\taddb #1");		// FF:Carry, other:NC
-	println("\trolb");
+	println("\tlsrb");		// FF->7F, other:00
       } else if (node->kind == ND_GT) {	// AccB:01 true, other false
         println("; ND_GT");
-        println("\tclra");
-        println("\tdecb");
-        println("\tsubb #1");		// 01:carry, other NC
-	println("\trolb");
+        println("\tincb");		// FF,00,01 -> 00,01,02
+        println("\tlsrb");		//          -> 00,00,01
       } else if (node->kind == ND_LE) { // AccB:FF,00 true, other false
         println("; ND_LE");
-	println("\tdecb");		// AccB:FE,FF tue, other false
-	println("\taddb #2");		// AccB:FE,FF Carry, other NC
-	println("\trolb");
+	println("\tdecb");		// FF,00,01 -> FE,FF,00
+	println("\taslb");		//          -> FC,FE,00  C=1,1,0
+	println("\trolb");		//          -> F9,FD,00
       } else if (node->kind == ND_GE) { // AccB:00,01 true, other false
-        println("; ND_LE");
+        println("; ND_GE");
 	println("\tsubb #2");		// AccB:00,01 Carry, other NC
 	println("\trolb");
       } else {
         error_tok(node->tok, "invalid expression");
       }
-      println("\tclra");
       println("\tandb #1");
       println("%s:",L_cmpf2);
       depth -= 4;
@@ -3571,6 +3565,7 @@ static void gen_stmt(Node *node)
     IX_Dest = IX_None;
     gen_stmt(node->then);
     println("_%s:", node->cont_label);
+    stmt_dump(cond->loc);
     cond->bool_result_unused = true;
     cond = optimize_expr(cond);
     gen_expr(cond);
@@ -3597,6 +3592,7 @@ static void gen_stmt(Node *node)
     }
     for (Node *n = node->case_next; n; n = n->case_next) {
       // TODO: 32bit case
+      stmt_dump(n->loc);
       if (n->begin == n->end) {
 	switch (node->cond->ty->size) {
 	case 1:
