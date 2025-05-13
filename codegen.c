@@ -74,7 +74,6 @@ static void ins(int n)
 
 static void ldd_i(int n)
 {
-  println("; ldd_i %d",n);
   if ((n & 0x00ff)==0) {
     println("\tclrb");
   } else {
@@ -719,7 +718,7 @@ static void load(Type *ty) {
     // the first element of the array in C" occurs.
     return;
   case TY_FLOAT:
-    println("\tjsr __load32	; @long = (AccAB)");
+    println("\tjsr __load32");		// @long = (AccAB)");
     IX_Dest = IX_None;
 //  println("  movss (%%rax), %%xmm0");
     return;
@@ -3847,7 +3846,8 @@ static void emit_data(Obj *prog) {
           rel = rel->next;
           pos += 2;
         } else {
-	  if (isalnum(var->init_data[pos])){
+	  if (isprint(var->init_data[pos])
+	  &&  var->init_data[pos]!='\\'   ){
             println("\t.byte %d	; '%c'", var->init_data[pos],
 			                 var->init_data[pos]);
 	  }else{
