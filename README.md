@@ -34,35 +34,77 @@ For testing, we use emu6800 from Fuzix-Compiler-Kit.
 - https://github.com/EtchedPixels/Fuzix-Compiler-Kit
 
 ---
-# Installation
 
-Follow these steps to set up the compiler:
+## Installation
 
-1. Install **Fuzix-BinTools** and **Fuzix-Compiler-Kit**.
-2. Clone this repository:
+Follow the steps below to set up the environment for chibicc-6800.
+
+### 1. Install Fuzix-Bintools
+
+First, install [Fuzix-Bintools](https://github.com/EtchedPixels/Fuzix-Bintools).  
+Please refer to the instructions in the Fuzix-Bintools repository's README.md for details.
+
+Make sure that the installed binaries (e.g., `as6800`, `ld6800`) are available in your `$PATH`.
+
+### 2. Install Fuzix-Compiler-Kit
+
+Next, install [Fuzix-Compiler-Kit](https://github.com/EtchedPixels/Fuzix-Compiler-Kit).  
+Please follow the installation instructions in the Fuzix-Compiler-Kit repository's README.md.
+
+### 3. Install `emu6800` Emulator
+
+After installing the Fuzix-Compiler-Kit, you need to install the `emu6800` emulator for testing.
+
+Copy the emulator binary to the appropriate directory:
+
+```sh
+cp test/emu6800 /opt/fcc/bin/
 ```
-   git clone https://github.com/zu2/chibicc-6800-v1.git
+
+> **Note:**  
+> Make sure that `/opt/fcc/bin/` is included in your `$PATH` environment variable.
+
+### 4. Verify Installation
+
+You can verify that the tools are installed correctly by running:
+
+```sh
+which chibicc
+which emu6800
+which as6800
+which ld6800
 ```
-3. Build and install:
+
+All commands should return the path to the respective binaries.
+
+---
+
+## Example: Running Test Programs
+
+You can run all test programs automatically using the provided onetest script:
+
+```sh
+cd ztest
+./onetest 9018-asciiartf.c
 ```
-   cd chibicc-6800-v1
-   make
-   make install
+
+To run all tests, use runtest.
+
+```sh
+cd ztest
+./runall
 ```
-4. Add the following paths to your `$PATH`:
+
+Alternatively, you can manually compile and run a test program as follows:
+
+```sh
+cd ztest
+chibicc -v -O -o 9018-asciiartf.bin 9018-asciiartf.c
+emu6800 6800 9018-asciiartf.bin
 ```
-   export PATH="/opt/chibicc/bin:/opt/fcc/bin:$PATH"
-```
-5. test compile a C file using:
-```
-   cd ztest
-   ./onetest 9018-asciiartf.c
-```
-6. To run the test programs
-```
-    cd ztest; ./runall
-    cd ztest; ./onetest some-test-program.c
-```
+
+This will compile the source file and execute the resulting binary using the emulator.
+
 ---
 # Performance
 
