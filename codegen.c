@@ -2771,7 +2771,7 @@ void gen_expr(Node *node) {
       int c = count();
       sprintf(L_cmpf1, "_L_%d_1_cmpf",c);
       sprintf(L_cmpf2, "_L_%d_2_cmpf",c);
-      println("\tjsr __cmpf32tos	; @long cmp  TOS");
+      println("\tjsr __cmpf32tos");	// @long cmp  TOS");
       println("\tbcc %s",L_cmpf1);	// when carry=1, compare NaN
       if (node->kind == ND_NE) {
         println("\tldab #1");
