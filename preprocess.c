@@ -1071,11 +1071,11 @@ void init_macros(void) {
   define_macro("__CHIBICC__", "1");
   define_macro("__CHIBICC_6800__", "1");
   define_macro("_LP32", "1");
-  define_macro("_LP64", "0");
+//define_macro("_LP64", "0");
   define_macro("__C99_MACRO_WITH_VA_ARGS", "1");
   define_macro("__ELF__", "1");
   define_macro("__LP32__", "1");
-  define_macro("__LP64__", "0");
+//define_macro("__LP64__", "0");
   define_macro("__SIZEOF_DOUBLE__", "4");
   define_macro("__SIZEOF_FLOAT__", "4");
   define_macro("__SIZEOF_INT__", "2");
