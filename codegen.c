@@ -873,7 +873,7 @@ static void store(Type *ty) {
     return;
   case TY_FLOAT:
     popx();
-    println("\tjsr __store32x   ; store @long to (0-3,x)");
+    println("\tjsr __store32x");	// store @long to (0-3,x)");
     return;
   case TY_DOUBLE:
     assert(ty->kind!=TY_DOUBLE);
@@ -890,7 +890,7 @@ static void store(Type *ty) {
     println("\tstab 1,x");
     println("\tstaa 0,x");
   }else if (ty->size == 4){
-    println("\tjsr __store32x   ; store @long to (0-3,x)");
+    println("\tjsr __store32x");	// store @long to (0-3,x)");
   }else
     assert(0);
 }
@@ -1115,7 +1115,7 @@ static void push_struct(Type *ty) {
 
   tfr_dx();
   if (ty->size<=8) {
-    for (int i = ty->size-1; i >=0 ; i-- ){
+    for (int i = ty->size-1; i >=0; i-- ){
       println("\tldab %d,x",i);
       println("\tpshb");
     }
@@ -2865,7 +2865,7 @@ void gen_expr(Node *node) {
       gen_expr(node->lhs);
       pushl();
       gen_expr(node->rhs);
-      println("\tjsr __sub32tos  ; @long = TOS - @long, pull TOS");
+      println("\tjsr __sub32tos");	 // @long = TOS - @long, pull TOS");
       depth -= 4;
       IX_Dest = IX_None;
       return;
@@ -2886,7 +2886,7 @@ void gen_expr(Node *node) {
         pushl();
       }
       gen_expr(node->rhs);
-      println("\tjsr __mul32tos ; @long *= TOS, pull TOS");
+      println("\tjsr __mul32tos");	// @long *= TOS, pull TOS");
 //  println("  imul %s, %s", di, ax);
       depth -= 4;
       IX_Dest = IX_None;
@@ -2896,9 +2896,9 @@ void gen_expr(Node *node) {
       pushl();
       gen_expr(node->lhs);
       if (node->ty->is_unsigned) {
-        println("\tjsr __div32x32u ; @long /= TOS, pull TOS");
+        println("\tjsr __div32x32u");	// @long /= TOS, pull TOS");
       }else{
-        println("\tjsr __div32x32s ; @long /= TOS, pull TOS");
+        println("\tjsr __div32x32s");	// @long /= TOS, pull TOS");
       }
       depth -= 4;
       IX_Dest = IX_None;
@@ -2908,9 +2908,9 @@ void gen_expr(Node *node) {
       pushl();
       gen_expr(node->lhs);
       if (node->ty->is_unsigned) {
-        println("\tjsr __rem32x32u ; @long %%= TOS, pull TOS");
+        println("\tjsr __rem32x32u");	// @long %%= TOS, pull TOS");
       }else{
-        println("\tjsr __rem32x32s ; @long %%= TOS, pull TOS");
+        println("\tjsr __rem32x32s");	// @long %%= TOS, pull TOS");
       }
       depth -= 4;
       IX_Dest = IX_None;

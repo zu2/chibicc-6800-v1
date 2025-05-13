@@ -42,6 +42,11 @@
 	.export __divf32tos
 	.export __cmpf32tos
 	.export __cmpf32x
+	.export __load32x_addf
+	.export __load32x_subf
+	.export __load32x_mulf
+	.export __load32x_divf
+	.export __load32x_cmpf
 	.export __f32iszero
 ;	.export __f32iszerox
 	.export __f32isNaNorInf
@@ -738,16 +743,20 @@ __u16ffff:
 ;	@long	= @long - TOS
 ;	→	= @long + (-TOS)
 ;
+__load32x_subf:
+	jsr	__load32x
 __subf32tos:
 	tsx
 	ldab	2,x		; flip the sign of TOS
 	eorb	#$80
 	stab	2,x
-;	jmp	addf32tos	; thru to __addf32tos
+	jmp	__addf32tos
 ;
 ;	@long = TOS + @long
 ;	pull TOS
 ;
+__load32x_addf:
+	jsr     __load32x
 __addf32tos:
 	tsx
 	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
@@ -1244,6 +1253,8 @@ __pullret:
 ;
 ;	No arithmetic is required when multiplying by 1, but simply multiply it now.
 ;
+__load32x_mulf:
+	jsr	__load32x
 __mulf32tos:
 	tsx
 	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
@@ -1448,6 +1459,8 @@ __mulf32tos74:
 ;
 ;	@long = @long / TOS
 ;
+__load32x_divf:
+	jsr	__load32x
 __divf32tos:
 	tsx
 	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
@@ -1712,6 +1725,8 @@ ret:
 ;	  @long>TOS	1
 ;
 ;
+__load32x_cmpf:
+	jsr	__load32x
 __cmpf32tos:
 	jsr	__f32isNaNorInf
 	jcs	__pullret

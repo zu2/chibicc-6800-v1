@@ -206,3 +206,36 @@
 	ldab %1+1
 	ldaa %1
 
+
+	jsr __load32x
+	jsr __addf32tos
+=
+	jsr __load32x_addf
+
+
+	jsr __load32x
+	jsr __subf32tos
+=
+	jsr __load32x_subf
+
+
+	jsr __load32x
+	jsr __mulf32tos
+=
+	jsr __load32x_mulf
+
+
+	jsr __load32x
+	jsr __divf32tos
+=
+	jsr __load32x_divf
+
+
+	jsr __load32x
+	jsr __cmpf32tos
+=
+	jsr __load32x_cmpf
+
+
+
+
