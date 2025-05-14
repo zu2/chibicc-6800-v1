@@ -6,7 +6,8 @@ all: libm.a
 OBJ =	__floor.o __fmaxf.o __fmodf.o __modff.o __round.o \
 	__sqrtf.o \
 	atanf.o cosf.o sinf.o tanf.o  \
-	expf.o logf.o powf.o log1pf.o
+	expf.o logf.o powf.o log1pf.o \
+	__copysignf.o
 
 .s.o:
 	as6800 $<
