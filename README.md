@@ -165,7 +165,7 @@ The IEEE754 float implementation has passed the Paranoia test for addition, subt
   if `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization
 
 - **`-Os`**:  
-  This option generates code aimed at minimizing the size of the object file. As a trade-off, the resulting code may run approximately 5% slower.
+  This option generates code aimed at minimizing the size of the object file. As a trade-off, the resulting code may run approximately 5%-25% slower.
 ---
 # Memo
 
