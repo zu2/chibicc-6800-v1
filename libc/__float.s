@@ -1753,34 +1753,55 @@ __cmpf32tos_10:
 	jmp	__pullret
 __cmpf32x:			; TODO: name?
 	ldab	@long
-	cmpb	2,x
-	bgt	__cmpf32x_gt
-	blt	__cmpf32x_lt
-	ldab	@long+1
-	cmpb	3,x
-	bhi	__cmpf32x_gt
-	bcs	__cmpf32x_lt
-	ldab	@long+2
-	cmpb	4,x
-	bhi	__cmpf32x_gt
-	bcs	__cmpf32x_lt
-	ldab	@long+3
-	cmpb	5,x
-	bhi	__cmpf32x_gt
-	bcs	__cmpf32x_lt
-__cmpf32x_eq:			; @long == TOS
-	clrb
-	clra			; Z=1,C=0, N=0
-	rts
-__cmpf32x_gt:			; @long > TOS
-	clra			; C=0
-	ldab	#1		; Z=0, N=0
-	rts
+	bpl	__cmpf32_p	; jump if @long >= 0
+	ldab	2,x
+	bpl	__cmpf32x_lt	; @long<0 LT TOS>=0
+;
+	bsr	__cmpf32_s	; @long<0 && TOS<0
+	bcs	__cmpf32x_gt	; C=1
+	beq	__cmpf32x_eq	; Z=1
+	bra	__cmpf32x_lt
+;
 __cmpf32x_lt:			; @long < TOS
 	clrb			; C=0
 	decb			; Z=0, N=1
 	tba
 	rts
+;
+__cmpf32_p:			; if @long >= 0
+	ldab	2,x
+	bmi	__cmpf32x_gt	; @long>=0 && TOS<0
+	bsr	__cmpf32_s
+	bcs	__cmpf32x_lt
+	beq	__cmpf32x_eq
+__cmpf32x_gt:			; @long > TOS
+	clra			; C=0
+	ldab	#1		; Z=0, N=0
+	rts
+__cmpf32x_eq:			; @long == TOS
+	clrb
+	clra			; Z=1,C=0, N=0
+	rts
+;
+__cmpf32_s:
+	ldab	@long
+	cmpb	2,x
+	bne	__cmpf32_sret
+	ldab	@long+1
+	cmpb	3,x
+	bne	__cmpf32_sret
+	ldab	@long+2
+	cmpb	4,x
+	bne	__cmpf32_sret
+	ldab	@long+3
+	cmpb	5,x
+	bne	__cmpf32_sret
+__cmpf32_sret:
+	rts			; when @long>0 && TOS>0
+				; @long == TOS : C=0, Z=1
+				; @long <  TOS : C=0, Z=0
+				; @long >  TOS : C=1, Z=0
+
 ;
 ;	if float is subnormal, mantissa into normal form.
 ;	unbiased exp is returned in AccAB.
