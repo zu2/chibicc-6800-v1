@@ -19,4 +19,4 @@ libc.a: $(OBJ)
 	ar qc libm.a `lorderz80 $(OBJ) | tsort`
 
 clean:
-	rm -f *.o *.a *~ makeops libc.a
+	rm -f *.o *.a *~ makeops libm.a

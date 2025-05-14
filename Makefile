@@ -69,6 +69,7 @@ clean:
 	rm -rf chibicc tmp* $(TESTS) test/*.s test/*.exe stage2
 	find * -type f '(' -name '*~' -o -name '*.o' ')' -exec rm {} ';'
 	(cd libc ; make clean)
+	(cd libm ; make clean)
 	(cd ztest ; make clean)
 
 .PHONY: test clean test-stage2
