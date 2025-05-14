@@ -964,6 +964,7 @@ enum { I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, F80 };
 
 static int getTypeId(Type *ty) {
   switch (ty->kind) {
+  case TY_BOOL:
   case TY_CHAR:
     return ty->is_unsigned ? U8 : I8;
   case TY_SHORT:
@@ -1213,24 +1214,25 @@ static void push_args2(Node *args,bool is_variadic)
     gen_expr(args);
     push_struct(args->ty);
     break;
+  case TY_BOOL:
   case TY_CHAR: {
-      if (args->kind       == ND_CAST
-      &&  args->lhs->kind  == ND_NUM
-      &&  is_integer(args->lhs->ty)) {
-	println("\tldab #<%ld",args->lhs->val);
+    if (args->kind       == ND_CAST
+    &&  args->lhs->kind  == ND_NUM
+    &&  is_integer(args->lhs->ty)) {
+      println("\tldab #<%ld",args->lhs->val);
+    }else{
+      gen_expr(args);
+    }
+    if (args->pass_by_stack){
+      if (is_variadic) {
+        cast(args->ty, ty_int);
+        push();
       }else{
-        gen_expr(args);
-      }
-      if (args->pass_by_stack){
-	if (is_variadic) {
-          cast(args->ty, ty_int);
-	  push();
-	}else{
-          push1();
-	}
+        push1();
       }
     }
     break;
+  } // TY_CHAR,TY_BOOL
   case TY_FLOAT:
     if (args->pass_by_stack && args->kind==ND_NUM) {
       union { float f32; uint32_t u32; } u = { args->fval };
@@ -1271,7 +1273,7 @@ static void push_args2(Node *args,bool is_variadic)
     case ND_VAR:
       if (test_addr_x(args)){
         int off = gen_addr_x(args,false);
-	pushlx(off);
+        pushlx(off);
       }else{
         gen_expr(args);
         pushl();
@@ -1452,6 +1454,7 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
   switch(node->kind){
   case ND_NUM: {
     switch (node->ty->kind) {
+    case TY_BOOL:
     case TY_CHAR:		// TODO: Avoid unnecessary type promotion
     case TY_SHORT:
     case TY_INT:
@@ -1477,18 +1480,18 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
     if (node->var->ty->kind != TY_VLA ){
       if (!test_addr_x(node)) return 0;
       if(node->var->is_local){
-	if (node->ty->kind==TY_ARRAY) {
-	  return 0;
-	}
+        if (node->ty->kind==TY_ARRAY) {
+	        return 0;
+        }
         int off = gen_addr_x(node,true);
-        if (node->ty->kind==TY_CHAR){
+        if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL){
           if (test) {
             return node->ty->is_unsigned;
-	  }
+          }
           println("\t%s %d,x",opb,off);
-	  if (strcmp(opb,"stab")) {
+          if (strcmp(opb,"stab")) {
             println("\t%s #0",opa);
-	  }
+	        }
         }else{
           if (test) return 1;
           println("\t%s %d,x",opb,off+1);
@@ -1498,22 +1501,22 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
       }else{
         // global
         if (node->ty->kind==TY_FUNC)
-	  return 0;
+          return 0;
         if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned)
-	  return 0;
+          return 0;
         if (test) return 1;
         if (node->ty->kind==TY_CHAR && node->ty->is_unsigned) {
           println("\t%s _%s",opb,node->var->name);
-	  if (strcmp(opb,"stab")) {
+   	      if (strcmp(opb,"stab")) {
             println("\t%s #0",opa);
-	  }
-	  return 1;
-	}
-	if (node->ty->kind==TY_ARRAY) {
+	        }
+	        return 1;
+	      }
+        if (node->ty->kind==TY_ARRAY) {
           println("\t%s #<_%s",opb,node->var->name);
           println("\t%s #>_%s",opa,node->var->name);
-	  return 1;
-	}
+	        return 1;
+        }
         println("\t%s _%s+1",opb,node->var->name);
         println("\t%s _%s",opa,node->var->name);
         return 1;
@@ -2178,6 +2181,7 @@ void gen_expr(Node *node) {
       error_tok(node->tok, "gen_expr: double not implemented yet");
       return;
     }
+    case TY_BOOL:
     case TY_CHAR:
       if(node->val==0){
         println("\tclrb");
@@ -2185,7 +2189,6 @@ void gen_expr(Node *node) {
         println("\tldab #<%u", (uint16_t)node->val);
       }
       return;
-    case TY_BOOL:
     case TY_INT:
     case TY_SHORT:
     case TY_PTR:
