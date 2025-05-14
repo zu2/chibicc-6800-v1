@@ -76,7 +76,7 @@ __work: .word	0	; working area 48bit
 	.code
 ;
 ;	(0-3,x) is NaN? (exp==255)
-;		NaN: 7F800000-7FFFFFFF
+;		NaN: 7F800001-7FFFFFFF, FF800001-FFFFFFFF
 ;		Inf: 7F800000 or FF800000
 ;	C=1: NaN
 ;	Z=1: Inf
@@ -87,14 +87,14 @@ __f32isNaNorInfx:
 	ldab	1,x
 	ldaa	0,x
 	aslb
-	rola
+	rola			; AccA=exp, b=(b22-b16)<<1, don't care sign.
 	adda	#1		; Use adda to update the carry flag (not inca).
 	bne	__f32isNaN_1	; if exp!=$FF, not NaN and Inf. C=0,Z=0
 	;			; exp == 255, check mantissa
-	;			; Hera, a is zero
+	;			; Here, a is zero
 	sba			; a-b → 0-b
-	bne	__f32isNaN_1	; if b==0 then Z=1,C=0 else Z=0,C=1
-	cmpa	2,x		; cmpa is faster than tst
+	bne	__f32isNaN_1	; if b!=0 then jump Z=0 C=1
+	cmpa	2,x		; Here, a==0, cmpa is faster than tst
 	bne	__f32isNaN_1	; ditto
 	cmpa	3,x		
 __f32isNaN_1:			; Z=0, C=0 not NaN,Inf
@@ -1729,12 +1729,12 @@ ret:
 __load32x_cmpf:
 	jsr	__load32x
 __cmpf32tos:
-	jsr	__f32isNaNorInf
+	jsr	__f32isNaNorInf	; if @long is NaN, C=1
 	jcs	__pullret
 	tsx
 	inx
 	inx
-	jsr	__f32isNaNorInfx
+	jsr	__f32isNaNorInfx ; if TOS is NaN, C=1
 	jcs	__pullret
 ;
         jsr     __f32iszero	; @long == 0.0 ?
