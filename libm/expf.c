@@ -16,7 +16,7 @@ float expf(float pX) { // e: input, f: result
     const float pLN2_HI  = 6.93145752e-1f;        // e: high part of ln(2), f: 0.693145752
     const float pLN2_LO  = 1.42860677e-6f;        // e: low part of ln(2), f: 0.00000142860677
     float pKf = pX * pINV_LN2 + 12582912.0f;      // e: magic bias for rounding, f: 1.2582912e7
-    int pK = (int)(pKf - 12582912.0f);
+    long pK = (long)(pKf - 12582912.0f);
     float pF = pX - pK * pLN2_HI - pK * pLN2_LO;  // e: reduced argument, f: pF
 
     // --- Polynomial approximation for exp(pF) on small interval ---
@@ -25,7 +25,6 @@ float expf(float pX) { // e: input, f: result
     pR = pR * pF + 4.16695364e-2f;    // e: coeff, f: 0.0416695364
     pR = pR * pF + 1.66664720e-1f;    // e: coeff, f: 0.166664720
     pR = pR * pF + 4.99999851e-1f;    // e: coeff, f: 0.499999851
-    pR = pR * pF + 1.0f;              // e: coeff, f: 1.0
     pR = pR * pF + 1.0f;              // e: coeff, f: 1.0
 
     // --- Scale by 2^pK using float bit manipulation ---
