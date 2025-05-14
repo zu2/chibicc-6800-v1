@@ -7,7 +7,7 @@ CCRUN="../chibicc $OPT "
 s=$(basename $1 .c)
 echo  "compiling:" $s
 echo $CCRUN -o $s.bin $s.c
-$CCRUN -o $s.bin $s.c common.c
+$CCRUN -o $s.bin $s.c common.c -lm
 $CCRUN -S $s.c
 err=$?
 if [ $err -ne 0 ] ; then
