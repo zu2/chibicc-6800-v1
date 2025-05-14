@@ -26,8 +26,6 @@ _strcmp:
 	ldx	2,x		; get s2
 	stx	@tmp3
 ;
-	bra	_strcmp_loop
-;
 _strcmp_loop:
 	ldx	@tmp2
 	ldab	0,x
