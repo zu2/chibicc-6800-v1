@@ -7,7 +7,7 @@ all: dhry_1.c dhry_2.c dhry.h my_printf.c
 	chibicc ${OPT} -c dhry_1.c
 	chibicc ${OPT} -c dhry_2.c
 	chibicc ${OPT} -c my_printf.c
-	chibicc ${OPT} -o dhry.bin dhry_1.o dhry_2.o my_printf.o
+	chibicc ${OPT} -o dhry.bin dhry_1.o dhry_2.o my_printf.o -lm
 	emu6800 6800 dhry.bin dhry.map
 
 setup:	dhry_1.c dhry_2.c dhry.h
