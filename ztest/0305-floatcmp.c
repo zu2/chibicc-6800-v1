@@ -3,6 +3,10 @@
 //
 
 #include "common.h"
+#include "math.h"
+#include "float.h"
+
+#define to_float(x) (*(const float*)&(uint32_t){x})
 
 int
 cmpf(float f, float g)
@@ -79,5 +83,28 @@ int main(int argc, char **argv)
 	putstr("2.0>=1.0:\t");print(2.0>=1.0);
 	putstr("2.0>=1.0=\t");print(g>=f);
 	putchar('\n');
+
+  if (to_float(0xff800000) < to_float(0xff000000))
+    return 239;
+
+
+  if (-NAN < f)
+    return 240;
+  return 0;
+
+  f = 1.0;
+  if (f < NAN)
+    return 250;
+  if (f <= NAN)
+    return 251;
+  if (f == NAN)
+    return 252;
+  if (f != NAN)
+    return 253;
+  if (f > NAN)
+    return 254;
+  if (f >= NAN)
+    return 255;
+
 	return 0;
 }
