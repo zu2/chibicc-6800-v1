@@ -16,6 +16,7 @@
 
 	.code
 	.export	_strcpy
+	.export	__strcpy_start
 _strcpy:
 	pshb			; save d, access to the stack will add two.
 	psha
@@ -26,7 +27,7 @@ _strcpy:
 ;
 	tsx
 	ldx	4,x		; get s
-	bra	_strcpy_start
+	bra	__strcpy_start
 ;
 _strcpy_loop:
 	inx
@@ -39,7 +40,7 @@ _strcpy_loop:
 	inx
 	stx	@tmp2
 	ldx	@tmp3
-_strcpy_start:
+__strcpy_start:
 	ldaa	0,x
 	beq	_strcpy_ret1
 	ldab	1,x
