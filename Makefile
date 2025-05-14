@@ -12,6 +12,7 @@ all: chibicc lib crt0.o
 
 lib:
 	(cd libc ; make)
+	(cd libm ; make)
 
 crt0.o: crt0.s
 	as6800 $^
@@ -23,6 +24,7 @@ install:
 	install -c chibicc /opt/chibicc/bin
 	install -c crt0.o /opt/chibicc/lib
 	install -c libc/libc.a /opt/chibicc/lib
+	install -c libm/libm.a /opt/chibicc/lib
 	install -c copt.rules  /opt/chibicc/lib
 	install -c $(INCS)  /opt/chibicc/include
 	

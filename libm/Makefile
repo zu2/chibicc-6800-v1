@@ -3,7 +3,8 @@
 #
 all: libc.a
 
-OBJ =	atanf.o cosf.o sinf.o tanf.o
+OBJ =	atanf.o cosf.o sinf.o tanf.o \
+	expf.o logf.o powf.o log1pf.o
 
 .s.o:
 	as6800 $<
