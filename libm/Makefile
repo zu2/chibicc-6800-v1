@@ -14,7 +14,7 @@ OBJ =	__floor.o __fmaxf.o __fmodf.o __modff.o __round.o \
 .c.o:
 	../chibicc -c $<
 
-libc.a: $(OBJ)
+libm.a: $(OBJ)
 	rm -f libm.a
 	ar qc libm.a `lorderz80 $(OBJ) | tsort`
 

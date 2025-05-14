@@ -13,7 +13,6 @@ float logf(float x) {
     // Polynomial coefficients for log2 approximation
     const float pA = -0.6296735f;    // quadratic coefficient
     const float pB =  1.466967f;     // linear coefficient
-    const float pLN2 = 0.69314718056f; // ln(2)
 
     union { float f; uint32_t i; } ux1, ux2;
     ux1.f = x;
@@ -42,5 +41,5 @@ float logf(float x) {
     }
 
     // Convert log2(x) to ln(x)
-    return lg2 * pLN2;
+    return lg2 * M_LN2;
 }

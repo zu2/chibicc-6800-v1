@@ -1,25 +1,22 @@
 #include <math.h>
 
-const float PI_OVER_4 = 0x1.921fb6p-1f; // π/4 (0.7853981634f)
-const float PI_OVER_2 = 0x1.921fb6p0f;  // π/2 (1.5707963268f)
-const float TWO_PI = 0x1.921fb6p2f;     // 2π (6.2831853072f)
-const float sin_sign_map[8] = {1.0f,  1.0f,  -1.0f, -1.0f,
+static const float sin_sign_map[8] = {1.0f,  1.0f,  -1.0f, -1.0f,
                                -1.0f, -1.0f, 1.0f,  1.0f};
 
 float sinf(float x)
 {
-  float x_red = fmodf(x, TWO_PI);
+  float x_red = fmodf(x, M_TWOPI);
   if (x_red < 0) {
-    x_red += TWO_PI;
+    x_red += M_TWOPI;
   }
 
-  int quadrant = (int)(x_red / PI_OVER_4);
+  int quadrant = (int)(x_red / M_PI_4);
   quadrant %= 8;
 
-  float base = quadrant * PI_OVER_4;
+  float base = quadrant * M_PI_4;
   float ref_angle = x_red - base;
   if (quadrant % 2 == 1) {
-    ref_angle = PI_OVER_4 - ref_angle;
+    ref_angle = M_PI_4 - ref_angle;
   }
 
   float x2 = ref_angle * ref_angle;
