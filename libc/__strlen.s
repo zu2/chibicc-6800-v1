@@ -20,17 +20,18 @@ _strlen:
 	stab	@tmp1+1
 	staa	@tmp1
 	ldx	@tmp1
+;
 	dex
-;
-	ldab	#$ff		; low  byte of n
-	tba			; high byte of n
-;
 _strlen_loop:
 	inx
-	addb	#1
-	adca	#0
-	tst	0,x
+	ldab	0,x
 	bne	_strlen_loop
 _strlen_ret:
+;
+	stx	@tmp2
+	ldab	@tmp2+1
+	ldaa	@tmp2
+	subb	@tmp1+1
+	sbca	@tmp1
 	rts
 ;
