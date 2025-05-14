@@ -1,9 +1,11 @@
 #
+#  Math library
 #
-#
-all: libc.a
+all: libm.a
 
-OBJ =	atanf.o cosf.o sinf.o tanf.o \
+OBJ =	__floor.o __fmaxf.o __fmodf.o __modff.o __round.o \
+	__sqrtf.o \
+	atanf.o cosf.o sinf.o tanf.o  \
 	expf.o logf.o powf.o log1pf.o
 
 .s.o:
