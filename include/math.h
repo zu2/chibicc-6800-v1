@@ -7,8 +7,17 @@
 #define MATH_H
 #include <stdint.h>
 
-#define M_PI 0x1.921fb6p1f  // 3.1415927f
-#define M_E  0x1.5bf0a8p1f  // 2.7182817f
+#define M_PI 	0x1.921fb6p+1f  // 3.1415927f	pi
+#define	M_TWOPI	0x1.921fb6p+2f	// 6.2831855f	2*pi
+#define M_PI_2	0x1.921fb6p+0f	// 1.5707964f	pi/2
+#define M_PI_4	0x1.921fb6p-1f	// 0.7853982f	pi/4
+#define M_1_PI	0x1.45f306p-2f	// 0.3183099f	1/pi
+#define M_2_PI	0x1.45f306p-1f	// 0.6366198f	2/pi
+#define M_E  	0x1.5bf0a8p+1f  // 2.7182817f	e
+#define M_LOG2E	0x1.715476p+0f	// 1.4426950f	log_2 e
+#define	M_LOG10E 0x1.bcb7b2p-2f	// 0.4342945f	log_10 e
+#define	M_LN2	0x1.62e43p-1f	// 0.6931472f	ln 2
+#define	M_LN10	0x1.26bb1cp+1f	// 2.3025851f	ln 10
 
 #define INFINITY (*(const float*)&(uint32_t){0x7F800000})
 #define NAN      (*(const float*)&(uint32_t){0x7FC00000})
