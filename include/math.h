@@ -26,7 +26,6 @@ int	isnan(float x);
 int	isinf(float x);
 int	isfinite(float x);
 
-#if 1
 float	sinf(float x);
 float	cosf(float x);
 float	tanf(float x);
@@ -38,7 +37,6 @@ float	atan2f(float y, float x);
 float	sinhf(float x);
 float	coshf(float x);
 float	tanhf(float x);
-#endif
 
 float	expf(float x);
 float	logf(float x);
@@ -58,8 +56,20 @@ float	fminf(float x, float y);
 float	fmodf(float x, float y);
 float	modff(float x, float *iptr);
 
-#ifdef  __use_float_for_double__
+#ifdef  __USE_FLOAT_FOR_DOUBLE__
+#define	sin(x)		sinf(x)
+#define	cos(x)		cosf(x)
+#define	tan(x)		tanf(x)
+#define	atan(x)		atanf(x)
+//
+#define	exp(x)		expf(x)
+#define log(x)		logf(x)
+#define log10(x)	log10f(x)
+#define	pow(x,y)	powf(x,y)
+#define	log1p(x,y)	log1pf(x,y)
+//
 #define sqrt(x)		sqrtf(x)
+//
 #define ceil(x)		ceilf(x)
 #define floor(x)	floorf(x)
 #define fabs(x)		fabsf(x)
@@ -67,8 +77,6 @@ float	modff(float x, float *iptr);
 #define fmin(x,y)	fminf(x,y)
 #define fmod(x,y)	fmodf(x,y)
 #define	modf(x,iptr)	modff(x,iptr)
-#define log(x)		logf(x)
-#define	pow(x,y)	powf(x,y)
 #endif
 
 #endif // MATH_H
