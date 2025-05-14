@@ -1502,14 +1502,16 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
         // global
         if (node->ty->kind==TY_FUNC)
           return 0;
-        if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned)
+        if (node->ty->size==TY_CHAR && !node->ty->is_unsigned)
           return 0;
         if (test) return 1;
-        if (node->ty->kind==TY_CHAR && node->ty->is_unsigned) {
+        if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL) {
+   	      if (!strcmp(opb,"stab")) {
+            println("\t%s _%s",opb,node->var->name);
+            return 1;
+          }
           println("\t%s _%s",opb,node->var->name);
-   	      if (strcmp(opb,"stab")) {
-            println("\t%s #0",opa);
-	        }
+          println("\t%s #0",opa);
 	        return 1;
 	      }
         if (node->ty->kind==TY_ARRAY) {
@@ -2216,18 +2218,19 @@ void gen_expr(Node *node) {
       tfr_dx();
     }
     switch (node->lhs->ty->kind) {
+    case TY_BOOL:
     case TY_CHAR:
       println("\tldab %d,x",off);
       switch(val){
       case 1:
-	println("\tincb");
-	break;
+        println("\tincb");
+        break;
       case -1:
-	println("\tdecb");
-	break;
+        println("\tdecb");
+        break;
       default:
         println("\taddb #%d",val);
-	break;
+        break;
       }
       println("\tstab %d,x",off);
       if (!node->retval_unused) {
@@ -2237,7 +2240,7 @@ void gen_expr(Node *node) {
           break;
         case -1:
           println("\tincb");
-	  break;
+          break;
         default:
           println("\tsubb #%d",val);
           break;
@@ -2247,7 +2250,7 @@ void gen_expr(Node *node) {
           println("\tasrb");
           println("\trolb");
           println("\tsbca #0");
-	}
+        }
       }
       break;
     case TY_SHORT:
@@ -2284,18 +2287,19 @@ void gen_expr(Node *node) {
       tfr_dx();
     }
     switch (node->lhs->ty->kind) {
+    case TY_BOOL:
     case TY_CHAR:
       println("\tldab %d,x",off);
       switch(val){
       case 1:
-	println("\tincb");
-	break;
+        println("\tincb");
+        break;
       case -1:
-	println("\tdecb");
-	break;
+        println("\tdecb");
+        break;
       default:
         println("\taddb #%d",val);
-	break;
+        break;
       }
       println("\tstab %d,x",off);
       if (!node->retval_unused) {
@@ -2304,7 +2308,7 @@ void gen_expr(Node *node) {
           println("\tasrb");
           println("\trolb");
           println("\tsbca #0");
-	}
+        }
       }
       break;
     case TY_SHORT:
@@ -2439,13 +2443,13 @@ void gen_expr(Node *node) {
         gen_direct(node->lhs,"stab","staa");
       }else if (test_addr_x(node->lhs)){
         int off = gen_addr_x(node->lhs,true);
-	gen_expr(node->rhs);
+        gen_expr(node->rhs);
         store_x(node->ty,off);
       }else{
-	gen_addr(node->lhs);
-	tfr_dx();
+        gen_addr(node->lhs);
+        tfr_dx();
         gen_direct(node->rhs,"ldab","ldaa");
-	store_x(node->ty,0);
+        store_x(node->ty,0);
       }
       return;
     }
