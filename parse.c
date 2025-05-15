@@ -1628,9 +1628,9 @@ static Node *stmt(Token **rest, Token *tok) {
 
     add_type(exp);
     Type *ty = current_fn->ty->return_ty;
-    if (!is_compatible(exp->ty, ty)) {
-      warn_tok(tok, "return type mismatch");
-    }
+//  if (!is_compatible(exp->ty, ty)) {
+//    warn_tok(tok, "return type mismatch");
+//  }
     if (ty->kind != TY_STRUCT && ty->kind != TY_UNION)
       exp = new_cast(exp, current_fn->ty->return_ty);
 
