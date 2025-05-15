@@ -1,7 +1,12 @@
 #include <stdio.h>
 #include <math.h>
 
-float atanf(float x) {
+static float atanf_taylor(float x) {
+    float x2 = x * x;
+    return x - (x2 * x) / 3.0f + (x2 * x2 * x) / 5.0f - (x2 * x2 * x2 * x) / 7.0f + (x2 * x2 * x2 * x2 * x) / 9.0f;
+}
+
+static float atanf_frac(float x) {
     float r = 0.0f;
     float x2 = x*x;
 
@@ -18,4 +23,16 @@ float atanf(float x) {
     r = (         x2) / ( 3.0f + r);  //  1
 
     return (x / (1.0f + r)); // 0
+}
+
+
+float atanf(float x) {
+    if (fabsf(x) < 0.5f) {
+        return atanf_taylor(x);
+    } else if (fabsf(x) < 2.0f) {
+        return atanf_frac(x);
+    } else {
+        float inv_x = 1.0f / x;
+        return (x > 0 ? M_PI_2 : -M_PI_2) - atanf(inv_x);
+    }
 }
