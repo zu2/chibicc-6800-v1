@@ -1853,11 +1853,11 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
       if (test) return 1;
       // TODO: Branching with strcmp is not pretty. think it later.
       if (strcmp(opb,"andb")==0)
-	return gen_direct_long_and(rhs->val,opa,opb);
+        return gen_direct_long_and(rhs->val,opa,opb);
       if (strcmp(opb,"orab")==0)
-	return gen_direct_long_or(rhs->val,opa,opb);
+        return gen_direct_long_or(rhs->val,opa,opb);
       if (strcmp(opb,"eorb")==0)
-	return gen_direct_long_xor(rhs->val,opa,opb);
+        return gen_direct_long_xor(rhs->val,opa,opb);
       println("\tldab @long+3");
       println("\t%s #%u", opb, (uint32_t) (rhs->val & 0x000000FF));
       println("\tstab @long+3");

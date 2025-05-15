@@ -94,8 +94,10 @@ static int node_cost(Node *node)
   case ND_CAST:
     sign = !node->ty->is_unsigned;
     return node_cost(node->lhs)+10+sign;
+  case ND_FUNCALL:
+    return 400;
   }
-  return 255;
+  return 1000;
 }
 
 static Node *optimize_lr(Node *node)
@@ -257,8 +259,18 @@ Node *optimize_expr(Node *node)
     node = optimize_lr(node);
     return optimize_const_expr(node);
   case ND_ADD:
+  case ND_MUL: {
+    int64_t val;
+
+    node = optimize_lr_swap(node);
+    if (is_integer_constant(node->lhs,&val)
+    &&  is_integer_constant(node->rhs,&val)) {
+      return optimize_const_expr(node);
+    }
+
+    return node;
+  }
   case ND_SUB:
-  case ND_MUL:
   case ND_DIV:
   case ND_MOD: {
     int64_t val;
@@ -274,7 +286,7 @@ Node *optimize_expr(Node *node)
   case ND_BITAND:
   case ND_BITOR:
   case ND_BITXOR:
-    node = optimize_lr(node);
+    node = optimize_lr_swap(node);
     return optimize_const_expr(node);
   case ND_EQ:
   case ND_NE:
