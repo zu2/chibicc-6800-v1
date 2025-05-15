@@ -542,16 +542,16 @@ int gen_addr_x(Node *node,bool save_d)
       &&  lhs->rhs->kind == ND_CAST
       &&  lhs->rhs->ty->kind == TY_PTR
       &&  lhs->rhs->lhs->kind == ND_NUM) {
-	off = lhs->rhs->lhs->val; // * lhs->rhs->ty->size;
-	if (off < 252 ) {
-	  println("\tldx #_%s",lhs->lhs->lhs->var->name);
+        off = lhs->rhs->lhs->val; // * lhs->rhs->ty->size;
+        if (off < 252 ) {
+          println("\tldx #_%s",lhs->lhs->lhs->var->name);
           IX_Dest = IX_None;
-	  return off;
+          return off;
         }
-	println("\tldx #_%s+%ld",lhs->lhs->lhs->var->name,
-                       lhs->rhs->lhs->val * lhs->rhs->ty->size);
+        println("\tldx #_%s+%ld",lhs->lhs->lhs->var->name,
+                                 lhs->rhs->lhs->val * lhs->rhs->ty->size);
         IX_Dest = IX_None;
-	return 0;
+        return 0;
       }
       if (lhs->lhs->kind == ND_CAST
       &&  lhs->lhs->ty->kind == TY_PTR
@@ -561,13 +561,13 @@ int gen_addr_x(Node *node,bool save_d)
       &&  lhs->rhs->kind == ND_CAST
       &&  lhs->rhs->ty->kind == TY_PTR
       &&  lhs->rhs->lhs->kind == ND_NUM) {
-	off = lhs->rhs->lhs->val; //  * lhs->rhs->ty->size;
+        off = lhs->rhs->lhs->val; //  * lhs->rhs->ty->size;
         if (off < 252) {
-	  ldx_bp();
-	  println("\tldx %d,x", lhs->lhs->lhs->var->offset);
-	  IX_Dest = IX_None;
-	  return off;
-	}
+          ldx_bp();
+          println("\tldx %d,x", lhs->lhs->lhs->var->offset);
+          IX_Dest = IX_None;
+          return off;
+        }
       }
       break;
     } // ND_DEREF
@@ -1466,7 +1466,7 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
         }
       }
       if (strcmp(opb,"ldab")==0) {
-	ldd_i((uint16_t)node->val);
+        ldd_i((uint16_t)node->val);
       } else {
         println("\t%s #<%u", opb, (uint16_t)node->val);
         println("\t%s #>%u", opa, (uint16_t)node->val);
@@ -1532,19 +1532,19 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
       if (node->lhs->ty->kind  == TY_PTR
       &&  node->lhs->lhs->kind == ND_NUM
       &&  is_integer(node->lhs->lhs->ty)) {
-	if (test) return 1;
-	switch(node->ty->kind) {
-	case TY_BOOL:
-	case TY_CHAR:
-	  println("\t%s %ld",opb,node->lhs->lhs->val);
-	  return 1;
-	case TY_SHORT:
-	case TY_INT:
-	case TY_ENUM:
-	case TY_PTR:
-	  println("\t%s %ld+1",opb,node->lhs->lhs->val);
-	  println("\t%s %ld",opb,node->lhs->lhs->val);
-	  return 1;
+        if (test) return 1;
+        switch(node->ty->kind) {
+        case TY_BOOL:
+        case TY_CHAR:
+          println("\t%s %ld",opb,node->lhs->lhs->val);
+          return 1;
+        case TY_SHORT:
+        case TY_INT:
+        case TY_ENUM:
+        case TY_PTR:
+          println("\t%s %ld+1",opb,node->lhs->lhs->val);
+          println("\t%s %ld",opb,node->lhs->lhs->val);
+          return 1;
         }
       }
     }
@@ -1555,6 +1555,9 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
       return 1;
     if (node->ty->kind == TY_INT
     &&  node->lhs->ty->kind == TY_CHAR
+    &&  gen_direct_sub(node->lhs, opb, opa, test))
+      return 1;
+    if (node->ty->kind      == TY_PTR
     &&  gen_direct_sub(node->lhs, opb, opa, test))
       return 1;
     return 0;
@@ -2831,7 +2834,7 @@ void gen_expr(Node *node) {
     switch (node->kind) {
     case ND_ADD:
       if (test_addr_x(node->lhs) && !test_addr_x(node->rhs)){
-	node = swap_lr(node);
+        node = swap_lr(node);
       }
       if (can_direct_long2(node)){
         gen_direct_long2(node,"addb","adca");
@@ -2839,10 +2842,10 @@ void gen_expr(Node *node) {
       }
       gen_expr(node->lhs);
       if (can_direct_long(node->rhs)){
-	if (gen_direct_long(node->rhs,"addb","adca")){
+        if (gen_direct_long(node->rhs,"addb","adca")){
           return;
-	}
-	assert(0);
+        }
+        assert(0);
       }
       pushl();
       gen_expr(node->rhs);
@@ -3037,55 +3040,7 @@ void gen_expr(Node *node) {
   case ND_ADD:
     if (gen_direct_lr(node,"addb","adca"))
       return;
-    if (node->lhs->kind          == ND_CAST
-    &&  node->lhs->ty->kind      == TY_PTR
-    &&  node->lhs->lhs->kind     == ND_VAR
-    &&  node->lhs->lhs->ty->kind == TY_ARRAY
-    &&  !node->lhs->lhs->var->is_local) {
-      gen_expr(node->rhs);
-      println("\taddb #<_%s",node->lhs->lhs->var->name);
-      println("\tadca #>_%s",node->lhs->lhs->var->name);
-      return;
-    }
     gen_expr(node->lhs);
-    if (node->rhs->kind     == ND_CAST
-    &&  node->rhs->ty->kind == TY_ARRAY
-    &&  node->rhs->lhs->kind == ND_VAR
-    &&  node->rhs->lhs->var->is_local   ) {
-      println("\taddb @bp+1");
-      println("\tadca @bp");
-      if (node->rhs->lhs->var->offset) {
-        println("\taddb #<%d",node->rhs->lhs->var->offset);
-        println("\tadca #>%d",node->rhs->lhs->var->offset);
-      }
-      return;
-    }
-    if (node->rhs->kind     == ND_CAST
-    &&  node->rhs->ty->kind == TY_PTR
-    &&  node->rhs->lhs->kind == ND_VAR
-    &&  node->rhs->lhs->var->is_local) {
-      switch (node->rhs->lhs->ty->kind) {
-      case TY_CHAR:
-	if (node->rhs->lhs->ty->is_unsigned
-	&&  node->rhs->lhs->var->offset<=255) {
-          ldx_bp();
-          println("\taddb %d,x",node->rhs->lhs->var->offset);
-	  println("\tadca #0");
-	  return;
-	}
-	break;
-      case TY_SHORT:
-      case TY_INT:
-      case TY_ENUM:
-        if (node->rhs->lhs->var->offset<=254) {
-          ldx_bp();
-          println("\taddb %d,x",node->rhs->lhs->var->offset+1);
-          println("\tadca %d,x",node->rhs->lhs->var->offset);
-	  return;
-        }
-	break;
-      }
-    }
     push();
     gen_expr(node->rhs);
     println("\ttsx");
