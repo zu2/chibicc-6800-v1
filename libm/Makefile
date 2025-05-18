@@ -3,7 +3,7 @@
 #
 all: libm.a
 
-OBJ =	__floor.o __fmaxf.o __fmodf.o __modff.o __round.o \
+OBJ =	__floorf.o __fmaxf.o __fmodf.o __modff.o __roundf.o \
 	__sqrtf.o \
 	atanf.o cosf.o sinf.o tanf.o  \
 	expf.o logf.o powf.o log1pf.o \
