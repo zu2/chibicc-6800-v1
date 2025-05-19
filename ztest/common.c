@@ -3,17 +3,16 @@
 //	test common routine
 //
 
-#if !defined(__CHIBICC_COMMON_H__)
-#define __CHIBICC_COMMON_H__
 #if defined(__clang__) || defined(__GNUC__)
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <float.h>
 #include <time.h>
 #define print(i)	printf("%d\n",i)
 #define cpu_counter()	{ clock_t t; t=clock();printf("CPU = %.6f sec\n",(double)t/CLOCKS_PER_SEC); }
 #define	fmodf(x,y)	fmod(x,y)
-#else
+#endif
 #if defined(__CHIBICC_6800__)
 // chibicc, fcc, cc68
 extern	void print(int i);
@@ -60,7 +59,7 @@ puthexl(long v)
 	puthexc(*(p+3));
 }
 
-#if	defined(__CHIBICC__) || defined(__FCC__)
+#if	defined(__CHIBICC_6800__) || defined(__FCC__)
 void
 puthexf(float f)
 {
@@ -70,6 +69,14 @@ puthexf(float f)
 	puthexc(*(p+1));
 	puthexc(*(p+2));
 	puthexc(*(p+3));
+}
+#else
+void
+puthexf(float f)
+{
+	unsigned int *p = (unsigned int *)&f;
+
+  printf("%08x",*p);
 }
 #endif
 
@@ -84,6 +91,3 @@ void assert(int expected, int actual, char *code) {
 }
 
 #define ASSERT(x, y) assert(x, y, #y)
-
-#endif
-#endif

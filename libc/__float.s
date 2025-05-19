@@ -57,6 +57,7 @@
 	.export __setup_zin
 	.export __f32NaN
 	.export __f32NaNx
+	.export __f32zerox
 	.export __f32zeros
 	.export __f32ones
 	.export	__f32Infs
@@ -77,10 +78,6 @@ __exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
 __work: .word	0	; working area 48bit
 	.word	0
 	.word	0
-___NAN:
-	.byte	$7F,$C0,$00,$00
-___INFINITY:
-	.byte	$7F,$80,$00,$00
 	
 	.code
 ;
@@ -401,6 +398,15 @@ __f32tou32_4:
 	bne	__f32tou32_4
 	rts
 ;
+__f32zerox:
+	ldab	__sign
+	andb	#$80
+	stab	0,x
+	clrb
+	stab	1,x
+	stab	2,x
+	stab	3,x
+	rts
 __f32zeros:
 	bsr	__f32zero
 	ldab	__sign
