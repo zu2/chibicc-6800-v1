@@ -58,11 +58,15 @@
 	.export __f32NaN
 	.export __f32NaNx
 	.export __f32zeros
+	.export __f32ones
+	.export	__f32Infs
 	.export __adj_subnormal
 	.export __asl8_both
 ;
 	.export __sign
 	.export __work
+	.export __lexp
+;
 	.data
 __zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
 __sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
@@ -73,6 +77,11 @@ __exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
 __work: .word	0	; working area 48bit
 	.word	0
 	.word	0
+___NAN:
+	.byte	$7F,$C0,$00,$00
+___INFINITY:
+	.byte	$7F,$80,$00,$00
+	
 	.code
 ;
 ;	(0-3,x) is NaN? (exp==255)
@@ -403,21 +412,20 @@ __f32zero:
 __i32zero:
 __u32zero:
 	ldx	#0
-	stx	@long+2
+__f32stx:
 	stx	@long
+	stx	@long+2
 	rts
 __f32ffffffff:
 __i32ffffffff:
 __u32ffffffff:
 	ldx	#$ffff
-	stx	@long+2
-	stx	@long
-	rts
+	bra	__f32stx
 __i327fffffff:
-	ldx	#$ffff
-	stx	@long+2
 	ldx	#$7fff
 	stx	@long
+	ldx	#$ffff
+	stx	@long+2
 	rts
 __i3280000000:
 	ldx	#0
@@ -425,6 +433,34 @@ __i3280000000:
 	ldx	#$8000
 	stx	@long
 	rts
+__f32Infs:
+	ldab	__sign
+	bmi	__f32mInf
+__f32pInf:
+__f327f800000:
+	ldx	#$7F80
+__f32Inf2:
+	stx	@long
+	ldx	#$0000
+	stx	@long+2
+	rts
+__f32mInf:
+__f32ff800000:
+	ldx	#$FF80
+	bra	__f32Inf2
+__f32ones:
+	tst	__sign
+	bmi	__f32mOne
+__f32pOne:
+	ldx	#$3F80
+__f32One_2:
+	stx	@long
+	ldx	#$0000
+	stx	@long+2
+	rts
+__f32mOne:
+	ldx	#$BF80
+	bra	__f32One_2
 ;
 ;	load plus/minus Inf into @long
 ;
@@ -434,22 +470,10 @@ __f32retInf:		; AccB(Sign)+7f80 0000
 	tstb
 	bmi	__f32retmInf
 __f32retpInf:		; 7f80 0000
-	ldab	#$7f
-	stab	@long
-	incb
-	stab	@long+1
-	clrb
-	stab	@long+2
-	stab	@long+3
+	bsr	__f327f800000
 	jmp     __pullret
 __f32retmInf:		; ff80 0000
-	ldab	#$80
-	stab	@long+1
-	clrb
-	stab	@long+2
-	stab	@long+3
-	decb
-	stab	@long
+	bsr	__f32ff800000
 	jmp     __pullret
 ;
 ;	load plus/minus qNaN into @long

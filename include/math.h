@@ -19,8 +19,10 @@
 #define	M_LN2	0x1.62e42fep-1f	// 0.6931472f	ln 2
 #define	M_LN10	0x1.772b538p+1f	// 2.3025851f	ln 10
 
-#define INFINITY (*(const float*)&(uint32_t){0x7F800000})
-#define NAN      (*(const float*)&(uint32_t){0x7FC00000})
+extern	long	_INFINITY;
+extern	long	_NAN;
+#define INFINITY (*(const float*)&_INFINITY)
+#define NAN      (*(const float*)&_NAN)
 
 int	isnan(float x);
 int	isinf(float x);
@@ -51,6 +53,8 @@ float	sqrtf(float x);
 float	ceilf(float x);
 float	floorf(float x);
 float	truncf(float x);
+float	roundf(float x);
+float	nearbyintf(float x);
 float	fabsf(float x);
 float	fmaxf(float x, float y);
 float	fminf(float x, float y);
@@ -73,6 +77,8 @@ float	modff(float x, float *iptr);
 //
 #define ceil(x)		ceilf(x)
 #define floor(x)	floorf(x)
+#define trunc(x)	truncf(x);
+#define round(x)	roundf(x);
 #define fabs(x)		fabsf(x)
 #define fmax(x,y)	fmaxf(x,y)
 #define fmin(x,y)	fminf(x,y)
