@@ -10,40 +10,41 @@
 ;	and does not pay attention to speed, accuracy, or exception handling.
 ;
 ;
-        .export	_floorf
+        .export	_ceilf
         .data
 __fracmask_p:
 	.word	0
 ;
         .code
 ;
-;       @long = floor(@long)
+;       @long = ceil(@long)
 ;               parameter passed by @long
 ;
-_floorf:
+_ceilf:
 	jsr	__f32isNaNorInf
-	bls	__floor_ret		; C=1 or Z=1 : C:NaN, Z:Inf
+	bls	__ceil_ret		; C=1 or Z=1 : C:NaN, Z:Inf
 	jsr	__f32iszero
-	bne	__floor_non_zero
-__floor_ret:
+	bne	__ceil_non_zero
+__ceil_ret:
 	rts
-__floor_non_zero:
+__ceil_non_zero:
 	jsr	__get_lexp_sign		; AccB = exp (biased)
 	cmpb	#150			; exp>=23+127?
-	bcc	__floor_ret		; return @long
+	bcc	__ceil_ret		; return @long
 	subb	#127
-	bcc	__floor_ge1		; exp>126? (fabsf(@long)>=1.0f)
+	bcc	__ceil_ge1		; exp>126? (fabsf(@long)>=1.0f)
 	ldab	__sign			; exp<=126, check sign
-	jpl	__f32zeros		; if @long>=0.0f return +0.0f
-	jmp	__f32ones		; if @long<0.0f  return -1.0f
+	jpl	__f32ones		; if @long>=0.0f return +1.0f
+	clr	__sign
+	jmp	__f32zeros		; if @long<0.0f  return +0.0f
 ;
-__floor_ge1:				; fabsf(@long) >= 1.0f
+__ceil_ge1:				; fabsf(@long) >= 1.0f
 	jsr	__fracmask		; make mantissa mask
 	jsr	__bit_fmask		; fac & mask == 0 ?
-	beq	__floor_ret		; @long is already an integer
+	beq	__ceil_ret		; @long is already an integer
 	jsr	__and_not_fmask		; truncate fractional
 	tst	__sign
-	bpl	__floor_ret
+	bmi	__ceil_ret
 	ldab	__lexp
 	subb	#127
 	jsr	__fmsbmask		; '1' bit
