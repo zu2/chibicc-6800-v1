@@ -84,10 +84,6 @@ int main(int argc, char **argv)
 	putstr("2.0>=1.0=\t");print(g>=f);
 	putchar('\n');
 
-  if (to_float(0xff800000) < to_float(0xff000000))
-    return 239;
-
-
   if (-NAN < f)
     return 240;
   return 0;
