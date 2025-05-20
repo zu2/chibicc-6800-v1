@@ -306,33 +306,58 @@ Node *optimize_expr(Node *node)
   case ND_LT:
   case ND_LE:
   case ND_GT:
-  case ND_GE:
+  case ND_GE: {
+    int64_t val;
+
     node = optimize_lr(node);
+    if ( is_integer(node->ty)
+    &&  node->kind==ND_LE
+    && is_integer_constant(node->rhs,&val)) {
+      switch(node->ty->kind){
+      case TY_CHAR:
+        if (( node->ty->is_unsigned && node->rhs->val < UINT8_MAX)
+        ||  (!node->ty->is_unsigned && node->rhs->val < INT8_MAX)) {
+          node->rhs->val++;
+          node->kind = ND_LT;
+        }
+        break;
+      case TY_SHORT:
+      case TY_INT:
+        if (( node->ty->is_unsigned && node->rhs->val < UINT16_MAX)
+        ||  (!node->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
+          node->rhs->val++;
+          node->kind = ND_LT;
+        }
+        break;
+      case TY_LONG:
+        if (( node->ty->is_unsigned && node->rhs->val < UINT32_MAX)
+        ||  (!node->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
+          node->rhs->val++;
+          node->kind = ND_LT;
+        }
+        break;
+      }
+    }
 //  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
     if ( node_cost(node->lhs) < node_cost(node->rhs)
-    ||  (node_cost(node->lhs) == node_cost(node->rhs)
-      &&(node->kind == ND_LE || node->kind == ND_GT))){
+    ||  (node_cost(node->lhs) == node_cost(node->rhs))) {
 //    println("; optimize RO %d swap_lr",node->kind);
-      node = swap_lr(node);
       switch(node->kind){
-      case ND_LT:
-	node->kind = ND_GT;
-	break;
       case ND_LE:
+        node = swap_lr(node);
         node->kind = ND_GE;
         break;
       case ND_GT:
-	node->kind = ND_LT;
-	break;
-      case ND_GE:
-        node->kind = ND_LE;
+        node = swap_lr(node);
+        node->kind = ND_LT;
         break;
       }
       return node;
     }
     return node;
-  case ND_SHL: {
-  case ND_SHR:
+  } // relative op
+  case ND_SHL:
+  case ND_SHR: {
     node = optimize_lr(node);
     return optimize_const_expr(node);
   } // ND_SHL, ND_SHR
