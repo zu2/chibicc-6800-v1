@@ -4,6 +4,7 @@
 	.export __load32
 	.export __load32i
 	.export __load32x
+	.export __load32bx
 	.export __load32dx
 	.export __store32x
 	.export __store32dx
@@ -61,6 +62,8 @@ __load32i:		; load 32bit immediate
 	ldab 0,x
 	stab @long+0
 	jmp  4,x
+__load32bx:             ; loda 32bit from b,x
+        clra
 __load32dx:		; load 32bit from d,x
 	jsr  __adx
 __load32x:		; load 32bit from (0-3,x)
@@ -75,8 +78,11 @@ __load32x:		; load 32bit from (0-3,x)
 	rts
 ;
 ;	__store32x	store long to 0-3,x
+;	__store32bx	store long to b,x  (mess IX)
 ;	__store32dx	store long to d,x  (mess IX)
 ;
+__store32bx:
+        clra
 __store32dx:
 	jsr __adx
 __store32x:
