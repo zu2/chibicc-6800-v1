@@ -354,10 +354,10 @@ __f32tou32_1:
 ;	bcs	__f32tou32_2
 ;	jmp	__u32ffffffff	; return 4,294,967,295
 __f32tou32_2:
-	clr	0,x
 	ldaa	1,x		; recover hidden bit
-	ora	#$80
+	oraa	#$80
 	staa	1,x
+	clr	0,x
 ;
 	subb	#$96		; TODO:
 	beq	__f32tou32_ret
@@ -511,72 +511,15 @@ __f32retTOS:
 ;		@long -> @long
 ;	
 __f32toi32:
-	ldx	#long
-__f32toi32x:
-	jsr	__f32iszerox
-	jeq	__u32zero
-	ldab	0,x
-	stab	__sign		; save sign
-	ldaa	1,x
-	asla
-	rolb			; B = exp
-	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
-	jcs	__u32zero
-__f32toi32_1:
-	cmpb	#$9E		; if exp>=$9E (x > 2,147,483,647)
-	bcs	__f32toi32_2
-	tst	__sign
-	jpl	__i327fffffff	; return +2,147,483,647
-	jmp	__i3280000000	; return -2,147,483,648
-__f32toi32_2:
-	clr	0,x
-	sec			; recover hidden bit
-	rora
-	staa	1,x
-	subb	#$96		; exp==2^23?
-	beq	__f32toi32_ret	; 24bit mantissa can be interpreted as long.
-	bcs	__f32toi32_4
-	ldaa	3,x
-__f32toi32_3:
-	asla
-	rol	2,x
-	rol	1,x
-	rol	0,x
-	decb
-	bne	__f32toi32_3
-	staa	3,x
-__f32toi32_ret:
-	tst	__sign
-	jmi	__neg32x	; negate (0-3,x) and return
-__f32toi32_ret2:
+	ldab	@long
+	pshb
+	andb	#$7F
+	stab	@long
+	jsr	__f32tou32
+	pulb
+	tstb
+	jmi	__neg32
 	rts
-__f32toi32_4:
-	clra
-__f32toi32_5:
-	lsr	0,x
-	ror	1,x
-	ror	2,x
-	ror	3,x
-	rora			; G/S bit
-	incb
-	bne	__f32toi32_5
-	tsta
-	bpl	__f32toi32_ret	; G=0, no round up
-	bitb	#$7F
-	bne	__f32toi32_6	; round up
-	ldaa	3,x
-	lsra
-	bcc	__f32toi32_ret	; S=0, LSB=0, no round up
-;
-__f32toi32_6:
-	inc	3,x		; round up
-	bne	__f32toi32_ret
-	inc	2,x
-	bne	__f32toi32_ret
-	inc	1,x
-	bne	__f32toi32_ret
-	inc	0,x
-	bra	__f32toi32_ret
 ;
 ;	float to unsigned char
 ;		@long -> AccB, clear AccA
