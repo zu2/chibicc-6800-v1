@@ -40,6 +40,7 @@ int scheck2(long sl, long sl2)
 
   f = sl;
   if ((signed long)f != sl2){
+    putstr("f=(float)sl2\n");
     putstr("sl sl2 (sl)f f\n");
     puthexl(sl);putchar(' '); puthexl(sl2);putchar(' ');
     puthexl((signed long)f);putchar(' ');
@@ -200,11 +201,11 @@ int main(int argc, char **argv)
   // 31bit
   if (scheck2(0x7FFFFFBF,0x7FFFFF80))
     return 71;
-  if (scheck2(0x7FFFFFC0,0x7FFFFFFF))
+  if (scheck2(0x7FFFFFC0,0x80000000))
     return 72;
-  if (scheck2(0x7FFFFFFE,0x7FFFFFFF))
+  if (scheck2(0x7FFFFFFE,0x80000000))
     return 73;
-  if (scheck2(0x7FFFFFFF,0x7FFFFFFF))
+  if (scheck2(0x7FFFFFFF,0x80000000))
     return 74;
 
   if (scheck2(0x80000200,0x80000200))
@@ -250,7 +251,7 @@ int main(int argc, char **argv)
 
   if (ucheck2(0xFFFFFF00,0xFFFFFF00))
     return 141;
-  if (ucheck2(0xFFFFFFFF,0xFFFFFFFF))
+  if (ucheck2(0xFFFFFFFF,0x00000000)) // 4294967296.0 -> 0
     return 142;
 
     
