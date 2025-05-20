@@ -128,6 +128,8 @@ iszerox_ret:
 ;
 ;	int16 to float32
 ;
+;	@long ← (float)AccAB
+;
 __i16tof32:
 	tstb
 	bne	__i16tof32_1
@@ -135,29 +137,27 @@ __i16tof32:
 	jeq	__f32zero	; load 0.0 and return
 	;
 __i16tof32_1:
-	psha
-	anda	#$80
 	staa	__sign
-	pula
 	bpl	__i16tof32_10
-	nega
+	nega			; AccAB = -AccAB
 	negb
 	sbca	#0
 	;
 __i16tof32_10:
 	stab	@long+2
 	ldab	#$8f		; exp ($8e+1), if i32>=32768 then exp=$8E
-__i16tof32_20:			; Shift left until the most significant bit becomes 1
+__i16tof32_20:			; Shift left until the MSB becomes 1
 	decb
 	asl	@long+2
 	rola
-	bcc	__i16tof32_20	; loop until C=1 (hidden bit check)
+	bcc	__i16tof32_20	; loop until C=1
+				; MSB overflows to C, but it’s a hidden bit
 __i16tof32_21:
-	lsrb
-	rora			; shifted over 1bit, fix it.
-	ror	@long+2
+	asl	__sign
+	rorb
+	rora
+	ror	@long+2		; shifted over 1bit, fix it.
 	staa	@long+1
-	orab	__sign
 	stab	@long
 	clr	@long+3
 	rts
