@@ -47,6 +47,11 @@ bool is_boolean_result(Node *node)
     return 0;
 }
 
+bool is_byte(Node *node)
+{
+  return (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL);
+}
+
 static int isNUM(Node *node)
 {
   return node->kind==ND_NUM;
@@ -90,7 +95,7 @@ static int gen_jump_if_false_8bit(Node *node,char *if_false)
   Node *rhs = node->rhs;
 
   if (isVAR(node)) {
-    if (node->ty->kind != TY_CHAR)
+    if (!is_byte(node))
       return 0;				// what's happen?
     load_var(node);
 //  This tstb is unnecessary in the current codegen.c:load_var(),
@@ -197,7 +202,7 @@ int gen_jump_if_false(Node *node,char *if_false)
     return gen_jump_if_true(node->lhs,if_false);
   }
 
-  if (isVAR(node) && node->ty->kind==TY_CHAR)
+  if (isVAR(node) && is_byte(node))
     return gen_jump_if_false_8bit(node,if_false);
 
   if (isVAR(node) && node->ty->kind==TY_INT) {
@@ -451,7 +456,7 @@ static int gen_jump_if_true_8bit(Node *node,char *if_true)
   Node *rhs = node->rhs;
 
   if (isVAR(node)) {
-    if (node->ty->kind != TY_CHAR)
+    if (!is_byte(node))
       return 0;				// what's happen?
     load_var(node);
 //  This tstb is unnecessary in the current codegen.c:load_var(),
@@ -555,7 +560,7 @@ int gen_jump_if_true(Node *node,char *if_true)
     return gen_jump_if_false(node->lhs,if_true);
   }
 
-  if (isVAR(node) && node->ty->kind==TY_CHAR)
+  if (isVAR(node) && is_byte(node))
     return gen_jump_if_true_8bit(node,if_true);
 
   if(!is_compare(node)) {
