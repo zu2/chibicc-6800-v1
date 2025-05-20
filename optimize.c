@@ -212,17 +212,25 @@ Node *optimize_expr(Node *node)
       uint64_t val = node->lhs->val;
       switch (node->ty->size) {
       case 1:
-	val =  node->ty->is_unsigned ? (uint8_t)val : (int8_t)val;
-	break;
+        val =  node->ty->is_unsigned ? (uint8_t)val : (int8_t)val;
+        break;
       case 2:
-	val =  node->ty->is_unsigned ? (uint16_t)val : (int16_t)val;
-	break;
+        val =  node->ty->is_unsigned ? (uint16_t)val : (int16_t)val;
+        break;
       case 4:
-	val =  node->ty->is_unsigned ? (uint32_t)val : (int32_t)val;
-	break;
+        val =  node->ty->is_unsigned ? (uint32_t)val : (int32_t)val;
+        break;
       }
       new->val = val;
       new->ty  = node->ty;
+      return new;
+    }
+    if (is_flonum(node->ty)
+    &&  node->lhs->kind==ND_NUM
+    &&  is_integer(node->lhs->ty)) {
+      Node *new = new_copy(node->lhs);
+      new->fval = node->lhs->val;
+      new->ty   = node->ty;
       return new;
     }
     return node;
