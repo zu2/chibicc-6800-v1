@@ -11,6 +11,7 @@
 #define	M_TWOPI	0x1.921fb54p+2f	// 6.2831855f	2*pi
 #define M_PI_2	0x1.921fb54p+0f	// 1.5707964f	pi/2
 #define M_PI_4	0x1.921fb54p-1f	// 0.7853982f	pi/4
+#define	M_PI_8	0x1.921fb54p-2f	// 0.3926991f	pi/8
 #define M_1_PI	0x1.45f307p-2f	// 0.3183099f	1/pi
 #define M_2_PI	0x1.45f307p-1f	// 0.6366198f	2/pi
 #define M_E  	0x1.bc55864p+0f // 2.7182817f	e
