@@ -149,6 +149,10 @@ static void load32x(int off)
   if (opt_O == 's') {
     if (off==0) {
       println("\tjsr __load32x");
+    }else if (off<=255) {
+      println("\tldab #<%d",off);
+      println("\tjsr __load32bx");
+      IX_Dest = IX_None;
     }else{
       ldd_i(off);
       println("\tjsr __load32dx");
@@ -3515,6 +3519,7 @@ static void gen_stmt(Node *node)
   }
   case ND_FOR: {
     Node *cond = node->cond;
+    int64_t val;
     char if_false[30];
     int c = count();
     sprintf(if_false,"_%s",node->brk_label);
@@ -3525,11 +3530,17 @@ static void gen_stmt(Node *node)
     if (cond) {
       cond->bool_result_unused = true;
       cond = optimize_expr(cond);
-      if (!gen_jump_if_false(cond,if_false)){
-        gen_expr(cond);
-        if (!is_compare_or_not(cond))
-          cmp_zero(cond->ty);
-        println("\tjeq %s", if_false);
+      if (is_integer_constant(cond,&val)) {
+        if (val==0) {
+          println("\tjmp %s", if_false);
+        }
+      }else{
+        if (!gen_jump_if_false(cond,if_false)){
+          gen_expr(cond);
+          if (!is_compare_or_not(cond))
+            cmp_zero(cond->ty);
+          println("\tjeq %s", if_false);
+        }
       }
     }
     gen_stmt(node->then);
@@ -3548,21 +3559,33 @@ static void gen_stmt(Node *node)
   case ND_DO: {
     Node *cond = node->cond;
     int c = count();
-    println("_L_begin_%d:", c);
+    int64_t val;
+    char L_begin[30];
+    sprintf(L_begin,"_L_begin_%d", c);
+    println("%s:",L_begin);
     IX_Dest = IX_None;
     gen_stmt(node->then);
     println("_%s:", node->cont_label);
     stmt_dump(cond->loc);
     cond->bool_result_unused = true;
     cond = optimize_expr(cond);
-    gen_expr(cond);
-    if (!is_compare_or_not(cond))
-      cmp_zero(cond->ty);
-    println("\tjne _L_begin_%d", c);
+    if (is_integer_constant(cond,&val)) {
+      if (val!=0) {
+        println("\tjmp %s", L_begin);
+        IX_Dest = IX_None;
+      }
+    }else{
+      if (!gen_jump_if_true(cond,L_begin)){
+        gen_expr(cond);
+        if (!is_compare_or_not(cond))
+          cmp_zero(cond->ty);
+        println("\tjne %s", L_begin);
+      }
+      IX_Dest = IX_None;
+    }
     println("_%s:", node->brk_label);
-    IX_Dest = IX_None;
     return;
-  }
+  } // ND_DO
   case ND_SWITCH: {
     bool has_case_ranges = 0;
 
