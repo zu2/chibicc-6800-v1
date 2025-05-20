@@ -4,67 +4,50 @@
 
 #include "common.h"
 
-int
-cmpf(float f, float g)
-{
-	int i;
-	unsigned char *p = (unsigned char *)&f;
-	unsigned char *q = (unsigned char *)&g;
-
-	puthexf(f);putchar(' ');
-	puthexf(g);putchar('\n');
-#if 0
-	for (i=0; i<4; ++i,++p,++q){
-		if (*p != *q){
-			return	i+1;
-		}
-	}
-#endif
-	return 0;
-}
-
-
-
 int main(int argc, char **argv)
 {
 	float	f;
 
-	putstr("float to unsigned long:\n");
 	f = 1.0;
-	if ((unsigned long)f != 1)
+	if ((unsigned long)f != 1UL)
 		return	1;
 	f = 2.0;
-	if ((unsigned long)f != 2)
+	if ((unsigned long)f != 2UL)
 		return	2;
 	f = 1024.0;
-	if ((unsigned long)f != 1024)
+	if ((unsigned long)f != 1024UL)
 		return	10;
 	f = 32767.0;
-	if ((unsigned long)f != 32767)
+	if ((unsigned long)f != 32767UL)
 		return	20;
 	f = 32768.0;
-	if ((unsigned long)f != 32768L)
+	if ((unsigned long)f != 32768UL)
 		return	21;
 	f = 65535.0;
-	if ((unsigned long)f != 65535L)
+	if ((unsigned long)f != 65535UL)
 		return	30;
 	f = 65536.0;
-	if ((unsigned long)f != 65536L)
+	if ((unsigned long)f != 65536UL)
 		return	31;
 	f = 65537.0;
-	if ((unsigned long)f != 65537L)
+	if ((unsigned long)f != 65537UL)
 		return	32;
 	f = 16777215.0;
-	if ((unsigned long)f != 16777215L)
+	if ((unsigned long)f != 16777215UL)
 		return	40;
 	f = 16777216.0;
-	if ((unsigned long)f != 16777216L)
+	if ((unsigned long)f != 16777216UL)
 		return	41;
-	f = 4294967295.0;
-	if ((unsigned long)f != 4294967295L)
-		return	42;
+  f = 2147483647.0;     // 2147483647.0 is rounded to 2147483648.0 in float.
+	if ((unsigned long)f != 2147483648UL)
+		return	41;
+	f = 4294967295.0;     // 4294967295.0 is rounded to 4294967296.0 in float.
+	if ((unsigned long)f != 0L)    // 4294967296.0 → 0UL
+		return	48;
+	f = 4294967296.0;
+	if ((unsigned long)f != 4294967296UL)   // Undefined Behavior
+		return	49;
 
-	putstr("float to long:\n");
 	f = 1.0;
 	if ((long)f != 1)
 		return	51;
@@ -126,7 +109,7 @@ int main(int argc, char **argv)
 	if ((long)f != 2147483520)
 		return	94;
 	f = 2147483648.0;
-	if ((long)f != 2147483647)
+	if ((long)f != 2147483647)   // Undefined behavior
 		return	95;
 	f = -2147483520.0;
 	if ((long)f != -2147483520)
@@ -135,7 +118,6 @@ int main(int argc, char **argv)
 	if ((long)f != -2147483648)
 		return	98;
 
-	putstr("int to float\n");
 	f = 0;
 	if (f != 0.0)
 		return	100;
@@ -161,7 +143,6 @@ int main(int argc, char **argv)
 	if (f != -32768.0)
 		return	122;
 
-	putstr("long to float\n");
 	f = 1L;
 	if ((long)f != 1)
 		return	151;
@@ -223,7 +204,7 @@ int main(int argc, char **argv)
 	if ((long)f != 2147483520)
 		return	194;
 	f = 2147483648L;
-	if ((long)f != 2147483648)
+	if ((long)f != 2147483647L)     // undefined behavior
 		return	195;
 	f = -2147483520L;
 	if ((long)f != -2147483520)
@@ -231,10 +212,6 @@ int main(int argc, char **argv)
 	f = -2147483648L;
 	if ((long)f != -2147483648)
 		return	198;
-#if	0
-	putstr("1.0f:\t");puthexf(f);putchar('\n');
-	putstr("(unsigned long)1.0f:\t");puthexl((unsigned long)1.0);putchar('\n');
-#endif
 
 	return 0;
 }
