@@ -348,37 +348,23 @@ __f32tou32:
 	asla
 	rolb			; B = exp
 	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
-	bcc	__f32tou32_1
-	jmp	__u32zero
+	jcs	__u32zero
 __f32tou32_1:
-	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
-	bcs	__f32tou32_2
-	jmp	__u32ffffffff	; return 4,294,967,295
+;	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
+;	bcs	__f32tou32_2
+;	jmp	__u32ffffffff	; return 4,294,967,295
 __f32tou32_2:
 	clr	0,x
 	ldaa	1,x		; recover hidden bit
 	ora	#$80
 	staa	1,x
+;
 	subb	#$96		; TODO:
 	beq	__f32tou32_ret
-	bcs	__f32tou32_4
-__f32tou32_3:
-	asl	3,x
-	rol	2,x
-	rol	1,x
-	rol	0,x
-	decb
-	bne	__f32tou32_3
-__f32tou32_ret:
-	rts
+	jcc	__shl32
 __f32tou32_4:
-	lsr	0,x
-	ror	1,x
-	ror	2,x
-	ror	3,x
-	incb
-	bne	__f32tou32_4
-	rts
+	negb
+	jmp	__shr32u
 ;
 __f32zerox:
 	ldab	__sign
@@ -388,6 +374,7 @@ __f32zerox:
 	stab	1,x
 	stab	2,x
 	stab	3,x
+__f32tou32_ret:
 	rts
 __f32zeros:
 	bsr	__f32zero
