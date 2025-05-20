@@ -831,8 +831,8 @@ void load_var(Node *node)
       break;
     case 4:
       if (opt_O == 's') {
-	println("\tldx #_%s",node->var->name);
-	println("\tjsr __load32x");
+        println("\tldx #_%s",node->var->name);
+        println("\tjsr __load32x");
       }else{
         println("\tldx _%s+2",node->var->name);
         println("\tstx @long+2");
@@ -1846,11 +1846,14 @@ int gen_direct_shr_long(Node *node)
 //
 static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
 {
+  if (opt_O == 's')
+    return 0;
   switch(rhs->kind){
   case ND_NUM: {
     switch (rhs->ty->kind) {
     case TY_LONG:
-      if (test) return 1;
+      if (test)
+        return 1;
       // TODO: Branching with strcmp is not pretty. think it later.
       if (strcmp(opb,"andb")==0)
         return gen_direct_long_and(rhs->val,opa,opb);
