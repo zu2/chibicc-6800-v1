@@ -126,24 +126,6 @@ __f32iszerox:
 iszerox_ret:
 	rts
 ;
-;	negate 32bit long
-;
-__negi32:
-	ldx	#long
-__negi32x:
-	com	0,x	
-	com	1,x	
-	com	2,x	
-	neg	3,x	
-	bne	__negi32xret
-	inc	2,x
-	bne	__negi32xret
-	inc	1,x
-	bne	__negi32xret
-	inc	0,x
-__negi32xret:
-	rts
-;
 ;	int16 to float32
 ;
 __i16tof32:
@@ -230,7 +212,7 @@ __i32tof32_1:
 	andb	#$80
 	stab	__sign		; b7:sign bit
 	bpl	__i32tof32_2
-	jsr	__negi32x	; negate (0-3,x)
+	jsr	__neg32x	; negate (0-3,x)
 __i32tof32_2:
 	ldaa	0,x
 	beq	__i32tof32_left	; need left shift
@@ -578,7 +560,7 @@ __f32toi32_3:
 	staa	3,x
 __f32toi32_ret:
 	tst	__sign
-	jmi	__negi32x	; negate (0-3,x) and return
+	jmi	__neg32x	; negate (0-3,x) and return
 __f32toi32_ret2:
 	rts
 __f32toi32_4:
