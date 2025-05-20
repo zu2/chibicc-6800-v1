@@ -1478,11 +1478,11 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
   } // ND_NUM
   case ND_VAR: {
     if (node->var->ty->kind != TY_VLA ){
-      if (!test_addr_x(node)) return 0;
       if(node->var->is_local){
         if (node->ty->kind==TY_ARRAY) {
 	        return 0;
         }
+        if (!test_addr_x(node)) return 0;
         int off = gen_addr_x(node,true);
         if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL){
           if (test) {
@@ -1561,6 +1561,21 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
     if (node->ty->kind      == TY_PTR
     &&  gen_direct_sub(node->lhs, opb, opa, test))
       return 1;
+    // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) m +0 )
+    if (node->ty->kind == TY_PTR
+    &&  node->lhs->kind == ND_VAR
+    &&  node->lhs->var->is_local
+    &&  node->lhs->ty->kind == TY_ARRAY){
+       if (test)
+         return 1;
+      println("\taddb @bp+1");
+      println("\tadca @bp");
+      if (node->lhs->var->offset){
+        println("\taddb #<%d",node->lhs->var->offset);
+        println("\tadca #>%d",node->lhs->var->offset);
+      }
+      return 1;
+    }
     return 0;
   default:
     return 0;
