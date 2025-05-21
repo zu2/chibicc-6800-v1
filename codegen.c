@@ -244,6 +244,25 @@ bool is_global_var(Node *node)
 }
 
 //
+// node is global variable?
+//
+bool is_global_array(Node *node)
+{
+   if (node->kind != ND_VAR)
+     return 0;
+   if (node->var->ty->kind == TY_VLA)
+     return 0;
+   if (node->var->is_local)
+     return 0;
+   if (node->ty->kind == TY_FUNC)
+     return 0;
+   if (node->ty->kind == TY_ARRAY)
+     return 1;
+
+   return 0;
+}
+
+//
 // node is global variable or global array with constant subscript
 //
 bool is_global_var_or_array(Node *node)
@@ -256,7 +275,7 @@ bool is_global_var_or_array(Node *node)
      return 0;
    if (node->ty->kind == TY_FUNC)
      return 0;
-   if (node->ty->kind == TY_ARRAY) {
+   if (node->ty->kind == TY_ARRAY) {  // TODO:XXX
      return 0;
    }
 
@@ -645,11 +664,11 @@ int test_addr_x(Node *node)
       &&  lhs->lhs->ty->kind == TY_PTR
       &&  lhs->lhs->lhs->kind == ND_VAR
       &&  lhs->lhs->lhs->ty->kind == TY_ARRAY
-      &&  !lhs->lhs->lhs->var->is_local
+//    &&  !lhs->lhs->lhs->var->is_local
       &&  lhs->rhs->kind == ND_CAST
       &&  lhs->rhs->ty->kind == TY_PTR
       &&  lhs->rhs->lhs->kind == ND_NUM) {
-	 return test_addr_x(lhs->lhs->lhs);
+        return test_addr_x(lhs->lhs->lhs);
       }
       if (lhs->lhs->kind == ND_CAST
       &&  lhs->lhs->ty->kind == TY_PTR
@@ -659,7 +678,7 @@ int test_addr_x(Node *node)
       &&  lhs->rhs->ty->kind == TY_PTR
       &&  lhs->rhs->lhs->kind == ND_NUM
       &&  lhs->rhs->lhs->val) { //  * lhs->rhs->ty->size < 252) {
-	 return test_addr_x(lhs->lhs->lhs);
+         return test_addr_x(lhs->lhs->lhs);
       }
       return 0;
     case ND_VAR:
@@ -1533,6 +1552,8 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
   case ND_DEREF:
     switch(node->lhs->kind){
     case ND_CAST:
+      if (!is_integer(node->ty) || node->ty->kind==TY_LONG)
+        return 0;
       if (node->lhs->ty->kind  == TY_PTR
       &&  node->lhs->lhs->kind == ND_NUM
       &&  is_integer(node->lhs->lhs->ty)) {
@@ -1551,6 +1572,48 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
           return 1;
         }
       }
+      break;
+    case ND_ADD: {
+      // gloval array[const]
+      // (ND_DEREF ty_uchar
+      //   (+ (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) ua1 global)) 
+      //      (ND_CAST TY_PTR(10) 0)))
+      Node *lhs = node->lhs->lhs;
+      Node *rhs = node->lhs->rhs;
+      int64_t val;
+      if (lhs->kind == ND_CAST
+      &&  lhs->ty->kind  == TY_PTR
+      &&  is_global_array(lhs->lhs)
+      &&  rhs->kind == ND_CAST
+      &&  rhs->ty->kind == TY_PTR
+      &&  is_integer_constant(rhs->lhs,&val)) {
+        if (test) return 1;
+        val *= lhs->lhs->var->ty->size;
+        switch(node->ty->kind) {
+        case TY_BOOL:
+        case TY_CHAR:
+          if (val==0) {
+            println("\t%s _%s",opb,lhs->lhs->var->name);
+          }else{
+            println("\t%s _%s+%ld",opb,lhs->lhs->var->name,val);
+          }
+          return 1;
+        case TY_SHORT:
+        case TY_INT:
+        case TY_ENUM:
+        case TY_PTR:
+          if (val==0) {
+            println("\t%s _%s+1",opb,lhs->lhs->var->name);
+            println("\t%s _%s",  opa,lhs->lhs->var->name);
+          }else{
+            println("\t%s _%s+%ld+1",opb,lhs->lhs->var->name,val);
+            println("\t%s _%s+%ld",  opa,lhs->lhs->var->name,val);
+          }
+          return 1;
+        }
+      }
+     }
+     break;
     }
     return 0;
   case ND_CAST:
@@ -2465,10 +2528,9 @@ void gen_expr(Node *node) {
     }
     if ((ty = is_integer_constant(node->rhs,&val))
     &&  ty->size <= 2
-    &&  is_integer(node->rhs->ty)
+    &&  is_integer(node->ty)
     &&  node->ty->size <= 2) {
       if (can_direct(node->lhs)) {
-        println("; can_direct");
         gen_direct(node->rhs,"ldab","ldaa");
         gen_direct(node->lhs,"stab","staa");
       }else if (test_addr_x(node->lhs)){
