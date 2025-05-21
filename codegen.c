@@ -71,6 +71,13 @@ static void ins(int n)
     println("\tins");
   }
 }
+static void des(int n)
+{
+  depth -= n;
+  while (n-->0) {
+    println("\tdes");
+  }
+}
 
 static void ldd_i(int n)
 {
@@ -468,9 +475,9 @@ int gen_addr_x(Node *node,bool save_d)
     // Variable-length array, which is always local.
     if (node->var->ty->kind == TY_VLA){
       if (node->var->offset<=254) {
-	ldx_bp();
+        ldx_bp();
         println("\tldx %d,x	; gen_addr_x():TY_LDA ",node->var->offset);
-	IX_Dest = IX_None;
+        IX_Dest = IX_None;
         return 0;
       }
       assert(0); // TODO:
@@ -478,8 +485,8 @@ int gen_addr_x(Node *node,bool save_d)
     // Local variable
     if (node->var->is_local) {
       if (node->var->offset <= 254){
-	ldx_bp();
-	return node->var->offset;
+        ldx_bp();
+        return node->var->offset;
       }
       if (save_d)
         push();
@@ -507,18 +514,18 @@ int gen_addr_x(Node *node,bool save_d)
         if (off < 254) {
           ldx_bp();
           return  off;
-	}
-	break; // fall thru
+        }
+        break; // fall thru
       }else{
-	println("\tldx	#_%s+%d",lhs->var->name,node->member->offset);
-	IX_Dest = IX_None;
-	return 0;
+        println("\tldx	#_%s+%d",lhs->var->name,node->member->offset);
+        IX_Dest = IX_None;
+        return 0;
       }
     }
     if (lhs->kind == ND_DEREF && test_addr_x(lhs->lhs)) {
       off = gen_addr_x(lhs->lhs,true);
       if (is_var_array(lhs->lhs)) {
-	return off;
+        return off;
       }else{
         println("\tldx %d,x",off);
         IX_Dest = IX_None;
@@ -536,6 +543,7 @@ int gen_addr_x(Node *node,bool save_d)
     case ND_VAR:
       off = gen_addr_x(lhs,save_d);
       if (is_var_array(lhs)) {
+        assert(0);
         return off;
       }
       println("\tldx %d,x",off);
@@ -639,7 +647,7 @@ int test_addr_x(Node *node)
     }
     // maybe Global variable
     // Array
-    if (node->ty->kind == TY_FUNC) {
+    if (node->ty->kind == TY_ARRAY) {
       return 0;
     }
     return 1;
@@ -3969,111 +3977,78 @@ static void emit_text(Obj *prog) {
     }
 
     // only one argument pass via Acc A,B, @long
-    // Save passed-by-register arguments to the stack
-    int gp = 0;
-    // 返り値がSTRUCT/UNIONの場合は、レジスタ引数に返り値のアドレスが入るので
-    // 関数引数はレジスタに入らない
-    switch (fn->ty->return_ty->kind){
-    case TY_STRUCT:
-    case TY_UNION:
-      gp++;
-    }
-    for (Obj *var = fn->params; var; var = var->next) {
-      if (var->offset > 0)
-        continue;
-
-      Type *ty = var->ty;
-
-      switch (ty->kind) {
-      case TY_STRUCT:
-      case TY_UNION:
-	break;
-      case TY_DOUBLE:
-      case TY_LDOUBLE:
-	assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
-	break;
-      default:
-	gp++;
-      }
-    }
-    int save_reg_param = 0;
+    // save passed-by-register arguments to the stack
+    int reg_param_size = 0;
     // 返り値がSTRUCT/UNIONの場合は、レジスタ引数に返り値のアドレスが入る
     switch (fn->ty->return_ty->kind){
     case TY_STRUCT:
     case TY_UNION:
-      save_reg_param = 1;
-      break;
-    default:
-      for (Obj *var = fn->params; var; var = var->next) {
-        if (var->reg_param) {
-	  switch(var->ty->kind){
-	  case TY_SHORT:
-	  case TY_INT:
-	  case TY_PTR:
-	  case TY_ENUM:
-  	    save_reg_param = 1;
-  	    break;
-	  }
- 	}
-      }
-    }
-    // make base pointer
-    if (save_reg_param)
-      println("\tstaa @tmp1");
-    println("\tldaa @bp+1");			// push old @bp
-    println("\tpsha");
-    println("\tldaa @bp");
-    println("\tpsha");
-    if (save_reg_param)
-      println("\tldaa @tmp1");
-    int reg_param_size = 0;
-    switch (fn->ty->return_ty->kind){
-    case TY_STRUCT:
-    case TY_UNION:
-      println("\tpshb");
-      println("\tpsha");
       reg_param_size = 2;
       break;
     default:
       for (Obj *var = fn->params; var; var = var->next) {
-        if (var->reg_param){ // push argment pass by register
+        if (var->reg_param) {
           reg_param_size = var->ty->size;
-  	  switch(var->ty->kind){
-          case TY_CHAR:
-    	    println("\tpshb");
-	    break;
-	  case TY_SHORT:
-	  case TY_INT:
-	  case TY_PTR:
-	  case TY_ENUM:
-    	    println("\tpshb");
-	    println("\tpsha");
-	    break;
-          case TY_FLOAT:
-          case TY_LONG:
-	    pushl();
-	    break;
-	  }
-	}
+          break;
+        }
+      }
+    }
+    if (opt_O == 's') {
+      println("\tjsr __prologue_%d",reg_param_size);
+    } else {
+      if (reg_param_size)
+        println("\tstaa @tmp1");
+      println("\tldaa @bp+1");			// push old @bp
+      println("\tpsha");
+      println("\tldaa @bp");
+      println("\tpsha");
+      if (reg_param_size)
+        println("\tldaa @tmp1");
+
+      switch (reg_param_size){
+      case 0:
+        break;
+      case 1:
+        push1();
+        break;
+      case 2:
+        push();
+        break;
+      case 4:
+        pushl();
+        break;
+      default:
+        assert(0);
       }
     }
     // make base pointer
     if (fn->stack_size<=5){			// 5 for speed, 13 for size
-      for(int i=0; i<fn->stack_size; i++)
-        println("\tdes");			// 4 1	
-      println("\ttsx");				// 4 1
+      des(fn->stack_size);
+      println("\ttsx");	 	      // 4 1
       println("\tstx @bp");			// 5 2
       IX_Dest = IX_BP;
+    }else if (opt_O == 's') {
+      println("\tsts @bp");
+      if (fn->stack_size-1<=255) {
+        println("\tldab #%u",fn->stack_size-1);
+        println("\tjsr __sub_bp_b");
+      }else{
+        println("\tldab #<%u",fn->stack_size-1);
+        println("\tldaa #>%u",fn->stack_size-1);
+        println("\tjsr __sub_bp_d");
+      } 
+      println("\ttxs");
+      IX_Dest = IX_BP;
     }else{					// make new bp
-      println("\tsts @bp");			// 5 2	total 31cyc,17bytes
-      println("\tldab @bp+1");			// 3 2
-      println("\tldaa @bp");			// 3 2
+      println("\tsts @bp");     // 5 2	total 31cyc,17bytes
+      println("\tldab @bp+1");	// 3 2
+      println("\tldaa @bp");		// 3 2
       println("\tsubb #<%u",fn->stack_size-1);	// 2 2
       println("\tsbca #>%u",fn->stack_size-1);	// 2 2
-      println("\tstab @bp+1");			// 4 2
-      println("\tstaa @bp");			// 4 2
+      println("\tstab @bp+1");	// 4 2
+      println("\tstaa @bp");		// 4 2
       println("\tldx @bp");			// 4 2
-      println("\ttxs");				// 4 1
+      println("\ttxs");         // 4 1
       IX_Dest = IX_BP;
     }
     depth = 0;
@@ -4123,31 +4098,36 @@ no_params_locals:
         for(int i=0; i<npops; i++)
           println("\tins");
       }else{
-	println("\tldx @bp");
+        println("\tldx @bp");
         for(int i=0; i<abs(npops)-1; i++)
           println("\tdex");	// if use des, be corrupted when interrupt.
         println("\ttxs");
       }
-    }else{
+    }else {
       switch (fn->ty->return_ty->kind){
       case TY_VOID:
       case TY_LONG:
       case TY_FLOAT:
-	break;
+        break;
       default:
         println("\tpshb");
       }
-      println("\tldab @bp+1");					// 3 2 // 18 12
-      println("\taddb #<%u",fn->stack_size+reg_param_size-1);	// 2 2
-      println("\tstab @bp+1");					// 4 2
-      println("\tldab @bp");					// 3 2
-      println("\tadcb #>%u",fn->stack_size+reg_param_size-1);	// 2 2
-      println("\tstab @bp");					// 4 2
+      if (opt_O == 's' && fn->stack_size+reg_param_size-1 < 256) {
+        println("\tldab #%u",fn->stack_size+reg_param_size-1);
+        println("\tjsr __add_bp_b");
+      }else{
+        println("\tldab @bp+1");					// 3 2 // 18 12
+        println("\taddb #<%u",fn->stack_size+reg_param_size-1);	// 2 2
+        println("\tstab @bp+1");					// 4 2
+        println("\tldab @bp");			      // 3 2
+        println("\tadcb #>%u",fn->stack_size+reg_param_size-1);	// 2 2
+        println("\tstab @bp");					  // 4 2
+      }
       switch (fn->ty->return_ty->kind){
       case TY_VOID:
       case TY_LONG:
       case TY_FLOAT:
-	break;
+        break;
       default:
         println("\tpulb");
       }
