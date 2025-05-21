@@ -125,6 +125,7 @@ Token *preprocess(Token *tok);
 int64_t eval2(Node *node, char ***label);
 int64_t eval(Node *node);
 Node *new_copy(Node *node);
+Node *new_num(int64_t val, Token *tok);
 bool is_const_expr(Node *node);
 
 // Variable or function

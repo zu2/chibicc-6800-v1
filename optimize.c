@@ -206,6 +206,12 @@ Node *optimize_expr(Node *node)
     return new;
   case ND_CAST: {
     node->lhs = optimize_expr(node->lhs);
+    if (node->lhs->kind == ND_CAST) {
+      if (node->ty->kind == TY_PTR
+      &&  node->lhs->ty->kind == TY_PTR) {
+        node = node->lhs;
+      }
+    }
     if (node->ty->kind==TY_BOOL
     &&  is_boolean_result(node->lhs)){
       return node->lhs;
@@ -271,7 +277,29 @@ Node *optimize_expr(Node *node)
   case ND_LOGOR:
     node = optimize_lr(node);
     return optimize_const_expr(node);
-  case ND_ADD:
+  case ND_ADD: {
+    int64_t val;
+    int64_t val2;
+    Node *new;
+
+    node = optimize_lr_swap(node);
+    if (is_integer_constant(node->lhs,&val)
+    &&  is_integer_constant(node->rhs,&val)) {
+      return optimize_const_expr(node);
+    }
+    if (node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->lhs,&val)
+    &&  node->rhs->kind == ND_CAST
+    &&  node->rhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->rhs->lhs,&val2)) {
+      new = new_copy(node->lhs);
+      new->lhs = new_num(val+val2,node->tok);
+      new->lhs->ty = node->lhs->lhs->ty;
+      return new;
+    }
+    return node;
+  }
   case ND_MUL: {
     int64_t val;
 

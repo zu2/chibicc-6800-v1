@@ -219,7 +219,7 @@ static Node *new_unary(NodeKind kind, Node *expr, Token *tok) {
   return node;
 }
 
-static Node *new_num(int64_t val, Token *tok) {
+Node *new_num(int64_t val, Token *tok) {
   Node *node = new_node(ND_NUM, tok);
   node->val = val;
   return node;
