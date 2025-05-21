@@ -19,7 +19,7 @@ int	sum(int n)
 	int	sum;
 
 	for (sum=0,i=0; i<n; i++){
-		sum += buf[0];
+		sum += buf[i];
 	}
 
 	return	sum;
