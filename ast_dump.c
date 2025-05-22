@@ -136,7 +136,7 @@ static void ast_dump(Node *node)
     ast_dump_binary(node,",");
     return;
   case ND_MEMBER:
-    printout("(ND_MEMBER ");
+    printout("(ND_MEMBER %s ",type_str(node));
     ast_dump(node->lhs);
     printout(" ");
     printout("+%d)",node->member->offset);
