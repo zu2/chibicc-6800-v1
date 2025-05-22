@@ -364,7 +364,7 @@ static Obj *new_gvar(char *name, Type *ty) {
 
 static char *new_unique_name(void) {
   static int id = 0;
-  return format("L__%d", id++);
+  return format("_L_%d", id++);
 }
 
 static Obj *new_anon_gvar(Type *ty) {

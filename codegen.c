@@ -1210,14 +1210,14 @@ static void cast(Type *from, Type *to) {
   if (to->kind == TY_BOOL) {
     cmp_zero(from);
     int c = count();
-    println("\tbeq _L_false_%d", c);
+    println("\tbeq L_false_%d", c);
     println("\tclra");
     println("\tldab #1");
-    println("\tbra _L_end_%d", c);
-    println("_L_false_%d:", c);
+    println("\tbra L_end_%d", c);
+    println("L_false_%d:", c);
     println("\tclra");
     println("\tclrb");
-    println("_L_end_%d:", c);
+    println("L_end_%d:", c);
     return;
   }
 
@@ -1557,14 +1557,14 @@ static void builtin_alloca(void) {
   //     so the original stack data must be copied.
   // Push the data from __alloca_bottom to @tmp2 onto the new SP
   println("\tldx 0,x");		// get old SP bottom
-  println("_L_%d:",c1);
+  println("L_%d:",c1);
   println("\tcpx @tmp2");
-  println("\tbeq _L_%d",c2);
+  println("\tbeq L_%d",c2);
   println("\tldab 0,x");
   println("\tpshb");
   println("\tdex");
-  println("\tbra _L_%d",c1);
-  println("_L_%d:",c2);
+  println("\tbra L_%d",c1);
+  println("L_%d:",c2);
 
   println("; Move alloca_bottom pointer.");
   println("\tldx @tmp1");
@@ -1999,9 +1999,9 @@ int gen_direct_shr_long(Node *node)
     if (!lhs->ty->is_unsigned) {
       int c = count();
       println("\ttst @long");
-      println("\tbpl _L_%d",c);
+      println("\tbpl L_%d",c);
       println("\tdeca");
-      println("_L_%d:",c);
+      println("L_%d:",c);
     }
   }
   switch (rhs->val) {
@@ -2736,11 +2736,11 @@ void gen_expr(Node *node) {
       println("\tldab #%d",node->var->ty->size);
       println("\tclra");
       int c = count();
-      println("_L_memzero_%d:", c);
+      println("L_memzero_%d:", c);
       println("\tstaa %d,x",node->var->offset);
       println("\tinx");
       println("\tdecb");
-      println("\tbne _L_memzero_%d", c);
+      println("\tbne L_memzero_%d", c);
       IX_Dest = IX_None;
     } else {
       println("\tldab @bp+1");
@@ -2751,11 +2751,11 @@ void gen_expr(Node *node) {
       println("\tldab #%d",node->var->ty->size);
       println("\tclra");
       int c = count();
-      println("_L_memzero_%d:", c);
+      println("L_memzero_%d:", c);
       println("\tstaa 0,x");
       println("\tinx");
       println("\tdecb");
-      println("\tbne _L_memzero_%d", c);
+      println("\tbne L_memzero_%d", c);
       IX_Dest = IX_None;
     }
     return;
@@ -2763,8 +2763,8 @@ void gen_expr(Node *node) {
     int c = count();
     char L_else[30];
     char L_end[30];
-    sprintf(L_else,"_L_else_%d",c);
-    sprintf(L_end, "_L_end_%d",c);
+    sprintf(L_else,"L_else_%d",c);
+    sprintf(L_end, "L_end_%d",c);
 
     Node *cond;
     node->cond->bool_result_unused = true;
@@ -2795,14 +2795,14 @@ void gen_expr(Node *node) {
     }
     cmp_zero(node->lhs->ty);
     int c = count();
-    println("\tbeq _L_false_%d", c);
+    println("\tbeq L_false_%d", c);
     println("\tclra");
     println("\tclrb");
-    println("\tbra _L_end_%d", c);
-    println("_L_false_%d:", c);
+    println("\tbra L_end_%d", c);
+    println("L_false_%d:", c);
     println("\tclra");
     println("\tldab #1");
-    println("_L_end_%d:", c);
+    println("L_end_%d:", c);
     return;
   }
   case ND_BITNOT:
@@ -2831,8 +2831,8 @@ void gen_expr(Node *node) {
     int need_bool = 0;
     char L_false[32];
     char L_end[32];
-    sprintf(L_false,"_L_false_%d",c);
-    sprintf(L_end,  "_L_end_%d",c);
+    sprintf(L_false,"L_false_%d",c);
+    sprintf(L_end,  "L_end_%d",c);
 
     if (gen_jump_if_false(node->lhs,L_false)){
       need_bool = 1;
@@ -2866,7 +2866,7 @@ void gen_expr(Node *node) {
       println("\tclra");
       println("\tclrb");
     }
-    println("_L_end_%d:", c);
+    println("L_end_%d:", c);
     IX_Dest = IX_None;
     return;
   }
@@ -2874,8 +2874,8 @@ void gen_expr(Node *node) {
     int c = count();
     int need_bool = 0;
     char L_true[32], L_end[32];
-    sprintf(L_true,"_L_true_%d",c);
-    sprintf(L_end, "_L_end_%d" ,c);
+    sprintf(L_true,"L_true_%d",c);
+    sprintf(L_end, "L_end_%d" ,c);
 
     if (gen_jump_if_true(node->lhs,L_true)) {
       need_bool = 1;
@@ -2968,8 +2968,8 @@ void gen_expr(Node *node) {
       char L_cmpf1[32];
       char L_cmpf2[32];
       int c = count();
-      sprintf(L_cmpf1, "_L_%d_1_cmpf",c);
-      sprintf(L_cmpf2, "_L_%d_2_cmpf",c);
+      sprintf(L_cmpf1, "L_%d_1_cmpf",c);
+      sprintf(L_cmpf2, "L_%d_2_cmpf",c);
       println("\tjsr __cmpf32tos");	// @long cmp  TOS");
       println("\tbcc %s",L_cmpf1);	// when carry=1, compare NaN
       if (node->kind == ND_NE) {
@@ -3538,10 +3538,10 @@ static void gen_stmt(Node *node)
     char L_else[32];
     char L_end[32];
     if (node->els){
-      sprintf(L_else,"_L_else_%d",c);
-      sprintf(L_end, "_L_end_%d"  ,c);
+      sprintf(L_else,"L_else_%d",c);
+      sprintf(L_end, "L_end_%d"  ,c);
     }else{
-      sprintf(L_end, "_L_end_%d"  ,c);
+      sprintf(L_end, "L_end_%d"  ,c);
       strcpy(L_else,L_end);
     }
     cond->bool_result_unused = true;
@@ -3559,7 +3559,7 @@ static void gen_stmt(Node *node)
       IX_Dest = IX_None;
       gen_stmt(node->els);
     }
-    println("_L_end_%d:", c);
+    println("L_end_%d:", c);
     IX_Dest = IX_None;
     return;
   }
@@ -3571,7 +3571,7 @@ static void gen_stmt(Node *node)
     sprintf(if_false,"_%s",node->brk_label);
     if (node->init)
       gen_stmt(node->init);
-    println("_L_begin_%d:", c);
+    println("L_begin_%d:", c);
     IX_Dest = IX_None;
     if (cond) {
       cond->bool_result_unused = true;
@@ -3597,7 +3597,7 @@ static void gen_stmt(Node *node)
       node->inc->retval_unused = true;
       gen_expr(node->inc);
     }
-    println("\tjmp _L_begin_%d", c);
+    println("\tjmp L_begin_%d", c);
     println("%s:", if_false);
     IX_Dest = IX_None;
     return;
@@ -3607,7 +3607,7 @@ static void gen_stmt(Node *node)
     int c = count();
     int64_t val;
     char L_begin[30];
-    sprintf(L_begin,"_L_begin_%d", c);
+    sprintf(L_begin,"L_begin_%d", c);
     println("%s:",L_begin);
     IX_Dest = IX_None;
     gen_stmt(node->then);
@@ -3663,11 +3663,11 @@ static void gen_stmt(Node *node)
           int c = count();
 	  println("\tldx #%ld	; %ld",n->begin & 0x0ffff,n->begin);
 	  println("\tcpx @long+2");
-	  println("\tbne _L_case_%d",c);
+	  println("\tbne L_case_%d",c);
 	  println("\tldx #%ld",(n->begin>>16)&0x0ffff);
 	  println("\tcpx @long");
 	  println("\tjeq _%s", n->label);
-	  println("_L_case_%d:",c);
+	  println("L_case_%d:",c);
           IX_Dest = IX_None;
 	  break;
 	}
@@ -3749,8 +3749,8 @@ static void gen_stmt(Node *node)
       }
     }
 
-    println("\tjmp _L_return_%d", current_fn->function_no);
-//    println("\tjmp _L_return_%s", current_fn->name);
+    println("\tjmp L_return_%d", current_fn->function_no);
+//    println("\tjmp L_return_%s", current_fn->name);
     return;
   case ND_EXPR_STMT:
     node->lhs->retval_unused = true;
@@ -4056,7 +4056,7 @@ no_params_locals:
     }
 
     // Epilogue
-    println("_L_return_%d:", fn->function_no);
+    println("L_return_%d:", fn->function_no);
     println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 	   	    	fn->stack_size,reg_param_size);

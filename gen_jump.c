@@ -248,7 +248,7 @@ int gen_jump_if_false(Node *node,char *if_false)
   char if_label[32];
   char if_cond[32];
   int c = count();
-  sprintf(if_thru,"_L_thru_%d",c);
+  sprintf(if_thru,"L_thru_%d",c);
   if(rhs->kind == ND_NUM && rhs->val == 0){
     if ((lhs->kind==ND_VAR && lhs->var->ty->kind != TY_VLA)
     && ( (lhs->var->is_local && lhs->ty->kind!=TY_ARRAY)
@@ -386,7 +386,7 @@ int gen_jump_if_false(Node *node,char *if_false)
   // aba/jne/jcs	5bytes, 6 or 10cycle
   // jxx may be converted to bxx/jmp, fewer jxx instructions are preferable.
   case ND_EQ:
-    sprintf(if_label,"_L_thru_%d",c);
+    sprintf(if_label,"L_thru_%d",c);
     println("\taba");
     println("\tadca #0");
     println("\tjne %s",if_false);
@@ -581,7 +581,7 @@ int gen_jump_if_true(Node *node,char *if_true)
 
   char if_thru[32];
   int c = count();
-  sprintf(if_thru,"_L_thru_%d",c);
+  sprintf(if_thru,"L_thru_%d",c);
   if (can_direct(rhs)){
     gen_expr(lhs);
     if(rhs->kind == ND_NUM && rhs->val == 0){
