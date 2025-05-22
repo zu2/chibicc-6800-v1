@@ -666,7 +666,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     IX_Dest = IX_None;
     return 0;
   case ND_MEMBER:
-  //  (ND_MEMBER (ND_VAR TY_STRUCT(14) s +0 ) +2)
+  // (ND_MEMBER (ND_VAR TY_STRUCT(14) s +0 ) +2)
     if (lhs->kind == ND_VAR
     &&  (lhs->ty->kind == TY_STRUCT || lhs->ty->kind == TY_UNION)) {
       if (lhs->var->is_local) {
@@ -687,7 +687,10 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     if (lhs->kind == ND_DEREF && test_addr_x(lhs->lhs)) {
       if (test) return 1;
       off = gen_addr_x(lhs->lhs,true);
+      println("; gen_addr_x ND_DEREF ND_MEMBER is_var_array=%d",
+                                               is_var_array(lhs->lhs));
       if (is_var_array(lhs->lhs)) {
+        assert(0);
         return off;
       }else{
         println("\tldx %d,x",off);
@@ -731,6 +734,14 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
         println("\tldx #_%s",lhs->lhs->var->name);
         IX_Dest = IX_None;
         return 0;
+      }
+      break;
+    case ND_MEMBER:
+      if (lhs->member->offset+lhs->ty->size<255 && test_addr_x(lhs->lhs)) {
+        if (test)
+          return true;
+        off = gen_addr_x(lhs->lhs,false);
+        return off+lhs->member->offset;
       }
       break;
     case ND_ADD:
@@ -2560,8 +2571,29 @@ void gen_expr(Node *node) {
     load_var(node);
     return;
   case ND_MEMBER: {
+// (ND_MEMBER (ND_DEREF TY_STRUCT(14) (ND_VAR TY_PTR(10) y +7 )) +0)
+    ast_node_dump(node);
+#if 0
+    println("; ND_MEMBER: %d<=255?",node->member->offset + node->ty->size);
+    if (node->member->offset + node->ty->size <= 255  // TODO: gen_addr's off?
+    &&  test_addr_x(node->lhs)) {
+      println("; ND_MEMBER: use test_addr_x");
+      int off = gen_addr_x(node->lhs,false);
+      println("; ND_MEMBER: off=%d",off);
+      if (node->lhs->kind == ND_DEREF) {
+        println("\tldx %d,x",off);
+        IX_Dest = IX_None;
+      }
+      load_x(node->ty,node->member->offset);
+    }else{
+      println("; ND_MEMBER: use gen_addr_x");
+      gen_addr(node);
+      load(node->ty);
+    }
+#else
     gen_addr(node);
     load(node->ty);
+#endif
 
     Member *mem = node->member;
     if (mem->is_bitfield) {
