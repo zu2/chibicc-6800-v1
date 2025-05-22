@@ -2,6 +2,7 @@
 
 PATH=/opt/fcc/bin:$PATH
 OPT="-v -Os -I. -DTEST"
+#OPT="-v -O2 -I. -DTEST"
 CCRUN="../chibicc $OPT "
 
 s=$(basename $1 .c)
