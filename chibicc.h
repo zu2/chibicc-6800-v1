@@ -447,7 +447,7 @@ __attribute__((format(printf, 1, 2)))
 void printout(char *fmt, ...);
 bool is_local_var(Node *node);
 bool is_global_var(Node *node);
-int  test_addr_x(Node *node);
+bool test_addr_x(Node *node);
 void codegen(Obj *prog, FILE *out);
 int align_to(int n, int align);
 bool is_compare(Node *node);
