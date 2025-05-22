@@ -395,6 +395,152 @@ bool gen_shr(Type *ty, uint64_t val)
   assert(0); // what's?
 }
 
+//
+// jsr mul16x16 uses 10bytes; unrolled if smaller, even for Os
+//
+//    pshb          // 1 4
+//    psha          // 1 4
+//    ldab #xx      // 2 2
+//    clra          // 2 1
+//    jsr mul16x16  // 9 3
+//    ins           // 4 1
+//    ins           // 4 1
+//
+bool
+gen_mul16(Node *node)
+{
+  switch(node->rhs->kind){
+  case ND_NUM:
+    switch (node->rhs->ty->kind) {
+    case TY_INT:
+    case TY_SHORT:
+    case TY_ENUM:
+      switch(node->rhs->val){
+      case -4:
+        println("\taslb");
+        println("\trola");
+        // thru
+      case -2:
+        println("\taslb");
+        println("\trola");
+        // thru
+      case -1:
+        println("\tnega");
+        println("\tnegb");
+        println("\tsbca #0");
+        return true;
+      case 0:
+        println("\tclrb");
+        println("\tclra");
+        return true;
+      case 1:
+        return true;
+      case 2:
+        println("\taslb");
+        println("\trola");
+        return true;
+      case 3:
+        println("\tstab @tmp1+1");
+        println("\tstaa @tmp1");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca @tmp1");
+        return true;
+      case 4:
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        return true;
+      case 5:
+        if (opt_O == 's')
+          return false;
+        println("\tstab @tmp1+1");
+        println("\tstaa @tmp1");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca @tmp1");
+        return true;
+      case 6:
+        if (opt_O == 's')
+          return false;
+        println("\tstab @tmp1+1");
+        println("\tstaa @tmp1");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca @tmp1");
+        println("\taslb");
+        println("\trola");
+        return true;
+      case 7:
+        if (opt_O == 's')
+          return false;
+        println("\tstab @tmp1+1");
+        println("\tstaa @tmp1");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\tsubb @tmp1+1");
+        println("\tsbca @tmp1");
+        return true;
+      case 8:
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        return true;
+      case 10:
+        if (opt_O == 's')
+          return false;
+        println("\tstab @tmp1+1");
+        println("\tstaa @tmp1");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca @tmp1");
+        println("\taslb");
+        println("\trola");
+        return true;
+      case 16:
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        return true;
+      case 32:
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
 static void gen_addr(Node *node){
@@ -3141,131 +3287,15 @@ void gen_expr(Node *node) {
     IX_Dest = IX_None;
     return;
   case ND_MUL:
-    if (node->lhs->ty ==  node->ty){
-      if(node->lhs->kind==ND_NUM
-      && (node->lhs->ty->kind==TY_INT
-       || node->lhs->ty->kind==TY_SHORT
-       || node->lhs->ty->kind==TY_ENUM)
-      && node->rhs->kind!=ND_NUM) {
-        Node *tmp = node->lhs;
-        node->lhs = node->rhs;
-        node->rhs = tmp;
-      }
-      switch(node->rhs->kind){
-      case ND_NUM:
-        switch (node->rhs->ty->kind) {
-        case TY_INT:
-        case TY_SHORT:
-        case TY_ENUM:
-          switch(node->rhs->val){
-          case 2:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-      	    println("\taslb");
-      	    println("\trola");
-      	    return;
-      	  case 3:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-      	    println("\tstab @tmp1+1");
-      	    println("\tstaa @tmp1");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taddb @tmp1+1");
-      	    println("\tadca @tmp1");
-      	    return;
-      	  case 4:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-	          println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    return;
-      	  case 5:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-      	    println("\tstab @tmp1+1");
-      	    println("\tstaa @tmp1");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taddb @tmp1+1");
-      	    println("\tadca @tmp1");
-      	    return;
-      	  case 6:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-      	    println("\tstab @tmp1+1");
-      	    println("\tstaa @tmp1");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taddb @tmp1+1");
-      	    println("\tadca @tmp1");
-      	    println("\taslb");
-      	    println("\trola");
-      	    return;
-      	  case 7:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-      	    println("\tstab @tmp1+1");
-      	    println("\tstaa @tmp1");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\tsubb @tmp1+1");
-      	    println("\tsbca @tmp1");
-      	    return;
-      	  case 8:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    return;
-      	  case 10:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-      	    println("\tstab @tmp1+1");
-      	    println("\tstaa @tmp1");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taddb @tmp1+1");
-      	    println("\tadca @tmp1");
-      	    println("\taslb");
-      	    println("\trola");
-      	    return;
-      	  case 16:
-            gen_expr(node->lhs);
-            cast(node->lhs->ty, node->ty);
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    println("\taslb");
-      	    println("\trola");
-      	    return;
-          }
-        }
-	      break;
-      }
-    }
     gen_expr(node->lhs);
+    if (node->lhs->ty ==  node->ty
+    &&  gen_mul16(node)) {
+      return;
+    }
+    cast(node->lhs->ty, node->ty);
     push();
     gen_expr(node->rhs);
     cast(node->lhs->ty, node->ty);
-//  println("  imul %s, %s", di, ax);
     println("\tjsr __mul16x16");
     ins(2);
     IX_Dest = IX_None;
