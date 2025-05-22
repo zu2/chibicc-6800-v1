@@ -185,7 +185,11 @@ static void store32x(int off)
   if (opt_O == 's') {
     if (off == 0) {
       println("\tjsr __store32x");
-    }else{
+    } else if (off<=255-4) {
+      println("\tldab #%d",off);
+      println("\tjsr __store32bx");
+      IX_Dest = IX_None;
+    } else {
       ldd_i(off);
       println("\tjsr __store32dx");
       IX_Dest = IX_None;
@@ -331,7 +335,11 @@ bool gen_shl(Type *ty, uint64_t val)
     } 
     return true;
   case 4:
-    // TODO:
+    if ( opt_O != '2' && val>2) {
+      ldd_i(val);
+      println("\tjsr __shl16");
+      return true;
+    }
     for (int i=0; i<val; i++) {
       println("\tasl @long+3");
       println("\trol @long+2");
@@ -3408,7 +3416,7 @@ void gen_expr(Node *node) {
       gen_expr(node->lhs);
       if (gen_shl(node->lhs->ty,val)) {
         cast(node->lhs->ty, node->ty);
-	return;
+        return;
       }
       println("\tclrb");
       println("\tclra");
@@ -4022,6 +4030,7 @@ no_params_locals:
     println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
     println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 	   	    	fn->stack_size,reg_param_size);
+    println("; fn->ty->return_ty->size = %d", fn->ty->return_ty->size);
     println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
     if (!fn->params && !fn->stack_size & !fn->use_alloca) {
       println("; function has no params & locals");

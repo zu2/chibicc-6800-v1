@@ -138,13 +138,14 @@
 	pshb
 	pshb
 
-	ldab 3,x
+
+	ldab %4,x
 	stab @long+3
-	ldab 2,x
+	ldab %3,x
 	stab @long+2
-	ldab 1,x
+	ldab %2,x
 	stab @long+1
-	ldab 0,x
+	ldab %1,x
 	stab @long
 	ldab @long+3
 	pshb
@@ -155,15 +156,39 @@
 	ldab @long
 	pshb
 =
-	ldab 3,x
+	ldab %4,x
 	pshb
-	ldab 2,x
+	ldab %3,x
 	pshb
-	ldab 1,x
+	ldab %2,x
 	pshb
-	ldab 0,x
+	ldab %1,x
 	pshb
 
+
+	ldx #%1
+	stx @long+2
+	ldx #%2
+	stx @long
+	ldx #%3
+	ldab @long+3
+	stab 3,x
+	ldab @long+2
+	stab 2,x
+	ldab @long+1
+	stab 1,x
+	ldab @long
+	stab 0,x
+=
+	ldx #%3
+	ldab #<%1
+	ldaa #>%1
+	stab 3,x
+	staa 2,x
+	ldab #<%2
+	ldaa #>%2
+	stab 1,x
+	staa 0,x
 
 	ldab @bp+1
 	ldaa @bp
@@ -235,7 +260,3 @@
 	jsr __cmpf32tos
 =
 	jsr __load32x_cmpf
-
-
-
-
