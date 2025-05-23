@@ -5,6 +5,7 @@ all: libm.a
 
 OBJ =	__floorf.o __ceilf.o __truncf.o __roundf.o \
 	__fmaxf.o __fmodf.o __modff.o \
+	__frexpf.o __ldexpf.o \
 	__sqrtf.o \
 	atanf.o sincosf.o tanf.o  \
 	expf.o logf.o powf.o log1pf.o \

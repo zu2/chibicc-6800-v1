@@ -60,6 +60,8 @@ float	fmaxf(float x, float y);
 float	fminf(float x, float y);
 float	fmodf(float x, float y);
 float	modff(float x, float *iptr);
+float	frexpf(float x, int *expptr);
+float	ldexpf(float x, int exp);
 
 #ifdef  __USE_FLOAT_FOR_DOUBLE__
 #define	sin(x)		sinf(x)
