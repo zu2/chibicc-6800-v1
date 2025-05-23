@@ -3073,7 +3073,7 @@ static Node *funcall(Token **rest, Token *tok, Node *fn) {
   node->ty = ty->return_ty;
   node->args = head.next;
 
-  // check __builtin_nanf
+  // __builtin_nanf
   if (fn->var && fn->var->name && !strcmp(fn->var->name, "__builtin_nanf")) {
     Node *arg = node->args;
     if (arg) {
@@ -3084,6 +3084,7 @@ static Node *funcall(Token **rest, Token *tok, Node *fn) {
         return nan_node;
     }
   }
+  // __builtin_inff
   if (fn->var && fn->var->name && !strcmp(fn->var->name, "__builtin_inff")) {
     if (node->args == NULL) {
         union { uint32_t u; float f; } nan = { 0x7F800000 };
@@ -3560,6 +3561,16 @@ static void declare_builtin_functions(void) {
   Type *ty4 = func_type(ty_float);
   ty4->params = NULL;
   new_gvar("__builtin_inff", ty4)->is_definition = false;
+
+  // float __builtin_inff(void)
+  Type *ty5 = func_type(ty_int);
+  ty5->params = copy_type(ty_ulong);
+  new_gvar("__builtin_clz", ty5)->is_definition = false;
+
+  // float __builtin_inff(void)
+  Type *ty6 = func_type(ty_int);
+  ty6->params = copy_type(ty_ulong);
+  new_gvar("__builtin_ctz", ty6)->is_definition = false;
 }
 
 // program = (typedef | function-definition | global-variable)*
