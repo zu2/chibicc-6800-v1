@@ -20,8 +20,8 @@
 #define	M_LN2	0x1.62e42fep-1f	// 0.6931472f	ln 2
 #define	M_LN10	0x1.772b538p+1f	// 2.3025851f	ln 10
 
-#define NAN      (*(const float*)&(uint32_t){0x7FC00000})
-#define INFINITY (*(const float*)&(uint32_t){0x7F800000})
+#define NAN      (__builtin_nanf(""))
+#define INFINITY (__builtin_inff())
 
 int	isnan(float x);
 int	isinf(float x);

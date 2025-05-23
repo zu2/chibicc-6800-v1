@@ -3073,6 +3073,28 @@ static Node *funcall(Token **rest, Token *tok, Node *fn) {
   node->ty = ty->return_ty;
   node->args = head.next;
 
+  // check __builtin_nanf
+  if (fn->var && fn->var->name && !strcmp(fn->var->name, "__builtin_nanf")) {
+    Node *arg = node->args;
+    if (arg) {
+        union { uint32_t u; float f; } nan = { 0x7FC00000 };
+        Node *nan_node = new_num(nan.u,tok);
+        nan_node->ty = ty_float;
+        nan_node->fval = nan.f;
+        return nan_node;
+    }
+  }
+  if (fn->var && fn->var->name && !strcmp(fn->var->name, "__builtin_inff")) {
+    if (node->args == NULL) {
+        union { uint32_t u; float f; } nan = { 0x7F800000 };
+        Node *nan_node = new_num(nan.u,tok);
+        nan_node->ty = ty_float;
+        nan_node->fval = nan.f;
+        return nan_node;
+    }
+  }
+
+
   // If a function returns a struct, it is caller's responsibility
   // to allocate a space for the return value.
   if (node->ty->kind == TY_STRUCT || node->ty->kind == TY_UNION)
@@ -3528,6 +3550,16 @@ static void declare_builtin_functions(void) {
   ty2->is_variadic = true;
   builtin_va_start_addr = new_gvar("__builtin_va_start_addr", ty2);
   builtin_va_start_addr->is_definition = false;
+
+  // float __builtin_nanf(const char*)
+  Type *ty3 = func_type(ty_float);
+  ty3->params = copy_type(pointer_to(ty_char));
+  new_gvar("__builtin_nanf", ty3)->is_definition = false;
+
+  // float __builtin_inff(void)
+  Type *ty4 = func_type(ty_float);
+  ty4->params = NULL;
+  new_gvar("__builtin_inff", ty4)->is_definition = false;
 }
 
 // program = (typedef | function-definition | global-variable)*
