@@ -14,6 +14,7 @@
 	.export	_isinf
 	.export	_isnan
 	.export	_isfinite
+        .export _signbit
 	.data
 	.code
 ;
@@ -66,11 +67,14 @@ _isfinite:
 	bcs	__isfinite_non
 	beq	__isfinite_non
 	bra	__isfinite_yes
-
-
-
-;	memo: __f32isNaNorInf
-;	  Z=0, C=0 not NaN,Inf
-;	  Z=1, C=0 Inf
-;	  Z=0, C=1 NaN
-
+;
+;       AccAB = signbit(@long)
+;		parameter passed by @long
+;
+_signbit:
+        clra
+        ldab    @long
+        aslb
+        rolb
+        andb    #1
+        rts
