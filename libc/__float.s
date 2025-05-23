@@ -459,10 +459,11 @@ __f32retNaN:
 __f32NaN:
 	ldx	#long
 __f32NaNx:
-	ldab	#$7F		; only +NaN return
+	ldab	#$7F		; only +qNaN return
 	stab	0,x
-	ldab	#$FF
+	ldab	#$C0
 	stab	1,x
+	clrb
 	stab	2,x
 	stab	3,x
 	rts

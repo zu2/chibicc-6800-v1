@@ -27,20 +27,17 @@ _sqrtf:
 	bcs	__sqrtf_ret	; @long is NaN, return @long
 	bne	__sqrtf_01
 	ldab	@long		; @long is Inf, sign?
-	bpl	__sqrtf_ret	;   +Inf, return @long
-	;			;   -Inf, return NaN
-__retNaN:
-	ldx	#$7FFF
-	stx	@long
-	ldx	#$FFFF
-	stx	@long+2
+        bpl     __sqrtf_ret     ;   +Inf, return @long
+__sqrtf_NaN:
+	jmp	__f32NaN	;   -Inf, return NaN
 __sqrtf_ret:
 	rts
+
 __sqrtf_01:			; @long is not NaN and Inf
 	jsr	__f32iszero	; @long == 0.0?
 	beq	__sqrtf_ret	; Yes, return @long
 	ldab	@long		; @long < 0.0?
-	bmi	__retNaN	; Yes, return NaN
+	bmi	__sqrtf_NaN	; Yes, return NaN
 ;
 	ldaa	@long+1
 	asla
