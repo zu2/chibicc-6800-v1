@@ -23,11 +23,13 @@ _ldexpf:
 	bls	__ldexpf_ret	; yes, return it (C+Z=1)
 	jsr	__f32iszero	; @long == 0.0?
 	bne	__ldexpf_01
-__ldexpf_ret:                   ; return @long, *exp = 0;
+__ldexpf_ret:                   ; return @long
         rts
 ;
 __ldexpf_01:			; @long is not NaN, Inf, 0.0
         tsx
+        ldx     2,x
+        beq     __ldexpf_ret
 ;
         ldaa    @long+1
         ldab    @long
@@ -48,6 +50,7 @@ __ldexpf_02:
         bpl     __ldexpf_02
 ;
 __ldexpf_03:
+        tsx
         addb    3,x             ; get new exp
         adca    2,x
         subb    #127            ; unbias
