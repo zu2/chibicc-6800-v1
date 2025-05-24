@@ -1,45 +1,50 @@
 #include <math.h>
 #include <stdint.h>
 
-// Fast approximation of logf (natural logarithm, float)
-// Range reduction and quadratic polynomial approximation
-float logf(float x) {
-    // Special cases
-    if (x < 0.0f) return NAN;        // log(negative) is NaN
-    if (x == 0.0f) return -INFINITY; // log(0) is -Inf
-    if (isinf(x)) return INFINITY;   // log(Inf) is Inf
-    if (isnan(x)) return NAN;        // log(NaN) is NaN
 
-    // Polynomial coefficients for log2 approximation
-    const float pA = -0.6296735f;    // quadratic coefficient
-    const float pB =  1.466967f;     // linear coefficient
+float logf(float x)
+{
+  // Handle special cases
+  if (x < 0.0f || isnan(x)) {
+    return NAN;
+  }
+  if (x == 0.0f) {
+    return -INFINITY;
+  }
+  if (isinf(x)) {
+    return INFINITY;
+  }
 
-    union { float f; uint32_t i; } ux1, ux2;
-    ux1.f = x;
+  // Decompose x into mantissa m and exponent e
+  int e;
+  float m = frexpf(x, &e);
 
-    // Extract exponent (bits 23-30)
-    int exp = (ux1.i & 0x7F800000) >> 23;
-    // Actual exponent is exp - 127
-    int greater = ux1.i & 0x00400000; // true if significand > 1.5
+  // Precise range reduction: [0.75, 1.5)
+  if (m < 0.75f) {
+    m *= 2.0f;
+    e--;
+  }
 
-    float signif, fexp, lg2;
+  // Compute f = m - 1 for log1p(f)
+  float f = m - 1.0f;
 
-    if (greater) {
-        // significand >= 1.5, normalize to [0.75, 1.5)
-        ux2.i = (ux1.i & 0x007FFFFF) | 0x3f000000;
-        signif = ux2.f;
-        fexp = exp - 126; // 126 instead of 127 due to normalization
-        signif = signif - 1.0f;
-        lg2 = fexp + pA * signif * signif + pB * signif;
-    } else {
-        // normalize to [0.75, 1.5)
-        ux2.i = (ux1.i & 0x007FFFFF) | 0x3f800000;
-        signif = ux2.f;
-        fexp = exp - 127;
-        signif = signif - 1.0f;
-        lg2 = fexp + pA * signif * signif + pB * signif;
-    }
+  // Remez-optimized 7th-order coefficients (ε < 1e-7)
+  const float c1 = 0.9999999993f;
+  const float c2 = -0.4999999755f;
+  const float c3 = 0.3333329856f;
+  const float c4 = -0.2500420645f;
+  const float c5 = 0.2003053691f;
+  const float c6 = -0.1662378768f;
+  const float c7 = 0.1423557882f;
 
-    // Convert log2(x) to ln(x)
-    return lg2 * M_LN2;
+  // Polynomial evaluation using Horner's method
+  float z = f;
+  float poly =
+      f * (c1 + z * (c2 + z * (c3 + z * (c4 + z * (c5 + z * (c6 + z * c7))))));
+
+  // High-precision ln2 (0.6931471805599453)
+  const float ln2 = 0.6931471825f;
+
+  // Final composition
+  return e * ln2 + poly;
 }

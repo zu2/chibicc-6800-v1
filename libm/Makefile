@@ -16,7 +16,7 @@ OBJ =	__floorf.o __ceilf.o __truncf.o __roundf.o \
 	as6800 $<
 
 .c.o:
-	../chibicc -c $<
+	../chibicc -O2 -c $<
 
 libm.a: $(OBJ)
 	rm -f libm.a
