@@ -1,43 +1,62 @@
 #include <math.h>
-#include <stdint.h>
+#include <float.h>
 
-// Convert int32_t bit pattern to float
-static inline float pIntAsFloat(int32_t pI) { // e: int, f: float
-    union { int32_t e; float f; } u;
-    u.e = pI;
-    return u.f;
-}
+// 7th order Taylor expansion coefficients (precomputed)
+#define C0 1.0f
+#define C1 1.0f
+#define C2 0.5f
+#define C3 0.16666667f // 1/6
+#define C4 0.04166667f // 1/24
+#define C5 0.00833333f // 1/120
+#define C6 0.00138889f // 1/720
+#define C7 0.00019841f // 1/5040
 
-// High-accuracy expf implementation using range reduction, polynomial, and bit manipulation
-float expf(float pX) { // e: input, f: result
-    // --- Range reduction: pX = pK * pLN2 + pF, pF in [-pLN2/2, pLN2/2] ---
-    // pK = round(pX / pLN2)
-    const float pINV_LN2 = 1.4426950408889634f;   // e: 1/ln(2), f: 1.4426950408889634
-    const float pLN2_HI  = 6.93145752e-1f;        // e: high part of ln(2), f: 0.693145752
-    const float pLN2_LO  = 1.42860677e-6f;        // e: low part of ln(2), f: 0.00000142860677
-    float pKf = pX * pINV_LN2 + 12582912.0f;      // e: magic bias for rounding, f: 1.2582912e7
-    long pK = (long)(pKf - 12582912.0f);
-    float pF = pX - pK * pLN2_HI - pK * pLN2_LO;  // e: reduced argument, f: pF
+float expf(float x)
+{
+  // Handle special cases
+  if (isnan(x)) {
+    return x;
+  }
+  if (x == 0.0f) {
+    return 1.0f;
+  }
+  if (x == INFINITY) {
+    return INFINITY;
+  }
+  if (x == -INFINITY) {
+    return 0.0f;
+  }
+  if (x > 88.722839f) {
+    return INFINITY;
+  }
+  if (x < -103.97208f) {
+    return 0.0f;
+  }
 
-    // --- Polynomial approximation for exp(pF) on small interval ---
-    float pR = 1.37805939e-3f;    // e: coeff, f: 0.00137805939
-    pR = pR * pF + 8.37312452e-3f;    // e: coeff, f: 0.00837312452
-    pR = pR * pF + 4.16695364e-2f;    // e: coeff, f: 0.0416695364
-    pR = pR * pF + 1.66664720e-1f;    // e: coeff, f: 0.166664720
-    pR = pR * pF + 4.99999851e-1f;    // e: coeff, f: 0.499999851
-    pR = pR * pF + 1.0f;              // e: coeff, f: 1.0
+  // Range reduction using frexpf for higher accuracy
+  // Step 1: Calculate n such that x = n*ln2 + r, r in [-ln2/2, ln2/2]
+#if 0
+  float n_float = x * M_LOG2E;
+  int n;
+  float frac = frexpf(n_float, &n); // n_float = frac * 2^n, frac in [0.5, 1)
+  n = (int)(n_float + (x >= 0 ? 0.5f : -0.5f)); // round to nearest int
+  float r = x - n * M_LN2;
+#else
+  // Range reduction using fmodf
+  int n = (int)(x / M_LN2);
+  float r = fmodf(x, M_LN2);
+  if (r > 0.5f * M_LN2) {
+    r -= M_LN2;
+    n += 1;
+  } else if (r < -0.5f * M_LN2) {
+    r += M_LN2;
+    n -= 1;
+  }
+#endif
 
-    // --- Scale by 2^pK using float bit manipulation ---
-    // 2^pK = reinterpret_bits(0x7f800000 + (pK << 23))
-    int32_t pExponent = (pK + 127) << 23; // e: exponent bits, f: (pK+127)<<23
-    float pScale = pIntAsFloat(pExponent); // e: 2^pK as float, f: pScale
+  // Step 2: Polynomial approximation of exp(r) using Horner's method
+  float exp_r = C0 + r * (C1 + r * (C2 + r * (C3 + r * (C4 + r * (C5 + r * (C6 + r * (C7)))))));
 
-    float pResult = pR * pScale; // e: final result, f: pResult
-
-    // --- Handle special cases (overflow, underflow, NaN, Inf) ---
-    if (isnan(pX)) return NAN;
-    if (pX > 88.722839f) return INFINITY;    // e: overflow threshold, f: 88.722839
-    if (pX < -103.972084f) return 0.0f;      // e: underflow threshold, f: -103.972084
-
-    return pResult;
+  // Step 3: Combine using ldexpf
+  return ldexpf(exp_r, n);
 }

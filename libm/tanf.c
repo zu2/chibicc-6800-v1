@@ -2,9 +2,29 @@
 
 float tanf(float x)
 {
-  float cos_val = cosf(x);
-  if (cos_val == 0.0f) {
-    return (x > 0) ? INFINITY : -INFINITY;
+  // Use fmodf to reduce x into [-PI, PI]
+  float r = fmodf(x, (float)M_PI);
+
+  // Fold into [-PI/2, PI/2]
+  if (r > (float)M_PI_2) {
+    r -= (float)M_PI;
+  } else if (r < -(float)M_PI_2) {
+    r += (float)M_PI;
   }
-  return sinf(x) / cos_val;
+
+  // Use 1/delta approximation near the asymptote for |r| close to π/2
+  float delta = (r > 0) ? (M_PI_2 - r) : (-M_PI_2 - r);
+  if (fabsf(delta) < 0.01f) {
+    if (delta == 0.0f) {
+      return (r > 0) ? INFINITY : -INFINITY;
+    }
+    return (r > 0 ? 1.0f : -1.0f) / delta;
+  }
+
+  // Standard computation using sinf/cosf
+  float cos_val = cosf(r);
+  if (cos_val == 0.0f) {
+    return (r > 0) ? INFINITY : -INFINITY;
+  }
+  return sinf(r) / cos_val;
 }

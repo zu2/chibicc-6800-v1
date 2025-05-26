@@ -15,7 +15,7 @@
 #define M_1_PI	0x1.45f307p-2f	// 0.3183099f	1/pi
 #define M_2_PI	0x1.45f307p-1f	// 0.6366198f	2/pi
 #define M_E  	0x1.bc55864p+0f // 2.7182817f	e
-#define M_LOG2E	0x1.7154765p-1f	// 1.4426950f	log_2 e
+#define M_LOG2E	0x1.715476p+0f  // 1.44269504f  log_2 e
 #define	M_LOG10E 0x1.b8aa3b2p-3f // 0.4342945f	log_10 e
 #define	M_LN2	0x1.62e42fep-1f	// 0.6931472f	ln 2
 #define	M_LN10	0x1.772b538p+1f	// 2.3025851f	ln 10
