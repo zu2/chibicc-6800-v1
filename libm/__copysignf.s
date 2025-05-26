@@ -9,7 +9,7 @@ _copysignf:
 	ldab	2,x
 	andb	#$80
 	ldaa	@long
-	andb	#$7F
+	anda	#$7F
 	aba
 	staa	@long
 	rts
