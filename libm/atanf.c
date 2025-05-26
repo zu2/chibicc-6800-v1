@@ -39,14 +39,16 @@ float atanf(float x)
   if (x == -INFINITY) {
     return -M_PI_2;
   }
-  if (x < 0) {
-    return -atanf(-x);
-  }else if (fabsf(x) < 0.5f) {
-    return atanf_taylor(x);
-  } else if (fabsf(x) < 1.0f) {
-    return atanf_frac(x);
+  if (x == 0.0) {
+    return x;
+  }
+
+  if (fabsf(x) < 0.5f) {
+    return copysignf(atanf_taylor(fabsf(x)),x);
+  } else if (fabsf(x) < 1.5f) {
+    return copysignf(atanf_frac(fabsf(x)),x);
   } else {
-    float inv_x = 1.0f / x;
-    return M_PI_2 - atanf(inv_x);
+    float inv_x = 1.0f / fabsf(x);
+    return copysignf(M_PI_2 - atanf(inv_x),x);
   }
 }
