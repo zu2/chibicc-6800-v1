@@ -34,17 +34,19 @@ float atanf(float x)
     return NAN;
   }
   if (x == INFINITY) {
-    return 1.5707963f;
+    return M_PI_2;
   }
   if (x == -INFINITY) {
-    return -1.5707963f;
+    return -M_PI_2;
   }
-  if (fabsf(x) < 0.5f) {
+  if (x < 0) {
+    return -atanf(-x);
+  }else if (fabsf(x) < 0.5f) {
     return atanf_taylor(x);
-  } else if (fabsf(x) < 2.0f) {
+  } else if (fabsf(x) < 1.0f) {
     return atanf_frac(x);
   } else {
     float inv_x = 1.0f / x;
-    return (x > 0 ? M_PI_2 : -M_PI_2) - atanf(inv_x);
+    return M_PI_2 - atanf(inv_x);
   }
 }
