@@ -11,6 +11,7 @@
 #include <time.h>
 #define print(i)	printf("%d\n",i)
 #define cpu_counter()	{ clock_t t; t=clock();printf("CPU = %.6f sec\n",(double)t/CLOCKS_PER_SEC); }
+#define	floorf(x)   fmod(x)
 #define	fmodf(x,y)	fmod(x,y)
 #endif
 #if defined(__CHIBICC_6800__)

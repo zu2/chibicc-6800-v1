@@ -14,6 +14,7 @@
 #define print(i)	printf("%d\n",i)
 #define cpu_counter()	{ clock_t t; t=clock();printf("CPU = %.6f sec\n",(double)t/CLOCKS_PER_SEC); }
 #define	fmodf(x,y)	fmod(x,y)
+#define	floorf(x)	floor(x)
 #endif
 
 // chibicc, fcc, cc68
