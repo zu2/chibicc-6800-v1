@@ -12,6 +12,10 @@ float tanhf(float x)
   if (isinf(x)) {
     return copysignf(1.0f, x);
   }
+  if (fabsf(x) < 1e-7f) {
+    return x;
+  }
+
   // Return ±1.0 for values beyond the threshold to avoid overflow
   if (x > TANH_THRESHOLD) {
     return 1.0f;

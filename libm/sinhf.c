@@ -18,6 +18,10 @@ float sinhf(float x)
   if (fabsf(x) < 1e-10f) {
     return x;
   }
+  if (fabsf(x) < 1.0f) {
+    float x2 = x * x;
+    return (((x2 + 42.0f) * x2 + 840.0f) * x2 + 5040.0f) * x / 5040.0f;
+  }
 
   // Return ±INFINITY for values beyond the threshold to avoid overflow
   if (x > SINH_THRESHOLD) {
@@ -27,8 +31,5 @@ float sinhf(float x)
     return -INFINITY;
   }
   // For |x| <= threshold, use the identity sinh(x) = (exp(x) - exp(-x)) / 2
-  float expx = expf(x);
-  float expmx = expf(-x);
-  return (expx - expmx) / 2.0f;
+  return (expf(x) - expf(-x)) / 2.0f;
 }
-

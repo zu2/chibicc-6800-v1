@@ -15,6 +15,13 @@ float coshf(float x)
   if (isinf(x)) {
     return INFINITY;
   }
+  if (fabsf(x) < 1e-10f) {
+    return 1.0f;
+  }
+  if (fabsf(x) < 1.0f) {
+    float x2 = x * x;
+    return (720.0f + x2 * (360.0f + x2 * (30.0f + x2))) / 720.0f;
+  }
   // Return INFINITY for values beyond the threshold to avoid overflow
   if (x > COSH_THRESHOLD) {
     return INFINITY;
@@ -23,7 +30,5 @@ float coshf(float x)
     return INFINITY;
   }
   // For |x| <= threshold, use the identity cosh(x) = (exp(x) + exp(-x)) / 2
-  float expx = expf(x);
-  float expmx = expf(-x);
-  return (expx + expmx) / 2.0f;
+  return (expf(x) + expf(-x)) / 2.0f;
 }
