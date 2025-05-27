@@ -8,9 +8,10 @@ There are many aspects of the object code generation method and speed that canno
 
 However, it is a compiler that works reasonably well. I hope it will be helpful for you to create another fork.
 
-Dhrystone works now. 
+Dhrystone & Whetstone works now. 
 
 - https://github.com/z88dk/z88dk/tree/master/libsrc/\_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21
+- https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone
 ----
 # Topics
 
@@ -116,7 +117,9 @@ This will compile the source file and execute the resulting binary using the emu
 ## Floating-Point Operations
 - **Mandelbrot ASCII renderer (`asciiartf`):** 266 seconds  
 - **Source code:** [`ztest/9018-asciiartf.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9018-asciiartf.c)  
-- *Note: Whetstone benchmark is not yet supported because trigonometric and exponential/logarithmic functions are not implemented.*
+
+- **Whetstone benchmark:** 449.5355 seconds at 1MHz on MC6800, equivalent to approximately 2.2245 KWIPS, .0022245 MWIPS
+- **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone)
 
 ## String and Memory Operations
 - `strcmp`, `strcpy`, and `strcat` operate on two bytes at a time, resulting in high performance.
