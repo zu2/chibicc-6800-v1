@@ -224,6 +224,12 @@
 =
 	jsr __load32x_push
 
+	jsr __load32bx
+	jsr __push32
+=
+	jsr __load32bx_push
+
+
 	ldab #<%1
 	ldaa #>%1
 	jsr __load16
