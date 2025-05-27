@@ -827,11 +827,18 @@ bool test_addr_x(Node *node)
   return gen_addr_x_sub(node,true,true);
 }
 
-static void load_long_imm(uint32_t val)
+static void load32i(uint32_t val)
 {
   uint16_t hi = (uint16_t)((val>>16)&0x0ffff);
   uint16_t lo = (uint16_t)(val&0x0ffff);
 
+  if (opt_O == 's' && hi!=lo) {
+    println("\tjsr __load32i");
+    println("\t.word %u",hi);
+    println("\t.word %u",lo);
+    IX_Dest = IX_None;
+    return;
+  }
   println("\tldx #%u",lo);
   println("\tstx @long+2");
   if (lo+1 == hi){
@@ -1189,12 +1196,6 @@ static char f64u32[] = "cvttsd2siq %xmm0, %rax";
 static char f64i64[] = "cvttsd2siq %xmm0, %rax";
 static char f64u64[] = "cvttsd2siq %xmm0, %rax";
 static char f64f32[] = "cvtsd2ss %xmm0, %xmm0";
-
-#define FROM_F80_1                                           \
-  "fnstcw -10(%rsp); movzwl -10(%rsp), %eax; or $12, %ah; " \
-  "mov %ax, -12(%rsp); fldcw -12(%rsp); "
-
-#define FROM_F80_2 " -24(%rsp); fldcw -10(%rsp); "
 
 // ex. i32i16: i32->i16
 static char *cast_table[][11] = {
@@ -2388,7 +2389,7 @@ void gen_expr(Node *node) {
     switch (node->ty->kind) {
     case TY_FLOAT: {
       union { float f32; uint32_t u32; } u = { node->fval };
-      load_long_imm(u.u32);
+      load32i(u.u32);
       return;
     }
     case TY_DOUBLE:
@@ -2411,7 +2412,7 @@ void gen_expr(Node *node) {
       ldd_i((uint16_t)node->val);
       return;
     case TY_LONG:
-      load_long_imm(node->val);
+      load32i(node->val);
       return;
     }
     error_tok(node->tok, "gen_expr: not implemented yet token");
@@ -2572,7 +2573,6 @@ void gen_expr(Node *node) {
     return;
   case ND_MEMBER: {
 // (ND_MEMBER (ND_DEREF TY_STRUCT(14) (ND_VAR TY_PTR(10) y +7 )) +0)
-    ast_node_dump(node);
 #if 0
     println("; ND_MEMBER: %d<=255?",node->member->offset + node->ty->size);
     if (node->member->offset + node->ty->size <= 255  // TODO: gen_addr's off?

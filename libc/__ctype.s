@@ -127,14 +127,18 @@ _isblank:			; (c == ' ' || c == '\t')
 	rts
 ;
 _tolower:			; isupper(c)? c + ('a' - 'A'): c;
+        pshb
 	bsr	_isupper
-	bne	__ret
+        pulb
+	beq	__ret
 	addb	#'a'-'A'
 	rts
 ;
 _toupper:			; islower(c)? c - ('a' - 'A'): c;
+        pshb
 	bsr	_islower
-	bne	__ret
+        pulb
+	beq	__ret
 	subb	#'a'-'A'
 	rts
 ;
