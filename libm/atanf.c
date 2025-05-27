@@ -8,6 +8,23 @@ static float atanf_taylor(float x)
          (x2 * x2 * x2 * x) / 7.0f + (x2 * x2 * x2 * x2 * x) / 9.0f;
 }
 
+#if 1
+static float atanf_frac(float x)
+{
+    float x2 = x * x;
+    return x / (1.0f + x2 / (3.0f +
+           (4.0f * x2) / (5.0f +
+           (9.0f * x2) / (7.0f +
+           (16.0f * x2) / (9.0f +
+           (25.0f * x2) / (11.0f +
+           (36.0f * x2) / (13.0f +
+           (49.0f * x2) / (15.0f +
+           (64.0f * x2) / (17.0f +
+           (81.0f * x2) / (19.0f +
+           (100.0f * x2) / (21.0f +
+           (121.0f * x2) / (23.0f))))))))))));
+}
+#else
 static float atanf_frac(float x)
 {
   float r = 0.0f;
@@ -27,6 +44,7 @@ static float atanf_frac(float x)
 
   return (x / (1.0f + r)); // 0
 }
+#endif
 
 float atanf(float x)
 {
