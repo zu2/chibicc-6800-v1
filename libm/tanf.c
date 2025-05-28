@@ -8,7 +8,7 @@ float tanf(float x)
 
   x = fmodf(x, M_TWOPI);
   if (x > M_PI) {
-    return tanf(M_TWOPI - x);
+    return -tanf(M_TWOPI - x);
   }
   if (x > M_PI_2) {
     return -tanf(M_PI - x);
