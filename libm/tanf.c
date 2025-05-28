@@ -2,29 +2,37 @@
 
 float tanf(float x)
 {
-  // Use fmodf to reduce x into [-PI, PI]
-  float r = fmodf(x, (float)M_PI);
-
-  // Fold into [-PI/2, PI/2]
-  if (r > (float)M_PI_2) {
-    r -= (float)M_PI;
-  } else if (r < -(float)M_PI_2) {
-    r += (float)M_PI;
+  if (x < 0) {
+    return -tanf(-x);
   }
 
-  // Use 1/delta approximation near the asymptote for |r| close to π/2
-  float delta = (r > 0) ? (M_PI_2 - r) : (-M_PI_2 - r);
-  if (fabsf(delta) < 0.01f) {
+  x = fmodf(x, M_TWOPI);
+  if (x > M_PI) {
+    return tanf(M_TWOPI - x);
+  }
+  if (x > M_PI_2) {
+    return -tanf(M_PI - x);
+  }
+
+  float delta = M_PI_2 - x;
+  if (delta < 0.01f) {
     if (delta == 0.0f) {
-      return (r > 0) ? INFINITY : -INFINITY;
+      return copysignf(INFINITY, delta);
     }
-    return (r > 0 ? 1.0f : -1.0f) / delta;
+    return 1.0f / delta;
   }
 
-  // Standard computation using sinf/cosf
-  float cos_val = cosf(r);
-  if (cos_val == 0.0f) {
-    return (r > 0) ? INFINITY : -INFINITY;
+  if (x > M_PI_4) {
+    return 1.0f / tanf(M_PI_2 - x);
   }
-  return sinf(r) / cos_val;
+  if (x > M_PI_8) {
+    // tan(x) = (2*tan(x/2)) / (1 - tan(x/2)^2)
+    float t = tanf(x / 2.0f);
+    return (2.0f * t) / (1.0f - t * t);
+  }
+
+  // return sinf(x)/cosf(x);
+  float x2 = x * x;
+  return x * (0.99999948f +
+              x2 * (0.33337722f + x2 * (0.13232848f + x2 * 0.06236088f)));
 }
