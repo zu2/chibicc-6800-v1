@@ -61,34 +61,42 @@ const TanfTestCase test_cases[] = {
     {NAN, NAN},
 };
 
-// Improved tanf for float, using only float operations, no double, no FMA
-float my_tanf(float x)
+float mytanf(float x)
 {
-  // Use fmodf to reduce x into [-PI, PI]
-  float r = fmodf(x, (float)M_PI);
-
-  // Fold into [-PI/2, PI/2]
-  if (r > (float)M_PI_2) {
-    r -= (float)M_PI;
-  } else if (r < -(float)M_PI_2) {
-    r += (float)M_PI;
+  // Step 0: Use the property of odd function (tanf)
+  if (x < 0) {
+    return -mytanf(fabsf(x));
   }
 
-  // Use 1/delta approximation near the asymptote for |r| close to π/2
-  float delta = (r > 0) ? (M_PI_2 - r) : (-M_PI_2 - r);
-  if (fabsf(delta) < 0.01f) {
+  x = fmodf(x, M_TWOPI);
+  if (x > M_PI) {
+    return -mytanf(M_TWOPI - x);
+  }
+  if (x > M_PI_2) {
+    return -mytanf(M_PI - x);
+  }
+
+  float delta = M_PI_2 - x;
+  if (delta < 0.01f) {
     if (delta == 0.0f) {
-      return (r > 0) ? INFINITY : -INFINITY;
+      return copysignf(INFINITY, delta);
     }
-    return (r > 0 ? 1.0f : -1.0f) / delta;
+    return 1.0f / delta;
   }
 
-  // Standard computation using sinf/cosf
-  float cos_val = cosf(r);
-  if (cos_val == 0.0f) {
-    return (r > 0) ? INFINITY : -INFINITY;
+  if (x > M_PI_4) {
+    return 1.0f / mytanf(M_PI_2 - x);
   }
-  return sinf(r) / cos_val;
+  if (x > M_PI_8) {
+    // tan(x) = (2*tan(x/2)) / (1 - tan(x/2)^2) の公式を使う
+    float t = mytanf(x / 2.0f);
+    return (2.0f * t) / (1.0f - t * t);
+  }
+
+  // return sinf(x)/cosf(x);
+  float x2 = x * x;
+  return x * (0.99999948f +
+              x2 * (0.33337722f + x2 * (0.13232848f + x2 * 0.06236088f)));
 }
 
 #define EPSILON 1e-6f
@@ -116,8 +124,8 @@ int main()
   for (int i = 0; i < num_cases; i++) {
     float input = test_cases[i].input;
     float expected = test_cases[i].expected;
-    float got = tanf(input);
-//    float got = my_tanf(input);
+    float got = mytanf(input);
+//  float got = tanf(input);
     float diff = fabsf(got - expected);
     int ok = float_equal(got, expected);
     printf("%16e %16e %16e %16e %6s\n", input, expected, got, diff,
@@ -131,6 +139,6 @@ int main()
   } else {
     printf("%d tests failed.\n", failed);
   }
-//return failed;
+  // return failed;
   return 0;
 }
