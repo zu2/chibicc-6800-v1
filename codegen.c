@@ -543,8 +543,8 @@ gen_mul16(Node *node)
 
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
-static void gen_addr(Node *node){
-
+static void gen_addr(Node *node)
+{
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
@@ -617,6 +617,71 @@ static void gen_addr(Node *node){
   error_tok(node->tok, "not an lvalue");
 }
 
+int gen_expr_x_sub(Node *node,bool save_d,bool test)
+{
+  Node *lhs = node->lhs;
+  int off;
+
+  switch(node->kind) {
+  case ND_NULL_EXPR:
+    return false;
+  case ND_NUM: {
+    switch (node->ty->kind) {
+    case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
+      return false;
+    case TY_LONG:
+      if (test) return true;
+      println("\tldx @long+2");
+      return 0;
+    case TY_BOOL:
+    case TY_CHAR:
+      return false;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+      if (test) return true;
+      println("\tldx #%d",(unsigned int)((node->val & 0x0ffff)));
+      IX_Dest = IX_None;
+      return 0;
+    default: 
+      break;
+    }
+  } // ND_NUM
+  case ND_NEG:
+    return false;
+  case ND_VAR:
+    if (test_addr_x(node)) {
+      if (test) return true;
+      println("\tldx 0,x");
+      IX_Dest = IX_None;
+    }
+    return 0;
+  default:
+    return false;
+  }
+  if (test) {
+    return false;
+  }
+  error_tok(node->tok, "invalid expression at %s node->kind %d",__func__,node->kind);
+}
+
+int gen_expr_x(Node *node,bool save_d)
+{
+  return gen_expr_x_sub(node,save_d,false);
+}
+
+bool test_expr_x(Node *node)
+{
+  return 0;
+
+  int r =  gen_expr_x_sub(node,true,true);
+  println("; test_expr_x r %d",r);
+  return r;
+}
+
+
 // Compute the absolute address of a given node in IX.
 // It's an error if a given node does not reside in memory.
 int gen_addr_x_sub(Node *node,bool save_d,bool test)
@@ -624,6 +689,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
   Node *lhs = node->lhs;
   int off;
 
+  println("; gen_addr_x_sub kind=%d, test=%d",node->kind,test);
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
@@ -635,7 +701,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
         IX_Dest = IX_None;
         return 0;
       }
-      assert(0); // TODO:
+      goto fallback;
     }
     // Local variable
     if (node->var->is_local) {
@@ -644,14 +710,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
         ldx_bp();
         return node->var->offset;
       }
-      if (test) return 0;
-      if (save_d)
-        push();
-      gen_addr(node);
-      tfr_dx();
-      if (save_d)
-        pop();
-      return 0;
+      goto fallback;
     }
     // Function
     if (node->ty->kind == TY_FUNC) {
@@ -665,147 +724,82 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     println("\tldx #_%s",node->var->name);
     IX_Dest = IX_None;
     return 0;
-  case ND_MEMBER:
-  // (ND_MEMBER (ND_VAR TY_STRUCT(14) s +0 ) +2)
-    if (lhs->kind == ND_VAR
-    &&  (lhs->ty->kind == TY_STRUCT || lhs->ty->kind == TY_UNION)) {
-      if (lhs->var->is_local) {
-        off = lhs->var->offset + node->member->offset;
-        if (off < 254) {
-          if (test) return 1;
-          ldx_bp();
-          return  off;
-        }
-        break; // fall thru
-      }else{
-        if (test) return 1;
-        println("\tldx	#_%s+%d",lhs->var->name,node->member->offset);
-        IX_Dest = IX_None;
-        return 0;
-      }
-    }
-    if (lhs->kind == ND_DEREF && test_addr_x(lhs->lhs)) {
-      if (test) return 1;
-      off = gen_addr_x(lhs->lhs,true);
-      println("; gen_addr_x ND_DEREF ND_MEMBER is_var_array=%d",
-                                               is_var_array(lhs->lhs));
-      if (is_var_array(lhs->lhs)) {
-        assert(0);
-        return off;
-      }else{
-        println("\tldx %d,x",off);
-        IX_Dest = IX_None;
-        return node->member->offset;
-      }
-    }
-    break;
   case ND_DEREF:
-    switch (lhs->kind){
-    case ND_DEREF:
-      if (test) return 1;
-      off = gen_addr_x(lhs,save_d);
-      println("\tldx %d,x",off);
-      IX_Dest = IX_None;
-      return 0;
-    case ND_VAR:
-      if (is_var_array(lhs)) {
-        if (test) return 0;
-        assert(0);
-        return off;
-      }
-      if (test) return 1;
-      off = gen_addr_x(lhs,save_d);
-      println("\tldx %d,x",off);
-      IX_Dest = IX_None;
-      return 0;
-    case ND_CAST:
-      if (lhs->ty->kind == TY_PTR
-      &&  lhs->lhs->kind == ND_NUM
-      &&  is_integer(lhs->lhs->ty)) {
-        if (test) return 1;
-        println("\tldx #%ld",lhs->lhs->val);
-        IX_Dest = IX_None;
-        return 0;
-      }
-      if (lhs->ty->kind == TY_PTR
-      &&  is_var_array(lhs->lhs)
-      &&  !lhs->lhs->var->is_local) {
-        if (test) return 1;
-        println("\tldx #_%s",lhs->lhs->var->name);
-        IX_Dest = IX_None;
-        return 0;
-      }
-      break;
-    case ND_MEMBER:
-      if (lhs->member->offset+lhs->ty->size<255 && test_addr_x(lhs->lhs)) {
-        if (test)
-          return true;
-        off = gen_addr_x(lhs->lhs,false);
-        return off+lhs->member->offset;
-      }
-      break;
-    case ND_ADD:
-      if (lhs->lhs->kind == ND_CAST
-      &&  lhs->lhs->ty->kind == TY_PTR
-      &&  is_var_array(lhs->lhs->lhs)
-      &&  !lhs->lhs->lhs->var->is_local
-      &&  lhs->rhs->kind == ND_CAST
-      &&  lhs->rhs->ty->kind == TY_PTR
-      &&  lhs->rhs->lhs->kind == ND_NUM) {
-        off = lhs->rhs->lhs->val; // * lhs->rhs->ty->size;
-        if (test) return 1;
-        if (off < 252 ) {
-          println("\tldx #_%s",lhs->lhs->lhs->var->name);
-          IX_Dest = IX_None;
-          return off;
-        }
-        println("\tldx #_%s+%ld",lhs->lhs->lhs->var->name,
-                                 lhs->rhs->lhs->val * lhs->rhs->ty->size);
-        IX_Dest = IX_None;
-        return 0;
-      }
-      if (lhs->lhs->kind == ND_CAST
-      &&  lhs->lhs->ty->kind == TY_PTR
-      &&  lhs->lhs->lhs->kind == ND_VAR
-      &&  lhs->lhs->lhs->ty->kind == TY_PTR
-      &&  lhs->lhs->lhs->var->is_local
-      &&  lhs->rhs->kind == ND_CAST
-      &&  lhs->rhs->ty->kind == TY_PTR
-      &&  lhs->rhs->lhs->kind == ND_NUM) {
-        off = lhs->rhs->lhs->val; //  * lhs->rhs->ty->size;
-        if (off < 252) {
-          if (test) return 1;
-          ldx_bp();
-          println("\tldx %d,x", lhs->lhs->lhs->var->offset);
-          IX_Dest = IX_None;
-          return off;
-        }
-      }
-      if (lhs->lhs->kind == ND_CAST
-      &&  lhs->lhs->ty->kind == TY_PTR
-      &&  lhs->lhs->lhs->kind == ND_MEMBER) {
-        if (test_addr_x(lhs->lhs->lhs)) {
-          if (test) return 1;
-          off = gen_addr_x(lhs->lhs->lhs,save_d);
-          IX_Dest = IX_None;
-          return off;
-        }
-      }
-      break;
-    } // ND_DEREF
-    break;
-  case ND_CAST:
-    if (node->ty->kind == TY_PTR
-    &&  lhs->kind == ND_NUM
-    &&  is_integer(lhs->ty)) {
-      if (test) return 1;
-      println("\tldx #%ld",lhs->val);
-      IX_Dest = IX_None;
+    return false;
+    println("; gen_addr_x ND_DEREF test_addr_x %d",test_addr_x(node->lhs));
+    if (!test_expr_x(node->lhs)) {
       return 0;
     }
+    if (test) {
+      return true;
+    }
+    off = gen_expr_x(node->lhs,false);
+    IX_Dest = IX_None;
+    return off;
+  case ND_COMMA:
+    return false;
+  case ND_MEMBER:
+    return false;
+    if (!test_addr_x(node->lhs)) {
+      return 0;
+    }
+    if (test) {
+      return true;
+    }
+    off = gen_addr_x(node->lhs,save_d) + node->member->offset;
+    if (off<=252) {
+      return off;
+    }
+    if (save_d)
+      push();
+    ldd_i(off);
+    println("\tjsr __adx");
+    if (save_d)
+      pop();
+    return 0;
+  case ND_FUNCALL:
+    return false;
+    // TODO: Consider the correct address generation method
+    if (node->ret_buffer) {
+      if (test_expr_x(node)) {
+        if (test) return true;
+        off = gen_expr_x(node,false);
+        return off;
+      }
+      return false;
+    }
+    return false;
+  case ND_ASSIGN:
+  case ND_COND:
+    println("; ND_ASSIGN in gen_addr_x %s %d",__FILE__,__LINE__);
+    return false;
+    println("; ND_ASSIGN or ND_COND %d",node->kind);
+    if (node->ty->kind == TY_STRUCT || node->ty->kind == TY_UNION) {
+      if (test_expr_x(node)) {
+        if (test) {
+          return true;
+        }
+        off = gen_expr_x(node,false);
+        return off;
+      }
+      return false;
+    }
     break;
+  case ND_VLA_PTR:
+    return false;
+    if (node->var->offset <= 252) {
+      if (test) {
+        return true;
+      }
+      ldx_bp();
+      return node->var->offset;
+    }
+    goto fallback;
   }
+  if (test) return false;
+  error_tok(node->tok, "not an lvalue at gen_addr_x, node->kind %d",node->kind);
   // fallback to gen_addr()
+fallback:
   if (test) return 0;
   println("; fall back to gen_addr() save_d %d",save_d);
   if (save_d)
@@ -819,12 +813,16 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
 
 int gen_addr_x(Node *node,bool save_d)
 {
-  return gen_addr_x_sub(node,save_d,false);
+  int off = gen_addr_x_sub(node,save_d,false);
+  println("; gen_addr_x return %d",off);
+  return off;
 }
 
 bool test_addr_x(Node *node)
 {
-  return gen_addr_x_sub(node,true,true);
+  int r =  gen_addr_x_sub(node,true,true);
+  println("; test_addr_x return %d",r);
+  return r;
 }
 
 static void load32i(uint32_t val)
@@ -904,6 +902,22 @@ static void load(Type *ty) {
     assert(0);
   }
   IX_Dest = IX_None;
+}
+
+bool can_load_x(Type *ty)
+{
+  switch(ty->kind) {
+  case TY_ARRAY:
+  case TY_STRUCT:
+  case TY_UNION:
+  case TY_FUNC:
+  case TY_VLA:
+    return false;
+  case TY_DOUBLE:
+  case TY_LDOUBLE:
+    return false;
+  }
+  return is_integer(ty);
 }
 
 static void load_x(Type *ty,int off) {
@@ -1529,11 +1543,11 @@ static void copy_struct_mem(void) {
     println("\tldx @tmp2");
     println("\tldab %d,x",i);
     println("\tldx @tmp3");
-    IX_Dest = IX_None;
     println("\tstab %d,x",i);
   }
   println("\tldab @tmp3+1");
   println("\tldaa @tmp3");
+  IX_Dest = IX_None;
 }
 
 static void builtin_alloca(void) {
@@ -2230,13 +2244,18 @@ int can_direct_long2(Node *node)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
-  int L =  ((lhs->kind == ND_NUM) && (lhs->ty->kind == TY_LONG))
-        || ((lhs->kind == ND_VAR) && test_addr_x(lhs) &&  lhs->var->is_local);
-  int R =  ((rhs->kind == ND_NUM) && (rhs->ty->kind == TY_LONG))
-        || ((rhs->kind == ND_VAR) && test_addr_x(rhs) &&  rhs->var->is_local);
+  int L =  ((lhs->kind == ND_NUM) && (lhs->ty->kind == TY_LONG))*2
+        +  ((lhs->kind == ND_VAR) && test_addr_x(lhs) &&  lhs->var->is_local);
+  int R =  ((rhs->kind == ND_NUM) && (rhs->ty->kind == TY_LONG))*2
+        +  ((rhs->kind == ND_VAR) && test_addr_x(rhs) &&  rhs->var->is_local);
   if (!L || !R){
     return 0;
   }
+  if (L==1 && !test_addr_x(lhs))
+    return 0;
+  if (R==1 && !test_addr_x(lhs))
+    return 0;
+
   return 1;
 }
 
@@ -2298,7 +2317,7 @@ static void gen_funcall(Node *node)
       case TY_UNION:
       case TY_DOUBLE:
       case TY_LDOUBLE:
-	passed_by_reg = 0;
+        passed_by_reg = 0;
       }
       if (current_fn->ty->return_ty->kind == TY_STRUCT
       ||  current_fn->ty->return_ty->kind == TY_UNION  ){
@@ -2325,8 +2344,8 @@ static void gen_funcall(Node *node)
 
   if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
     println("\tjsr _%s",node->lhs->var->name);
-  }else if (test_addr_x(node->lhs)) {
-    int off = gen_addr_x(node->lhs,true);
+  }else if (test_expr_x(node->lhs)) { // TODO: gen_expr_x
+    int off = gen_expr_x(node->lhs,true);
     if (node->lhs->kind==ND_DEREF && node->lhs->ty->kind==TY_FUNC) {
       println("\tjsr %d,x",off);
     } else if (node->lhs->ty->kind!=TY_FUNC) {
@@ -2572,28 +2591,8 @@ void gen_expr(Node *node) {
     load_var(node);
     return;
   case ND_MEMBER: {
-// (ND_MEMBER (ND_DEREF TY_STRUCT(14) (ND_VAR TY_PTR(10) y +7 )) +0)
-#if 0
-    println("; ND_MEMBER: %d<=255?",node->member->offset + node->ty->size);
-    if (node->member->offset + node->ty->size <= 255  // TODO: gen_addr's off?
-    &&  test_addr_x(node->lhs)) {
-      println("; ND_MEMBER: use test_addr_x");
-      int off = gen_addr_x(node->lhs,false);
-      println("; ND_MEMBER: off=%d",off);
-      if (node->lhs->kind == ND_DEREF) {
-        println("\tldx %d,x",off);
-        IX_Dest = IX_None;
-      }
-      load_x(node->ty,node->member->offset);
-    }else{
-      println("; ND_MEMBER: use gen_addr_x");
-      gen_addr(node);
-      load(node->ty);
-    }
-#else
     gen_addr(node);
     load(node->ty);
-#endif
 
     Member *mem = node->member;
     if (mem->is_bitfield) {
@@ -2627,15 +2626,9 @@ void gen_expr(Node *node) {
       load_x(node->ty,0);
       return;
     }
-    if (test_addr_x(lhs)){
-      int off = gen_addr_x(lhs,false);
-      if (is_var_array(lhs)) {
-        load_x(node->ty,off);
-      }else{
-        println("\tldx %d,x",off);
-        IX_Dest = IX_None;
-        load_x(node->ty,0);
-      }
+    if (can_load_x(node->ty) && test_expr_x(lhs)){
+      int off = gen_expr_x(lhs,false);
+      load_x(node->ty,0);
       return;
     }
     gen_expr(lhs);

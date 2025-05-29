@@ -71,11 +71,11 @@ static int check_in_char(Node *node)
   if (node->kind==ND_NUM) {
     if (node->ty->is_unsigned) {
       if (node->val > 255) {
-	return 0;
+        return 0;
       }
     }else{ // signed
       if (node->val<128 || node->val > 127) {
-	return 0;
+        return 0;
       }
     }
   }
@@ -254,8 +254,13 @@ int gen_jump_if_false(Node *node,char *if_false)
     && ( (lhs->var->is_local && lhs->ty->kind!=TY_ARRAY)
        ||(!lhs->var->is_local && lhs->ty->kind!=TY_FUNC))) {
       if( lhs->var->is_local && lhs->ty->kind!=TY_ARRAY) {
-        int off = gen_addr_x(lhs,false);
-        sprintf(if_cond,"%d,x",off);
+        if (test_addr_x(lhs)) {
+          int off = gen_addr_x(lhs,false);
+          sprintf(if_cond,"%d,x",off);
+        }else{
+          // It's strange to fail test_addr_x, but it may pass in debugging.
+          return 0;
+        }
       }else if (!lhs->var->is_local && lhs->ty->kind!=TY_FUNC) {
         sprintf(if_cond,"_%s",lhs->var->name);
       }
@@ -289,12 +294,12 @@ int gen_jump_if_false(Node *node,char *if_false)
         }else{
           println("; int>0 is !(int<0) && !(int==0)");
           println("\tldx %s",if_cond);
-	  println("\tjmi %s",if_false);
-	  println("\tjeq %s",if_false);
+          println("\tjmi %s",if_false);
+          println("\tjeq %s",if_false);
           IX_Dest = IX_None;
-	  return 1;
+          return 1;
         }
-	break;
+        break;
       case ND_GE:
         if (lhs->ty->is_unsigned) {
           println("; uint >= 0 is always true");
@@ -302,7 +307,7 @@ int gen_jump_if_false(Node *node,char *if_false)
         }else{
           println("\tldaa %s",if_cond);
           println("\tjmi %s",if_false);
-	  return 1;
+          return 1;
         }
         break;
       case ND_LE:
@@ -326,40 +331,40 @@ int gen_jump_if_false(Node *node,char *if_false)
       switch(node->kind) {
       case ND_EQ:
       case ND_NE:
-	break;
+        break;
       case ND_LT:
         if (lhs->ty->is_unsigned) {
           println("; uint < 0 is always false");
-	  println("\tjmp %s",if_false);
-	  return 1;
-	}
+          println("\tjmp %s",if_false);
+          return 1;
+        }
         // 'subb #0 / sbca #0' can be substituted with 'tsta'.
         println("\ttsta");
-	break;
+        break;
       case ND_GT:
-	if (lhs->ty->is_unsigned) {
+        if (lhs->ty->is_unsigned) {
           println("; uint > 0 is true for any value other than zero.");
-	  node->kind = ND_NE;
-	}else{
+          node->kind = ND_NE;
+        }else{
           println("\ttsta");
-	}
-	break;
+        }
+        break;
       case ND_GE:
         if (lhs->ty->is_unsigned) {
           println("; uint >= 0 is always true");
-	  return 1;
-	}else{
+          return 1;
+        }else{
           println("\ttsta");
-	}
-	break;
+        }
+        break;
       case ND_LE:
         if (lhs->ty->is_unsigned) {
           println("; uint<=0 only when it is exactly 0");
-	  node->kind = ND_EQ;
-	}else{
+          node->kind = ND_EQ;
+        }else{
           println("\ttsta");
-	}
-	break;
+        }
+        break;
       }
     }
   // ↑ rhs==0
