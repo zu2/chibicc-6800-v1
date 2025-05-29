@@ -677,7 +677,6 @@ bool test_expr_x(Node *node)
   return 0;
 
   int r =  gen_expr_x_sub(node,true,true);
-  println("; test_expr_x r %d",r);
   return r;
 }
 
@@ -689,7 +688,6 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
   Node *lhs = node->lhs;
   int off;
 
-  println("; gen_addr_x_sub kind=%d, test=%d",node->kind,test);
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
@@ -726,7 +724,6 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     return 0;
   case ND_DEREF:
     return false;
-    println("; gen_addr_x ND_DEREF test_addr_x %d",test_addr_x(node->lhs));
     if (!test_expr_x(node->lhs)) {
       return 0;
     }
@@ -771,9 +768,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     return false;
   case ND_ASSIGN:
   case ND_COND:
-    println("; ND_ASSIGN in gen_addr_x %s %d",__FILE__,__LINE__);
     return false;
-    println("; ND_ASSIGN or ND_COND %d",node->kind);
     if (node->ty->kind == TY_STRUCT || node->ty->kind == TY_UNION) {
       if (test_expr_x(node)) {
         if (test) {
@@ -814,14 +809,12 @@ fallback:
 int gen_addr_x(Node *node,bool save_d)
 {
   int off = gen_addr_x_sub(node,save_d,false);
-  println("; gen_addr_x return %d",off);
   return off;
 }
 
 bool test_addr_x(Node *node)
 {
   int r =  gen_addr_x_sub(node,true,true);
-  println("; test_addr_x return %d",r);
   return r;
 }
 
