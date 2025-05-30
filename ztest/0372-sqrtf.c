@@ -16,9 +16,10 @@ typedef struct {
   uint32_t expected;
 } SqrtTestCase;
 
-SqrtTestCase test_cases[83] = {
+SqrtTestCase test_cases[] = {
     {0x00000000u, 0x00000000u}, // 0f -> 0f
     {0x80000000u, 0x80000000u}, // -0f -> -0f
+    {0x00000001u, 0x1A3504F3u}, // FLT_MIN -> 3.743392e-23
     {0x00800000u, 0x20000000u}, // 1.1754944e-38f -> 1.0842022e-19f
     {0x006CE3EEu, 0x1FEC1E4Au}, // 9.9999994e-39f -> 9.9999997e-20f
     {0x1E3CE508u, 0x2EDBE6FFu}, // 9.9999997e-21f -> 1e-10f
@@ -131,7 +132,7 @@ int run_tests()
   for (int i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); ++i) {
     float x = *(float *)&test_cases[i].input;
     float expected = *(float *)&test_cases[i].expected;
-    //  float actual = custom_sqrtf(x);
+    //float actual = custom_sqrtf(x);
     float actual = sqrtf(x);
     uint32_t actual_bits = *(uint32_t *)&actual;
 
