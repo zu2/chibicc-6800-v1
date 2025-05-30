@@ -14,11 +14,6 @@ __adx:
 	stx	@tmp1
 	addb	@tmp1+1
 	adca	@tmp1
-	stab	@tmp1+1
-	staa	@tmp1
-	ldx	@tmp1
-	rts
-;
 __tfr_dx:
 	stab	@tmp1+1
 	staa	@tmp1

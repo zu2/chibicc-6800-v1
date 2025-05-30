@@ -14,38 +14,18 @@
 	.export __push32
 	.export __push32x
 	.export __push32dx
-	.export __pop32
 
 	.code
 __load32:		; load 32bit from (AccAB)
-	pshb
-	psha
-	tsx
-	ldx 0,x
-	ins
-	ins
-	ldab 3,x
-	stab @long+3
-	ldab 2,x
-	stab @long+2
-	ldab 1,x
-	stab @long+1
-	ldab 0,x
-	stab @long+0
-	rts
+        jsr __tfr_dx
+        bra __load32x
+;
 __load32i:		; load 32bit immediate
 	tsx
 	ldx 0,x
 	ins
 	ins
-	ldab 3,x
-	stab @long+3
-	ldab 2,x
-	stab @long+2
-	ldab 1,x
-	stab @long+1
-	ldab 0,x
-	stab @long+0
+        bsr __load32x
 	jmp  4,x
 ;
 __load32bx:             ; loda 32bit from b,x
@@ -128,20 +108,3 @@ __push32x:
 	pshb
 	ldx	@tmp1
 	jmp	0,x
-;
-;	__pop32		pul @long
-;
-__pop32:
-	tsx
-	ldx 0,x
-	ins
-	ins
-	pulb
-	stab @long
-	pulb
-	stab @long+1
-	pulb
-	stab @long+2
-	pulb
-	stab @long+3
-	jmp 0,x
