@@ -129,7 +129,9 @@ int align_to(int n, int align) {
 static void ldx_bp()
 {
   if (IX_Dest != IX_BP){
-    println("; stack depth = %d",depth);
+    if (opt_g >= '2') {
+      println("; stack depth = %d",depth);
+    }
     if(depth==0 && !current_fn->use_alloca) {
       println("\ttsx");
     }else{
@@ -624,6 +626,7 @@ bool test_expr_x(Node *node);
 int gen_expr_x_sub(Node *node,bool save_d,bool test)
 {
   Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
   int off;
 
   switch(node->kind) {
@@ -666,7 +669,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return 0;
   case ND_MEMBER: {
     Member *mem = node->member;
-    if (mem->is_bitfield) {     // bitfield cannot be moved to IX
+    if (mem->is_bitfield) {     // bitfield cannot be move to IX
       return false;
     }
     if (test_addr_x(node)) {
@@ -678,18 +681,18 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return false;
   } // ND_MEMBER:
   case ND_DEREF: {
-    if (test_expr_x(node->lhs)) {
+    if (test_expr_x(lhs)) {
       if (test) return true;
-      off = gen_expr_x(node->lhs,true);
+      off = gen_expr_x(lhs,true);
       off = ldx_x(node->ty,off);
       return off;
     }
     return 0;
   } // ND_DEREF
   case ND_ADDR: {
-    if (test_addr_x(node->lhs)) {
+    if (test_addr_x(lhs)) {
       if (test) return true;
-      off = gen_addr_x(node->lhs,true);
+      off = gen_addr_x(lhs,true);
       return off;
     }
     return false;
@@ -698,9 +701,9 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 //case ND_STMT_EXPR:
 //case ND_COMMA:
   case ND_CAST: {
-    if (test_expr_x(node->lhs)) {
+    if (test_expr_x(lhs)) {
       if (test) return true;
-      off = gen_expr_x(node->lhs,true);
+      off = gen_expr_x(lhs,true);
       return off;
     }
     return false;
@@ -713,7 +716,28 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 // case ND_LOGOR:
 // case ND_FUNCALL:
 // case ND_LABEL_VAL:
-// case ND_ADD: TODO
+#if 0
+  // rethink. check ARRAY or Pointer
+  case ND_ADD:
+    if (lhs->kind      == ND_CAST
+    &&  lhs->ty->kind  == TY_PTR
+    &&  test_addr_x(lhs->lhs)
+    &&  rhs->kind      == ND_CAST
+    &&  rhs->ty->kind  == TY_PTR
+    &&  rhs->lhs->kind == ND_NUM
+    &&  is_integer(rhs->lhs->ty)) {
+      if (lhs->lhs->kind == ND_VAR
+      &&  lhs->lhs->var->is_local) {
+        off = lhs->lhs->var->offset + rhs->lhs->val;
+        if (off<=252) {
+          if (test) return true;
+          off = gen_addr_x(lhs->lhs,true) + rhs->lhs->val;
+          return off;
+        }
+      }
+    }
+    return false;
+#endif
   default:
     return false;
   }
@@ -739,6 +763,7 @@ bool test_expr_x(Node *node)
 int gen_addr_x_sub(Node *node,bool save_d,bool test)
 {
   Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
   int off;
 
   switch (node->kind) {
@@ -787,8 +812,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
   case ND_COMMA:
     return false;
   case ND_MEMBER:
-    return false;
-    if (!test_addr_x(node->lhs)) {
+    if (!test_addr_x(lhs)) {
       return 0;
     }
     if (test) {
@@ -798,6 +822,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     if (off<=252) {
       return off;
     }
+    // fall back
     if (save_d)
       push();
     ldd_i(off);
@@ -841,6 +866,8 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       return node->var->offset;
     }
     goto fallback;
+// (+ (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) a +0 ))
+//    (ND_CAST TY_PTR(10) 1))
   }
   if (test) return false;
   error_tok(node->tok, "not an lvalue at gen_addr_x, node->kind %d",node->kind);
@@ -2448,6 +2475,9 @@ static void gen_funcall(Node *node)
 // Generate code for a given node.
 void gen_expr(Node *node) {
   node = optimize_expr(node);
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+  int off;
 
   switch (node->kind) {
   case ND_NULL_EXPR:
@@ -2639,8 +2669,13 @@ void gen_expr(Node *node) {
     load_var(node);
     return;
   case ND_MEMBER: {
-    gen_addr(node);
-    load(node->ty);
+    if (can_load_x(node->ty) && test_addr_x(node)) {
+      off = gen_addr_x(node,false);
+      load_x(node->ty,off);
+    }else{
+      gen_addr(node);
+      load(node->ty);
+    }
 
     Member *mem = node->member;
     if (mem->is_bitfield) {
@@ -2693,7 +2728,6 @@ void gen_expr(Node *node) {
     int64_t val;
 
     node = optimize_expr(node);
-#if 0
     if (is_global_var(node->lhs)
     &&  is_integer(node->lhs->ty)
     &&  node->ty->size <= 2
@@ -2721,7 +2755,6 @@ void gen_expr(Node *node) {
       }
       return;
     }
-#endif
     if (!(node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield)
     &&  test_addr_x(node->lhs)){
       gen_expr(node->rhs);
@@ -3312,6 +3345,43 @@ void gen_expr(Node *node) {
   case ND_ADD:
     if (gen_direct_lr(node,"addb","adca"))
       return;
+#if 0
+    // TODO: rethink
+    println("; gen_expr ND_ADD is_integer_or_ptr rhs->ty %d",is_integer_or_ptr(rhs->ty));
+    println("; gen_expr ND_ADD rhs->ty->size %d",rhs->ty->size);
+    println("; gen_expr test_addr_x rhs %d",test_addr_x(rhs));
+    ast_node_dump(rhs);
+    if (rhs->kind == ND_CAST
+    &&  is_integer_or_ptr(rhs->ty)
+    &&  rhs->ty->size<=2
+    &&  test_addr_x(rhs->lhs)) {
+      int size = (rhs->ty->size < rhs->lhs->ty->size)? rhs->ty->size: rhs->lhs->ty->size;
+      gen_expr(lhs);
+      off = gen_addr_x(rhs->lhs,true);
+      if (size==1) {
+        println("\taddb %d,x",off);
+        println("\tadca #0");
+      }else{
+        println("\taddb %d,x",off+1);
+        println("\tadca %d,x",off);
+      }
+      return;
+    }
+    if (is_integer_or_ptr(rhs->ty)
+    &&  rhs->ty->size<=2
+    &&  test_addr_x(rhs)) {
+      gen_expr(lhs);
+      off = gen_addr_x(rhs,true);
+      if (rhs->ty->size==1) {
+        println("\taddb %d,x",off);
+        println("\tadca #0");
+      }else{
+        println("\taddb %d,x",off+1);
+        println("\tadca %d,x",off);
+      }
+      return;
+    }
+#endif
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);
@@ -3587,6 +3657,9 @@ void stmt_dump(char *p)
   char *q = s;
   static char *pp = NULL;
 
+  if (opt_g < '1') {
+    return;
+  }
   if (pp!=p) {
     if(*p && *p!=';' && *p!='\r' && *p!='\n'){
       while(*p && *p!=';' && *p!='\r' && *p!='\n'){
@@ -3610,7 +3683,14 @@ void stmt_dump(char *p)
 
 static void gen_stmt(Node *node)
 {
+  // When the -g option is added, 
+  // the original C source code is embeddedwithin the assembly source.
   stmt_dump(node->loc);
+  // With -g2 or higher, AST node details are also embedded;
+  // Assembly may sometimes fail in such cases.
+  if (opt_g >= '2') {
+    ast_node_dump(node);
+  }
 
   switch (node->kind) {
   case ND_IF: {
@@ -3719,7 +3799,7 @@ static void gen_stmt(Node *node)
     for (Node *n = node->case_next; n; n = n->case_next) {
       if (n->begin != n->end) {
         has_case_ranges = 1;
-	break;
+        break;
       }
     }
     gen_expr(node->cond);
@@ -3731,51 +3811,51 @@ static void gen_stmt(Node *node)
       // TODO: 32bit case
       stmt_dump(n->loc);
       if (n->begin == n->end) {
-	switch (node->cond->ty->size) {
-	case 1:
-	  println("\tcmpb #<%ld",n->begin);
-	  println("\tjeq _%s", n->label);
-	  break;
-	case 2:
-	  println("\tcpx #%ld",n->begin);
-	  println("\tjeq _%s", n->label);
-	  break;
-	case 4: {
+        switch (node->cond->ty->size) {
+        case 1:
+          println("\tcmpb #<%ld",n->begin);
+          println("\tjeq _%s", n->label);
+          break;
+        case 2:
+          println("\tcpx #%ld",n->begin);
+          println("\tjeq _%s", n->label);
+          break;
+        case 4: {
           int c = count();
-	  println("\tldx #%ld	; %ld",n->begin & 0x0ffff,n->begin);
-	  println("\tcpx @long+2");
-	  println("\tbne L_case_%d",c);
-	  println("\tldx #%ld",(n->begin>>16)&0x0ffff);
-	  println("\tcpx @long");
-	  println("\tjeq _%s", n->label);
-	  println("L_case_%d:",c);
+          println("\tldx #%ld	; %ld",n->begin & 0x0ffff,n->begin);
+          println("\tcpx @long+2");
+          println("\tbne L_case_%d",c);
+          println("\tldx #%ld",(n->begin>>16)&0x0ffff);
+          println("\tcpx @long");
+          println("\tjeq _%s", n->label);
+          println("L_case_%d:",c);
           IX_Dest = IX_None;
-	  break;
-	}
-	default:
-	  assert(0);
-	}
+          break;
+        }
+        default:
+          assert(0);
+        }
         continue;
       }
       // [GNU] Case ranges
       switch (node->cond->ty->size) {
       case 1:
-	println("\ttba");
-	println("\tsuba #%ld", n->begin);
-	println("\tcmpa #%ld", n->end - n->begin);
-	println("\tjcs _%s",   n->label);
-	break;
+        println("\ttba");
+        println("\tsuba #%ld", n->begin);
+        println("\tcmpa #%ld", n->end - n->begin);
+        println("\tjcs _%s",   n->label);
+        break;
       case 2:
-	println("\tpshb");
-	println("\tpsha");
-	println("\tsubb #<%ld", n->begin);
-	println("\tsbca #>%ld", n->begin);
-	println("\tsubb #<%ld", n->end - n->begin);
-	println("\tsbca #>%ld", n->end - n->begin);
-	println("\tpula");
-	println("\tpulb");
-	println("\tjcs _%s", n->label);
-	break;
+        println("\tpshb");
+        println("\tpsha");
+        println("\tsubb #<%ld", n->begin);
+        println("\tsbca #>%ld", n->begin);
+        println("\tsubb #<%ld", n->end - n->begin);
+        println("\tsbca #>%ld", n->end - n->begin);
+        println("\tpula");
+        println("\tpulb");
+        println("\tjcs _%s", n->label);
+        break;
       case 4:
         // TODO: case range
         assert(0);

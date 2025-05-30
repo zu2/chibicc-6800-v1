@@ -27,6 +27,7 @@ static char *opt_MT;
 static char *opt_o;
 static int  opt_v = 0;
 char opt_O = '0';
+char opt_g = '0';
 #define copt_path  "/opt/fcc/lib/copt"
 #define copt_rules "/opt/chibicc/lib/copt.rules"
 
@@ -330,24 +331,24 @@ static void parse_args(int argc, char **argv) {
 
     if (!strncmp(argv[i], "-v", 2)) {
       if (argv[i][2]=='\0') {
-	opt_v++;
+        opt_v++;
       } else if (isdigit(argv[i][2])) {
-	opt_v = atoi(&argv[i][2]);
+        opt_v = atoi(&argv[i][2]);
       } else {
-	for (int j=1; argv[i][j]; j++) {
-	  if (argv[i][j]=='v') {
-	    opt_v++;
-	  }else
+        for (int j=1; argv[i][j]; j++) {
+          if (argv[i][j]=='v') {
+            opt_v++;
+          }else
             error("unknown argument: %s", argv[i]);
-	}
+        }
       }
       continue;
     }
     if (!strncmp(argv[i], "-O", 2)) {
       if (argv[i][2]=='\0') {
-	opt_O = argv[i][1];
+        opt_O = argv[i][1];
       }else{
-	opt_O = argv[i][2];
+        opt_O = argv[i][2];
       }
       switch (opt_O) {
       case 's':
@@ -355,19 +356,35 @@ static void parse_args(int argc, char **argv) {
       case '1':
       case '2':
       case '3':
-	break;
+        break;
       case 'O':
-	opt_O = '1';
-	break;
+        opt_O = '1';
+        break;
       default:
-	error("unknown optimize option: %s", argv[i]);
+        error("unknown optimize option: %s", argv[i]);
+      }
+      continue;
+    }
+    if (!strncmp(argv[i], "-g", 2)) {
+      if (argv[i][2]=='\0') {
+        opt_g = '1';
+      }else{
+        opt_g = argv[i][2];
+      }
+      switch (opt_g) {
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+        break;
+      default:
+        error("unknown debug option: %s", argv[i]);
       }
       continue;
     }
 
     // These options are ignored for now.
     if (!strncmp(argv[i], "-W", 2) ||
-        !strncmp(argv[i], "-g", 2) ||
         !strncmp(argv[i], "-std=", 5) ||
         !strcmp(argv[i], "-ffreestanding") ||
         !strcmp(argv[i], "-fno-builtin") ||
@@ -457,7 +474,7 @@ static void run_subprocess(char **argv, char *redirect_in, char *redirect_out) {
     if (redirect_in) {
       int fd = open(redirect_in, O_RDONLY);
       if (fd<0) {
-	error("can't open input file %s for %s",argv[0],redirect_in);
+        error("can't open input file %s for %s",argv[0],redirect_in);
       }
       dup2(fd, STDIN_FILENO);
       close(fd);
@@ -465,7 +482,7 @@ static void run_subprocess(char **argv, char *redirect_in, char *redirect_out) {
     if (redirect_out) {
       int fd = open(redirect_out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd<0) {
-	error("can't open input file %s for %s",argv[0],redirect_in);
+        error("can't open input file %s for %s",argv[0],redirect_in);
       }
       dup2(fd, STDOUT_FILENO);
       close(fd);
@@ -719,7 +736,7 @@ static void run_linker(StringArray *inputs, char *output) {
   for (int i = 0; i < inputs->len; i++) {
     if (strlen(inputs->data[i])>=3 && strncmp(inputs->data[i],"-l",2)==0) {
       if (strchr(inputs->data[i],'/'))
-	continue;
+        continue;
       strarray_push(&arr, format("%s/lib%s.a",libpath,inputs->data[i]+2));
     }
   }
@@ -816,9 +833,9 @@ int main(int argc, char **argv) {
     // Compile
     if (opt_S) {
       if (opt_O && opt_O != '0' && can_copt()) {
-	char *tmp3 = create_tmpfile();
+        char *tmp3 = create_tmpfile();
         run_cc1(argc, argv, input, tmp3);
-	run_copt(tmp3,output);
+        run_copt(tmp3,output);
       }else{
         run_cc1(argc, argv, input, output);
       }
@@ -830,9 +847,9 @@ int main(int argc, char **argv) {
       char *tmp = create_tmpfile();
       run_cc1(argc, argv, input, tmp);
       if (opt_O && opt_O != '0' && can_copt()) {
-	char *tmp3 = create_tmpfile();
-	run_copt(tmp,tmp3);
-	tmp = tmp3;
+        char *tmp3 = create_tmpfile();
+        run_copt(tmp,tmp3);
+        tmp = tmp3;
       }
       assemble(tmp, output);
       continue;

@@ -412,6 +412,7 @@ extern Type *ty_double;
 extern Type *ty_ldouble;
 
 bool is_integer(Type *ty);
+bool is_integer_or_ptr(Type *ty);
 bool is_flonum(Type *ty);
 bool is_numeric(Type *ty);
 bool is_redundant_cast(Node *expr, Type *ty);
@@ -471,7 +472,6 @@ typedef	enum {
 } IX_Type;
 
 extern IX_Type	IX_Dest;
-extern char opt_O;
 
 //
 // gen_jump.c
@@ -523,5 +523,6 @@ extern StringArray include_paths;
 extern bool opt_fpic;
 extern bool opt_fcommon;
 extern bool opt_optimize;
-extern bool opt_g;
 extern char *base_file;
+extern char opt_O;
+extern char opt_g;
