@@ -1,0 +1,40 @@
+;
+;	long basic library sub32
+;
+	.export __sub32x
+	.export __sub32tos
+
+	.code
+;
+;	__sub32x	@long -= (0-3,x)
+;
+__sub32x:
+	ldab @long+3
+	subb 3,x
+	stab @long+3
+	ldab @long+2
+	sbcb 2,x
+	stab @long+2
+	ldab @long+1
+	sbcb 1,x
+	stab @long+1
+	ldab @long
+	sbcb 0,x
+	stab @long
+	rts
+;
+;	__sub32tos	@long = TOS - @long, pull TOS
+;
+__sub32tos:
+	pula		; pull return address
+	pulb
+	stab	@tmp1+1
+	staa	@tmp1
+	tsx
+        bsr     __sub32x
+	ins
+	ins
+	ins
+	ins
+	ldx	@tmp1
+	jmp	0,x
