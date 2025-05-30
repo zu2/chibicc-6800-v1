@@ -678,29 +678,20 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return false;
   } // ND_MEMBER:
   case ND_DEREF: {
-    println("; gen_expr_x ND_DEREF 1");
-    ast_node_dump(node);
     if (test_expr_x(node->lhs)) {
       if (test) return true;
-      println("; gen_expr_x ND_DEREF 2");
       off = gen_expr_x(node->lhs,true);
-      println("; gen_expr_x ND_DEREF 3 off=%d",off);
       off = ldx_x(node->ty,off);
-      println("; gen_expr_x ND_DEREF 4 off=%d",off);
       return off;
     }
-    println("; gen_expr_x ND_DEREF 5");
     return 0;
   } // ND_DEREF
   case ND_ADDR: {
-    println("; gen_expr_x ND_ADDR start");
     if (test_addr_x(node->lhs)) {
       if (test) return true;
       off = gen_addr_x(node->lhs,true);
-      println("; gen_expr_x ND_ADDR end1 off=%d",off);
       return off;
     }
-    println("; gen_expr_x ND_ADDR end2");
     return false;
   } // ND_ADDR;
 //case ND_ASSIGN:
@@ -2411,11 +2402,8 @@ static void gen_funcall(Node *node)
   if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
     println("\tjsr _%s",node->lhs->var->name);
   }else if (test_expr_x(node->lhs)) { // TODO: gen_expr_x
-    println("; funcall gen_expr_x kind %d",node->lhs->ty->kind);
-    ast_node_dump(node->lhs);
     int off = gen_expr_x(node->lhs,true);
     println("\tjsr %d,x",off);
-    IX_Dest = IX_None;
   }else{
     gen_expr(node->lhs);
     println("\tjsr __jmp_d");
@@ -2688,12 +2676,12 @@ void gen_expr(Node *node) {
       load_x(node->ty,0);
       return;
     }
+#endif
     if (can_load_x(node->ty) && test_expr_x(lhs)){
       int off = gen_expr_x(lhs,false);
-      load_x(node->ty,0);
+      load_x(node->ty,off);
       return;
     }
-#endif
     gen_expr(lhs);
     load(node->ty);
     return;
@@ -2734,13 +2722,14 @@ void gen_expr(Node *node) {
       }
       return;
     }
-    if (test_addr_x(node->lhs)){
+#endif
+    if (!(node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield)
+    &&  test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
       store_x(node->ty,off);
       return;
     }
-#endif
     gen_addr(node->lhs);
     push();
     gen_expr(node->rhs);
@@ -3946,21 +3935,19 @@ static void emit_data(Obj *prog) {
 
     // Common symbol
     if (opt_fcommon && var->is_tentative) {
-        println(";  .comm %s, %d, %d", var->name, var->ty->size, align);
-	println("_%s:",var->name);
-	switch(var->ty->size){
-	case 1: println("\t.byte 0");
-		break;
-	case 2:	println("\t.word 0");
-		break;
-	case 4:	println("\t.word 0");
-		println("\t.word 0");
-		break;
-	default:println("\t.blkb %d",var->ty->size);
-		break;
-//	default:assert(var->ty->size < 8);
-//		break;
-	}
+      println(";  .comm %s, %d, %d", var->name, var->ty->size, align);
+      println("_%s:",var->name);
+      switch(var->ty->size){
+      case 1: println("\t.byte 0");
+        break;
+      case 2:	println("\t.word 0");
+        break;
+      case 4:	println("\t.word 0");
+        println("\t.word 0");
+        break;
+      default:println("\t.blkb %d",var->ty->size);
+        break;
+      }
       continue;
     }
 
@@ -3988,14 +3975,14 @@ static void emit_data(Obj *prog) {
           rel = rel->next;
           pos += 2;
         } else {
-	  if (isprint(var->init_data[pos])
-	  &&  var->init_data[pos]!='\\'   ){
+          if (isprint(var->init_data[pos])
+          &&  var->init_data[pos]!='\\'   ){
             println("\t.byte %d	; '%c'", var->init_data[pos],
-			                 var->init_data[pos]);
-	  }else{
+                                         var->init_data[pos]);
+          }else{
             println("\t.byte %d", var->init_data[pos]);
-	  }
-	  pos++;
+          }
+          pos++;
         }
       }
       continue;
