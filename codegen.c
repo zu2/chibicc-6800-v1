@@ -2119,7 +2119,6 @@ int gen_direct_shr_long(Node *node)
 //
 static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
 {
-  return 0;
   if (opt_O == 's')
     return 0;
   switch(rhs->kind){
@@ -3279,6 +3278,9 @@ void gen_expr(Node *node) {
        || node->rhs->ty->kind==TY_INT
        || node->rhs->ty->kind==TY_SHORT) ){
         gen_expr(node->lhs);
+        if (node->rhs->val == 0) {
+          return;
+        }
         if (node->kind == ND_SHL && gen_direct_shl_long(node))
           return;
         if (node->kind == ND_SHR && gen_direct_shr_long(node))
