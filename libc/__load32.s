@@ -47,6 +47,7 @@ __load32i:		; load 32bit immediate
 	ldab 0,x
 	stab @long+0
 	jmp  4,x
+;
 __load32bx:             ; loda 32bit from b,x
         clra
 __load32dx:		; load 32bit from d,x

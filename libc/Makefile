@@ -5,7 +5,7 @@ all: libc.a
 
 OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o \
 	__cmp16.o __shift16.o \
-	__load.o __load32.o \
+	__load.o __load32.o __pop32.o \
 	__long.o __mul32x32.o __div32x32.o __cmp32.o __shift32.o \
 	__add32.o __sub32.o __neg32.o \
 	__and32.o __or32.o __xor32.o __not32.o \
