@@ -617,6 +617,10 @@ static void gen_addr(Node *node)
   error_tok(node->tok, "not an lvalue");
 }
 
+static int ldx_x(Type *ty,int off);
+int gen_expr_x(Node *node,bool save_d);
+bool test_expr_x(Node *node);
+
 int gen_expr_x_sub(Node *node,bool save_d,bool test)
 {
   Node *lhs = node->lhs;
@@ -640,6 +644,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       return false;
     case TY_SHORT:
     case TY_INT:
+    case TY_PTR:
     case TY_ENUM:
       if (test) return true;
       println("\tldx #%d",(unsigned int)((node->val & 0x0ffff)));
@@ -654,10 +659,70 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
   case ND_VAR:
     if (test_addr_x(node)) {
       if (test) return true;
-      println("\tldx 0,x");
-      IX_Dest = IX_None;
+      off = gen_addr_x(node,true);
+      off = ldx_x(node->ty,off);
+      return off;
     }
     return 0;
+  case ND_MEMBER: {
+    Member *mem = node->member;
+    if (mem->is_bitfield) {     // bitfield cannot be moved to IX
+      return false;
+    }
+    if (test_addr_x(node)) {
+      if (test) return true;
+      off = gen_addr_x(node,true);
+      off = ldx_x(node->ty,off);
+      return off;
+    }
+    return false;
+  } // ND_MEMBER:
+  case ND_DEREF: {
+    println("; gen_expr_x ND_DEREF 1");
+    ast_node_dump(node);
+    if (test_expr_x(node->lhs)) {
+      if (test) return true;
+      println("; gen_expr_x ND_DEREF 2");
+      off = gen_expr_x(node->lhs,true);
+      println("; gen_expr_x ND_DEREF 3 off=%d",off);
+      off = ldx_x(node->ty,off);
+      println("; gen_expr_x ND_DEREF 4 off=%d",off);
+      return off;
+    }
+    println("; gen_expr_x ND_DEREF 5");
+    return 0;
+  } // ND_DEREF
+  case ND_ADDR: {
+    println("; gen_expr_x ND_ADDR start");
+    if (test_addr_x(node->lhs)) {
+      if (test) return true;
+      off = gen_addr_x(node->lhs,true);
+      println("; gen_expr_x ND_ADDR end1 off=%d",off);
+      return off;
+    }
+    println("; gen_expr_x ND_ADDR end2");
+    return false;
+  } // ND_ADDR;
+//case ND_ASSIGN:
+//case ND_STMT_EXPR:
+//case ND_COMMA:
+  case ND_CAST: {
+    if (test_expr_x(node->lhs)) {
+      if (test) return true;
+      off = gen_expr_x(node->lhs,true);
+      return off;
+    }
+    return false;
+  } // ND_CAST:
+// case ND_MEMZERO:
+// case ND_COND:
+// case ND_NOT:
+// case ND_BITNOT:
+// case ND_LOGAND:
+// case ND_LOGOR:
+// case ND_FUNCALL:
+// case ND_LABEL_VAL:
+// case ND_ADD: TODO
   default:
     return false;
   }
@@ -674,10 +739,7 @@ int gen_expr_x(Node *node,bool save_d)
 
 bool test_expr_x(Node *node)
 {
-  return 0;
-
-  int r =  gen_expr_x_sub(node,true,true);
-  return r;
+  return  gen_expr_x_sub(node,true,true);
 }
 
 
@@ -723,7 +785,6 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     IX_Dest = IX_None;
     return 0;
   case ND_DEREF:
-    return false;
     if (!test_expr_x(node->lhs)) {
       return 0;
     }
@@ -731,7 +792,6 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       return true;
     }
     off = gen_expr_x(node->lhs,false);
-    IX_Dest = IX_None;
     return off;
   case ND_COMMA:
     return false;
@@ -909,8 +969,20 @@ bool can_load_x(Type *ty)
   case TY_DOUBLE:
   case TY_LDOUBLE:
     return false;
+  case TY_PTR:
+    return true;
   }
   return is_integer(ty);
+}
+
+static int ldx_x(Type *ty,int off)
+{
+  if (can_load_x(ty)) {
+    println("\tldx %d,x",off);
+    IX_Dest = IX_None;
+    return 0;
+  }
+  return off;
 }
 
 static void load_x(Type *ty,int off) {
@@ -2056,6 +2128,7 @@ int gen_direct_shr_long(Node *node)
 //
 static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
 {
+  return 0;
   if (opt_O == 's')
     return 0;
   switch(rhs->kind){
@@ -2109,8 +2182,8 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
         return 1;
       }else{ // global
         if (test) return 1;
-	println("\tldx #_%s",rhs->var->name);
-	IX_Dest = IX_None;
+        println("\tldx #_%s",rhs->var->name);
+        IX_Dest = IX_None;
         println("\tldab @long+3");
         println("\t%s 3,x",opb);
         println("\tstab @long+3");
@@ -2123,7 +2196,7 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
         println("\tldaa @long");
         println("\t%s 0,x",opa);
         println("\tstaa @long");
-	return 1;
+        return 1;
       }
     }
     return 0;
@@ -2180,10 +2253,10 @@ int gen_direct_long2(Node *node,char *opb, char *opa)
   uint64_t lv;
   uint64_t rv;
 
-  //
-  // L もR もlocal変数の場合、IXは両方とも@bpになるので、これで良い
-  // 将来、IXが変化する場合は、問題になるかもしれない
-  //
+//
+//  If both L and R are local variables, IX is @bp for both, so this is fine.
+//  Should IX change in the future, this could cause problems.
+//
   if (L==1)
     loff = gen_addr_x(lhs,false);
   else
@@ -2338,19 +2411,14 @@ static void gen_funcall(Node *node)
   if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
     println("\tjsr _%s",node->lhs->var->name);
   }else if (test_expr_x(node->lhs)) { // TODO: gen_expr_x
+    println("; funcall gen_expr_x kind %d",node->lhs->ty->kind);
+    ast_node_dump(node->lhs);
     int off = gen_expr_x(node->lhs,true);
-    if (node->lhs->kind==ND_DEREF && node->lhs->ty->kind==TY_FUNC) {
-      println("\tjsr %d,x",off);
-    } else if (node->lhs->ty->kind!=TY_FUNC) {
-      println("\tldx %d,x",off);
-      println("\tjsr 0,x");
-    }else{
-      println("\tjsr %d,x",off);
-    }
+    println("\tjsr %d,x",off);
+    IX_Dest = IX_None;
   }else{
     gen_expr(node->lhs);
-    tfr_dx();
-    println("\tjsr 0,x");
+    println("\tjsr __jmp_d");
   }
   IX_Dest = IX_None;
   
@@ -2610,6 +2678,7 @@ void gen_expr(Node *node) {
   }
   case ND_DEREF: {
     Node *lhs = node->lhs;
+#if 0
     if (lhs->kind      == ND_CAST
     &&  lhs->ty->kind  == TY_PTR
     &&  lhs->lhs->kind == ND_NUM
@@ -2624,6 +2693,7 @@ void gen_expr(Node *node) {
       load_x(node->ty,0);
       return;
     }
+#endif
     gen_expr(lhs);
     load(node->ty);
     return;
@@ -2636,6 +2706,7 @@ void gen_expr(Node *node) {
     int64_t val;
 
     node = optimize_expr(node);
+#if 0
     if (is_global_var(node->lhs)
     &&  is_integer(node->lhs->ty)
     &&  node->ty->size <= 2
@@ -2669,6 +2740,7 @@ void gen_expr(Node *node) {
       store_x(node->ty,off);
       return;
     }
+#endif
     gen_addr(node->lhs);
     push();
     gen_expr(node->rhs);
