@@ -26,10 +26,22 @@
 %1:
 
 
-	jmp L%1
-	jmp L%2
+	jmp %1
+	jmp %2
 =
-	jmp L%1
+	jmp %1
+
+#
+#	case
+#
+
+	jeq %1
+	jmp %2
+%1:
+=
+	jne %2
+%1:
+
 
 #
 #
@@ -49,10 +61,10 @@
 %2:
 
 
-	bra L%1
-	bra L%2
+	bra %1
+	bra %2
 =
-	bra L%1
+	bra %1
 
 #
 #
@@ -210,6 +222,21 @@
 	rola
 	addb @bp+1
 	adca @bp
+
+	stab %2,x
+	staa %1,x
+	ldab %2,x
+	ldaa %1,x
+=
+	stab %2,x
+	staa %1,x
+
+	ldab %2,x
+	ldaa %1,x
+	jsr __tfr_dx
+=
+	ldx %1,x
+
 
 	jsr __load8u	; AccB = (AccAB)
 	tstb
