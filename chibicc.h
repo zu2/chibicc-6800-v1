@@ -476,8 +476,8 @@ extern IX_Type	IX_Dest;
 //
 // gen_jump.c
 //
-int gen_jump_if_false(Node *node,char *if_false);
-int gen_jump_if_true(Node *node,char *if_true);
+bool gen_jump_if_false(Node *node,char *if_false);
+bool gen_jump_if_true(Node *node,char *if_true);
 
 //
 // unicode.c
