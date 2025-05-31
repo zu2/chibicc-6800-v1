@@ -31,7 +31,18 @@ __sub32tos:
 	stab	@tmp1+1
 	staa	@tmp1
 	tsx
-        bsr     __sub32x
+	ldab 3,x
+	subb @long+3
+	stab @long+3
+	ldab 2,x
+	sbcb @long+2
+	stab @long+2
+	ldab 1,x
+	sbcb @long+1
+	stab @long+1
+	ldab 0,x
+	sbcb @long
+	stab @long
 	ins
 	ins
 	ins
