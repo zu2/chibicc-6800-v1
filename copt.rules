@@ -43,6 +43,14 @@
 %1:
 
 
+	jne %1
+	jmp %2
+%1:
+=
+	jeq %2
+%1:
+
+
 #
 #
 #
@@ -85,10 +93,38 @@
 	clra
 
 
-	ldab 0,x
+	ldab %1
 	tstb
 =
-	ldab 0,x
+	ldab %1
+
+
+	stab %1
+	tstb
+=
+	stab %1
+
+
+	jsr __load8u
+	tstb
+=
+	jsr __load8u
+
+
+	stab %1
+	clra
+	tstb
+=
+	clra
+	stab %1
+
+
+	incb
+	clra
+	tstb
+=
+	clra
+	incb
 
 
 	clra
@@ -293,3 +329,59 @@
 	jsr __cmpf32tos
 =
 	jsr __load32x_cmpf
+
+#
+#	branch condition
+#
+
+	clra
+	andb %1
+	aba
+	adca #0
+=
+	andb %1
+
+
+	jsr __ge16s
+	aba
+	adca #0
+	jeq %1
+=
+	jsr __ge16s
+	jeq %1
+
+
+	jsr __lt16s
+	aba
+	adca #0
+	jeq %1
+=
+	jsr __lt16s
+	jeq %1
+
+
+	jsr __eq16
+	aba
+	adca #0
+	jne %1
+=
+	jsr __eq16
+	jne %1
+
+	jsr __eq16
+	aba
+	adca #0
+	jeq %1
+=
+	jsr __eq16
+	jeq %1
+
+
+	jsr __ne16
+	aba
+	adca #0
+	jeq %1
+=
+	jsr __ne16
+	jeq %1
+
