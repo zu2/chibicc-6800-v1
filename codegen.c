@@ -2439,8 +2439,16 @@ static void gen_funcall(Node *node)
   }
   IX_Dest = IX_None;
   
-  // Removes pushed arguments before calling a function
-  if (stack_args*4 > 34) {
+  // Removes pushed arguments before calling a function for speed
+  if (opt_O == 's' && stack_args>4) {         // Smaller, but too slow
+    println("\tjsr __ins_i");
+    if (stack_args>255) {
+      assert(0);
+    }
+    println("\t.byte  %d",stack_args);
+    depth-=stack_args;
+  }else if (stack_args>20 ||                       // Both faster and smaller
+           (opt_O != 's' && stack_args*4 > 34)) {  // Faster, but larger
     println("; ins*%d",stack_args);
     println("\tstaa @tmp2");		// 4
     println("\tsts @tmp1");		// 5
