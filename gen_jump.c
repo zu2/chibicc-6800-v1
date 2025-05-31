@@ -223,16 +223,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
     return gen_jump_if_true(node->lhs, if_false);
   }
 
-  if (is_compare(node)
-  ||  node->kind == ND_BITAND
-  ||  node->kind == ND_BITOR
-  ||  node->kind == ND_BITXOR ) {
-    if (gen_jump_if_false_8bit(node, if_false)) {
-      return true;
-    }
-    goto fallback;
-  }
-
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size==2) {
     if (is_global_var(node)) {
       println("\tldx _%s", node->var->name);
@@ -409,6 +399,10 @@ bool gen_jump_if_false(Node *node, char *if_false)
     if (!gen_direct(rhs, "subb", "sbca")) {
       assert(0);
     }
+  } else if (0 && opt_O == 's' && is_compare(node)) {
+    gen_expr(node);
+    println("\tjeq  %s",if_false);
+    return true;
   } else {
     gen_expr(rhs);
     push();
@@ -481,7 +475,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
     break;
   }
-  return 1;
+  return true;
 fallback:
   gen_expr(node);
   cmp_zero(node->ty);
@@ -646,7 +640,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   char if_false[32];
   char if_thru[32];
   int c = count();
-  sprintf(if_thru, "L_false_%d", c);
+  sprintf(if_false, "L_false_%d", c);
   sprintf(if_thru, "L_thru_%d", c);
 
   if (node->kind == ND_NOT) {
@@ -696,8 +690,10 @@ bool gen_jump_if_true(Node *node, char *if_true)
     goto fallback;
   }
 
-  if (lhs->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR &&
-      gen_jump_if_true_8bit(node, if_true)) {
+  if (lhs->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR) {
+    if (gen_jump_if_true_8bit(node, if_true)) {
+      return true;
+    }
     goto fallback;
   }
 
@@ -715,6 +711,10 @@ bool gen_jump_if_true(Node *node, char *if_true)
     } else if (!gen_direct(rhs, "subb", "sbca")) {
       assert(0);
     }
+  } else if (0 && opt_O == 's' && is_compare(node)) {
+    gen_expr(node);
+    println("\tjne  %s",if_true);
+    return true;
   } else {
     gen_expr(rhs);
     push();
