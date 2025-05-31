@@ -300,7 +300,37 @@ static void ast_dump(Node *node)
 //49   ND_EXCH,      // Atomic exchange
   case ND_POST_INCDEC:
     ast_dump_binary(node,"ND_POST_INCDEC");
-    break;
+    return;
+  case ND_ADDEQ:
+    ast_dump_binary(node,"+=");
+    return;
+  case ND_SUBEQ:
+    ast_dump_binary(node,"-=");
+    return;
+  case ND_MULEQ:
+    ast_dump_binary(node,"*=");
+    return;
+  case ND_DIVEQ:
+    ast_dump_binary(node,"/=");
+    return;
+  case ND_MODEQ:
+    ast_dump_binary(node,"%=");
+    return;
+  case ND_ANDEQ:
+    ast_dump_binary(node,"&=");
+    return;
+  case ND_OREQ:
+    ast_dump_binary(node,"|=");
+    return;
+  case ND_XOREQ:
+    ast_dump_binary(node,"^=");
+    return;
+  case ND_SHLEQ:
+    ast_dump_binary(node,"<<=");
+    return;
+  case ND_SHREQ:
+    ast_dump_binary(node,">>=");
+    return;
   default:
     return;
   }

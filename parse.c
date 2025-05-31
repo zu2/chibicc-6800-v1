@@ -2252,19 +2252,19 @@ static Node *assign(Token **rest, Token *tok) {
     return new_binary(ND_ASSIGN, node, assign(rest, tok->next), tok);
 
   if (equal(tok, "+="))
-    return to_assign(new_add(node, assign(rest, tok->next), tok));
+    return new_binary(ND_ADDEQ, node, assign(rest, tok->next), tok);
 
   if (equal(tok, "-="))
-    return to_assign(new_sub(node, assign(rest, tok->next), tok));
+    return new_binary(ND_SUBEQ, node, assign(rest, tok->next), tok);
 
   if (equal(tok, "*="))
-    return to_assign(new_binary(ND_MUL, node, assign(rest, tok->next), tok));
+    return new_binary(ND_MULEQ, node, assign(rest, tok->next), tok);
 
   if (equal(tok, "/="))
-    return to_assign(new_binary(ND_DIV, node, assign(rest, tok->next), tok));
+    return new_binary(ND_DIVEQ, node, assign(rest, tok->next), tok);
 
   if (equal(tok, "%="))
-    return to_assign(new_binary(ND_MOD, node, assign(rest, tok->next), tok));
+    return new_binary(ND_MODEQ, node, assign(rest, tok->next), tok);
 
   if (equal(tok, "&="))
     return to_assign(new_binary(ND_BITAND, node, assign(rest, tok->next), tok));

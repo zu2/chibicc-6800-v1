@@ -392,6 +392,17 @@ Node *optimize_expr(Node *node)
   case ND_POST_INCDEC:
   case ND_PRE_INCDEC:
     return optimize_lr(node);
+  case ND_ADDEQ:
+  case ND_SUBEQ:
+  case ND_MULEQ:
+  case ND_DIVEQ:
+  case ND_MODEQ:
+  case ND_ANDEQ:
+  case ND_OREQ:
+  case ND_XOREQ:
+  case ND_SHLEQ:
+  case ND_SHREQ:
+    return node;
   }
   return node;
 }

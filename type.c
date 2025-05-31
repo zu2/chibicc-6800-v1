@@ -338,6 +338,46 @@ void add_type(Node *node) {
       node->rhs = new_cast(node->rhs, node->lhs->ty);
     node->ty = node->lhs->ty;
     return;
+  case ND_ADDEQ:
+  case ND_SUBEQ:
+    if (node->lhs->ty->kind == TY_ARRAY)
+      error_tok(node->lhs->tok, "not an lvalue");
+    if (node->lhs->ty->kind == TY_PTR) {
+      if (!is_integer(node->rhs->ty)) {
+        error_tok(node->lhs->tok, "invalid operands");
+      }
+    }else if (!is_numeric(node->lhs->ty) || !is_numeric(node->rhs->ty)) {
+      error_tok(node->lhs->tok, "invalid operands");
+    }
+    node->rhs = new_cast(node->rhs, node->lhs->ty);
+    node->ty = node->lhs->ty;
+    return;
+  case ND_MULEQ:
+  case ND_DIVEQ:
+    if (node->lhs->ty->kind == TY_ARRAY)
+      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_numeric(node->lhs->ty)
+    ||  !is_numeric(node->rhs->ty)) {
+      error_tok(node->lhs->tok, "invalid operands");
+    }
+    node->rhs = new_cast(node->rhs, node->lhs->ty);
+    node->ty = node->lhs->ty;
+    return;
+  case ND_MODEQ:
+  case ND_ANDEQ:
+  case ND_OREQ:
+  case ND_XOREQ:
+  case ND_SHLEQ:
+  case ND_SHREQ:
+    if (node->lhs->ty->kind == TY_ARRAY)
+      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_integer(node->lhs->ty)
+    ||  !is_integer(node->rhs->ty)) {
+      error_tok(node->lhs->tok, "invalid operands");
+    }
+    node->rhs = new_cast(node->rhs, node->lhs->ty);
+    node->ty = node->lhs->ty;
+    return;
   case ND_EQ:
   case ND_NE:
   case ND_LT:

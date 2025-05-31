@@ -236,6 +236,16 @@ typedef enum {
   ND_EXCH,      // Atomic exchange
   ND_POST_INCDEC,// post inc/dec (++,--)
   ND_PRE_INCDEC, // pre  inc/dec (++,--)
+  ND_ADDEQ,	// +=
+  ND_SUBEQ,	// -=
+  ND_MULEQ,	// *=
+  ND_DIVEQ,	// /=
+  ND_MODEQ,	// %=
+  ND_ANDEQ,	// &=
+  ND_OREQ,	// |=
+  ND_XOREQ,	// ^=
+  ND_SHLEQ,	// <<=
+  ND_SHREQ,	// >>=
 } NodeKind;
 
 // AST node type

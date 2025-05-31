@@ -125,6 +125,12 @@ int align_to(int n, int align) {
 //  return (n + align - 1) / align * align;
 }
 
+static void negd()
+{
+  println("\tnega");
+  println("\tnegb");
+  println("\tsbca #0");
+}
 
 static void ldx_bp()
 {
@@ -430,9 +436,7 @@ gen_mul16(Node *node)
         println("\trola");
         // thru
       case -1:
-        println("\tnega");
-        println("\tnegb");
-        println("\tsbca #0");
+        negd();
         return true;
       case 0:
         println("\tclrb");
@@ -2670,10 +2674,7 @@ void gen_expr(Node *node) {
       println("\tnega");
       return;
     }
-    println("\tnega");
-    println("\tnegb");
-    println("\tsbca #0");
-//  println("  neg %%rax");
+    negd();
     return;
   //   ND_NEG end
   case ND_VAR:
@@ -2814,6 +2815,199 @@ void gen_expr(Node *node) {
     store(node->ty);
     return;
   } // ND_ASSIGN
+  case ND_ADDEQ: {
+    gen_addr(node->lhs);
+    push();
+    switch(node->ty->kind) {
+    case TY_FLOAT:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tjsr __push32x");
+      IX_Dest = IX_None;
+      gen_expr(node->rhs);
+      println("\tjsr __addf32tos");
+      break;
+    case TY_LONG:
+      gen_expr(node->rhs);
+      println("\ttsx");
+      println("\tldx 0,x");
+      IX_Dest = IX_None;
+      println("\tjsr __add32x");
+      break;
+    case TY_BOOL:
+    case TY_CHAR:
+      gen_expr(node->rhs);
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\taddb 0,x");
+      println("\tadca #0");
+      break;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+    case TY_PTR:
+      gen_expr(node->rhs);
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\taddb 1,x");
+      println("\tadca 0,x");
+      break;
+    default:
+      assert(0);
+    }
+    IX_Dest = IX_None;
+    store(node->ty);
+    return;
+  }
+  case ND_SUBEQ: {
+    gen_addr(node->lhs);
+    push();
+    switch(node->ty->kind) {
+    case TY_FLOAT:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tjsr __push32x");
+      IX_Dest = IX_None;
+      gen_expr(node->rhs);
+      println("\tjsr __subf32tos");
+      break;
+    case TY_LONG:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tjsr __push32x");
+      IX_Dest = IX_None;
+      gen_expr(node->rhs);
+      println("\tjsr __sub32tos");
+      break;
+    case TY_BOOL:
+    case TY_CHAR:
+      gen_expr(node->rhs);
+      negd();
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\taddb 0,x");
+      println("\tadca #0");
+      break;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+    case TY_PTR:
+      gen_expr(node->rhs);
+      negd();
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\taddb 1,x");
+      println("\tadca 0,x");
+      break;
+    default:
+      assert(0);
+    }
+    store(node->ty);
+    return;
+  }
+  case ND_MULEQ: {
+    gen_addr(node->lhs);
+    push();
+    switch(node->ty->kind) {
+    case TY_FLOAT:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tjsr __push32x");
+      IX_Dest = IX_None;
+      gen_expr(node->rhs);
+      println("\tjsr __mulf32tos");
+      break;
+    case TY_LONG:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tjsr __push32x");
+      IX_Dest = IX_None;
+      gen_expr(node->rhs);
+      println("\tjsr __mul32tos");
+      break;
+    case TY_BOOL:
+    case TY_CHAR: 
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tldab 0,x");
+      println("\tclra");
+      IX_Dest = IX_None;
+      push();
+      gen_expr(node->rhs);
+      println("\tjsr __mul16x16");
+      ins(2);
+      break;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tldab 1,x");
+      println("\tldaa 0,x");
+      IX_Dest = IX_None;
+      push();
+      gen_expr(node->rhs);
+      println("\tjsr __mul16x16");
+      ins(2);
+      break;
+    default:
+      assert(0);
+    }
+    store(node->ty);
+    return;
+  }
+  case ND_DIVEQ: {
+    gen_addr(node->lhs);
+    push();
+    switch(node->ty->kind) {
+    case TY_FLOAT:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tjsr __push32x");
+      IX_Dest = IX_None;
+      gen_expr(node->rhs);
+      println("\tjsr __divf32tos");
+      break;
+    case TY_LONG:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tjsr __push32x");
+      IX_Dest = IX_None;
+      gen_expr(node->rhs);
+      println("\tjsr __div32tos");
+      break;
+    case TY_BOOL:
+    case TY_CHAR: 
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tldab 0,x");
+      println("\tclra");
+      IX_Dest = IX_None;
+      push();
+      gen_expr(node->rhs);
+      println("\tjsr __div16x16");
+      ins(2);
+      break;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tldab 1,x");
+      println("\tldaa 0,x");
+      IX_Dest = IX_None;
+      push();
+      gen_expr(node->rhs);
+      println("\tjsr __div16x16");
+      ins(2);
+      break;
+    default:
+      assert(0);
+    }
+    IX_Dest = IX_None;
+    store(node->ty);
+    return;
+  }
   case ND_STMT_EXPR:
     for (Node *n = node->body; n; n = n->next)
       gen_stmt(n);
@@ -3412,9 +3606,7 @@ void gen_expr(Node *node) {
     }
     if (can_direct(node->lhs)){
       gen_expr(node->rhs);
-      println("\tnega");
-      println("\tnegb");
-      println("\tsbca #0");
+      negd();
       if(gen_direct(node->lhs,"addb","adca"))
         return;
       assert(0);
@@ -3428,9 +3620,7 @@ void gen_expr(Node *node) {
     }
     if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
-      println("\tnega");
-      println("\tnegb");
-      println("\tsbca #0");
+      negd();
       int off = gen_addr_x(node->lhs,true);
       println("\taddb %d+1,x",off);
       println("\tadca %d,x",off);
