@@ -297,6 +297,9 @@ bool is_global_var_or_array(Node *node)
 
 Type *is_integer_constant(Node *node, int64_t *val)
 {
+  if (node->kind == ND_CAST && node->ty->kind == TY_INT) {
+    node = node->lhs;
+  }
   if (node->kind != ND_NUM)
     return NULL;
   if (!is_integer(node->ty))

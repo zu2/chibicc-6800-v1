@@ -48,6 +48,9 @@ bool is_boolean_result(Node *node)
 
 bool is_byte(Node *node)
 {
+  if (node->kind == ND_CAST && node->ty->kind == TY_INT) {
+    node = node->lhs;
+  }
   return (node->ty->kind == TY_CHAR || node->ty->kind == TY_BOOL);
 }
 
@@ -55,21 +58,16 @@ static int isNUM(Node *node) { return node->kind == ND_NUM; }
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
 static int isVARorNUM(Node *node) { return isVAR(node) || isNUM(node); }
 
-static int check_in_char(Node *node)
+static bool check_in_char(Node *node)
 {
+  int64_t val;
 
-  if (node->kind == ND_NUM) {
-    if (node->ty->is_unsigned) {
-      if (node->val > 255) {
-        return 0;
-      }
-    } else { // signed
-      if (node->val < 128 || node->val > 127) {
-        return 0;
-      }
+  if (is_integer_constant(node,&val)) {
+    if ((val & ~0xff)==0) {
+      return true;
     }
   }
-  return 1;
+  return false;
 }
 
 //
@@ -92,6 +90,26 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     load_var(node);
     //  println("\tstb");
     println("\tjeq %s", if_false);
+    return true;
+  }
+
+  if (node->kind == ND_LOGOR) {
+    char if_thru[32];
+    sprintf(if_thru,  "L_thru_%d", count());
+    gen_jump_if_true(node->lhs, if_thru);
+    gen_jump_if_false(node->rhs, if_false);
+    println("%s:",if_thru);
+    return true;
+  }
+  if (node->kind == ND_LOGAND) {
+    gen_jump_if_false(node->lhs, if_false);
+    gen_jump_if_false(node->rhs, if_false);
+    return true;
+  }
+
+  if (node->kind == ND_BITAND && check_in_char(rhs)) {
+    println("\tandb #$%02lx",rhs->val);
+    println("\tjeq %s",if_false);
     return true;
   }
 
@@ -196,20 +214,26 @@ bool gen_jump_if_false(Node *node, char *if_false)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+  char if_thru[32];
+  char if_cond[32];
+  sprintf(if_thru,  "L_thru_%d", count());
 
   if (node->kind == ND_NOT) {
     node->lhs->bool_result_unused = true;
     return gen_jump_if_true(node->lhs, if_false);
   }
 
-  if (isVAR(node) && is_byte(node)) {
+  if (is_compare(node)
+  ||  node->kind == ND_BITAND
+  ||  node->kind == ND_BITOR
+  ||  node->kind == ND_BITXOR ) {
     if (gen_jump_if_false_8bit(node, if_false)) {
       return true;
     }
     goto fallback;
   }
 
-  if (isVAR(node) && node->ty->kind == TY_INT) {
+  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size==2) {
     if (is_global_var(node)) {
       println("\tldx _%s", node->var->name);
       println("\tjeq %s", if_false);
@@ -225,7 +249,19 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
   }
 
-  if (!is_compare(node)) {
+  if (node->kind == ND_LOGOR) {
+    gen_jump_if_true(node->lhs, if_thru);
+    gen_jump_if_false(node->rhs, if_false);
+    println("%s:",if_thru);
+    return true;
+  }
+  if (node->kind == ND_LOGAND) {
+    gen_jump_if_false(node->lhs, if_false);
+    gen_jump_if_false(node->rhs, if_false);
+    return true;
+  }
+
+  if (!is_compare(node) || (node->ty->kind != TY_INT)) {
     gen_expr(node);
     cmp_zero(node->ty);
     println("\tjeq %s", if_false);
@@ -234,9 +270,10 @@ bool gen_jump_if_false(Node *node, char *if_false)
 
   // If one side is ND_NUM, both sides are promoted to int,
   // so this can't be optimized. TODO: Fix optimize.c
-  if (lhs->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR &&
-      gen_jump_if_false_8bit(node, if_false)) {
-    return 1;
+  if (is_byte(node->lhs) && is_byte(node->rhs)) {
+    if (gen_jump_if_false_8bit(node, if_false)) {
+      return 1;
+    }
   }
 
   if (lhs->ty->kind != TY_CHAR && lhs->ty->kind != TY_INT &&
@@ -248,11 +285,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
     goto fallback;
   }
 
-  char if_thru[32];
-  char if_label[32];
-  char if_cond[32];
-  int c = count();
-  sprintf(if_thru, "L_thru_%d", c);
   if (rhs->kind == ND_NUM && rhs->val == 0) {
     if ((lhs->kind == ND_VAR && lhs->var->ty->kind != TY_VLA) &&
         ((lhs->var->is_local && lhs->ty->kind != TY_ARRAY) ||
@@ -395,7 +427,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
   // aba/jne/jcs	5bytes, 6 or 10cycle
   // jxx may be converted to bxx/jmp, fewer jxx instructions are preferable.
   case ND_EQ:
-    sprintf(if_label, "L_thru_%d", c);
     println("\taba");
     println("\tadca #0");
     println("\tjne %s", if_false);
@@ -479,6 +510,36 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     //  println("\tstb");
     println("\tjne %s", if_true);
     return 1;
+  }
+
+  if (node->kind == ND_LOGOR) {
+    gen_jump_if_true(node->lhs, if_true);
+    gen_jump_if_true(node->rhs, if_true);
+    return true;
+  }
+  if (node->kind == ND_LOGAND) {
+    char if_thru[32];
+    sprintf(if_thru,  "L_thru_%d", count());
+    gen_jump_if_false(node->lhs, if_thru);
+    gen_jump_if_true(node->rhs, if_true);
+    println("%s:",if_thru);
+    return true;
+  }
+
+  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size==2) {
+    if (is_global_var(node)) {
+      println("\tldx _%s", node->var->name);
+      println("\tjne %s", if_true);
+      IX_Dest = IX_None;
+      return 1;
+    }
+    if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
+      int off = gen_addr_x(node, false);
+      println("\tldx %d,x", off);
+      println("\tjne %s", if_true);
+      IX_Dest = IX_None;
+      return 1;
+    }
   }
 
   if (!is_compare(node)) {
@@ -576,12 +637,17 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 // Compare two 8- or 16-bit integers.
 //   Generate code that branches to if_true if the comparison result is true.
 //   Return 1 if code was generated.
-// For other types, generate no code and return 0.
+// For other types, generate no code and return false.
 //
 bool gen_jump_if_true(Node *node, char *if_true)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+  char if_false[32];
+  char if_thru[32];
+  int c = count();
+  sprintf(if_thru, "L_false_%d", c);
+  sprintf(if_thru, "L_thru_%d", c);
 
   if (node->kind == ND_NOT) {
     node->lhs->bool_result_unused = true;
@@ -598,6 +664,34 @@ bool gen_jump_if_true(Node *node, char *if_true)
     goto fallback;
   }
 
+  if (node->kind == ND_LOGOR) {
+    gen_jump_if_true(node->lhs, if_true);
+    gen_jump_if_true(node->rhs, if_true);
+    return true;
+  }
+  if (node->kind == ND_LOGAND) {
+    gen_jump_if_false(node->lhs, if_thru);
+    gen_jump_if_true(node->rhs, if_true);
+    println("%s:",if_thru);
+    return true;
+  }
+
+  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size==2) {
+    if (is_global_var(node)) {
+      println("\tldx _%s", node->var->name);
+      println("\tjne %s", if_true);
+      IX_Dest = IX_None;
+      return 1;
+    }
+    if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
+      int off = gen_addr_x(node, false);
+      println("\tldx %d,x", off);
+      println("\tjne %s", if_true);
+      IX_Dest = IX_None;
+      return 1;
+    }
+  }
+
   if (!is_compare(node)) {
     goto fallback;
   }
@@ -612,9 +706,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
     goto fallback;
   }
 
-  char if_thru[32];
-  int c = count();
-  sprintf(if_thru, "L_thru_%d", c);
   if (can_direct(rhs)) {
     gen_expr(lhs);
     if (rhs->kind == ND_NUM && rhs->val == 0) {
