@@ -3240,7 +3240,7 @@ void gen_expr(Node *node) {
       gen_expr(node->rhs);
       push1();
       println("\ttsx");
-      println("\tldx 2,x");
+      println("\tldx 1,x");
       println("\tldab 0,x");
       println("\tclra");
       if (node->kind == ND_SHLEQ) {
@@ -3259,7 +3259,7 @@ void gen_expr(Node *node) {
       gen_expr(node->rhs);
       push1();
       println("\ttsx");
-      println("\tldx 2,x");
+      println("\tldx 1,x");
       println("\tldab 1,x");
       println("\tldaa 0,x");
       if (node->kind == ND_SHLEQ) {
@@ -3656,8 +3656,8 @@ void gen_expr(Node *node) {
       case ND_VAR:
         if (test_addr_x(node->lhs)){
           int off = gen_addr_x(node->lhs,false);
-  	  pushlx(off);
-	  break;
+          pushlx(off);
+          break;
         }
 	// THRU
       default:

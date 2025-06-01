@@ -12,8 +12,8 @@ __shl16:
 	ldab 2,x
 	beq noshift
 	cmpb #16
-	bcc noshift
 	pulb
+	bcc zero
 shlloop:
 	lslb
 	rola

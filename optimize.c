@@ -426,7 +426,9 @@ Node *optimize_expr(Node *node)
 //      warn_tok(node->tok,"shift count negative or too big, undefined behavior");
         Node *new = new_num(0,node->tok);
         new->ty   = node->ty;
-        return new_binary(ND_ASSIGN, node->lhs, new, node->tok);
+        new =  new_binary(ND_ASSIGN, node->lhs, new, node->tok);
+        new->ty = node->ty;
+        return new;
       }
     }
     return optimize_const_expr(node);
