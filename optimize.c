@@ -386,7 +386,19 @@ Node *optimize_expr(Node *node)
   } // relative op
   case ND_SHL:
   case ND_SHR: {
+    int64_t val;
     node = optimize_lr(node);
+    if (is_integer_constant(node->rhs,&val)) {
+      if (val==0) {
+        return node->lhs;
+      } else if (val<0
+      ||  val>=(node->ty->size)*8) { // TODO: bit field
+//      warn_tok(node->tok,"shift count negative or too big, undefined behavior");
+        Node *new = new_num(0,node->tok);
+        new->ty   = node->ty;
+        return new;
+      }
+    }
     return optimize_const_expr(node);
   } // ND_SHL, ND_SHR
   case ND_POST_INCDEC:
@@ -400,9 +412,24 @@ Node *optimize_expr(Node *node)
   case ND_ANDEQ:
   case ND_OREQ:
   case ND_XOREQ:
+    node = optimize_lr(node);
+    return optimize_const_expr(node);
   case ND_SHLEQ:
   case ND_SHREQ:
-    return node;
+    int64_t val;
+    node = optimize_lr(node);
+    if (is_integer_constant(node->rhs,&val)) {
+      if (val==0) {
+        return node->lhs;
+      } else if (val<0
+      ||  val>=(node->ty->size)*8) { // TODO: bit field
+//      warn_tok(node->tok,"shift count negative or too big, undefined behavior");
+        Node *new = new_num(0,node->tok);
+        new->ty   = node->ty;
+        return new_binary(ND_ASSIGN, node->lhs, new, node->tok);
+      }
+    }
+    return optimize_const_expr(node);
   }
   return node;
 }

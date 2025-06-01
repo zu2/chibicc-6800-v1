@@ -206,7 +206,7 @@ Node *new_copy(Node *node)
   return new;
 }
 
-static Node *new_binary(NodeKind kind, Node *lhs, Node *rhs, Token *tok) {
+Node *new_binary(NodeKind kind, Node *lhs, Node *rhs, Token *tok) {
   Node *node = new_node(kind, tok);
   node->lhs = lhs;
   node->rhs = rhs;

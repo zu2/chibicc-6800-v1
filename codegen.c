@@ -325,33 +325,89 @@ bool is_var_array(Node *node)
 }
 
 
+//
+// cf. https://www.zukeran.org/shin/d/2024/12/30/6800-programing-11/
+//
 bool gen_shl(Type *ty, uint64_t val)
 {
   if (!is_integer(ty))
     return false;
   if (val<0)
     return false;
-  if (val>=ty->size*8)
+  if (val==0)
+    return true;            // do nothing
+  if (val>=ty->size*8)      // TODO: bit field
     return false;
   switch(ty->size){
   case 1:
-    for (int i=0; i<val; i++) {
+    switch(val) {
+    case 6:                 // 8cyc, 5bytes
+      println("\trorb");
+      println("\trorb");
+      println("\trorb");
+      println("\tandb #$80");
+      return true;
+    case 7:                 // 6cyc, 4bytes
+      println("\trorb");
+      println("\trorb");
+      println("\tandb #$80");
+      return true;
+    }
+    for (int i=0; i<val; i++) {   // 1-5,  2*n cyc, n bytes
       println("\taslb");
     } 
     return true;
-  case 2:
-    for (int i=0; i<val; i++) {
+  case 2: {                 // short and int    // TODO: -Os
+    switch(val) {           // Tricky but fast and compact
+    case 6:                 // 22cyc, 10bytes
+      println("\tpsha");    // exchange A<->B
+      println("\ttba");
+      println("\tpulb");
+      println("\tlsrb");
+      println("\trora");
+      println("\trorb");
+      println("\trora");
+      println("\trorb");
+      println("\tandb #$C0");
+      return true;
+    case 7:                 // 10cyc, 6bytes
+      println("\tlsra");
+      println("\ttba");
+      println("\trora");
+      println("\trorb");
+      println("\tandb #$80");
+      return true;
+    case 14:                // 12cyc, 6bytes
+    case 15:                // 8cyc,  4bytes
+      println("\tclra");
+      for (int i=0; i<16-val; i++) {
+        println("\tlsrb");
+        println("\trora");
+      }
+      println("\tclrb");
+      return true;
+    }
+    if (val>=8) {                 // 8-13, 2*(n-8)+4 cyc, (n-8)+2 bytes
+      println("\ttba");
+      println("\tclrb");
+      for (int i=0; i<val-8; i++) {
+        println("\tasla");
+      }
+      return true;
+    }
+    for (int i=0; i<val; i++) {   // 1-5, 4*n cyc, 2*n bytes
       println("\taslb");
       println("\trola");
     } 
     return true;
+  }
   case 4:
-    if ( opt_O != '2' && val>2) {
+    if ( opt_O != '2') {
       ldd_i(val);
-      println("\tjsr __shl16");
+      println("\tjsr __shl32");
       return true;
     }
-    for (int i=0; i<val; i++) {
+    for (int i=0; i<val; i++) {   // TODO: byte move
       println("\tasl @long+3");
       println("\trol @long+2");
       println("\trol @long+1");
@@ -3182,7 +3238,7 @@ void gen_expr(Node *node) {
     case TY_BOOL:
     case TY_CHAR: 
       gen_expr(node->rhs);
-      push();
+      push1();
       println("\ttsx");
       println("\tldx 2,x");
       println("\tldab 0,x");
@@ -3194,14 +3250,14 @@ void gen_expr(Node *node) {
       }else{
         println("\tjsr __shr16s");
       }
-      ins(2);
+      ins(1);
       IX_Dest = IX_None;
       break;
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
       gen_expr(node->rhs);
-      push();
+      push1();
       println("\ttsx");
       println("\tldx 2,x");
       println("\tldab 1,x");
@@ -3213,7 +3269,7 @@ void gen_expr(Node *node) {
       }else{
         println("\tjsr __shr16s");
       }
-      ins(2);
+      ins(1);
       IX_Dest = IX_None;
       break;
     default:
@@ -3741,7 +3797,6 @@ void gen_expr(Node *node) {
         println("\tldab #%d",(uint32_t)(node->rhs->val & 0x000000FF));
       }else{
         gen_expr(node->rhs);
-        cast(node->rhs->ty, ty_char);
         push1();
         gen_expr(node->lhs);
         pop1();
@@ -4020,13 +4075,12 @@ void gen_expr(Node *node) {
       return;
     }
     gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
-    push();
+    push1();
     gen_expr(node->lhs);
 //  shl16: AccAB << TOS(16bit)
     cast(node->lhs->ty, node->ty);
     println("\tjsr __shl16");
-    ins(2);
+    ins(1);
     IX_Dest = IX_None;
     return;
   } // ND_SHL
@@ -4037,28 +4091,23 @@ void gen_expr(Node *node) {
       gen_expr(node->lhs);
       if (gen_shr(node->lhs->ty,val)) {
         cast(node->lhs->ty, node->ty);
-	return;
+        return;
       }
       println("\tclrb");
       println("\tclra");
       return;
     }
     gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
-    push();
+    push1();
     gen_expr(node->lhs);
     cast(node->lhs->ty, node->ty);
 //  shr16: AccAB >> TOS(16bit)
     if (node->lhs->ty->is_unsigned){
       println("\tjsr __shr16u");
-      println("\tins");
-      println("\tins");
     }else{
       println("\tjsr __shr16s");
-      println("\tins");
-      println("\tins");
     }
-    depth -= 2;
+    ins(1);
     IX_Dest = IX_None;
     return;
   } // ND_SHR

@@ -384,7 +384,7 @@ void add_type(Node *node) {
     ||  !is_integer(node->rhs->ty)) {
       error_tok(node->lhs->tok, "invalid operands");
     }
-    node->rhs = new_cast(node->rhs, ty_int);
+    node->rhs = new_cast(node->rhs, ty_uchar);
     node->ty = node->lhs->ty;
     return;
   case ND_EQ:
@@ -417,6 +417,7 @@ void add_type(Node *node) {
     if (!is_integer(node->rhs->ty))
       error_tok(node->rhs->tok, "invalid operand");
     int_promotion(&node->lhs);
+    node->rhs = new_cast(node->rhs, ty_uchar);
     node->ty = node->lhs->ty;
     return;
   case ND_VAR:

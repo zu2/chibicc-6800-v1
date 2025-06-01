@@ -1,6 +1,6 @@
 ;
-;	AccAB << TOS
-;	AccAB >> TOS
+;	AccAB << TOS (8bit)
+;	AccAB >> TOS (8bit)
 ;
 	.export __shl16
 	.export __shr16u
@@ -8,10 +8,8 @@
 	.code
 __shl16:
 	tsx
-	tst 2,x
-	bne zero
 	pshb
-	ldab 3,x
+	ldab 2,x
 	beq noshift
 	cmpb #16
 	bcc noshift
@@ -19,7 +17,7 @@ __shl16:
 shlloop:
 	lslb
 	rola
-	dec 3,x
+	dec 2,x
 	bne shlloop
 	rts
 noshift:
@@ -32,10 +30,8 @@ zero:
 ;
 __shr16u:
 	tsx
-	tst 2,x
-	bne zero
 	pshb
-	ldab 3,x
+	ldab 2,x
 	beq noshift
 	cmpb #16
 	pulb
@@ -43,16 +39,14 @@ __shr16u:
 shruloop:
 	lsra
 	rorb
-	dec 3,x
+	dec 2,x
 	bne shruloop
 	rts
 ;
 __shr16s:
 	tsx
-	tst 2,x
-	bne zero
 	pshb
-	ldab 3,x
+	ldab 2,x
 	beq noshift
 	cmpb #16
 	pulb
@@ -60,6 +54,6 @@ __shr16s:
 shrsloop:
 	asra
 	rorb
-	dec 3,x
+	dec 2,x
 	bne shrsloop
 	rts
