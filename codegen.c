@@ -4383,7 +4383,11 @@ static void gen_stmt(Node *node)
     gen_expr(optimize_expr(node->lhs));
     return;
   case ND_ASM:
-    println("\t%s", node->asm_str);
+    if (strchr(node->asm_str,':')==NULL) {
+      println("\t%s", node->asm_str);
+    }else{
+      println("%s", node->asm_str);
+    }
     return;
   }
 
