@@ -2864,11 +2864,12 @@ void gen_expr(Node *node) {
     push();
     switch(node->ty->kind) {
     case TY_FLOAT:
-      println("\ttsx");
-      println("\tldx 0,x");
-      println("\tjsr __push32x");
-      IX_Dest = IX_None;
       gen_expr(node->rhs);
+      println("\tjsr __push32");
+      println("\ttsx");
+      println("\tldx 4,x");
+      println("\tjsr __load32x");
+      IX_Dest = IX_None;
       println("\tjsr __subf32tos");
       break;
     case TY_LONG:
@@ -2961,45 +2962,259 @@ void gen_expr(Node *node) {
     push();
     switch(node->ty->kind) {
     case TY_FLOAT:
-      println("\ttsx");
-      println("\tldx 0,x");
-      println("\tjsr __push32x");
-      IX_Dest = IX_None;
       gen_expr(node->rhs);
+      pushl();
+      println("\ttsx");
+      println("\tldx 4,x");
+      println("\tjsr __load32x");
+      IX_Dest = IX_None;
       println("\tjsr __divf32tos");
+      depth -= 4;
       break;
     case TY_LONG:
-      println("\ttsx");
-      println("\tldx 0,x");
-      println("\tjsr __push32x");
-      IX_Dest = IX_None;
       gen_expr(node->rhs);
-      println("\tjsr __div32tos");
+      pushl();
+      println("\ttsx");
+      println("\tldx 4,x");
+      println("\tjsr __load32x");
+      if (node->ty->is_unsigned) {
+        println("\tjsr __div32x32u");
+      }else{
+        println("\tjsr -_div32x32s");
+      }
+      depth -= 4;
+      IX_Dest = IX_None;
       break;
     case TY_BOOL:
     case TY_CHAR: 
+      gen_expr(node->rhs);
+      push();
       println("\ttsx");
       println("\tldx 0,x");
       println("\tldab 0,x");
       println("\tclra");
-      IX_Dest = IX_None;
-      push();
-      gen_expr(node->rhs);
-      println("\tjsr __div16x16");
+      if (node->ty->is_unsigned) {
+        println("\tjsr __div16x16u");
+      }else{
+        println("\tjsr __div16x16s");
+      }
       ins(2);
+      IX_Dest = IX_None;
       break;
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
+      gen_expr(node->rhs);
+      push();
       println("\ttsx");
       println("\tldx 0,x");
       println("\tldab 1,x");
       println("\tldaa 0,x");
-      IX_Dest = IX_None;
-      push();
-      gen_expr(node->rhs);
-      println("\tjsr __div16x16");
+      if (node->ty->is_unsigned) {
+        println("\tjsr __div16x16u");
+      }else{
+        println("\tjsr __div16x16s");
+      }
       ins(2);
+      IX_Dest = IX_None;
+      break;
+    default:
+      assert(0);
+    }
+    IX_Dest = IX_None;
+    store(node->ty);
+    return;
+  }
+  case ND_MODEQ: {
+    gen_addr(node->lhs);
+    push();
+    switch(node->ty->kind) {
+    case TY_LONG:
+      gen_expr(node->rhs);
+      pushl();
+      println("\ttsx");
+      println("\tldx 4,x");
+      println("\tjsr __load32x");
+      if (node->ty->is_unsigned) {
+        println("\tjsr __rem32x32u");
+      }else{
+        println("\tjsr __rem32x32s");
+      }
+      depth -= 4;
+      IX_Dest = IX_None;
+      break;
+    case TY_BOOL:
+    case TY_CHAR: 
+      gen_expr(node->rhs);
+      push();
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tldab 0,x");
+      println("\tclra");
+      if (node->ty->is_unsigned) {
+        println("\tjsr __rem16x16u");
+      }else{
+        println("\tjsr __rem16x16s");
+      }
+      ins(2);
+      IX_Dest = IX_None;
+      break;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+      gen_expr(node->rhs);
+      push();
+      println("\ttsx");
+      println("\tldx 0,x");
+      println("\tldab 1,x");
+      println("\tldaa 0,x");
+      if (node->ty->is_unsigned) {
+        println("\tjsr __rem16x16u");
+      }else{
+        println("\tjsr __rem16x16s");
+      }
+      ins(2);
+      IX_Dest = IX_None;
+      break;
+    default:
+      assert(0);
+    }
+    IX_Dest = IX_None;
+    store(node->ty);
+    return;
+  }
+  case ND_ANDEQ:
+  case ND_OREQ:
+  case ND_XOREQ: {
+    gen_addr(node->lhs);
+    push();
+    switch(node->ty->kind) {
+    case TY_LONG:
+      gen_expr(node->rhs);
+      pushl();
+      println("\ttsx");
+      println("\tldx 4,x");
+      println("\tjsr __load32x");
+      switch(node->kind) {
+      case ND_ANDEQ:
+        println("\tjsr __and32tos");
+        break;
+      case ND_OREQ:
+        println("\tjsr __or32tos");
+        break;
+      case ND_XOREQ:
+        println("\tjsr __xor32tos");
+        break;
+      }
+      depth -= 4;
+      IX_Dest = IX_None;
+      break;
+    case TY_BOOL:
+    case TY_CHAR: 
+      gen_expr(node->rhs);
+      println("\ttsx");
+      println("\tldx 0,x");
+      switch (node->kind) {
+      case ND_ANDEQ:
+        println("\tandb 0,x");
+        break;
+      case ND_OREQ:
+        println("\torab 0,x");
+        break;
+      case ND_XOREQ:
+        println("\teorb 0,x");
+        break;
+      }
+      println("\tclra");
+      IX_Dest = IX_None;
+      break;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+      gen_expr(node->rhs);
+      println("\ttsx");
+      println("\tldx 0,x");
+      switch (node->kind) {
+      case ND_ANDEQ:
+        println("\tandb 1,x");
+        println("\tanda 0,x");
+        break;
+      case ND_OREQ:
+        println("\torab 1,x");
+        println("\toraa 0,x");
+        break;
+      case ND_XOREQ:
+        println("\teoab 1,x");
+        println("\teoaa 0,x");
+        break;
+      }
+      IX_Dest = IX_None;
+      break;
+    default:
+      error_tok(node->tok,"invalid operand &,|,^");
+      assert(0);
+    }
+    IX_Dest = IX_None;
+    store(node->ty);
+    return;
+  }
+  case ND_SHREQ:
+  case ND_SHLEQ: {
+    gen_addr(node->lhs);
+    push();
+    switch(node->ty->kind) {
+    case TY_LONG:
+      gen_expr(node->rhs);
+      push1();
+      println("\ttsx");
+      println("\tldx 1,x");
+      println("\tjsr __load32x");
+      pop1();
+      if (node->kind == ND_SHLEQ) {
+        println("\tjsr __shl32");
+      }else if (node->lhs->ty->is_unsigned) {
+        println("\tjsr __shr32u");
+      }else{
+        println("\tjsr __shr32s");
+      }
+      IX_Dest = IX_None;
+      break;
+    case TY_BOOL:
+    case TY_CHAR: 
+      gen_expr(node->rhs);
+      push();
+      println("\ttsx");
+      println("\tldx 2,x");
+      println("\tldab 0,x");
+      println("\tclra");
+      if (node->kind == ND_SHLEQ) {
+        println("\tjsr __shl16");
+      }else if (node->lhs->ty->is_unsigned) {
+        println("\tjsr __shr16u");
+      }else{
+        println("\tjsr __shr16s");
+      }
+      ins(2);
+      IX_Dest = IX_None;
+      break;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+      gen_expr(node->rhs);
+      push();
+      println("\ttsx");
+      println("\tldx 2,x");
+      println("\tldab 1,x");
+      println("\tldaa 0,x");
+      if (node->kind == ND_SHLEQ) {
+        println("\tjsr __shl16");
+      }else if (node->lhs->ty->is_unsigned) {
+        println("\tjsr __shr16u");
+      }else{
+        println("\tjsr __shr16s");
+      }
+      ins(2);
+      IX_Dest = IX_None;
       break;
     default:
       assert(0);

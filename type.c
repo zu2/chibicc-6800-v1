@@ -367,6 +367,15 @@ void add_type(Node *node) {
   case ND_ANDEQ:
   case ND_OREQ:
   case ND_XOREQ:
+    if (node->lhs->ty->kind == TY_ARRAY)
+      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_integer(node->lhs->ty)
+    ||  !is_integer(node->rhs->ty)) {
+      error_tok(node->lhs->tok, "invalid operands");
+    }
+    node->rhs = new_cast(node->rhs, node->lhs->ty);
+    node->ty = node->lhs->ty;
+    return;
   case ND_SHLEQ:
   case ND_SHREQ:
     if (node->lhs->ty->kind == TY_ARRAY)
@@ -375,7 +384,7 @@ void add_type(Node *node) {
     ||  !is_integer(node->rhs->ty)) {
       error_tok(node->lhs->tok, "invalid operands");
     }
-    node->rhs = new_cast(node->rhs, node->lhs->ty);
+    node->rhs = new_cast(node->rhs, ty_int);
     node->ty = node->lhs->ty;
     return;
   case ND_EQ:
