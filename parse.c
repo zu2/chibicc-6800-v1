@@ -2251,11 +2251,27 @@ static Node *assign(Token **rest, Token *tok) {
   if (equal(tok, "="))
     return new_binary(ND_ASSIGN, node, assign(rest, tok->next), tok);
 
-  if (equal(tok, "+="))
-    return new_binary(ND_ADDEQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "+=")) {
+    add_type(node);
+    Node *rhs = assign(rest, tok->next);
+    if (node->ty->kind == TY_PTR
+    &&  node->ty->base
+    &&  node->ty->base->size != 1) {
+      rhs = new_binary(ND_MUL, rhs, new_int(node->ty->base->size, tok), tok);
+    }
+    return new_binary(ND_ADDEQ, node, rhs, tok);
+  }
 
-  if (equal(tok, "-="))
-    return new_binary(ND_SUBEQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "-=")) {
+    add_type(node);
+    Node *rhs = assign(rest, tok->next);
+    if (node->ty->kind == TY_PTR
+    &&  node->ty->base
+    &&  node->ty->base->size != 1) {
+      rhs = new_binary(ND_MUL, rhs, new_int(node->ty->base->size, tok), tok);
+    }
+    return new_binary(ND_SUBEQ, node, rhs, tok);
+  }
 
   if (equal(tok, "*="))
     return new_binary(ND_MULEQ, node, assign(rest, tok->next), tok);
