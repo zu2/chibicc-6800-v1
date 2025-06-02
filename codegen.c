@@ -2493,8 +2493,61 @@ static void gen_funcall(Node *node)
     int off = gen_expr_x(node->lhs,true);
     println("\tjsr %d,x",off);
   }else{
+    if (!node->args->pass_by_stack) {
+      switch (node->args->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        println("\tpshb");
+        break;
+      case TY_SHORT:
+      case TY_INT:
+      case TY_PTR:
+      case TY_ENUM:
+        println("\tpshb");
+        println("\tpsha");
+        break;
+      case TY_LONG:
+      case TY_FLOAT:
+        println("\tpush32");
+        break;
+      default:
+        assert(0);
+      }
+    }else if (node->ret_buffer) {
+      println("\tpshb");
+      println("\tpsha");
+    }
+    println("; gen_expr start");
     gen_expr(node->lhs);
-    println("\tjsr __jmp_d");
+    println("; gen_expr end");
+    println("\tstab @tmp1+1");
+    println("\tstaa @tmp1");
+    if (!node->args->pass_by_stack) {
+      switch (node->args->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        println("\tpulb");
+        break;
+      case TY_SHORT:
+      case TY_INT:
+      case TY_PTR:
+      case TY_ENUM:
+        println("\tpula");
+        println("\tpulb");
+        break;
+      case TY_LONG:
+      case TY_FLOAT:
+        println("\tpop32");
+        break;
+      default:
+        assert(0);
+      }
+    }else if (node->ret_buffer) {
+      println("\tpula");
+      println("\tpulb");
+    }
+    println("\tldx @tmp1");
+    println("\tjsr 0,x");
   }
   IX_Dest = IX_None;
   
@@ -4427,7 +4480,6 @@ static void assign_lvar_offsets(Obj *prog) {
 		//
     fn->stack_size = 0;
     int has_implicit_reg_param = 0;
-    fprintf("; fn->name %s\n",fn->name);
     switch (fn->ty->return_ty->kind){
     case TY_STRUCT:
     case TY_UNION:
