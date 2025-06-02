@@ -96,7 +96,6 @@ static void ldd_i(int n)
   }
 }
 
-
 static void pushl(void) {
   if (opt_O == 's') {
     println("\tjsr __push32");
@@ -2542,335 +2541,9 @@ static void gen_funcall(Node *node)
   return;
 }
 
-
-// Generate code for a given node.
-void gen_expr(Node *node) {
-  node = optimize_expr(node);
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-  int off;
-
-  switch (node->kind) {
-  case ND_NULL_EXPR:
-    return;
-  case ND_NUM: {
-    switch (node->ty->kind) {
-    case TY_FLOAT: {
-      union { float f32; uint32_t u32; } u = { node->fval };
-      load32i(u.u32);
-      return;
-    }
-    case TY_DOUBLE:
-    case TY_LDOUBLE: {
-      error_tok(node->tok, "gen_expr: double not implemented yet");
-      return;
-    }
-    case TY_BOOL:
-    case TY_CHAR:
-      if(node->val==0){
-        println("\tclrb");
-      }else{
-        println("\tldab #<%u", (uint16_t)node->val);
-      }
-      return;
-    case TY_INT:
-    case TY_SHORT:
-    case TY_PTR:
-    case TY_ENUM:
-      ldd_i((uint16_t)node->val);
-      return;
-    case TY_LONG:
-      load32i(node->val);
-      return;
-    }
-    error_tok(node->tok, "gen_expr: not implemented yet token");
-    return;
-  }
-  case ND_POST_INCDEC: {
-    if (node->rhs->kind != ND_NUM){
-      assert(0);
-    }
-    int val = node->rhs->val;
-    int off;
-    if (test_addr_x(node->lhs)){
-      off = gen_addr_x(node->lhs,false);
-    }else{
-      off = 0;
-      gen_addr(node->lhs);
-      tfr_dx();
-    }
-    switch (node->lhs->ty->kind) {
-    case TY_BOOL:
-    case TY_CHAR:
-      println("\tldab %d,x",off);
-      switch(val){
-      case 1:
-        println("\tincb");
-        break;
-      case -1:
-        println("\tdecb");
-        break;
-      default:
-        println("\taddb #%d",val);
-        break;
-      }
-      println("\tstab %d,x",off);
-      if (!node->retval_unused) {
-        switch(val){
-        case 1:
-          println("\tdecb");
-          break;
-        case -1:
-          println("\tincb");
-          break;
-        default:
-          println("\tsubb #%d",val);
-          break;
-        }
-        println("\tclra");
-        if (!node->lhs->ty->is_unsigned){
-          println("\tasrb");
-          println("\trolb");
-          println("\tsbca #0");
-        }
-      }
-      break;
-    case TY_SHORT:
-    case TY_INT:
-    case TY_ENUM:
-    case TY_PTR:
-      println("\tldab %d,x",off+1);
-      println("\tldaa %d,x",off);
-      println("\taddb #<%d",val);
-      println("\tadca #>%d",val);
-      println("\tstab %d,x",off+1);
-      println("\tstaa %d,x",off);
-      if (!node->retval_unused) {
-        println("\tsubb #<%d",val);
-        println("\tsbca #>%d",val);
-      }
-      break;
-    default:
-      assert(0);
-    }
-    return;
-  } // ND_POST_INCDEC
-  case ND_PRE_INCDEC: {
-    if (node->rhs->kind != ND_NUM){
-      assert(0);
-    }
-    int val = node->rhs->val;
-    int off;
-    if (test_addr_x(node->lhs)){
-      off = gen_addr_x(node->lhs,false);
-    }else{
-      off = 0;
-      gen_addr(node->lhs);
-      tfr_dx();
-    }
-    switch (node->lhs->ty->kind) {
-    case TY_BOOL:
-    case TY_CHAR:
-      println("\tldab %d,x",off);
-      switch(val){
-      case 1:
-        println("\tincb");
-        break;
-      case -1:
-        println("\tdecb");
-        break;
-      default:
-        println("\taddb #%d",val);
-        break;
-      }
-      println("\tstab %d,x",off);
-      if (!node->retval_unused) {
-        println("\tclra");
-        if (!node->lhs->ty->is_unsigned){
-          println("\tasrb");
-          println("\trolb");
-          println("\tsbca #0");
-        }
-      }
-      break;
-    case TY_SHORT:
-    case TY_INT:
-      println("\tldab %d,x",off+1);
-      println("\tldaa %d,x",off);
-      println("\taddb #<%d",val);
-      println("\tadca #>%d",val);
-      println("\tstab %d,x",off+1);
-      println("\tstaa %d,x",off);
-      break;
-    default:
-      assert(0);
-    }
-    return;
-  } // ND_PRE_INCDEC
-  case ND_NEG:
-    gen_expr(node->lhs);
-
-    switch (node->ty->kind) {
-    case TY_FLOAT:
-      println("\tldab @long	; negate float");
-      println("\teorb #$80");
-      println("\tstab @long");
-      return;
-    case TY_DOUBLE:
-      error_tok(node->tok, "gen_expr: double not implemented yet");
-      return;
-    case TY_LDOUBLE:
-      error_tok(node->tok, "gen_expr: double not implemented yet");
-      return;
-    case TY_LONG:
-      println("\tjsr __neg32");
-      IX_Dest = IX_None;
-      return;
-    case TY_CHAR:
-      println("\tnega");
-      return;
-    }
-    negd();
-    return;
-  //   ND_NEG end
-  case ND_VAR:
-    load_var(node);
-    return;
-  case ND_MEMBER: {
-    if (can_load_x(node->ty) && test_addr_x(node)) {
-      off = gen_addr_x(node,false);
-      load_x(node->ty,off);
-    }else{
-      gen_addr(node);
-      load(node->ty);
-    }
-
-    Member *mem = node->member;
-    if (mem->is_bitfield) {
-      println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s %d",
-		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
-      println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
-      for (int i=0; i<mem->bit_width + mem->bit_offset; i++){
-        println("\taslb");
-        println("\trora");
-      }
-      for (int i=0; i<mem->bit_width; i++) {
-        if (mem->ty->is_unsigned){
-          println("\tlsra");
-          println("\trolb");
-        }else{
-          println("\tasra");
-          println("\trolb");
-        } 
-      }
-    }
-    return;
-  }
-  case ND_DEREF: {
-    Node *lhs = node->lhs;
-#if 0
-    if (lhs->kind      == ND_CAST
-    &&  lhs->ty->kind  == TY_PTR
-    &&  lhs->lhs->kind == ND_NUM
-    &&  is_integer(lhs->lhs->ty)) {
-      println("\tldx #%ld",lhs->lhs->val);
-      IX_Dest = IX_None;
-      load_x(node->ty,0);
-      return;
-    }
-#endif
-    if (can_load_x(node->ty) && test_expr_x(lhs)){
-      int off = gen_expr_x(lhs,false);
-      load_x(node->ty,off);
-      return;
-    }
-    gen_expr(lhs);
-    load(node->ty);
-    return;
-  } // ND_DEREF:
-  case ND_ADDR:
-    gen_addr(node->lhs);
-    return;
-  case ND_ASSIGN: {
-    Type    *ty;
-    int64_t val;
-
-    node = optimize_expr(node);
-    if (is_global_var(node->lhs)
-    &&  is_integer(node->lhs->ty)
-    &&  node->ty->size <= 2
-    &&  can_direct(node->lhs)) {
-      gen_expr(node->rhs);
-      gen_direct(node->lhs,"stab","staa");
-      return;
-    }
-    if ((ty = is_integer_constant(node->rhs,&val))
-    &&  ty->size <= 2
-    &&  is_integer(node->ty)
-    &&  node->ty->size <= 2) {
-      if (can_direct(node->lhs)) {
-        gen_direct(node->rhs,"ldab","ldaa");
-        gen_direct(node->lhs,"stab","staa");
-      }else if (test_addr_x(node->lhs)){
-        int off = gen_addr_x(node->lhs,true);
-        gen_expr(node->rhs);
-        store_x(node->ty,off);
-      }else{
-        gen_addr(node->lhs);
-        tfr_dx();
-        gen_direct(node->rhs,"ldab","ldaa");
-        store_x(node->ty,0);
-      }
-      return;
-    }
-    if (!(node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield)
-    &&  test_addr_x(node->lhs)){
-      gen_expr(node->rhs);
-      int off = gen_addr_x(node->lhs,true);
-      store_x(node->ty,off);
-      return;
-    }
-    gen_addr(node->lhs);
-    push();
-    gen_expr(node->rhs);
-
-    if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
-      println("\tstab @tmp1+1");
-      println("\tstab @tmp1");
-
-      // If the lhs is a bitfield, we need to read the current value
-      // from memory and merge it with a new value.
-      Member *mem = node->lhs->member;
-      println("; bitfieled mem->bit_width=%d, mem->bit_offset=%d, %s %d",
-		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
-      println("\tandb #<%d", (int)(1L << mem->bit_width) - 1);
-      println("\tanda #>%d", (int)(1L << mem->bit_width) - 1);
-      for (int i=0; i<mem->bit_offset; i++){
-        println("\taslb");
-        println("\trola");
-      }
-      println("\tstab @rdi+1");
-      println("\tstaa @rdi");
-      println("\tpula");
-      println("\tpulb");
-      println("\tpshb");
-      println("\tpsha");
-      load(mem->ty);
-
-      long mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
-      println("\tandb #<%d",(int)~mask);
-      println("\tanda #>%d",(int)~mask);
-      println("\torab @rdi+1");
-      println("\toraa @rdi+1");
-      store(node->ty);
-      println("\tldab @tmp1+1");
-      println("\tldaa @tmp1");
-      return;
-    }
-
-    store(node->ty);
-    return;
-  } // ND_ASSIGN
+static void opeq(Node *node)
+{
+  switch(node->kind){
   case ND_ADDEQ: {
     gen_addr(node->lhs);
     push();
@@ -3279,6 +2952,351 @@ void gen_expr(Node *node) {
     store(node->ty);
     return;
   }
+  default:
+    assert(0);
+  }
+}
+
+// Generate code for a given node.
+void gen_expr(Node *node) {
+  node = optimize_expr(node);
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+  int off;
+
+  switch (node->kind) {
+  case ND_NULL_EXPR:
+    return;
+  case ND_NUM: {
+    switch (node->ty->kind) {
+    case TY_FLOAT: {
+      union { float f32; uint32_t u32; } u = { node->fval };
+      load32i(u.u32);
+      return;
+    }
+    case TY_DOUBLE:
+    case TY_LDOUBLE: {
+      error_tok(node->tok, "gen_expr: double not implemented yet");
+      return;
+    }
+    case TY_BOOL:
+    case TY_CHAR:
+      if(node->val==0){
+        println("\tclrb");
+      }else{
+        println("\tldab #<%u", (uint16_t)node->val);
+      }
+      return;
+    case TY_INT:
+    case TY_SHORT:
+    case TY_PTR:
+    case TY_ENUM:
+      ldd_i((uint16_t)node->val);
+      return;
+    case TY_LONG:
+      load32i(node->val);
+      return;
+    }
+    error_tok(node->tok, "gen_expr: not implemented yet token");
+    return;
+  }
+  case ND_POST_INCDEC: {
+    if (node->rhs->kind != ND_NUM){
+      assert(0);
+    }
+    int val = node->rhs->val;
+    int off;
+    if (test_addr_x(node->lhs)){
+      off = gen_addr_x(node->lhs,false);
+    }else{
+      off = 0;
+      gen_addr(node->lhs);
+      tfr_dx();
+    }
+    switch (node->lhs->ty->kind) {
+    case TY_BOOL:
+    case TY_CHAR:
+      println("\tldab %d,x",off);
+      switch(val){
+      case 1:
+        println("\tincb");
+        break;
+      case -1:
+        println("\tdecb");
+        break;
+      default:
+        println("\taddb #%d",val);
+        break;
+      }
+      println("\tstab %d,x",off);
+      if (!node->retval_unused) {
+        switch(val){
+        case 1:
+          println("\tdecb");
+          break;
+        case -1:
+          println("\tincb");
+          break;
+        default:
+          println("\tsubb #%d",val);
+          break;
+        }
+        println("\tclra");
+        if (!node->lhs->ty->is_unsigned){
+          println("\tasrb");
+          println("\trolb");
+          println("\tsbca #0");
+        }
+      }
+      break;
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+    case TY_PTR:
+      println("\tldab %d,x",off+1);
+      println("\tldaa %d,x",off);
+      println("\taddb #<%d",val);
+      println("\tadca #>%d",val);
+      println("\tstab %d,x",off+1);
+      println("\tstaa %d,x",off);
+      if (!node->retval_unused) {
+        println("\tsubb #<%d",val);
+        println("\tsbca #>%d",val);
+      }
+      break;
+    default:
+      assert(0);
+    }
+    return;
+  } // ND_POST_INCDEC
+  case ND_PRE_INCDEC: {
+    if (node->rhs->kind != ND_NUM){
+      assert(0);
+    }
+    int val = node->rhs->val;
+    int off;
+    if (test_addr_x(node->lhs)){
+      off = gen_addr_x(node->lhs,false);
+    }else{
+      off = 0;
+      gen_addr(node->lhs);
+      tfr_dx();
+    }
+    switch (node->lhs->ty->kind) {
+    case TY_BOOL:
+    case TY_CHAR:
+      println("\tldab %d,x",off);
+      switch(val){
+      case 1:
+        println("\tincb");
+        break;
+      case -1:
+        println("\tdecb");
+        break;
+      default:
+        println("\taddb #%d",val);
+        break;
+      }
+      println("\tstab %d,x",off);
+      if (!node->retval_unused) {
+        println("\tclra");
+        if (!node->lhs->ty->is_unsigned){
+          println("\tasrb");
+          println("\trolb");
+          println("\tsbca #0");
+        }
+      }
+      break;
+    case TY_SHORT:
+    case TY_INT:
+      println("\tldab %d,x",off+1);
+      println("\tldaa %d,x",off);
+      println("\taddb #<%d",val);
+      println("\tadca #>%d",val);
+      println("\tstab %d,x",off+1);
+      println("\tstaa %d,x",off);
+      break;
+    default:
+      assert(0);
+    }
+    return;
+  } // ND_PRE_INCDEC
+  case ND_NEG:
+    gen_expr(node->lhs);
+
+    switch (node->ty->kind) {
+    case TY_FLOAT:
+      println("\tldab @long	; negate float");
+      println("\teorb #$80");
+      println("\tstab @long");
+      return;
+    case TY_DOUBLE:
+      error_tok(node->tok, "gen_expr: double not implemented yet");
+      return;
+    case TY_LDOUBLE:
+      error_tok(node->tok, "gen_expr: double not implemented yet");
+      return;
+    case TY_LONG:
+      println("\tjsr __neg32");
+      IX_Dest = IX_None;
+      return;
+    case TY_CHAR:
+      println("\tnega");
+      return;
+    }
+    negd();
+    return;
+  //   ND_NEG end
+  case ND_VAR:
+    load_var(node);
+    return;
+  case ND_MEMBER: {
+    if (can_load_x(node->ty) && test_addr_x(node)) {
+      off = gen_addr_x(node,false);
+      load_x(node->ty,off);
+    }else{
+      gen_addr(node);
+      load(node->ty);
+    }
+
+    Member *mem = node->member;
+    if (mem->is_bitfield) {
+      println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s %d",
+		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
+      println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
+      for (int i=0; i<mem->bit_width + mem->bit_offset; i++){
+        println("\taslb");
+        println("\trora");
+      }
+      for (int i=0; i<mem->bit_width; i++) {
+        if (mem->ty->is_unsigned){
+          println("\tlsra");
+          println("\trolb");
+        }else{
+          println("\tasra");
+          println("\trolb");
+        } 
+      }
+    }
+    return;
+  }
+  case ND_DEREF: {
+    Node *lhs = node->lhs;
+#if 0
+    if (lhs->kind      == ND_CAST
+    &&  lhs->ty->kind  == TY_PTR
+    &&  lhs->lhs->kind == ND_NUM
+    &&  is_integer(lhs->lhs->ty)) {
+      println("\tldx #%ld",lhs->lhs->val);
+      IX_Dest = IX_None;
+      load_x(node->ty,0);
+      return;
+    }
+#endif
+    if (can_load_x(node->ty) && test_expr_x(lhs)){
+      int off = gen_expr_x(lhs,false);
+      load_x(node->ty,off);
+      return;
+    }
+    gen_expr(lhs);
+    load(node->ty);
+    return;
+  } // ND_DEREF:
+  case ND_ADDR:
+    gen_addr(node->lhs);
+    return;
+  case ND_ASSIGN: {
+    Type    *ty;
+    int64_t val;
+
+    node = optimize_expr(node);
+    if (is_global_var(node->lhs)
+    &&  is_integer(node->lhs->ty)
+    &&  node->ty->size <= 2
+    &&  can_direct(node->lhs)) {
+      gen_expr(node->rhs);
+      gen_direct(node->lhs,"stab","staa");
+      return;
+    }
+    if ((ty = is_integer_constant(node->rhs,&val))
+    &&  ty->size <= 2
+    &&  is_integer(node->ty)
+    &&  node->ty->size <= 2) {
+      if (can_direct(node->lhs)) {
+        gen_direct(node->rhs,"ldab","ldaa");
+        gen_direct(node->lhs,"stab","staa");
+      }else if (test_addr_x(node->lhs)){
+        int off = gen_addr_x(node->lhs,true);
+        gen_expr(node->rhs);
+        store_x(node->ty,off);
+      }else{
+        gen_addr(node->lhs);
+        tfr_dx();
+        gen_direct(node->rhs,"ldab","ldaa");
+        store_x(node->ty,0);
+      }
+      return;
+    }
+    if (!(node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield)
+    &&  test_addr_x(node->lhs)){
+      gen_expr(node->rhs);
+      int off = gen_addr_x(node->lhs,true);
+      store_x(node->ty,off);
+      return;
+    }
+    gen_addr(node->lhs);
+    push();
+    gen_expr(node->rhs);
+
+    if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
+      println("\tstab @tmp1+1");
+      println("\tstab @tmp1");
+
+      // If the lhs is a bitfield, we need to read the current value
+      // from memory and merge it with a new value.
+      Member *mem = node->lhs->member;
+      println("; bitfieled mem->bit_width=%d, mem->bit_offset=%d, %s %d",
+		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
+      println("\tandb #<%d", (int)(1L << mem->bit_width) - 1);
+      println("\tanda #>%d", (int)(1L << mem->bit_width) - 1);
+      for (int i=0; i<mem->bit_offset; i++){
+        println("\taslb");
+        println("\trola");
+      }
+      println("\tstab @rdi+1");
+      println("\tstaa @rdi");
+      println("\tpula");
+      println("\tpulb");
+      println("\tpshb");
+      println("\tpsha");
+      load(mem->ty);
+
+      long mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
+      println("\tandb #<%d",(int)~mask);
+      println("\tanda #>%d",(int)~mask);
+      println("\torab @rdi+1");
+      println("\toraa @rdi+1");
+      store(node->ty);
+      println("\tldab @tmp1+1");
+      println("\tldaa @tmp1");
+      return;
+    }
+
+    store(node->ty);
+    return;
+  } // ND_ASSIGN
+  case ND_ADDEQ:
+  case ND_SUBEQ:
+  case ND_MULEQ:
+  case ND_DIVEQ:
+  case ND_MODEQ:
+  case ND_ANDEQ:
+  case ND_OREQ:
+  case ND_XOREQ:
+  case ND_SHLEQ:
+  case ND_SHREQ:
+    opeq(node);
+    return;
   case ND_STMT_EXPR:
     for (Node *n = node->body; n; n = n->next)
       gen_stmt(n);
@@ -4409,6 +4427,7 @@ static void assign_lvar_offsets(Obj *prog) {
 		//
     fn->stack_size = 0;
     int has_implicit_reg_param = 0;
+    fprintf("; fn->name %s\n",fn->name);
     switch (fn->ty->return_ty->kind){
     case TY_STRUCT:
     case TY_UNION:
@@ -4425,19 +4444,19 @@ static void assign_lvar_offsets(Obj *prog) {
       switch (ty->kind) {
       case TY_STRUCT:
       case TY_UNION:
-	gp++;
+        gp++;
         var->offset = -2;	// STRUCT/UNION must pass via stack
-	continue;
+        continue;
       case TY_DOUBLE:
       case TY_LDOUBLE:
-	assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
-	break;
+        assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
+        break;
       default:
         if (gp++<1){		// only one args pass by register
-	  var->offset = -1;
-	  var->reg_param = 1;	// reg param mark
+          var->offset = -1;
+          var->reg_param = 1;	// reg param mark
           continue;
-	}
+        }
         var->offset = -2;		// stack param mark
       }
     }
