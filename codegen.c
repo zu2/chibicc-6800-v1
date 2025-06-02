@@ -2493,7 +2493,7 @@ static void gen_funcall(Node *node)
     int off = gen_expr_x(node->lhs,true);
     println("\tjsr %d,x",off);
   }else{
-    if (!node->args->pass_by_stack) {
+    if (node->args && !node->args->pass_by_stack) {
       switch (node->args->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
@@ -2522,7 +2522,7 @@ static void gen_funcall(Node *node)
     println("; gen_expr end");
     println("\tstab @tmp1+1");
     println("\tstaa @tmp1");
-    if (!node->args->pass_by_stack) {
+    if (node->args && !node->args->pass_by_stack) {
       switch (node->args->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
