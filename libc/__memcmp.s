@@ -24,26 +24,26 @@ _memcmp:
 ;
 	stab	@tmp2+1		; save s1
 	staa	@tmp2
-;
-	tsx
-	ldx	2,x		; get s2
-	stx	@tmp3
-;
-	addb	@tmp3+1
-	adca	@tmp3
+        tsx
+        addb    5,x
+        adca    4,x
 	stab	@tmp4+1		; check end addres (s1+n)
 	staa	@tmp4
 ;
+	ldx	2,x		; get s2
+        bra     _memcmp_start
+;
 _memcmp_loop:
-	ldx	@tmp2
+        ldx     @tmp3
+_memcmp_start:
 	ldab	0,x
 	inx
-	stx	@tmp2
-	ldx	@tmp3
+	stx	@tmp3           ; save s2
+	ldx	@tmp2
 	cmpb	0,x
 	bne	_memcmp_ne
 	inx
-	stx	@tmp3
+	stx	@tmp2
 	cpx	@tmp4
 	bne	_memcmp_loop
 _memcmp_eq:
@@ -51,11 +51,11 @@ _memcmp_eq:
 	clra
 	rts			; return 0
 _memcmp_ne:
-	bcs	_memcmp_lt
+	bhi	_memcmp_gt
 	ldab	#1		; return 1
 	clra
 	rts
-_memcmp_lt:
+_memcmp_gt:
 	ldab	#$FF		; return -1
 	tba
 	rts
