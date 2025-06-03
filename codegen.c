@@ -3077,12 +3077,12 @@ static void opeq(Node *node)
           if (node->kind == ND_SHLEQ) {
             if (gen_shl(node->lhs->ty,val)) {
               println("\tstab %d,x",off);
-              cast(node->lhs->ty, node->ty);
+//            cast(node->lhs->ty, node->ty);
               return;
             }
           }else if (gen_shr(node->lhs->ty,val)) {
             println("\tstab %d,x",off);
-            cast(node->lhs->ty, node->ty);
+//          cast(node->lhs->ty, node->ty);
             return;
           }
           println("\tclrb");
@@ -3140,13 +3140,13 @@ static void opeq(Node *node)
             if (gen_shl(node->lhs->ty,val)) {
               println("\tstab %d,x",off+1);
               println("\tstaa %d,x",off);
-              cast(node->lhs->ty, node->ty);
+//            cast(node->lhs->ty, node->ty);
               return;
             }
           }else if (gen_shr(node->lhs->ty,val)) {
             println("\tstab %d,x",off+1);
             println("\tstaa %d,x",off);
-            cast(node->lhs->ty, node->ty);
+//          cast(node->lhs->ty, node->ty);
             return;
           }
           println("\tclrb");
@@ -4172,7 +4172,7 @@ void gen_expr(Node *node) {
     cast(node->rhs->ty, node->ty);
     push();
     gen_expr(node->lhs);
-    cast(node->lhs->ty, node->ty);
+//  cast(node->lhs->ty, node->ty);
 //    println("  sub %s, %s", di, ax);
     println("\ttsx");
     println("\tsubb 1,x");
@@ -4186,10 +4186,10 @@ void gen_expr(Node *node) {
     &&  gen_mul16(node)) {
       return;
     }
-    cast(node->lhs->ty, node->ty);
+//  cast(node->lhs->ty, node->ty);
     push();
     gen_expr(node->rhs);
-    cast(node->lhs->ty, node->ty);
+//  cast(node->lhs->ty, node->ty);
     println("\tjsr __mul16x16");
     ins(2);
     IX_Dest = IX_None;
@@ -4224,7 +4224,7 @@ void gen_expr(Node *node) {
     cast(node->rhs->ty, node->ty);
     push();
     gen_expr(node->lhs);
-    cast(node->lhs->ty, node->ty);
+//  cast(node->lhs->ty, node->ty);
     if (node->ty->is_unsigned) {
       println("\tjsr __div16x16u");
     }else{
@@ -4238,7 +4238,7 @@ void gen_expr(Node *node) {
     cast(node->rhs->ty, node->ty);
     push();
     gen_expr(node->lhs);
-    cast(node->lhs->ty, node->ty);
+//  cast(node->lhs->ty, node->ty);
     if (node->ty->is_unsigned) {
       println("\tjsr __rem16x16u");
     }else{
@@ -4339,7 +4339,7 @@ void gen_expr(Node *node) {
     if (is_integer_constant(node->rhs, &val)){
       gen_expr(node->lhs);
       if (gen_shl(node->lhs->ty,val)) {
-        cast(node->lhs->ty, node->ty);
+//      cast(node->lhs->ty, node->ty);
         return;
       }
       println("\tclrb");
@@ -4349,8 +4349,8 @@ void gen_expr(Node *node) {
     gen_expr(node->rhs);
     push1();
     gen_expr(node->lhs);
-//  shl16: AccAB << TOS(16bit)
-    cast(node->lhs->ty, node->ty);
+//  shl16: AccAB << TOS(8bit)
+//  cast(node->lhs->ty, node->ty);
     println("\tjsr __shl16");
     ins(1);
     IX_Dest = IX_None;
@@ -4362,7 +4362,7 @@ void gen_expr(Node *node) {
     if (is_integer_constant(node->rhs, &val)){
       gen_expr(node->lhs);
       if (gen_shr(node->lhs->ty,val)) {
-        cast(node->lhs->ty, node->ty);
+//      cast(node->lhs->ty, node->ty);
         return;
       }
       println("\tclrb");
@@ -4372,7 +4372,7 @@ void gen_expr(Node *node) {
     gen_expr(node->rhs);
     push1();
     gen_expr(node->lhs);
-    cast(node->lhs->ty, node->ty);
+//  cast(node->lhs->ty, node->ty);
 //  shr16: AccAB >> TOS(16bit)
     if (node->lhs->ty->is_unsigned){
       println("\tjsr __shr16u");
