@@ -344,7 +344,7 @@ bool gen_shl(Type *ty, uint64_t val)
       println("\trorb");
       println("\trorb");
       println("\trorb");
-      println("\tandb #$80");
+      println("\tandb #$C0");
       return true;
     case 7:                 // 6cyc, 4bytes
       println("\trorb");
@@ -3066,7 +3066,47 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
-      gen_addr(node->lhs);
+      if (test_addr_x(node->lhs)) {
+        if (is_integer_constant(node->rhs, &val)){
+          int off = gen_addr_x(node->lhs,true);
+          println("\tclra");
+          println("\tldab %d,x",off);
+          if (val==0) {
+            return;
+          }
+          if (node->kind == ND_SHLEQ) {
+            if (gen_shl(node->lhs->ty,val)) {
+              println("\tstab %d,x",off);
+              cast(node->lhs->ty, node->ty);
+              return;
+            }
+          }else if (gen_shr(node->lhs->ty,val)) {
+            println("\tstab %d,x",off);
+            cast(node->lhs->ty, node->ty);
+            return;
+          }
+          println("\tclrb");
+          println("\tclra");
+          return;
+        }
+        gen_expr(node->rhs);
+        push1();
+        int off = gen_addr_x(node->lhs,true);
+        println("\tldab %d,x",off);
+        println("\tclra");
+        if (node->kind == ND_SHLEQ) {
+          println("\tjsr __shl16");
+        }else if (node->lhs->ty->is_unsigned) {
+          println("\tjsr __shr16u");
+        }else{
+          println("\tjsr __shr16s");
+        }
+        println("\tstab %d,x",off);
+        ins(1);
+        IX_Dest = IX_None;
+        return;
+      }
+      gen_addr(node->lhs); 
       push();
       gen_expr(node->rhs);
       push1();
@@ -3081,9 +3121,10 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __shr16s");
       }
+      println("\tstab 0,x");
       ins(1);
       IX_Dest = IX_None;
-      break;
+      return;
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
@@ -3092,6 +3133,9 @@ static void opeq(Node *node)
           int off = gen_addr_x(node->lhs,true);
           println("\tldab %d,x",off+1);
           println("\tldaa %d,x",off);
+          if (val==0) {
+            return;
+          }
           if (node->kind == ND_SHLEQ) {
             if (gen_shl(node->lhs->ty,val)) {
               println("\tstab %d,x",off+1);
