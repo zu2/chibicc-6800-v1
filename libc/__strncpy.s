@@ -41,13 +41,14 @@ _strncpy:
 ;
 _strncpy_loop:
 	stx	@tmp2
-	ldx	@tmp3
+	ldx	@tmp3           ; get s
 	ldab	0,x
 	inx
 	stx	@tmp3
 	ldx	@tmp2
 	stab	0,x
 	beq	_strncpy_ret
+        inx
 	cpx	@tmp4
 	bne	_strncpy_loop
 _strncpy_ret:
