@@ -674,7 +674,8 @@ static Type *func_params(Token **rest, Token *tok, Type *ty) {
 
 // array-dimensions = ("static" | "restrict")* const-expr? "]" type-suffix
 static Type *array_dimensions(Token **rest, Token *tok, Type *ty) {
-  while (equal(tok, "static") || equal(tok, "restrict"))
+  while (equal(tok, "static") || equal(tok, "restrict")
+      || equal(tok, "const")  || equal(tok,"volatile"))
     tok = tok->next;
 
   if (equal(tok, "]")) {

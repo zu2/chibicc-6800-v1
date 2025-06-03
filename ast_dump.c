@@ -50,9 +50,25 @@ static void ast_dump_unary(Node *node, char *name)
   printout(")");
 }
 
+static void ast_dump_unary_ty(Node *node, char *name)
+{
+  printout("(%s %s ",name,type_str(node));
+  ast_dump(node->lhs);
+  printout(")");
+}
+
 static void ast_dump_binary(Node *node, char *name)
 {
   printout("(%s ",name);
+  ast_dump(node->lhs);
+  printout(" ");
+  ast_dump(node->rhs);
+  printout(")");
+}
+
+static void ast_dump_binary_ty(Node *node, char *name)
+{
+  printout("(%s %s ",name,type_str(node));
   ast_dump(node->lhs);
   printout(" ");
   ast_dump(node->rhs);
@@ -70,58 +86,58 @@ static void ast_dump(Node *node)
     printout("()");
     return;
   case ND_ADD:
-    ast_dump_binary(node,"+");
+    ast_dump_binary_ty(node,"+");
     return;
   case ND_SUB:
-    ast_dump_binary(node,"-");
+    ast_dump_binary_ty(node,"-");
     return;
   case ND_MUL:
-    ast_dump_binary(node,"*");
+    ast_dump_binary_ty(node,"*");
     return;
   case ND_DIV:
-    ast_dump_binary(node,"/");
+    ast_dump_binary_ty(node,"/");
     return;
   case ND_NEG:
     ast_dump_unary(node,"-");
     return;
   case ND_MOD:
-    ast_dump_binary(node,"%");
+    ast_dump_binary_ty(node,"%");
     return;
   case ND_BITAND:
-    ast_dump_binary(node,"&");
+    ast_dump_binary_ty(node,"&");
     return;
   case ND_BITOR:
-    ast_dump_binary(node,"|");
+    ast_dump_binary_ty(node,"|");
     return;
   case ND_BITXOR:
-    ast_dump_binary(node,"^");
+    ast_dump_binary_ty(node,"^");
     return;
   case ND_SHL:
-    ast_dump_binary(node,"<<");
+    ast_dump_binary_ty(node,"<<");
     return;
   case ND_SHR:
-    ast_dump_binary(node,">>");
+    ast_dump_binary_ty(node,">>");
     return;
   case ND_EQ:
-    ast_dump_binary(node,"==");
+    ast_dump_binary_ty(node,"==");
     return;
   case ND_NE:
-    ast_dump_binary(node,"!=");
+    ast_dump_binary_ty(node,"!=");
     return;
   case ND_LT:
-    ast_dump_binary(node,"<");
+    ast_dump_binary_ty(node,"<");
     return;
   case ND_LE:
-    ast_dump_binary(node,"<=");
+    ast_dump_binary_ty(node,"<=");
     return;
   case ND_GT:
-    ast_dump_binary(node,">");
+    ast_dump_binary_ty(node,">");
     return;
   case ND_GE:
-    ast_dump_binary(node,">=");
+    ast_dump_binary_ty(node,">=");
     return;
   case ND_ASSIGN:
-    ast_dump_binary(node,"=");
+    ast_dump_binary_ty(node,"=");
     return;
   case ND_COND:
     printout("(ND_COND ");
@@ -237,7 +253,7 @@ static void ast_dump(Node *node)
     printout(")");
     return;
   case ND_FUNCALL:
-    printout("(ND_FUNCALL ");
+    printout("(ND_FUNCALL %s", type_str(node));
     ast_dump(node->lhs);
     printout(" ... )\n; ");
     return;

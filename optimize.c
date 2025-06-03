@@ -128,7 +128,7 @@ void make_comma_retval_unused(Node *node, bool all)
     if (node->rhs || all) {
       node->lhs->retval_unused = true;
       if (node->lhs->kind == ND_COMMA) {
-	make_comma_retval_unused(node->lhs,all);
+        make_comma_retval_unused(node->lhs,all);
       }
     }
   }
@@ -216,6 +216,13 @@ Node *optimize_expr(Node *node)
     &&  is_boolean_result(node->lhs)){
       return node->lhs;
     }
+    if (node->ty->kind  == TY_CHAR
+    &&  node->lhs->kind == ND_CAST
+    &&  (node->lhs->ty->kind == TY_SHORT
+      || node->lhs->ty->kind == TY_INT
+      || node->lhs->ty->kind == TY_LONG)) {
+      node->lhs = node->lhs->lhs;
+    }
     if (is_integer(node->ty)
     &&  node->lhs->kind==ND_NUM
     &&  is_integer(node->lhs->ty)) {
@@ -275,6 +282,18 @@ Node *optimize_expr(Node *node)
   // Below is a binary operator
   case ND_LOGAND:
   case ND_LOGOR:
+    if (is_compare(node->lhs)
+    ||  node->lhs->kind == ND_NOT
+    ||  node->lhs->kind == ND_LOGAND
+    ||  node->lhs->kind == ND_LOGOR) {
+      node->lhs->bool_result_unused = true;
+    }
+    if (is_compare(node->rhs)
+    ||  node->rhs->kind == ND_NOT
+    ||  node->rhs->kind == ND_LOGAND
+    ||  node->rhs->kind == ND_LOGOR) {
+      node->rhs->bool_result_unused = true;
+    }
     node = optimize_lr(node);
     return optimize_const_expr(node);
   case ND_ADD: {
@@ -328,6 +347,38 @@ Node *optimize_expr(Node *node)
   case ND_BITOR:
   case ND_BITXOR:
     node = optimize_lr_swap(node);
+    if (node->ty->kind            == TY_INT
+    &&  !node->ty->is_unsigned
+    &&  node->lhs->kind           == ND_CAST
+    &&  node->lhs->ty->kind       == TY_INT
+    &&  !node->lhs->ty->is_unsigned
+    &&  node->lhs->lhs->ty->kind  == TY_CHAR
+    &&  node->lhs->lhs->ty->is_unsigned) {
+      if (node->rhs->kind           == ND_NUM
+      &&  node->rhs->ty->kind       == TY_INT
+      &&  node->rhs->val            >= 0
+      &&  node->rhs->val            <= 255) {
+        Node *new = new_copy(node);
+        new->ty  = ty_uchar;
+        new->lhs = node->lhs->lhs;
+        new->rhs = node->rhs;
+        new->rhs->ty = ty_uchar;
+        new = new_cast(new,ty_int);
+        return optimize_const_expr(new);
+      }
+      if (node->rhs->kind           == ND_CAST
+      &&  node->rhs->ty->kind       == TY_INT
+      &&  !node->rhs->ty->is_unsigned
+      &&  node->rhs->lhs->ty->kind  == TY_CHAR
+      &&  node->rhs->lhs->ty->is_unsigned) {
+        Node *new = new_copy(node);
+        new->ty  = ty_uchar;
+        new->lhs = node->lhs->lhs;
+        new->rhs = node->rhs->lhs;
+        new = new_cast(new,ty_int);
+        return optimize_const_expr(new);
+      }
+    }
     return optimize_const_expr(node);
   case ND_EQ:
   case ND_NE:

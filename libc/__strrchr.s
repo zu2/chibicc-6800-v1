@@ -19,8 +19,8 @@
 ;
 
 	.code
-	.export	_strchr
-_strchr:
+	.export	_strrchr
+_strrchr:
 	stab	@tmp1+1		; save s
 	staa	@tmp1
 ;
@@ -33,14 +33,14 @@ _strchr:
 	ldx	@tmp1
 	dex
 ;
-_strchr_loop:
+_strrchr_loop:
 	inx
 	cmpb	0,x
-	bne	_strchr_ne
+	bne	_strrchr_ne
 	stx	@tmp2
-_strchr_ne:
+_strrchr_ne:
 	ldaa	0,x
-	bne	_strchr_loop
+	bne	_strrchr_loop
 ;
 	ldab	@tmp2+1
 	ldaa	@tmp2

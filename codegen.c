@@ -1783,7 +1783,7 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
     if (node->var->ty->kind != TY_VLA ){
       if(node->var->is_local){
         if (node->ty->kind==TY_ARRAY) {
-	        return 0;
+          return 0;
         }
         if (!test_addr_x(node)) return 0;
         int off = gen_addr_x(node,true);
@@ -1794,7 +1794,7 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
           println("\t%s %d,x",opb,off);
           if (strcmp(opb,"stab")) {
             println("\t%s #0",opa);
-	        }
+          }
         }else{
           if (test) return 1;
           println("\t%s %d,x",opb,off+1);
@@ -1853,6 +1853,7 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
         }
       }
       break;
+//(ND_DEREF ty_int (+ TY_PTR(10) (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) array global)) (ND_CAST TY_PTR(10) 2)))
     case ND_ADD: {
       // gloval array[const]
       // (ND_DEREF ty_uchar
@@ -1868,7 +1869,6 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
       &&  rhs->ty->kind == TY_PTR
       &&  is_integer_constant(rhs->lhs,&val)) {
         if (test) return 1;
-        val *= lhs->lhs->var->ty->size;
         switch(node->ty->kind) {
         case TY_BOOL:
         case TY_CHAR:
@@ -3493,6 +3493,7 @@ void gen_expr(Node *node) {
     }
     if (!(node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield)
     &&  test_addr_x(node->lhs)){
+      println("; ND_ASSIGN do gen_direct 4");
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
       store_x(node->ty,off);
@@ -4251,7 +4252,17 @@ void gen_expr(Node *node) {
     if (gen_direct_lr(node,"andb","anda")){
       return;
     }
-
+    if (node->ty->kind == TY_BOOL
+    &&  node->ty->kind == TY_CHAR) {
+      gen_expr(node->lhs);
+      push1();
+      gen_expr(node->rhs);
+      println("\ttsx");
+      IX_Dest = IX_None;
+      println("\tandb 0,x");
+      ins(1);
+      return;
+    }
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);
