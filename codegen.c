@@ -3263,6 +3263,16 @@ void gen_expr(Node *node) {
     int64_t val;
 
     node = optimize_expr(node);
+    if (node->lhs->kind == ND_DEREF
+    &&  is_integer(node->lhs->ty)
+    &&  node->lhs->ty->size <= 2
+    &&  node->lhs->lhs->kind == ND_CAST
+    &&  node->lhs->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->lhs->lhs,&val)) {
+      gen_expr(node->rhs);
+      gen_direct(node->lhs,"stab","staa");
+      return;
+    }
     if (is_global_var(node->lhs)
     &&  is_integer(node->lhs->ty)
     &&  node->ty->size <= 2
