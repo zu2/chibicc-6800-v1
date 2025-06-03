@@ -7,9 +7,14 @@
 	.export __shr16s
 	.code
 __shl16:
+        stx @tmp1
+        bsr __shl16sub
+        ldx @tmp1
+        rts
+__shl16sub:
 	tsx
 	pshb
-	ldab 2,x
+	ldab 4,x
 	beq noshift
 	cmpb #16
 	pulb
@@ -17,7 +22,7 @@ __shl16:
 shlloop:
 	lslb
 	rola
-	dec 2,x
+	dec 4,x
 	bne shlloop
 	rts
 noshift:
@@ -29,9 +34,14 @@ zero:
 	rts
 ;
 __shr16u:
+        stx @tmp1
+        bsr __shr16usub
+        ldx @tmp1
+        rts
+__shr16usub:
 	tsx
 	pshb
-	ldab 2,x
+	ldab 4,x
 	beq noshift
 	cmpb #16
 	pulb
@@ -39,14 +49,19 @@ __shr16u:
 shruloop:
 	lsra
 	rorb
-	dec 2,x
+	dec 4,x
 	bne shruloop
 	rts
 ;
 __shr16s:
+        stx @tmp1
+        bsr __shr16ssub
+        ldx @tmp1
+        rts
+__shr16ssub:
 	tsx
 	pshb
-	ldab 2,x
+	ldab 4,x
 	beq noshift
 	cmpb #16
 	pulb
@@ -54,6 +69,6 @@ __shr16s:
 shrsloop:
 	asra
 	rorb
-	dec 2,x
+	dec 4,x
 	bne shrsloop
 	rts

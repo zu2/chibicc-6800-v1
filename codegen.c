@@ -2598,10 +2598,10 @@ static void opeq(Node *node)
 {
   switch(node->kind){
   case ND_ADDEQ: {
-    gen_addr(node->lhs);
-    push();
     switch(node->ty->kind) {
     case TY_FLOAT:
+      gen_addr(node->lhs);
+      push();
       println("\ttsx");
       println("\tldx 0,x");
       println("\tjsr __push32x");
@@ -2610,6 +2610,8 @@ static void opeq(Node *node)
       println("\tjsr __addf32tos");
       break;
     case TY_LONG:
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       println("\ttsx");
       println("\tldx 0,x");
@@ -2618,6 +2620,17 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR:
+      if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        int off = gen_addr_x(node->lhs,true);
+        println("\taddb %d,x",off);
+        println("\tadca #0");
+        println("\tstab %d,x",off);
+        IX_Dest = IX_None;
+        return;
+      }
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       println("\ttsx");
       println("\tldx 0,x");
@@ -2628,6 +2641,18 @@ static void opeq(Node *node)
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
+      if (test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        int off = gen_addr_x(node->lhs,true);
+        println("\taddb %d,x",off+1);
+        println("\tadca %d,x",off);
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
+        IX_Dest = IX_None;
+        return;
+      }
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       println("\ttsx");
       println("\tldx 0,x");
@@ -2642,10 +2667,10 @@ static void opeq(Node *node)
     return;
   }
   case ND_SUBEQ: {
-    gen_addr(node->lhs);
-    push();
     switch(node->ty->kind) {
     case TY_FLOAT:
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       println("\tjsr __push32");
       println("\ttsx");
@@ -2655,6 +2680,8 @@ static void opeq(Node *node)
       println("\tjsr __subf32tos");
       break;
     case TY_LONG:
+      gen_addr(node->lhs);
+      push();
       println("\ttsx");
       println("\tldx 0,x");
       println("\tjsr __push32x");
@@ -2664,6 +2691,18 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR:
+      if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        negd();
+        int off = gen_addr_x(node->lhs,true);
+        println("\taddb %d,x",off);
+        println("\tadca #0");
+        println("\tstab %d,x",off);
+        IX_Dest = IX_None;
+        return;
+      }
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       negd();
       println("\ttsx");
@@ -2675,6 +2714,19 @@ static void opeq(Node *node)
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
+      if (test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        negd();
+        int off = gen_addr_x(node->lhs,true);
+        println("\taddb %d,x",off+1);
+        println("\tadca %d,x",off);
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
+        IX_Dest = IX_None;
+        return;
+      }
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       negd();
       println("\ttsx");
@@ -2868,10 +2920,10 @@ static void opeq(Node *node)
   case ND_ANDEQ:
   case ND_OREQ:
   case ND_XOREQ: {
-    gen_addr(node->lhs);
-    push();
     switch(node->ty->kind) {
     case TY_LONG:
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       pushl();
       println("\ttsx");
@@ -2893,6 +2945,29 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
+      if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        int off = gen_addr_x(node->lhs,true);
+        switch(node->kind) {
+        case ND_ANDEQ:
+          println("\tclra");
+          println("\tandb %d,x",off);
+          break;
+        case ND_OREQ:
+          println("\torab %d,x",off);
+          break;
+        case ND_XOREQ:
+          println("\teorb %d,x",off);
+          break;
+        default:
+          assert(0);
+        }
+        println("\tstab %d,x",off);
+        IX_Dest = IX_None;
+        return;
+      }
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       println("\ttsx");
       println("\tldx 0,x");
@@ -2913,6 +2988,32 @@ static void opeq(Node *node)
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
+      if (test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        int off = gen_addr_x(node->lhs,true);
+        switch(node->kind) {
+        case ND_ANDEQ:
+          println("\tandb %d,x",off+1);
+          println("\tanda %d,x",off);
+          break;
+        case ND_OREQ:
+          println("\torab %d,x",off+1);
+          println("\toraa %d,x",off);
+          break;
+        case ND_XOREQ:
+          println("\teorb %d,x",off+1);
+          println("\teora %d,x",off);
+          break;
+        default:
+          assert(0);
+        }
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
+        IX_Dest = IX_None;
+        return;
+      }
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       println("\ttsx");
       println("\tldx 0,x");
@@ -2942,10 +3043,12 @@ static void opeq(Node *node)
   }
   case ND_SHREQ:
   case ND_SHLEQ: {
-    gen_addr(node->lhs);
-    push();
+    int64_t val;
+
     switch(node->ty->kind) {
     case TY_LONG:
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       push1();
       println("\ttsx");
@@ -2963,6 +3066,8 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       push1();
       println("\ttsx");
@@ -2982,6 +3087,48 @@ static void opeq(Node *node)
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
+      if (test_addr_x(node->lhs)) {
+        if (is_integer_constant(node->rhs, &val)){
+          int off = gen_addr_x(node->lhs,true);
+          println("\tldab %d,x",off+1);
+          println("\tldaa %d,x",off);
+          if (node->kind == ND_SHLEQ) {
+            if (gen_shl(node->lhs->ty,val)) {
+              println("\tstab %d,x",off+1);
+              println("\tstaa %d,x",off);
+              cast(node->lhs->ty, node->ty);
+              return;
+            }
+          }else if (gen_shr(node->lhs->ty,val)) {
+            println("\tstab %d,x",off+1);
+            println("\tstaa %d,x",off);
+            cast(node->lhs->ty, node->ty);
+            return;
+          }
+          println("\tclrb");
+          println("\tclra");
+          return;
+        }
+        gen_expr(node->rhs);
+        push1();
+        int off = gen_addr_x(node->lhs,true);
+        println("\tldab %d,x",off+1);
+        println("\tldaa %d,x",off);
+        if (node->kind == ND_SHLEQ) {
+          println("\tjsr __shl16");
+        }else if (node->lhs->ty->is_unsigned) {
+          println("\tjsr __shr16u");
+        }else{
+          println("\tjsr __shr16s");
+        }
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
+        ins(1);
+        IX_Dest = IX_None;
+        return;
+      }
+      gen_addr(node->lhs); 
+      push();
       gen_expr(node->rhs);
       push1();
       println("\ttsx");
