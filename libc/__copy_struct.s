@@ -48,15 +48,14 @@ __copy_common:
 	beq	__copy_1byte
 ;
 __copy_2:
-	lsra
-	rorb
-	ror	@tmp4		; save LSBit to @tmp's MSBit
+	stab    @tmp4
 ;
-	cmpb	#1		; if b!=0 then a++
-	sbca	#0
-	inca
-	stab	@tmp1+1
-	staa	@tmp1
+        andb    #$FE            ; Make AccB even using AND operation
+;
+        addb    @tmp3+1
+        adca    @tmp3
+        stab    @tmp1+1         ; copy end address
+        staa    @tmp1
 ;
 __copy_loop:
 	ldx	@tmp2
@@ -71,13 +70,11 @@ __copy_loop:
 	inx
 	inx
 	stx	@tmp3
-	dec	@tmp1+1
-	bne	__copy_loop
-	dec	@tmp1
+        cpx     @tmp1
 	bne	__copy_loop
 ;
-	tst	@tmp4
-	bpl	__copy_end
+	ror	@tmp4           ; more 1-byte need copy?
+	bcc	__copy_end
 ;
 __copy_1byte:
 	ldx	@tmp2

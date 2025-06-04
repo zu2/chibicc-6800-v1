@@ -889,6 +889,9 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       push();
     ldd_i(off);
     println("\tjsr __adx");
+    if (off == 0) {
+      return off;
+    }
     if (save_d)
       pop();
     return 0;
@@ -1207,11 +1210,13 @@ static void store_x(Type *ty,int off) {
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
-    println("; store struct/union from TOS to IX+off, size %d",ty->size);
+    println("; store struct/union from *TOS to IX+off, size %d",ty->size);
     println("\tpshb");
     println("\tpsha");
-    ldd_i(off);
-    println("\tjsr __adx");
+    if (off!=0) {
+      ldd_i(off);
+      println("\tjsr __adx");
+    }
     ldd_i(ty->size);
     println("\tjsr  __copy_struct2");
     IX_Dest = IX_None;
@@ -1761,6 +1766,7 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
     case TY_CHAR:		// TODO: Avoid unnecessary type promotion
     case TY_SHORT:
     case TY_INT:
+    case TY_ENUM:
     case TY_PTR:
       if (test) return 1;
       if (node->val==0) {
@@ -3493,7 +3499,6 @@ void gen_expr(Node *node) {
     }
     if (!(node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield)
     &&  test_addr_x(node->lhs)){
-      println("; ND_ASSIGN do gen_direct 4");
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
       store_x(node->ty,off);
@@ -3588,8 +3593,9 @@ void gen_expr(Node *node) {
     if (node->var->ty->size <= 4
     && node->var->ty->size + node->var->offset < 256) {
       ldx_bp();
+      println("\tclrb");
       for (int i=0; i<node->var->ty->size; i++){
-        println("\tclr %d,x",node->var->offset+i);
+        println("\tstab %d,x",node->var->offset+i);
       }
     } else if (node->var->offset < 256) {
       ldx_bp();
@@ -4093,43 +4099,24 @@ void gen_expr(Node *node) {
   case ND_ADD:
     if (gen_direct_lr(node,"addb","adca"))
       return;
-#if 0
-    // TODO: rethink
-    println("; gen_expr ND_ADD is_integer_or_ptr rhs->ty %d",is_integer_or_ptr(rhs->ty));
-    println("; gen_expr ND_ADD rhs->ty->size %d",rhs->ty->size);
-    println("; gen_expr test_addr_x rhs %d",test_addr_x(rhs));
-    ast_node_dump(rhs);
-    if (rhs->kind == ND_CAST
-    &&  is_integer_or_ptr(rhs->ty)
-    &&  rhs->ty->size<=2
-    &&  test_addr_x(rhs->lhs)) {
-      int size = (rhs->ty->size < rhs->lhs->ty->size)? rhs->ty->size: rhs->lhs->ty->size;
-      gen_expr(lhs);
-      off = gen_addr_x(rhs->lhs,true);
-      if (size==1) {
-        println("\taddb %d,x",off);
-        println("\tadca #0");
-      }else{
-        println("\taddb %d,x",off+1);
-        println("\tadca %d,x",off);
-      }
+    if (node->rhs->kind     == ND_CAST
+    &&  node->rhs->ty->kind == TY_INT
+    &&  !node->rhs->ty->is_unsigned
+    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  !node->rhs->lhs->ty->is_unsigned
+    &&  test_addr_x(node->rhs->lhs)) {
+      println("; ND_ADD signed char");
+      gen_expr(node->lhs);
+      off = gen_addr_x(node->rhs->lhs,true);
+      int c = count();
+      println("\ttst %d,x",off);
+      println("\tbpl L_%d",c);
+      println("\tdeca");
+      println("L_%d:",c);
+      println("\taddb %d,x",off);
+      println("\tadca #0");
       return;
     }
-    if (is_integer_or_ptr(rhs->ty)
-    &&  rhs->ty->size<=2
-    &&  test_addr_x(rhs)) {
-      gen_expr(lhs);
-      off = gen_addr_x(rhs,true);
-      if (rhs->ty->size==1) {
-        println("\taddb %d,x",off);
-        println("\tadca #0");
-      }else{
-        println("\taddb %d,x",off+1);
-        println("\tadca %d,x",off);
-      }
-      return;
-    }
-#endif
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);

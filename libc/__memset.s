@@ -21,36 +21,58 @@ _memset:
 	beq	_memset_ret
 	pshb			; save s, access to the stack will add two.
 	psha
-	tsx
-	ldab	7,x		; n
-	ldaa	6,x
-	cmpb	#1		; if b!=0 then a++
-	sbca	#0
-	inca
-	staa	@tmp1
 ;
-	ldaa	5,x		; c
+	tsx
+	ldab	7,x		; get n
+	ldaa	6,x
+;
+        stab    @tmp4           ; save n low
+;
+        andb    #$FC            ; Make Acc a multiple of 4 using AND.
+        bne     _memset_1
+        tsta
+        bne     _memset_1
+        ldx     0,x
+        ldab    5,x
+        bra     _memset_final
+_memset_1:
+        addb    1,x
+        adca    0,x
+        stab    @tmp4+1         ; save end address
+        staa    @tmp4
+;        
+	ldab	5,x		; c
 ;
 	ldx	0,x		; saved s
 ;
 _memset_loop:
-	staa	0,x
+	stab	0,x
 	inx
-	decb
-	bne	_memset_loop
-	dec	@tmp1
+	stab	0,x
+        inx
+	stab	0,x
+	inx
+	stab	0,x
+        inx
+        cpx     @tmp4
 	bne	_memset_loop
 ;
+_memset_final:
+        ldaa    @tmp4
+        anda    #$03
+        beq     _memset_end
+        stab    0,x             ; set one more byte
+        deca
+        beq     _memset_end
+        stab    1,x
+        deca
+        beq     _memset_end
+        stab    2,x
+;
+_memset_end:
 	pula
 	pulb
 ;
 _memset_ret:
 	rts
 ;
-
-	
-	
-	
-	
-
-
