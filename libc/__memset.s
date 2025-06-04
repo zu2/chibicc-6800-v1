@@ -26,7 +26,7 @@ _memset:
 	ldab	7,x		; get n
 	ldaa	6,x
 ;
-        stab    @tmp4           ; save n low
+        stab    @tmp1           ; save n low
 ;
         andb    #$FC            ; Make Acc a multiple of 4 using AND.
         bne     _memset_1
@@ -58,7 +58,7 @@ _memset_loop:
 	bne	_memset_loop
 ;
 _memset_final:
-        ldaa    @tmp4
+        ldaa    @tmp1
         anda    #$03
         beq     _memset_end
         stab    0,x             ; set one more byte
