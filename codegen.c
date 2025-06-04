@@ -2602,6 +2602,8 @@ static void gen_funcall(Node *node)
 
 static void opeq(Node *node)
 {
+  int64_t val;
+
   switch(node->kind){
   case ND_ADDEQ: {
     switch(node->ty->kind) {
@@ -2721,6 +2723,17 @@ static void opeq(Node *node)
     case TY_ENUM:
     case TY_PTR:
       if (test_addr_x(node->lhs)) {
+        if (is_integer_constant(node->rhs,&val)) {
+          int off = gen_addr_x(node->lhs,true);
+          println("\tldab %d,x",off+1);
+          println("\tldaa %d,x",off);
+          println("\tsubb #<%ld",val);
+          println("\tsbca #>%ld",val);
+          println("\tstab %d,x",off+1);
+          println("\tstaa %d,x",off);
+          IX_Dest = IX_None;
+          return;
+        }
         gen_expr(node->rhs);
         negd();
         int off = gen_addr_x(node->lhs,true);
@@ -3033,8 +3046,8 @@ static void opeq(Node *node)
         println("\toraa 0,x");
         break;
       case ND_XOREQ:
-        println("\teoab 1,x");
-        println("\teoaa 0,x");
+        println("\teorb 1,x");
+        println("\teora 0,x");
         break;
       }
       IX_Dest = IX_None;
