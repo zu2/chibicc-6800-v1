@@ -385,3 +385,27 @@
 	jsr __ne16
 	jeq %1
 
+
+	clrb
+	clra
+	jmp %1
+	clrb
+	clra
+%1:
+=
+	clrb
+	clra
+%1:
+
+	stab %2,x
+	staa %1,x
+	subb #<1
+	sbca #>1
+	jsr __load8u
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	dex
+	clra
+	ldab 0,x
