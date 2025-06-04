@@ -318,7 +318,7 @@ Node *optimize_expr(Node *node)
       return new;
     }
     return node;
-  }
+  } // ND_ADD
   case ND_MUL: {
     int64_t val;
 
@@ -329,7 +329,7 @@ Node *optimize_expr(Node *node)
     }
 
     return node;
-  }
+  } // ND_MUL
   case ND_SUB:
   case ND_DIV:
   case ND_MOD: {
@@ -342,7 +342,7 @@ Node *optimize_expr(Node *node)
     }
 
     return node;
-  } // ND_ADD,SUB,MUL,DIV,MOD
+  } // ND_SUB,MUL,DIV,MOD
   case ND_BITAND:
   case ND_BITOR:
   case ND_BITXOR:
@@ -422,6 +422,12 @@ Node *optimize_expr(Node *node)
     ||  (node_cost(node->lhs) == node_cost(node->rhs))) {
 //    println("; optimize RO %d swap_lr",node->kind);
       switch(node->kind){
+      case ND_EQ:
+        node = swap_lr(node);
+        break;
+      case ND_NE:
+        node = swap_lr(node);
+        break;
       case ND_LE:
         node = swap_lr(node);
         node->kind = ND_GE;

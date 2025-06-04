@@ -46,12 +46,28 @@ bool is_boolean_result(Node *node)
   return 0;
 }
 
-bool is_byte(Node *node)
+Type *is_byte(Node *node)
 {
-  if (node->kind == ND_CAST && node->ty->kind == TY_INT) {
+  int64_t val;
+
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_INT
+  &&  !node->ty->is_unsigned) { // integral promotion ?
     node = node->lhs;
   }
-  return (node->ty->kind == TY_CHAR || node->ty->kind == TY_BOOL);
+  if (node->ty->kind == TY_CHAR || node->ty->kind == TY_BOOL)
+    return node->ty;
+
+  if (node->kind == ND_NUM
+  &&  is_integer_constant(node,&val)) {
+    if (node->ty->is_unsigned && val>=0 && val<=255) {
+      return node->ty;
+    }
+    if (!node->ty->is_unsigned && val>=-128 && val<=127) {
+      return node->ty;
+    }
+  }
+  return NULL;
 }
 
 static int isNUM(Node *node) { return node->kind == ND_NUM; }
@@ -117,12 +133,15 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     return false;
   }
 
-  if (lhs->ty->kind != TY_CHAR || rhs->ty->kind != TY_CHAR) {
+  Type *lty;
+  Type *rty;
+  if (!(lty=is_byte(lhs)))
     return false;
-  }
-  if (lhs->ty->is_unsigned != rhs->ty->is_unsigned) {
+  if (!(rty=is_byte(rhs)))
     return false;
-  }
+  if (lty->is_unsigned != rty->is_unsigned)
+    return false;
+
   if (!isVARorNUM(lhs) || !isVARorNUM(rhs)) {
     return false;
   }
