@@ -984,23 +984,18 @@ static void string_initializer(Token **rest, Token *tok, Initializer *init) {
     init->is_bulk_init = true;
     init->bulk_size = init->ty->array_len * init->ty->base->size;
     init->bulk_data = calloc(1, init->bulk_size);
-
     memcpy(init->bulk_data, tok->str, len);
-
-    *rest = tok->next;
-
-    return;
+    // Returning here leaves the global string uninitialized.
+    // Both local and global memory are used, but it’s hard to fix.
   };
 
   switch (init->ty->base->size) {
-#if 0
   case 1: {
     char *str = tok->str;
     for (int i = 0; i < len; i++)
       init->children[i]->expr = new_num(str[i], tok);
     break;
   }
-#endif
   case 2: {
     uint16_t *str = (uint16_t *)tok->str;
     for (int i = 0; i < len; i++)
