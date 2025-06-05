@@ -3,12 +3,16 @@
 ;
 	.export __neg32
 	.export __neg32x
+	.export	_labs
 
 	.code
 ;
 ;	__neg32		negate 32bit long, break IX
 ;	__neg32x	negate 32bit long (0-3,x)
 ;
+_labs:
+	tst	@long
+	jpl	__neg32x_ret
 __neg32:
         ldx #long
 __neg32x:
@@ -24,3 +28,11 @@ __neg32x:
 	inc 0,x
 __neg32x_ret:
 	rts
+;
+;	long labs(long n)
+;	{
+;          return (n>0)? n: -n;
+;	}
+;
+;	@long: n
+;
