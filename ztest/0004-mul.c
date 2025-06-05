@@ -1051,6 +1051,6 @@ int main(void) {
     if (!err) {
         printf("All tests passed.\n");
     }
-    return 1;
+    return 0;
 }
 

@@ -3052,6 +3052,17 @@ static void opeq(Node *node)
         gen_expr(node->rhs);
         println("\tldx #_%s",node->lhs->var->name);
         println("\tjsr __load32x");
+        if (node->kind == ND_SHLEQ) {
+          println("\tjsr __shl32");
+        }else if (node->lhs->ty->is_unsigned) {
+          println("\tjsr __shr32u");
+        }else{
+          println("\tjsr __shr32s");
+        }
+        IX_Dest = IX_None;
+        println("\tldx #_%s",node->lhs->var->name);
+        store_x(node->ty,0);
+        return;
       }else{
         gen_addr(node->lhs);
         push();
@@ -3069,7 +3080,6 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __shr32s");
       }
-      IX_Dest = IX_None;
       break;
     case TY_BOOL:
     case TY_CHAR: 
