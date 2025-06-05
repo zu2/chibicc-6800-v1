@@ -2512,6 +2512,9 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
   // VLA + num
   if (lhs->ty->base->kind == TY_VLA) {
     rhs = new_binary(ND_MUL, rhs, new_var_node(lhs->ty->base->vla_size, tok), tok);
+    add_type(rhs);
+    if (rhs->ty->kind!=TY_INT)
+      rhs = new_cast(rhs, ty_int);
     return new_binary(ND_ADD, lhs, rhs, tok);
   }
 
@@ -2525,6 +2528,8 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
       }
     }
     add_type(rhs);
+    if (rhs->ty->kind!=TY_INT)
+      rhs = new_cast(rhs, ty_int);
     Node *node = new_binary(ND_ADD, lhs, rhs, tok);
     node->ty = lhs->ty;
     return node;
@@ -2552,6 +2557,8 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
   if (lhs->ty->base->kind == TY_VLA) {
     rhs = new_binary(ND_MUL, rhs, new_var_node(lhs->ty->base->vla_size, tok), tok);
     add_type(rhs);
+    if (rhs->ty->kind!=TY_INT)
+      rhs = new_cast(rhs, ty_int);
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
     node->ty = lhs->ty;
     return node;
@@ -2567,6 +2574,8 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
       }
     }
     add_type(rhs);
+    if (rhs->ty->kind!=TY_INT)
+      rhs = new_cast(rhs, ty_int);
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
     node->ty = lhs->ty;
     return node;
