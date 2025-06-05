@@ -479,6 +479,8 @@ void push(void);
 void load_var(Node *node);
 void cmp_zero(Type *ty);
 Type *is_integer_constant(Node *node, int64_t *val);
+Type *is_flonum_constant(Node *node, double *val);
+
 
 extern int depth;
 typedef	enum {

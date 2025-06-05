@@ -315,6 +315,18 @@ Type *is_integer_constant(Node *node, int64_t *val)
   return node->ty;
 }
 
+Type *is_flonum_constant(Node *node, double *val)
+{
+  if (node->kind != ND_NUM)
+    return NULL;
+  if (!is_flonum(node->ty))
+    return NULL;
+
+  *val = node->fval;
+
+  return node->ty;
+}
+
 //
 // node is array name?
 //

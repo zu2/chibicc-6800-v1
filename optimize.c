@@ -151,6 +151,7 @@ Node *optimize_expr(Node *node)
 {
   Node *new;
   int64_t val;
+  double fval;
 
   if (!node)
     return node;
@@ -268,12 +269,23 @@ Node *optimize_expr(Node *node)
   // rewrite the relational operator.
   // In the case of float, rewriting is not possible because there is NaN.
   case ND_NOT:
+    println("; optimize ND_NOT");
+    ast_node_dump(node);
     if (is_compare(node->lhs)
     &&  is_integer(node->lhs->lhs->ty)
     &&  is_integer(node->lhs->rhs->ty)){
       return negate_condition(optimize_l(node->lhs));
     }
-    node = optimize_l(node);
+    if (is_integer_constant(node->lhs,&val)) {
+      Node *new = new_num((val==0),node->tok);
+      new->ty = ty_bool;
+      return new;
+    }
+    if (is_flonum_constant(node->lhs,&fval)) {
+      Node *new = new_num((fval==0.0),node->tok);
+      new->ty = ty_bool;
+      return new;
+    }
     return optimize_const_expr(node);
   case ND_BITNOT:
     node =  optimize_l(node);
