@@ -58,7 +58,7 @@ char *strrchr(const char *s, int c);
 //size_t strcspn(const char *s, const char *reject);
 
 // Tokenize string (not thread-safe)
-//char *strtok(char *str, const char *delim);
+char *strtok(char *str, const char *delim);
 
 #endif // _STRING_H_
 
