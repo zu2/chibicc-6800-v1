@@ -401,17 +401,8 @@ bool gen_shl(Type *ty, uint64_t val)
     return true;
   }
   case 4:
-    if ( opt_O != '2') {
-      ldd_i(val);
-      println("\tjsr __shl32");
-      return true;
-    }
-    for (int i=0; i<val; i++) {   // TODO: byte move
-      println("\tasl @long+3");
-      println("\trol @long+2");
-      println("\trol @long+1");
-      println("\trol @long");
-    } 
+    ldd_i(val);
+    println("\tjsr __shl32");
     return true;
   }
   assert(0); // what's?
@@ -2098,30 +2089,23 @@ static int gen_direct_long_xor(uint64_t v,char *opa, char *opb){
 //
 // shift operation
 //
-int gen_direct_shl_long(Node *node)
+int gen_direct_shl_long(Node *node,int64_t val)
 {
-  Node *rhs = node->rhs;
-
-  if (node->kind != ND_SHL || rhs->kind != ND_NUM)
+  if (node->kind != ND_SHL) {
     return 0;
-  if (node->rhs->ty->kind!=TY_LONG
-  &&  node->rhs->ty->kind!=TY_INT
-  &&  node->rhs->ty->kind!=TY_SHORT)
-    return 0;
+  }
 
-  if ( rhs->val >= 32 ) {
+  if ( val == 0) {
+    return 1;
+  }
+  if ( val >= 32 ) {
     println("\tldx #0");
     println("\tstx @long+2");
     println("\tstx @long");
     IX_Dest = IX_None;
     return 1;
   }
-  switch (rhs->val) {
-  case 24:
-  case 16:
-  case 8:
-  }
-  switch (rhs->val) {
+  switch (val) {
   case 24:
     println("\tclra");
     println("\tldab @long+3");
@@ -2139,7 +2123,7 @@ int gen_direct_shl_long(Node *node)
     return 1;
   case 8:
     println("\tldx @long+1");
-    println("\tldx @long");
+    println("\tstx @long");
     println("\tldab @long+3");
     println("\tstab @long+2");
     println("\tclr @long+3");
@@ -2149,18 +2133,14 @@ int gen_direct_shl_long(Node *node)
   return 0;
 }
 
-int gen_direct_shr_long(Node *node)
+int gen_direct_shr_long(Node *node,int64_t val)
 {
   Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-  if (node->kind != ND_SHR || rhs->kind != ND_NUM)
-    return 0;
-  if (node->rhs->ty->kind!=TY_LONG
-  &&  node->rhs->ty->kind!=TY_INT
-  &&  node->rhs->ty->kind!=TY_SHORT)
+
+  if (node->kind != ND_SHR)
     return 0;
 
-  if ( rhs->val >= 32 ) {
+  if ( val >= 32 ) {
     println("\tclra");
     if (!lhs->ty->is_unsigned) {
       println("\tasl @long");
@@ -2172,7 +2152,7 @@ int gen_direct_shr_long(Node *node)
     println("\tstaa @long");
     return 1;
   }
-  switch (rhs->val) {
+  switch (val) {
   case 24:
   case 16:
   case 8:
@@ -2185,7 +2165,7 @@ int gen_direct_shr_long(Node *node)
       println("L_%d:",c);
     }
   }
-  switch (rhs->val) {
+  switch (val) {
   case 24:
     println("\tldab @long");
     println("\tstab @long+3");
@@ -3068,14 +3048,20 @@ static void opeq(Node *node)
 
     switch(node->ty->kind) {
     case TY_LONG:
-      gen_addr(node->lhs);
-      push();
-      gen_expr(node->rhs);
-      push1();
-      println("\ttsx");
-      println("\tldx 1,x");
-      println("\tjsr __load32x");
-      pop1();
+      if (is_global_var(node->lhs)) {
+        gen_expr(node->rhs);
+        println("\tldx #_%s",node->lhs->var->name);
+        println("\tjsr __load32x");
+      }else{
+        gen_addr(node->lhs);
+        push();
+        gen_expr(node->rhs);
+        push1();
+        println("\ttsx");
+        println("\tldx 1,x");
+        println("\tjsr __load32x");
+        pop1();
+      }
       if (node->kind == ND_SHLEQ) {
         println("\tjsr __shl32");
       }else if (node->lhs->ty->is_unsigned) {
@@ -3228,6 +3214,7 @@ void gen_expr(Node *node) {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   int off;
+  int64_t val;
 
   switch (node->kind) {
   case ND_NULL_EXPR:
@@ -4093,19 +4080,18 @@ void gen_expr(Node *node) {
     //
     case ND_SHL:
     case ND_SHR:
-      if (node->rhs->kind == ND_NUM
-      && (node->rhs->ty->kind==TY_LONG
-       || node->rhs->ty->kind==TY_INT
-       || node->rhs->ty->kind==TY_SHORT) ){
+      // (<< NULL (ND_VAR NULL rndv global) 13)
+      ast_node_dump(node);
+      if (is_integer_constant(node->rhs,&val)) {
+        val &= 0x00ff;
         gen_expr(node->lhs);
-        if (node->rhs->val == 0) {
+        if (val==0)
           return;
-        }
-        if (node->kind == ND_SHL && gen_direct_shl_long(node))
+        if (node->kind == ND_SHL && gen_direct_shl_long(node,val))
           return;
-        if (node->kind == ND_SHR && gen_direct_shr_long(node))
+        if (node->kind == ND_SHR && gen_direct_shr_long(node,val))
           return;
-        println("\tldab #%d",(uint32_t)(node->rhs->val & 0x000000FF));
+        println("\tldab #%ld",val);
       }else{
         gen_expr(node->rhs);
         push1();
