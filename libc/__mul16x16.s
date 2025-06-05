@@ -6,15 +6,21 @@
 __mul16x16:
 	stab @tmp1+1
 	staa @tmp1
-	oraa @tmp1+1
+	ldx  @tmp1
 	beq __mul16x16_zero
 	tsx
-	tst 2,x		; TOS < 256 ?
+        oraa 2,x
+        bne __mul16x16_05
+        ldaa 3,x                ; here, TOS,tmp1 < 256
+        jmp __mul8x8            ; AccAB = AccA * AccB
+__mul16x16_05:
+        tsx
+        ldx  2,x
+        beq __mul16x16_zero
+	ldaa @tmp1
 	bne  __mul16x16_10
-	ldab 3,x
-	beq __mul16x16_zero
-	stab 2,x
-	clr 3,x
+        stab @tmp1
+	staa @tmp1+1            ; zero clear
 	ldab #8
 	bra __mul16x16_11
 __mul16x16_10:
@@ -28,11 +34,11 @@ __mul16x16_11:
 __mul16x16_50:
 	aslb
 	rola
-	rol 3,x
-	rol 2,x
+	rol @tmp1+1
+	rol @tmp1
 	bcc __mul16x16_90
-	addb @tmp1+1
-	adca @tmp1
+	addb 3,x
+	adca 2,x
 __mul16x16_90:
 	dec @tmp2
 	bne __mul16x16_50
