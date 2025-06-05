@@ -3,7 +3,7 @@
 
 static char *type_str(Type *ty)
 {
-  if (ty) return "NULL";
+  if (!ty) return "NULL";
 
   if (ty == ty_void) return "ty_void";
   if (ty == ty_bool) return "ty_bool";
