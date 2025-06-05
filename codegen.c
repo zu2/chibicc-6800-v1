@@ -1757,7 +1757,7 @@ static void builtin_alloca(void) {
 //
 // If node is a simple expression, it is computed directly without pushing it onto the stack.
 //
-static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
+static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
 {
   switch(node->kind){
   case ND_NUM: {
@@ -1789,7 +1789,12 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
     if (node->var->ty->kind != TY_VLA ){
       if(node->var->is_local){
         if (node->ty->kind==TY_ARRAY) {
-          return 0;
+          if (test) return true;
+          println("\t%s @bp+1",opb);
+          println("\t%s @bp",opa);
+          println("\t%s #<%d",opb,node->var->offset);
+          println("\t%s #>%d",opa,node->var->offset);
+          return 1;
         }
         if (!test_addr_x(node)) return 0;
         int off = gen_addr_x(node,true);
@@ -1859,7 +1864,6 @@ static int gen_direct_sub(Node *node,char *opb, char *opa, int test)
         }
       }
       break;
-//(ND_DEREF ty_int (+ TY_PTR(10) (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) array global)) (ND_CAST TY_PTR(10) 2)))
     case ND_ADD: {
       // gloval array[const]
       // (ND_DEREF ty_uchar
@@ -4112,6 +4116,7 @@ void gen_expr(Node *node) {
   case ND_ADD:
     if (gen_direct_lr(node,"addb","adca"))
       return;
+// (+ TY_PTR(10) (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) list +4 )) (ND_CAST TY_PTR(10) (* TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR ty_uchar i +2 )) 2))))
     if (node->rhs->kind     == ND_CAST
     &&  node->rhs->ty->kind == TY_INT
     &&  !node->rhs->ty->is_unsigned

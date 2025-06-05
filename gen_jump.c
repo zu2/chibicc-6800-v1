@@ -164,8 +164,6 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     return false;
   }
   if (rhs->kind == ND_NUM && rhs->val == 0) {
-    println("; 8bit 1");
-    ast_node_dump(lhs);
     gen_expr(lhs);
     if (node->kind != ND_EQ && node->kind != ND_NE) {
       println("\ttstb");
