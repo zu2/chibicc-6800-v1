@@ -1,25 +1,25 @@
 #include "chibicc.h"
 
 
-static char *type_str(Node *node)
+static char *type_str(Type *ty)
 {
-  if (!node || !node->ty) return "NULL";
+  if (ty) return "NULL";
 
-  if (node->ty == ty_void) return "ty_void";
-  if (node->ty == ty_bool) return "ty_bool";
-  if (node->ty == ty_char) return "ty_char";
-  if (node->ty == ty_short) return "ty_short";
-  if (node->ty == ty_int) return "ty_int";
-  if (node->ty == ty_long) return "ty_long";
-  if (node->ty == ty_uchar) return "ty_uchar";
-  if (node->ty == ty_ushort) return "ty_ushort";
-  if (node->ty == ty_uint) return "ty_uint";
-  if (node->ty == ty_ulong) return "ty_ulong";
-  if (node->ty == ty_float) return "ty_float";
-  if (node->ty == ty_double) return "ty_double";
-  if (node->ty == ty_ldouble) return "ty_ldouble";
+  if (ty == ty_void) return "ty_void";
+  if (ty == ty_bool) return "ty_bool";
+  if (ty == ty_char) return "ty_char";
+  if (ty == ty_short) return "ty_short";
+  if (ty == ty_int) return "ty_int";
+  if (ty == ty_long) return "ty_long";
+  if (ty == ty_uchar) return "ty_uchar";
+  if (ty == ty_ushort) return "ty_ushort";
+  if (ty == ty_uint) return "ty_uint";
+  if (ty == ty_ulong) return "ty_ulong";
+  if (ty == ty_float) return "ty_float";
+  if (ty == ty_double) return "ty_double";
+  if (ty == ty_ldouble) return "ty_ldouble";
 
-  switch(node->ty->kind){
+  switch(ty->kind){
   case TY_VOID:	return "TY_VOID(0)";
   case TY_BOOL: return "TY_BOOL(1)";
   case TY_CHAR: return "TY_CHAR(2)";
@@ -52,7 +52,8 @@ static void ast_dump_unary(Node *node, char *name)
 
 static void ast_dump_unary_ty(Node *node, char *name)
 {
-  printout("(%s %s ",name,type_str(node));
+  printout("(%s %s ",name,type_str(node->ty
+  ));
   ast_dump(node->lhs);
   printout(")");
 }
@@ -68,7 +69,7 @@ static void ast_dump_binary(Node *node, char *name)
 
 static void ast_dump_binary_ty(Node *node, char *name)
 {
-  printout("(%s %s ",name,type_str(node));
+  printout("(%s %s ",name,type_str(node->ty));
   ast_dump(node->lhs);
   printout(" ");
   ast_dump(node->rhs);
@@ -152,7 +153,7 @@ static void ast_dump(Node *node)
     ast_dump_binary(node,",");
     return;
   case ND_MEMBER:
-    printout("(ND_MEMBER %s ",type_str(node));
+    printout("(ND_MEMBER %s ",type_str(node->ty));
     ast_dump(node->lhs);
     printout(" ");
     printout("+%d)",node->member->offset);
@@ -161,7 +162,7 @@ static void ast_dump(Node *node)
     ast_dump_unary(node,"ND_ADDR");
     return;
   case ND_DEREF:
-    printout("(ND_DEREF %s ",type_str(node));
+    printout("(ND_DEREF %s ",type_str(node->ty));
     ast_dump(node->lhs);
     printout(")");
     return;
@@ -253,7 +254,7 @@ static void ast_dump(Node *node)
     printout(")");
     return;
   case ND_FUNCALL:
-    printout("(ND_FUNCALL %s", type_str(node));
+    printout("(ND_FUNCALL %s", type_str(node->ty));
     ast_dump(node->lhs);
     printout(" ... )\n; ");
     return;
@@ -266,9 +267,9 @@ static void ast_dump(Node *node)
       return;
     }
     if (strlen(node->var->name)){
-      printout("(ND_VAR %s %s ",type_str(node),node->var->name);
+      printout("(ND_VAR %s %s ",type_str(node->ty),node->var->name);
     }else{
-      printout("(ND_VAR %s no-name ",type_str(node));
+      printout("(ND_VAR %s no-name ",type_str(node->ty));
     }
     if (node->var->is_local){
       printout("+%d ",node->var->offset);
@@ -304,11 +305,14 @@ static void ast_dump(Node *node)
     }
     return;
   case ND_CAST:
-    printout("(ND_CAST %s ",type_str(node));
+    printout("(ND_CAST %s ",type_str(node->ty));
     ast_dump(node->lhs);
     printout(")");
     return;
 //46   ND_MEMZERO,   // Zero-clear a stack variable
+  case ND_MEMZERO:
+    printout("(ND_MEMZERO %s %d)",node->var->name,node->var->ty->size);
+    return;
   case ND_ASM:
     printout("(ND_ASM \"%s\")\n; ",node->asm_str);
     return;
@@ -346,6 +350,21 @@ static void ast_dump(Node *node)
     return;
   case ND_SHREQ:
     ast_dump_binary(node,">>=");
+    return;
+  case ND_BULKINIT:
+    printout("(ND_BULKINIT %s ",node->var->name);
+    printout("%s ",type_str(node->var->ty));
+    if (!node->var->is_local) {
+      printout("global ");
+    }
+    if (node->var->is_static) {
+      printout("static ");
+    }
+    if (node->var->is_local) {
+      printout("+%d ",node->var->offset);
+    }
+    printout("%s ", node->bulk_data->name);
+    printout("%d) ",node->ty->size);
     return;
   default:
     return;

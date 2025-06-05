@@ -246,6 +246,7 @@ typedef enum {
   ND_XOREQ,	// ^=
   ND_SHLEQ,	// <<=
   ND_SHREQ,	// >>=
+  ND_BULKINIT,	// bulk initialize a stack variable
 } NodeKind;
 
 // AST node type
@@ -317,6 +318,10 @@ struct Node {
   // optimize hint
   bool retval_unused;
   bool bool_result_unused;
+
+  // ND_MEMCPY for initialize local var
+  Obj *bulk_data;
+  size_t bulk_size;
 };
 
 Node *new_cast(Node *expr, Type *ty);

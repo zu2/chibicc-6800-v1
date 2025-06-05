@@ -68,6 +68,11 @@ struct Initializer {
   // Only one member can be initialized for a union.
   // `mem` is used to clarify which member is initialized.
   Member *mem;
+
+  // bulk initializer
+  bool is_bulk_init;
+  char *bulk_data;
+  size_t bulk_size;
 };
 
 // For local variable initializer.
@@ -975,13 +980,27 @@ static void string_initializer(Token **rest, Token *tok, Initializer *init) {
 
   int len = MIN(init->ty->array_len, tok->ty->array_len);
 
+  if (init->ty->base->size == 1) {
+    init->is_bulk_init = true;
+    init->bulk_size = init->ty->array_len * init->ty->base->size;
+    init->bulk_data = calloc(1, init->bulk_size);
+
+    memcpy(init->bulk_data, tok->str, len);
+
+    *rest = tok->next;
+
+    return;
+  };
+
   switch (init->ty->base->size) {
+#if 0
   case 1: {
     char *str = tok->str;
     for (int i = 0; i < len; i++)
       init->children[i]->expr = new_num(str[i], tok);
     break;
   }
+#endif
   case 2: {
     uint16_t *str = (uint16_t *)tok->str;
     for (int i = 0; i < len; i++)
@@ -1379,6 +1398,16 @@ static Node *init_desg_expr(InitDesg *desg, Token *tok) {
 }
 
 static Node *create_lvar_init(Initializer *init, Type *ty, InitDesg *desg, Token *tok) {
+
+  if (ty->kind == TY_ARRAY && init->is_bulk_init) {
+    Obj *bulk_data = new_string_literal(init->bulk_data,desg->var->ty);
+
+    Node *node = new_node(ND_BULKINIT, tok);
+    node->ty  = ty;
+    node->var = desg->var;
+    node->bulk_data = bulk_data;
+    return node;
+  }
   if (ty->kind == TY_ARRAY) {
     Node *node = new_node(ND_NULL_EXPR, tok);
     for (int i = 0; i < ty->array_len; i++) {

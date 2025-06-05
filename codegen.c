@@ -2527,9 +2527,7 @@ static void gen_funcall(Node *node)
       println("\tpshb");
       println("\tpsha");
     }
-    println("; gen_expr start");
     gen_expr(node->lhs);
-    println("; gen_expr end");
     println("\tstab @tmp1+1");
     println("\tstaa @tmp1");
     if (node->args && !node->args->pass_by_stack) {
@@ -3808,6 +3806,21 @@ void gen_expr(Node *node) {
   case ND_CAS:
   case ND_EXCH:
     assert(0);
+  case ND_BULKINIT:
+    // (ND_BULKINIT str NULL +2 _L_55 12)
+    println("; memcpy(%s,%s,%d);",node->var->name,node->bulk_data->name,node->ty->size);
+    ldd_i(node->ty->size);
+    push();
+    println("\tldab #<_%s", node->bulk_data->name);
+    println("\tldaa #>_%s", node->bulk_data->name);
+    push();
+    println("\tldab @bp+1");
+    println("\tldaa @bp");
+    println("\taddb #<%d",node->var->offset);
+    println("\tadca #>%d",node->var->offset);
+    println("\tjsr _memcpy");
+    ins(4);
+    return;
   }
   // Above is a unary operator
   //
@@ -4658,9 +4671,7 @@ static void gen_stmt(Node *node)
       switch (ty->kind) {
       case TY_STRUCT:
       case TY_UNION:
-        println("; copy_struct_mem begin");
         copy_struct_mem();
-        println("; copy_struct_mem end");
         break;
       }
     }

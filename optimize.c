@@ -488,6 +488,8 @@ Node *optimize_expr(Node *node)
       }
     }
     return optimize_const_expr(node);
+  case ND_BULKINIT:
+    return node;
   }
   return node;
 }
