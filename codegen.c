@@ -693,6 +693,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   int off;
+  int64_t val;
 
   switch(node->kind) {
   case ND_NULL_EXPR:
@@ -744,7 +745,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       return off;
     }
     return false;
-  } // ND_MEMBER:
+  }; // ND_MEMBER:
   case ND_DEREF: {
     if (test_expr_x(lhs)) {
       if (test) return true;
@@ -799,6 +800,17 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
           off = gen_addr_x(lhs->lhs,true) + rhs->lhs->val;
           return off;
         }
+      }
+    }
+    //(+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +0 ) 6)
+    if (lhs->kind     == ND_VAR
+    &&  lhs->ty->kind == TY_ARRAY
+    &&  lhs->var->is_local
+    &&  is_integer_constant(rhs,&val)) {
+      off = lhs->var->offset + val;
+      if (off <= 252) {
+        if (test) return true;
+        return gen_addr_x(lhs,true) + val;
       }
     }
     return false;
@@ -1679,6 +1691,7 @@ static void copy_struct_mem(void) {
   Type *ty = current_fn->ty->return_ty;
 //Obj *var = current_fn->params;
 
+  // TODO: memcpy
   println("; copy_struct_mem %s %d",__FILE__,__LINE__);
   println("\tstab @tmp2+1");
   println("\tstaa @tmp2");
@@ -4102,8 +4115,6 @@ void gen_expr(Node *node) {
     //
     case ND_SHL:
     case ND_SHR:
-      // (<< NULL (ND_VAR NULL rndv global) 13)
-      ast_node_dump(node);
       if (is_integer_constant(node->rhs,&val)) {
         val &= 0x00ff;
         gen_expr(node->lhs);
