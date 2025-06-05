@@ -269,8 +269,6 @@ Node *optimize_expr(Node *node)
   // rewrite the relational operator.
   // In the case of float, rewriting is not possible because there is NaN.
   case ND_NOT:
-    println("; optimize ND_NOT");
-    ast_node_dump(node);
     if (is_compare(node->lhs)
     &&  is_integer(node->lhs->lhs->ty)
     &&  is_integer(node->lhs->rhs->ty)){
