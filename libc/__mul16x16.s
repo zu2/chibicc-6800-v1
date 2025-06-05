@@ -29,6 +29,7 @@ __mul16x16_11:
 	stab @tmp2
 	; 0-1,x return address
 	; 2-3,x TOS
+        tsx
 	clra
 	clrb
 __mul16x16_50:
