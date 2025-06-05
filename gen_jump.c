@@ -662,6 +662,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 //
 bool gen_jump_if_true(Node *node, char *if_true)
 {
+  node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   char if_false[32];
@@ -672,10 +673,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
 
   if (node->kind == ND_NOT) {
     node->lhs->bool_result_unused = true;
-    if (gen_jump_if_false(node->lhs, if_true)) {
-      return true;
-    }
-    goto fallback;
+    return (gen_jump_if_false(node->lhs, if_true));
   }
 
   if (isVAR(node) && is_byte(node)) {
