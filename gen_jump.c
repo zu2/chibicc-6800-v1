@@ -97,6 +97,14 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
+#if 0
+  if (is_byte(lhs) && lhs->kind==ND_CAST) {
+    lhs = lhs->lhs;
+  }
+  if (is_byte(rhs) && rhs->kind==ND_CAST) {
+    rhs = rhs->lhs;
+  }
+#endif
   if (isVAR(node)) {
     if (!is_byte(node)) {
       return false;
@@ -112,14 +120,14 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   if (node->kind == ND_LOGOR) {
     char if_thru[32];
     sprintf(if_thru,  "L_thru_%d", count());
-    gen_jump_if_true(node->lhs, if_thru);
-    gen_jump_if_false(node->rhs, if_false);
+    gen_jump_if_true(lhs, if_thru);
+    gen_jump_if_false(rhs, if_false);
     println("%s:",if_thru);
     return true;
   }
   if (node->kind == ND_LOGAND) {
-    gen_jump_if_false(node->lhs, if_false);
-    gen_jump_if_false(node->rhs, if_false);
+    gen_jump_if_false(lhs, if_false);
+    gen_jump_if_false(rhs, if_false);
     return true;
   }
 
@@ -152,17 +160,18 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     return false;
   }
 
-  if (!can_direct(node->rhs)) {
+  if (!can_direct(rhs)) {
     return false;
   }
-
-  if (node->rhs->kind == ND_NUM && node->rhs->val == 0) {
-    gen_expr(node->lhs);
+  if (rhs->kind == ND_NUM && rhs->val == 0) {
+    println("; 8bit 1");
+    ast_node_dump(lhs);
+    gen_expr(lhs);
     if (node->kind != ND_EQ && node->kind != ND_NE) {
       println("\ttstb");
     }
   } else if (rhs->kind == ND_NUM) {
-    gen_expr(node->lhs);
+    gen_expr(lhs);
     println("\tcmpb #%ld", rhs->val);
   } else if (rhs->kind == ND_VAR) {
     if (rhs->var->ty->kind == TY_VLA) {
@@ -192,28 +201,28 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     println("\tjeq %s", if_false);
     break;
   case ND_LT:
-    if (node->lhs->ty->is_unsigned) {
+    if (lhs->ty->is_unsigned) {
       println("\tjcc %s", if_false);
     } else {
       println("\tjge %s", if_false);
     }
     break;
   case ND_GE:
-    if (node->lhs->ty->is_unsigned) {
+    if (lhs->ty->is_unsigned) {
       println("\tjcs %s", if_false);
     } else {
       println("\tjlt %s", if_false);
     }
     break;
   case ND_LE:
-    if (node->lhs->ty->is_unsigned) {
+    if (lhs->ty->is_unsigned) {
       println("\tjhi %s", if_false);
     } else {
       println("\tjgt %s", if_false);
     }
     break;
   case ND_GT:
-    if (node->lhs->ty->is_unsigned) {
+    if (lhs->ty->is_unsigned) {
       println("\tjls %s", if_false);
     } else {
       println("\tjle %s", if_false);
@@ -231,6 +240,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 //
 bool gen_jump_if_false(Node *node, char *if_false)
 {
+  node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   char if_thru[32];
@@ -279,6 +289,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
 
   // If one side is ND_NUM, both sides are promoted to int,
   // so this can't be optimized. TODO: Fix optimize.c
+  println("; gen_jump_if_false isbyte lhs %d, rhs %d",is_byte(node->lhs)!=NULL,is_byte(node->rhs)!=NULL);
   if (is_byte(node->lhs) && is_byte(node->rhs)) {
     if (gen_jump_if_false_8bit(node, if_false)) {
       return 1;

@@ -778,7 +778,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 // case ND_LOGOR:
 // case ND_FUNCALL:
 // case ND_LABEL_VAL:
-#if 0
+#if 1
   // rethink. check ARRAY or Pointer
   case ND_ADD:
     if (lhs->kind      == ND_CAST

@@ -2494,10 +2494,16 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
   // ptr + num
   if (lhs->ty->base && is_integer(rhs->ty)){
     if (lhs->ty->base->size!=1){
-      rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
-      return new_binary(ND_ADD, lhs, rhs, tok);	// TODO:
+      if (rhs->kind == ND_NUM) {
+        rhs = new_num(lhs->ty->base->size * rhs->val, tok);
+      }else{
+        rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
+      }
     }
-    return new_binary(ND_ADD, lhs, rhs, tok);
+    add_type(rhs);
+    Node *node = new_binary(ND_ADD, lhs, rhs, tok);
+    node->ty = lhs->ty;
+    return node;
   }
   error_tok(tok, "invalid operands %s %d",__FILE__,__LINE__);
 }
@@ -2511,6 +2517,13 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
   if (is_numeric(lhs->ty) && is_numeric(rhs->ty))
     return new_binary(ND_SUB, lhs, rhs, tok);
 
+  // Canonicalize `num + ptr` to `ptr + num`.
+  if (!lhs->ty->base && rhs->ty->base) {
+    Node *tmp = lhs;
+    lhs = rhs;
+    rhs = tmp;
+  }
+
   // VLA - num
   if (lhs->ty->base->kind == TY_VLA) {
     rhs = new_binary(ND_MUL, rhs, new_var_node(lhs->ty->base->vla_size, tok), tok);
@@ -2522,7 +2535,13 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
 
   // ptr - num
   if (lhs->ty->base && is_integer(rhs->ty)) {
-    rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
+    if (lhs->ty->base->size!=1){
+      if (rhs->kind == ND_NUM) {
+        rhs = new_num(lhs->ty->base->size * rhs->val, tok);
+      }else{
+        rhs = new_binary(ND_MUL, rhs, new_int(lhs->ty->base->size, tok), tok);
+      }
+    }
     add_type(rhs);
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
     node->ty = lhs->ty;

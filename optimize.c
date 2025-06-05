@@ -147,7 +147,6 @@ Node *optimize_const_expr(Node *node)
     }
     return node;
 }
-
 Node *optimize_expr(Node *node)
 {
   Node *new;
