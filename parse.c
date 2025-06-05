@@ -2639,7 +2639,9 @@ static Node *new_pre_inc_dec(Token **rest, Token *tok, int addend) {
   if (!node->ty->is_atomic
   &&  (node->ty->kind == TY_CHAR
     || node->ty->kind == TY_SHORT
-    || node->ty->kind == TY_INT) ){
+    || node->ty->kind == TY_INT
+    || node->ty->kind == TY_PTR
+    || node->ty->kind == TY_ENUM) ){
 
     node = new_add(node,new_num(addend,tok), tok);
     node->kind = ND_PRE_INCDEC;
@@ -2967,12 +2969,8 @@ static Node *new_post_inc_dec(Node *node, Token *tok, int addend) {
     if (ty->kind == TY_CHAR
     ||  ty->kind == TY_SHORT
     ||  ty->kind == TY_INT
-    ||  ty->kind == TY_ENUM ) {
-      node = new_add(node,new_num(addend,tok), tok);
-      node->kind = ND_POST_INCDEC;
-      node->ty = node->lhs->ty;
-      return node;
-    }else if (ty->kind == TY_PTR) {
+    ||  ty->kind == TY_ENUM
+    ||  ty->kind == TY_PTR) {
       node = new_add(node,new_num(addend,tok), tok);
       node->kind = ND_POST_INCDEC;
       node->ty = node->lhs->ty;

@@ -3376,6 +3376,8 @@ void gen_expr(Node *node) {
       break;
     case TY_SHORT:
     case TY_INT:
+    case TY_ENUM:
+    case TY_PTR:
       println("\tldab %d,x",off+1);
       println("\tldaa %d,x",off);
       println("\taddb #<%d",val);
@@ -4730,28 +4732,27 @@ static void assign_lvar_offsets(Obj *prog) {
       }
     }
 
-    // ローカル変数領域の大きさを計算
-    // Assign offsets to locals
+    // Calculate size of local variable area and Assign offsets to locals
     int ret_skipped = 0;
-    for (Obj *var = fn->locals; var; var = var->next) { //引数もここ
+    for (Obj *var = fn->locals; var; var = var->next) { // locals & args
       if (var->offset>0)
         continue;
- 
+
       if (var->offset == -1) {	// レジスタ引数
-	fn->stack_size = top;
+        fn->stack_size = top;
         var->offset = top;
-	top += var->ty->size + 4;	// skip old @bp, ret addr
-	ret_skipped = 1;
-	continue;
+        top += var->ty->size + 4;	// skip old @bp, ret addr
+        ret_skipped = 1;
+        continue;
       }else if (var->offset == -2){	// stack param
-	if (!ret_skipped) {
-	  fn->stack_size = top;
-	  top += 4 + (has_implicit_reg_param?2:0);
-	  ret_skipped = 1;
-	}
-	var->offset = top;
-	top += var->ty->size;
-	continue;
+        if (!ret_skipped) {
+          fn->stack_size = top;
+          top += 4 + (has_implicit_reg_param?2:0);
+          ret_skipped = 1;
+        }
+        var->offset = top;
+        top += var->ty->size;
+        continue;
       }else{ // ローカル変数の割り当て
         var->offset = top;
         top += var->ty->size;

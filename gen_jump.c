@@ -287,7 +287,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
 
   // If one side is ND_NUM, both sides are promoted to int,
   // so this can't be optimized. TODO: Fix optimize.c
-  println("; gen_jump_if_false isbyte lhs %d, rhs %d",is_byte(node->lhs)!=NULL,is_byte(node->rhs)!=NULL);
   if (is_byte(node->lhs) && is_byte(node->rhs)) {
     if (gen_jump_if_false_8bit(node, if_false)) {
       return 1;
