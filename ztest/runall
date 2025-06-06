@@ -1,11 +1,12 @@
 #!/bin/sh
 
 for i in [0-9]*.c; do
-  ./onetest $i
-  ret=$?
-  echo $ret
-  if [ $ret -ne 0 ]; then
-    exit $ret
-  fi
+  for opt in O0 O1 O2 Os; do
+    ./onetest -$opt $i
+    ret=$?
+    echo $ret
+    if [ $ret -ne 0 ]; then
+      exit $ret
+    fi
+  done
 done
-

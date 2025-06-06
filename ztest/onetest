@@ -1,9 +1,22 @@
 #!/bin/sh
 
 PATH=/opt/fcc/bin:$PATH
-OPT="-v -Os -I. -DTEST"
-#OPT="-v -O2 -I. -DTEST"
-CCRUN="../chibicc $OPT "
+OPT="-v -I. -DTEST"
+
+OPT_O="-Os"
+while true; do
+  case "$1" in
+  -O0|-O1|-O2|-Os)
+    OPT_O=$1
+    shift
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+
+CCRUN="../chibicc $OPT $OPT_O "
 
 s=$(basename $1 .c)
 echo  "compiling:" $s
@@ -16,6 +29,7 @@ if [ $err -ne 0 ] ; then
 	rm -f $s.o $s.s $s.bin
 	exit $err;
 fi
+ls -l $s.bin
 echo emu6800 -d 6800 $s.bin $s.map
 emu6800 6800 $s.bin $s.map
 ret=$?
