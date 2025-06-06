@@ -601,6 +601,9 @@ gen_mul16(Node *node)
         println("\taslb");
         println("\trola");
         return true;
+      case 100:
+        println("\jsr __mul100");
+        return true;
       }
     }
   }
