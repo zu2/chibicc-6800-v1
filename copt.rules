@@ -273,6 +273,12 @@
 =
 	ldx %1,x
 
+	stab %2,x
+	staa %1,x
+	jsr __tfr_dx
+=
+	ldx %1,x
+
 
 	jsr __load8u
 	tstb
@@ -409,3 +415,32 @@
 	dex
 	clra
 	ldab 0,x
+
+	stab %2,x
+	staa %1,x
+	addb #<1
+	adca #>1
+	jsr __load8u
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	inx
+	clra
+	ldab 0,x
+
+	stab %2,x
+	staa %1,x
+	jsr __load16
+= 
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+
+
+	clra
+	ldab %1,x
+	clra
+=
+	ldab %1,x
+	clra
