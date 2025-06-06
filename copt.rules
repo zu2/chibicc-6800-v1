@@ -277,6 +277,8 @@
 	staa %1,x
 	jsr __tfr_dx
 =
+	stab %2,x
+	staa %1,x
 	ldx %1,x
 
 
