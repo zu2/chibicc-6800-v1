@@ -189,18 +189,16 @@ static void load32x(int off)
 //
 static void store32x(int off)
 {
-  if (opt_O == 's') {
-    if (off == 0) {
-      println("\tjsr __store32x");
-    } else if (off<=255-4) {
-      println("\tldab #%d",off);
-      println("\tjsr __store32bx");
-      IX_Dest = IX_None;
-    } else {
-      ldd_i(off);
-      println("\tjsr __store32dx");
-      IX_Dest = IX_None;
-    }
+  if (off == 0) {
+    println("\tjsr __store32x");
+  }else if (off > 255 || off<0) {           // Offset too large for 1 byte
+    ldd_i(off);
+    println("\tjsr __store32dx");
+    IX_Dest = IX_None;
+  }else if (opt_O == 's' || off>252) {      // -Os enabled or   long offset > 255
+    println("\tldab #%d",off);
+    println("\tjsr __store32bx");
+    IX_Dest = IX_None;
   }else{
     println("\tldab @long+3");
     println("\tstab %d,x",off+3);
@@ -211,6 +209,7 @@ static void store32x(int off)
     println("\tldab @long");
     println("\tstab %d,x",off);
   }
+  return;
 }
 
 static char *helper_savex[] = {
