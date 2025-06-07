@@ -315,9 +315,8 @@ struct Node {
   int64_t val;
   long double fval;
 
-  // optimize hint
+  // optimize (to be deleted)
   bool retval_unused;
-  bool bool_result_unused;
 
   // ND_MEMCPY for initialize local var
   Obj *bulk_data;

@@ -30,6 +30,15 @@ int count(void) {
   return i++;
 }
 
+char *new_label(char *fmt)
+{
+  char *buf = calloc(1,strlen(fmt)+20); // 20?
+
+  sprintf(buf, fmt, count());
+
+  return buf;
+}
+
 static void push1(void) {	// push char parameter
   println("\tpshb");
   depth+=1;
@@ -423,6 +432,8 @@ bool gen_shr(Type *ty, uint64_t val)
 {
   if (!is_integer(ty))
     return false;
+  if (val==0)
+    return true;
   if (val<0)
     return false;
   if (val>=ty->size*8)
@@ -438,6 +449,22 @@ bool gen_shr(Type *ty, uint64_t val)
     }
     return true;
   case 2:
+    switch(val) {
+    case 8:
+      if (ty->is_unsigned) {
+        println("\ttab");
+        println("\tclra");
+      }else{
+        char *label = new_label("L_shr_%d");
+        // see. https://www.zukeran.org/shin/d/2024/12/30/6800-programing-11/
+        println("\ttab");
+        println("\tbpl %s",label);
+        println("\tdeca");
+        println("%s:",label);
+        println("\tsba");
+      }
+      return true;
+    }
     for (int i=0; i<val; i++) {
       if (ty->is_unsigned) {
         println("\tlsra");
@@ -602,7 +629,7 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 100:
-        println("\jsr __mul100");
+        println("\tjsr __mul100");
         return true;
       }
     }
@@ -1426,8 +1453,10 @@ static void cast(Type *from, Type *to) {
 static int is_empty_cast(Type *from, Type *to) {
   if (to->kind == TY_VOID)
     return 0;
+#if 0
   if (to->kind == TY_BOOL)
     return 0;
+#endif
   int t1 = getTypeId(from);
   int t2 = getTypeId(to);
   return cast_table[t1][t2]==NULL;
@@ -1541,10 +1570,15 @@ static void push_args2(Node *args,bool is_variadic)
     break;
   case TY_BOOL:
   case TY_CHAR: {
+#if 0
     if (args->kind       == ND_CAST
     &&  args->lhs->kind  == ND_NUM
     &&  is_integer(args->lhs->ty)) {
       println("\tldab #<%ld",args->lhs->val);
+#endif
+    int64_t val;
+    if (is_integer_constant(args->ty, &val)) {
+      println("\tldab #<%ld",val);
     }else{
       gen_expr(args);
     }
@@ -3330,12 +3364,14 @@ void gen_expr(Node *node) {
           println("\tsubb #%d",val);
           break;
         }
+#if 0
         println("\tclra");
         if (!node->lhs->ty->is_unsigned){
           println("\tasrb");
           println("\trolb");
           println("\tsbca #0");
         }
+#endif
       }
       break;
     case TY_SHORT:
@@ -3674,7 +3710,6 @@ void gen_expr(Node *node) {
     sprintf(L_end, "L_end_%d",c);
 
     Node *cond;
-    node->cond->bool_result_unused = true;
     cond = optimize_expr(node->cond);
 
     if (!gen_jump_if_false(cond,L_else)){
@@ -4391,7 +4426,6 @@ void gen_expr(Node *node) {
     if (is_integer_constant(node->rhs, &val)){
       gen_expr(node->lhs);
       if (gen_shl(node->lhs->ty,val)) {
-//      cast(node->lhs->ty, node->ty);
         return;
       }
       println("\tclrb");
@@ -4402,7 +4436,6 @@ void gen_expr(Node *node) {
     push1();
     gen_expr(node->lhs);
 //  shl16: AccAB << TOS(8bit)
-//  cast(node->lhs->ty, node->ty);
     println("\tjsr __shl16");
     ins(1);
     IX_Dest = IX_None;
@@ -4494,7 +4527,6 @@ static void gen_stmt(Node *node)
       sprintf(L_end, "L_end_%d"  ,c);
       strcpy(L_else,L_end);
     }
-    cond->bool_result_unused = true;
     cond = optimize_expr(cond);
     if (!gen_jump_if_false(cond,L_else)){
       gen_expr(cond);
@@ -4524,7 +4556,6 @@ static void gen_stmt(Node *node)
     println("L_begin_%d:", c);
     IX_Dest = IX_None;
     if (cond) {
-      cond->bool_result_unused = true;
       cond = optimize_expr(cond);
       if (is_integer_constant(cond,&val)) {
         if (val==0) {
@@ -4563,7 +4594,6 @@ static void gen_stmt(Node *node)
     gen_stmt(node->then);
     println("_%s:", node->cont_label);
     stmt_dump(cond->loc);
-    cond->bool_result_unused = true;
     cond = optimize_expr(cond);
     if (is_integer_constant(cond,&val)) {
       if (val!=0) {
@@ -4591,10 +4621,17 @@ static void gen_stmt(Node *node)
         break;
       }
     }
-    gen_expr(node->cond);
     if (node->cond->ty->size == 2 && !has_case_ranges) {
-      tfr_dx();
+      if (test_addr_x(node->cond)) {
+        int off = gen_addr_x(node->cond,false);
+        println("\tldx %d,x",off);
+      }else{
+        gen_expr(node->cond);
+        tfr_dx();
+      }
       IX_Dest = IX_None;
+    }else{
+      gen_expr(node->cond);
     }
     for (Node *n = node->case_next; n; n = n->case_next) {
       // TODO: 32bit case

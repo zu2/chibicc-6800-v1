@@ -246,7 +246,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
   sprintf(if_thru,  "L_thru_%d", count());
 
   if (node->kind == ND_NOT) {
-    node->lhs->bool_result_unused = true;
     return gen_jump_if_true(node->lhs, if_false);
   }
 
@@ -672,7 +671,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
   sprintf(if_thru, "L_thru_%d", c);
 
   if (node->kind == ND_NOT) {
-    node->lhs->bool_result_unused = true;
     return (gen_jump_if_false(node->lhs, if_true));
   }
 

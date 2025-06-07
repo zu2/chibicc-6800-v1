@@ -291,18 +291,6 @@ Node *optimize_expr(Node *node)
   // Below is a binary operator
   case ND_LOGAND:
   case ND_LOGOR:
-    if (is_compare(node->lhs)
-    ||  node->lhs->kind == ND_NOT
-    ||  node->lhs->kind == ND_LOGAND
-    ||  node->lhs->kind == ND_LOGOR) {
-      node->lhs->bool_result_unused = true;
-    }
-    if (is_compare(node->rhs)
-    ||  node->rhs->kind == ND_NOT
-    ||  node->rhs->kind == ND_LOGAND
-    ||  node->rhs->kind == ND_LOGOR) {
-      node->rhs->bool_result_unused = true;
-    }
     node = optimize_lr(node);
     return optimize_const_expr(node);
   case ND_ADD: {
