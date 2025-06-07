@@ -141,7 +141,7 @@ static void ast_dump(Node *node)
     ast_dump_binary_ty(node,"=");
     return;
   case ND_COND:
-    printout("(ND_COND ");
+    printout("(ND_COND %s ",type_str(node->ty));
     ast_dump(node->cond);
     printout(" ");
     ast_dump(node->then);
@@ -162,21 +162,19 @@ static void ast_dump(Node *node)
     ast_dump_unary(node,"ND_ADDR");
     return;
   case ND_DEREF:
-    printout("(ND_DEREF %s ",type_str(node->ty));
-    ast_dump(node->lhs);
-    printout(")");
+    ast_dump_unary_ty(node,"ND_DEREF");
     return;
   case ND_NOT:
-    ast_dump_unary(node,"!");
+    ast_dump_unary_ty(node,"!");
     return;
   case ND_BITNOT:
-    ast_dump_unary(node,"~");
+    ast_dump_unary_ty(node,"~");
     return;
   case ND_LOGAND:
-    ast_dump_binary(node,"&&");
+    ast_dump_binary_ty(node,"&&");
     return;
   case ND_LOGOR:
-    ast_dump_binary(node,"||");
+    ast_dump_binary_ty(node,"||");
     return;
   case ND_RETURN:
     ast_dump_unary(node,"ND_RETURN");
