@@ -22,8 +22,8 @@ s=$(basename $1 .c)
 echo  "compiling:" $s
 echo $CCRUN -o $s.bin $s.c common.c -lm
 $CCRUN -o $s.bin $s.c common.c -lm
-$CCRUN -S $s.c
 err=$?
+$CCRUN -S $s.c
 if [ $err -ne 0 ] ; then
 	echo $err
 	rm -f $s.o $s.s $s.bin
