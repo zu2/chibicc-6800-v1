@@ -415,7 +415,6 @@
 	staa %1,x
 	ldx %1,x
 	dex
-	clra
 	ldab 0,x
 
 	stab %2,x
@@ -428,7 +427,6 @@
 	staa %1,x
 	ldx %1,x
 	inx
-	clra
 	ldab 0,x
 
 	stab %2,x
@@ -446,3 +444,105 @@
 =
 	ldab %1,x
 	clra
+
+	ins
+	ins
+	ins
+	ins
+	ins
+	ins
+	ins
+	ins
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __ins8_popx_stxbp
+
+	ins
+	ins
+	ins
+	ins
+	ins
+	ins
+	ins
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __ins7_popx_stxbp
+
+	ins
+	ins
+	ins
+	ins
+	ins
+	ins
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __ins6_popx_stxbp
+
+	ins
+	ins
+	ins
+	ins
+	ins
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __ins5_popx_stxbp
+
+	ins
+	ins
+	ins
+	ins
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __ins4_popx_stxbp
+
+	ins
+	ins
+	ins
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __ins3_popx_stxbp
+
+	ins
+	ins
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __ins2_popx_stxbp
+
+	ins
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __ins1_popx_stxbp
+
+	jsr __popx
+	stx @bp
+	rts
+=
+	jmp __popx_stxbp
+
+
+	andb %1
+	tstb
+=
+	andb %1
+
+	incb
+	tstb
+=
+	incb
+

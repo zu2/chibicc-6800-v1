@@ -21,4 +21,3 @@ __popx:
 	ldab @tmp1+1
 	ldaa @tmp1
 	rts
-;

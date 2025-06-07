@@ -2627,6 +2627,7 @@ static void gen_funcall(Node *node)
   }
   // If the return value is a type shorter than an int,
   // the upper bytes contain garbage, so we correct it.
+#if 0
   switch (node->ty->kind) {
   case TY_BOOL:
     println("\tclra");
@@ -2640,6 +2641,7 @@ static void gen_funcall(Node *node)
     }
     return;
   }
+#endif
   return;
 }
 
@@ -3144,10 +3146,10 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
+      ast_node_dump(node);
       if (test_addr_x(node->lhs)) {
         if (is_integer_constant(node->rhs, &val)){
           int off = gen_addr_x(node->lhs,true);
-          println("\tclra");
           println("\tldab %d,x",off);
           if (val==0) {
             return;
@@ -3155,23 +3157,19 @@ static void opeq(Node *node)
           if (node->kind == ND_SHLEQ) {
             if (gen_shl(node->lhs->ty,val)) {
               println("\tstab %d,x",off);
-//            cast(node->lhs->ty, node->ty);
               return;
             }
           }else if (gen_shr(node->lhs->ty,val)) {
             println("\tstab %d,x",off);
-//          cast(node->lhs->ty, node->ty);
             return;
           }
           println("\tclrb");
-          println("\tclra");
           return;
         }
         gen_expr(node->rhs);
         push1();
         int off = gen_addr_x(node->lhs,true);
         println("\tldab %d,x",off);
-        println("\tclra");
         if (node->kind == ND_SHLEQ) {
           println("\tjsr __shl16");
         }else if (node->lhs->ty->is_unsigned) {
