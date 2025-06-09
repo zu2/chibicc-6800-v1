@@ -535,6 +535,14 @@
 =
 	jmp __popx_stxbp
 
+	pulb
+	stab @bp
+	pulb
+	stab @bp+1
+	rts
+=
+	jmp __pulbp_rts
+
 
 	andb %1
 	tstb

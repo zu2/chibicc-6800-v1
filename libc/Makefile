@@ -25,7 +25,7 @@ OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o __mul8x8.o \
 	__setjmp.o \
 	__memswap.o \
 	__func.o __jmp_d.o \
-	__popx_stxbp.o
+	__popx_stxbp.o __pulbp_rts.o
 
 .s.o:
 	as6800 $<
