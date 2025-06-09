@@ -88,6 +88,15 @@ static void des(int n)
   }
 }
 
+static void ldab_i(int n)
+{
+  if ((n & 0x00ff)==0) {
+    println("\tclrb");
+  } else {
+    println("\tldab #<%d",n);
+  }
+}
+
 static void ldd_i(int n)
 {
   if ((n & 0x00ff)==0) {
@@ -1577,7 +1586,7 @@ static void push_args2(Node *args,bool is_variadic)
       println("\tldab #<%ld",args->lhs->val);
 #endif
     int64_t val;
-    if (is_integer_constant(args->ty, &val)) {
+    if (is_integer_constant(args, &val)) {
       println("\tldab #<%ld",val);
     }else{
       gen_expr(args);
@@ -1827,7 +1836,11 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
         }
       }
       if (strcmp(opb,"ldab")==0) {
-        ldd_i((uint16_t)node->val);
+        if (node->ty->size == 1) {
+          ldab_i((uint16_t)node->val);
+        }else{
+          ldd_i((uint16_t)node->val);
+        }
       } else {
         println("\t%s #<%u", opb, (uint16_t)node->val);
         println("\t%s #>%u", opa, (uint16_t)node->val);
@@ -1868,7 +1881,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
         // global
         if (node->ty->kind==TY_FUNC)
           return 0;
-        if (node->ty->size==TY_CHAR && !node->ty->is_unsigned)
+        if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned)
           return 0;
         if (test) return 1;
         if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL) {
@@ -3146,7 +3159,6 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
-      ast_node_dump(node);
       if (test_addr_x(node->lhs)) {
         if (is_integer_constant(node->rhs, &val)){
           int off = gen_addr_x(node->lhs,true);
@@ -4185,14 +4197,12 @@ void gen_expr(Node *node) {
   case ND_ADD:
     if (gen_direct_lr(node,"addb","adca"))
       return;
-// (+ TY_PTR(10) (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) list +4 )) (ND_CAST TY_PTR(10) (* TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR ty_uchar i +2 )) 2))))
     if (node->rhs->kind     == ND_CAST
     &&  node->rhs->ty->kind == TY_INT
     &&  !node->rhs->ty->is_unsigned
     &&  node->rhs->lhs->ty->kind == TY_CHAR
     &&  !node->rhs->lhs->ty->is_unsigned
     &&  test_addr_x(node->rhs->lhs)) {
-      println("; ND_ADD signed char");
       gen_expr(node->lhs);
       off = gen_addr_x(node->rhs->lhs,true);
       int c = count();
