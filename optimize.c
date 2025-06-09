@@ -195,6 +195,12 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_ASSIGN:
     node = optimize_lr(node);
+    if(node->rhs->ty->kind == TY_BOOL
+    || node->rhs->ty->kind == TY_CHAR) {
+      if (is_integer_constant(node->rhs,&val)) {
+        node->rhs->ty = node->lhs->ty;
+      }
+    }
     return node;
   case ND_STMT_EXPR:
     //for (Node *n = node->body; n; n = n->next)
