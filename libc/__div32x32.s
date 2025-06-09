@@ -100,7 +100,31 @@ __pullret:
 __div32x32:
 	tsx
 __div32x32x:
+        tst @long
+        bne __div32x32x_32
+        tst @long+1
+        bne __div32x32x_24
+        ldab @long+2
+        stab @long
+        ldab @long+3
+        stab @long+1
+        clr @long+3
+        clr @long+2
+        ldab #16
+        bra __div32x32x_start
+__div32x32x_24:
+        ldab @long+1
+        stab @long
+        ldab @long+2
+        stab @long+1
+        ldab @long+3
+        stab @long+2
+        clr @long+3
+        ldab #24
+        bra __div32x32x_start
+__div32x32x_32:
 	ldab #32
+__div32x32x_start:
 	stab @tmp2
 	clra		; work area clear
 	clrb
