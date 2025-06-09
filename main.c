@@ -26,7 +26,7 @@ static char *opt_MF;
 static char *opt_MT;
 static char *opt_o;
 static int  opt_v = 0;
-char opt_O = '0';
+char opt_O = '1';
 char opt_g = '0';
 #define copt_path  "/opt/fcc/lib/copt"
 #define copt_rules "/opt/chibicc/lib/copt.rules"
