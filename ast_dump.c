@@ -235,7 +235,7 @@ static void ast_dump(Node *node)
     return;
   case ND_GOTO:
     printout("(ND_GOTO ");
-    printout("%s",node->label);
+    printout("%s",node->unique_label);
     printout(")");
     return;
   case ND_GOTO_EXPR:
