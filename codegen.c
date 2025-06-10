@@ -660,8 +660,10 @@ static void gen_addr(Node *node)
     if (node->var->ty->kind == TY_VLA) {
       println("\tldab @bp+1");
       println("\tldaa @bp");
-      println("\taddb #<%d",node->var->offset);
-      println("\tadca #>%d",node->var->offset);
+      if (node->var->offset) {
+        println("\taddb #<%d",node->var->offset);
+        println("\tadca #>%d",node->var->offset);
+      }
       tfr_dx();
       println("\tldab 1,x");
       println("\tldaa 0,x");
@@ -1855,10 +1857,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
     case TY_ENUM:
     case TY_PTR:
       if (test) return 1;
-      if (node->val==0) {
-        if (strcmp(opb,"addb")==0) {	// subb used for compare, so addb only
-          return 1;
-        }
+      if (strcmp(opb,"addb")==0 && node->val==0 ) { // subb used for compare
+        return 1;
       }
       if (strcmp(opb,"ldab")==0) {
         if (node->ty->size == 1) {
@@ -1883,6 +1883,9 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
           if (test) return true;
           println("\t%s @bp+1",opb);
           println("\t%s @bp",opa);
+          if (strcmp(opb,"addb")==0 && node->var->offset==0) {
+            return 1;
+          }
           println("\t%s #<%d",opb,node->var->offset);
           println("\t%s #>%d",opa,node->var->offset);
           return 1;
@@ -3596,7 +3599,6 @@ void gen_expr(Node *node) {
       return;
     }
     if (is_global_var(node->lhs)
-    &&  is_integer(node->lhs->ty)
     &&  node->ty->size <= 2
     &&  can_direct(node->lhs)) {
       gen_expr(node->rhs);
@@ -3736,8 +3738,10 @@ void gen_expr(Node *node) {
     } else {
       println("\tldab @bp+1");
       println("\tldaa @bp");
-      println("\taddb #<%d",node->var->offset);
-      println("\tadca #>%d",node->var->offset);
+      if (node->var->offset) {
+        println("\taddb #<%d",node->var->offset);
+        println("\tadca #>%d",node->var->offset);
+      }
       tfr_dx();
       println("\tldab #%d",node->var->ty->size);
       println("\tclra");
@@ -3923,8 +3927,10 @@ void gen_expr(Node *node) {
     push();
     println("\tldab @bp+1");
     println("\tldaa @bp");
-    println("\taddb #<%d",node->var->offset);
-    println("\tadca #>%d",node->var->offset);
+    if (node->var->offset) {
+      println("\taddb #<%d",node->var->offset);
+      println("\tadca #>%d",node->var->offset);
+    }
     println("\tjsr _memcpy");
     ins(4);
     return;
