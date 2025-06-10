@@ -5153,18 +5153,29 @@ no_params_locals:
     case TY_VOID:
     case TY_LONG:
     case TY_FLOAT:
-      println("\tpulb");
-      println("\tstab @bp");
-      println("\tpulb");
-      println("\tstab @bp+1");
-      break;
+      if (opt_O == 's') {
+        println("\tjmp __pulbp_rts");
+      }else{
+        println("\tpulb");
+        println("\tstab @bp");
+        println("\tpulb");
+        println("\tstab @bp+1");
+        println("\trts");		// 5 1
+        println(";");
+      }
+      goto epilogue_end;
+      ;
     default:
       popx();
       println("\tstx @bp");
+      println("\trts");		// 5 1
+      println(";");
+      goto epilogue_end;
     }
 no_params_locals2:
     println("\trts");		// 5 1
     println(";");
+epilogue_end:
   }
 }
 
