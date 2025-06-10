@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
+
 // Output a string of length n (using putchar for demo)
 int putnstr(const unsigned char *s, int n)
 {
@@ -225,7 +227,7 @@ int printf(const char *fmt, ...)
       fmt++;
     }
     // Parse width
-    while (*fmt >= '0' && *fmt <= '9') {
+    while (isdigit(*fmt)) {
       width = width * 10 + (*fmt - '0');
       fmt++;
     }
@@ -297,7 +299,7 @@ int printf(const char *fmt, ...)
       break;
     }
     case 'f': {
-      float val = (float)va_arg(args, double);
+      float val = (float)va_arg(args, float);
       if (check_nan(val, &total)) {
         break;
       }
@@ -309,7 +311,7 @@ int printf(const char *fmt, ...)
       break;
     }
     case 'e': {
-      float val = (float)va_arg(args, double);
+      float val = (float)va_arg(args, float);
       if (check_nan(val, &total)) {
         break;
       }
@@ -321,7 +323,7 @@ int printf(const char *fmt, ...)
       break;
     }
     case 'a': {
-      float val = (float)va_arg(args, double);
+      float val = (float)va_arg(args, float);
       if (check_nan(val, &total)) {
         break;
       }
