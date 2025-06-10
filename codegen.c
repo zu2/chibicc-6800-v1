@@ -39,7 +39,7 @@ char *new_label(char *fmt)
   return buf;
 }
 
-static void push1(void) {	// push char parameter
+void push1(void) {	// push char parameter
   println("\tpshb");
   depth+=1;
 }
@@ -50,17 +50,21 @@ void push(void) {
   depth+=2;
 }
 
-static void pop1(void) {
+void pop1(void) {
   println("\tpulb");
   depth-=1;
 }
-static void pop(void) {
+void popa(void) {
+  println("\tpula");
+  depth-=1;
+}
+void pop(void) {
   println("\tpula");
   println("\tpulb");
   depth-=2;
 }
 
-static void popx(void) {
+void popx(void) {
   if (opt_O == 's') {
     println("\tjsr __popx");
   } else {
@@ -1843,7 +1847,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
         }
       } else {
         println("\t%s #<%u", opb, (uint16_t)node->val);
-        println("\t%s #>%u", opa, (uint16_t)node->val);
+        if (opa)
+          println("\t%s #>%u", opa, (uint16_t)node->val);
       }
       return 1;
     default:
@@ -1868,7 +1873,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
             return node->ty->is_unsigned;
           }
           println("\t%s %d,x",opb,off);
-          if (strcmp(opb,"stab")) {
+          if (strcmp(opb,"stab") && opa) {
             println("\t%s #0",opa);
           }
         }else{
@@ -1881,8 +1886,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
         // global
         if (node->ty->kind==TY_FUNC)
           return 0;
-        if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned)
-          return 0;
+//      if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned && !opa)
+//          return 0;
         if (test) return 1;
         if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL) {
    	      if (!strcmp(opb,"stab")) {
@@ -1890,7 +1895,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
             return 1;
           }
           println("\t%s _%s",opb,node->var->name);
-          println("\t%s #0",opa);
+          if (opa)
+            println("\t%s #0",opa);
 	        return 1;
 	      }
         if (node->ty->kind==TY_ARRAY) {
@@ -4194,7 +4200,7 @@ void gen_expr(Node *node) {
   }
   // The following is a binary operator, length less than or equal to an int
   switch (node->kind) {
-  case ND_ADD:
+  case ND_ADD: {
     if (gen_direct_lr(node,"addb","adca"))
       return;
     if (node->rhs->kind     == ND_CAST
@@ -4205,11 +4211,11 @@ void gen_expr(Node *node) {
     &&  test_addr_x(node->rhs->lhs)) {
       gen_expr(node->lhs);
       off = gen_addr_x(node->rhs->lhs,true);
-      int c = count();
+      char *label = new_label("L_%d");
       println("\ttst %d,x",off);
-      println("\tbpl L_%d",c);
+      println("\tbpl %s",label);
       println("\tdeca");
-      println("L_%d:",c);
+      println("%s:",label);
       println("\taddb %d,x",off);
       println("\tadca #0");
       return;
@@ -4224,6 +4230,7 @@ void gen_expr(Node *node) {
     ins(2);
     IX_Dest = IX_None;
     return;
+  } // ND_ADD
   case ND_SUB:
     if (can_direct(node->rhs)){
       gen_expr(node->lhs);

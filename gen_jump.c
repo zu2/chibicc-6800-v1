@@ -50,20 +50,19 @@ Type *is_byte(Node *node)
 {
   int64_t val;
 
-  if (node->kind == ND_CAST
-  &&  node->ty->kind == TY_INT
-  &&  !node->ty->is_unsigned) { // integral promotion ?
+  if (node->kind == ND_CAST && node->ty->kind == TY_INT &&
+      !node->ty->is_unsigned) { // integral promotion ?
     node = node->lhs;
   }
-  if (node->ty->kind == TY_CHAR || node->ty->kind == TY_BOOL)
+  if (node->ty->kind == TY_CHAR || node->ty->kind == TY_BOOL) {
     return node->ty;
+  }
 
-  if (node->kind == ND_NUM
-  &&  is_integer_constant(node,&val)) {
-    if (node->ty->is_unsigned && val>=0 && val<=255) {
+  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
+    if (node->ty->is_unsigned && val >= 0 && val <= 255) {
       return node->ty;
     }
-    if (!node->ty->is_unsigned && val>=-128 && val<=127) {
+    if (!node->ty->is_unsigned && val >= -128 && val <= 127) {
       return node->ty;
     }
   }
@@ -78,8 +77,8 @@ static bool check_in_char(Node *node)
 {
   int64_t val;
 
-  if (is_integer_constant(node,&val)) {
-    if ((val & ~0xff)==0) {
+  if (is_integer_constant(node, &val)) {
+    if ((val & ~0xff) == 0) {
       return true;
     }
   }
@@ -96,15 +95,8 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+  int64_t val;
 
-#if 0
-  if (is_byte(lhs) && lhs->kind==ND_CAST) {
-    lhs = lhs->lhs;
-  }
-  if (is_byte(rhs) && rhs->kind==ND_CAST) {
-    rhs = rhs->lhs;
-  }
-#endif
   if (isVAR(node)) {
     if (!is_byte(node)) {
       return false;
@@ -119,10 +111,10 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 
   if (node->kind == ND_LOGOR) {
     char if_thru[32];
-    sprintf(if_thru,  "L_thru_%d", count());
+    sprintf(if_thru, "L_thru_%d", count());
     gen_jump_if_true(lhs, if_thru);
     gen_jump_if_false(rhs, if_false);
-    println("%s:",if_thru);
+    println("%s:", if_thru);
     return true;
   }
   if (node->kind == ND_LOGAND) {
@@ -132,8 +124,8 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   }
 
   if (node->kind == ND_BITAND && check_in_char(rhs)) {
-    println("\tandb #$%02lx",rhs->val);
-    println("\tjeq %s",if_false);
+    println("\tandb #$%02lx", rhs->val);
+    println("\tjeq %s", if_false);
     return true;
   }
 
@@ -143,52 +135,42 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 
   Type *lty;
   Type *rty;
-  if (!(lty=is_byte(lhs)))
-    return false;
-  if (!(rty=is_byte(rhs)))
-    return false;
-  if (lty->is_unsigned != rty->is_unsigned)
-    return false;
-
-  if (!isVARorNUM(lhs) || !isVARorNUM(rhs)) {
+  if (!(lty = is_byte(lhs))) {
     return false;
   }
-  if (rhs->kind == ND_NUM && !check_in_char(rhs)) {
+  if (!(rty = is_byte(rhs))) {
     return false;
   }
-  if (lhs->kind == ND_NUM && !check_in_char(lhs)) {
+  if (lty->is_unsigned != rty->is_unsigned) {
     return false;
   }
 
-  if (!can_direct(rhs)) {
-    return false;
+  if (lhs->kind == ND_CAST && lhs->ty->kind == TY_INT) {
+    lhs = lhs->lhs;
   }
-  if (rhs->kind == ND_NUM && rhs->val == 0) {
-    gen_expr(lhs);
-    if (node->kind != ND_EQ && node->kind != ND_NE) {
-      println("\ttstb");
-    }
-  } else if (rhs->kind == ND_NUM) {
-    gen_expr(lhs);
-    println("\tcmpb #%ld", rhs->val);
-  } else if (rhs->kind == ND_VAR) {
-    if (rhs->var->ty->kind == TY_VLA) {
-      return false;
-    }
-    if (rhs->ty->kind == TY_ARRAY) {
-      return false;
-    }
-    if (rhs->var->is_local) {
-      if (!test_addr_x(rhs)) {
-        return false;
+  if (rhs->kind == ND_CAST && rhs->ty->kind == TY_INT) {
+    rhs = rhs->lhs;
+  }
+  if (can_direct(rhs)) {
+    if (is_integer_constant(rhs, &val)) {
+      if (val == 0) {
+        gen_expr(lhs);
+        if (node->kind != ND_EQ && node->kind != ND_NE) {
+          println("\ttstb");
+        }
       }
-      int off = gen_addr_x(rhs, true);
-      println("\tcmpb %d,x", off);
-    } else { // global
-      println("\tcmpb _%s", rhs->var->name);
+      gen_expr(lhs);
+      println("\tcmpb #%ld", rhs->val);
+    } else {
+      gen_expr(lhs);
+      gen_direct(rhs, "cmpb", NULL);
     }
-  } else {
-    assert(0);
+  }else{
+    gen_expr(lhs);
+    push1();
+    gen_expr(rhs);
+    popa();
+    println("\tcba");
   }
 
   switch (node->kind) {
@@ -243,13 +225,13 @@ bool gen_jump_if_false(Node *node, char *if_false)
   Node *rhs = node->rhs;
   char if_thru[32];
   char if_cond[32];
-  sprintf(if_thru,  "L_thru_%d", count());
+  sprintf(if_thru, "L_thru_%d", count());
 
   if (node->kind == ND_NOT) {
     return gen_jump_if_true(node->lhs, if_false);
   }
 
-  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size==2) {
+  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
     if (is_global_var(node)) {
       println("\tldx _%s", node->var->name);
       println("\tjeq %s", if_false);
@@ -268,7 +250,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   if (node->kind == ND_LOGOR) {
     gen_jump_if_true(node->lhs, if_thru);
     gen_jump_if_false(node->rhs, if_false);
-    println("%s:",if_thru);
+    println("%s:", if_thru);
     return true;
   }
   if (node->kind == ND_LOGAND) {
@@ -427,7 +409,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
   } else if (0 && opt_O == 's' && is_compare(node)) {
     gen_expr(node);
-    println("\tjeq  %s",if_false);
+    println("\tjeq  %s", if_false);
     return true;
   } else {
     gen_expr(rhs);
@@ -539,14 +521,14 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   }
   if (node->kind == ND_LOGAND) {
     char if_thru[32];
-    sprintf(if_thru,  "L_thru_%d", count());
+    sprintf(if_thru, "L_thru_%d", count());
     gen_jump_if_false(node->lhs, if_thru);
     gen_jump_if_true(node->rhs, if_true);
-    println("%s:",if_thru);
+    println("%s:", if_thru);
     return true;
   }
 
-  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size==2) {
+  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
     if (is_global_var(node)) {
       println("\tldx _%s", node->var->name);
       println("\tjne %s", if_true);
@@ -689,11 +671,11 @@ bool gen_jump_if_true(Node *node, char *if_true)
   if (node->kind == ND_LOGAND) {
     gen_jump_if_false(node->lhs, if_thru);
     gen_jump_if_true(node->rhs, if_true);
-    println("%s:",if_thru);
+    println("%s:", if_thru);
     return true;
   }
 
-  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size==2) {
+  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
     if (is_global_var(node)) {
       println("\tldx _%s", node->var->name);
       println("\tjne %s", if_true);
@@ -736,7 +718,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     }
   } else if (0 && opt_O == 's' && is_compare(node)) {
     gen_expr(node);
-    println("\tjne  %s",if_true);
+    println("\tjne  %s", if_true);
     return true;
   } else {
     gen_expr(rhs);

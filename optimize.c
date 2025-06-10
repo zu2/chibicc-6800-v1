@@ -390,8 +390,37 @@ Node *optimize_expr(Node *node)
   case ND_GT:
   case ND_GE: {
     int64_t val;
+    Type *lty, *rty;
 
     node = optimize_lr(node);
+// (== ty_int (ND_CAST TY_INT(4) (ND_DEREF ty_uchar (ND_VAR TY_PTR(10) str +4 ))) 45) 
+    if ( (lty=is_byte(node->lhs))
+    &&   (rty=is_byte(node->rhs)) ) {
+      Node *lhs = node->lhs;
+      Node *rhs = node->rhs;
+      if (lhs->kind == ND_CAST) {
+        lhs = lhs->lhs;
+      }
+      if (rhs->kind == ND_CAST) {
+        rhs = rhs->lhs;
+      }
+      if (rhs->kind == ND_NUM
+      &&  is_integer_constant(rhs,&val)) { // Is the right-hand side within the range?
+        if (lty->is_unsigned) {
+          if (val >= 0 && val <= 255) {
+            rhs->ty = ty_uchar;
+            node->lhs = lhs;
+            node->rhs = rhs;
+          }
+        }else{
+          if (val >= -128 && val <= 127) {
+            rhs->ty = ty_char;
+            node->lhs = lhs;
+            node->rhs = rhs;
+          }
+        }
+      }
+    }
     if ( is_integer(node->ty)
     &&  node->kind==ND_LE
     && is_integer_constant(node->rhs,&val)) {

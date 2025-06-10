@@ -475,6 +475,11 @@ void gen_expr(Node *node);
 int gen_addr_x(Node *node,bool save_d);
 int count(void);
 void push(void);
+void push1(void);
+void pop(void);
+void pop1(void);
+void popa(void);
+void popx(void);
 void load_var(Node *node);
 void cmp_zero(Type *ty);
 Type *is_integer_constant(Node *node, int64_t *val);
@@ -495,6 +500,7 @@ extern IX_Type	IX_Dest;
 //
 bool gen_jump_if_false(Node *node,char *if_false);
 bool gen_jump_if_true(Node *node,char *if_true);
+Type *is_byte(Node *node);
 
 //
 // unicode.c
