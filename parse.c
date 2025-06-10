@@ -1653,6 +1653,8 @@ static Node *stmt(Token **rest, Token *tok) {
 
     add_type(exp);
     Type *ty = current_fn->ty->return_ty;
+    if (ty->kind == TY_VOID)
+      warn_tok(tok,"Return value in void function");
     if (ty->kind != TY_STRUCT && ty->kind != TY_UNION)
       exp = new_cast(exp, current_fn->ty->return_ty);
 
