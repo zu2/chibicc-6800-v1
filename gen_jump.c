@@ -501,6 +501,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+  int64_t val;
 
   if (isVAR(node)) {
     if (!is_byte(node)) {
@@ -548,52 +549,43 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     return false;
   }
 
-  if (lhs->ty->kind != TY_CHAR || rhs->ty->kind != TY_CHAR) {
+  Type *lty;
+  Type *rty;
+  if (!(lty = is_byte(lhs))) {
     return false;
   }
-  if (lhs->ty->is_unsigned != rhs->ty->is_unsigned) {
+  if (!(rty = is_byte(rhs))) {
     return false;
   }
-  if (!isVARorNUM(lhs) || !isVARorNUM(rhs)) {
+  if (lty->is_unsigned != rty->is_unsigned) {
     return false;
   }
-  if (rhs->kind == ND_NUM && !check_in_char(rhs)) {
-    return false;
+  if (lhs->kind == ND_CAST && lhs->ty->kind == TY_INT) {
+    lhs = lhs->lhs;
   }
-  if (lhs->kind == ND_NUM && !check_in_char(lhs)) {
-    return false;
-  }
-
-  if (!can_direct(node->rhs)) {
-    return false;
-  }
-
-  if (node->rhs->kind == ND_NUM && node->rhs->val == 0) {
-    gen_expr(node->lhs);
-    if (node->kind != ND_EQ && node->kind != ND_NE) {
-      println("\ttstb");
-    }
-  } else if (rhs->kind == ND_NUM) {
-    gen_expr(node->lhs);
-    println("\tcmpb #%ld", rhs->val);
-  } else if (rhs->kind == ND_VAR) {
-    if (rhs->var->ty->kind == TY_VLA) {
-      return false;
-    }
-    if (rhs->ty->kind == TY_ARRAY) {
-      return false;
-    }
-    if (rhs->var->is_local) {
-      if (!test_addr_x(rhs)) {
-        return false;
+  if (rhs->kind == ND_CAST && rhs->ty->kind == TY_INT) {
+    rhs = rhs->lhs;
+  } 
+  if (can_direct(rhs)) {
+    if (is_integer_constant(rhs, &val)) {
+      if (val == 0) {
+        gen_expr(lhs);
+        if (node->kind != ND_EQ && node->kind != ND_NE) {
+          println("\ttstb");
+        }
       }
-      int off = gen_addr_x(rhs, true);
-      println("\tcmpb %d,x", off);
-    } else { // global
-      println("\tcmpb _%s", rhs->var->name);
+      gen_expr(lhs);
+      println("\tcmpb #%ld", rhs->val);
+    } else {
+      gen_expr(lhs);
+      gen_direct(rhs, "cmpb", NULL);
     }
-  } else {
-    assert(0);
+  }else{
+    gen_expr(lhs);
+    push1();
+    gen_expr(rhs);
+    popa();
+    println("\tcba");
   }
 
   switch (node->kind) {
