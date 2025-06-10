@@ -1081,13 +1081,34 @@ static void load(Type *ty) {
   // register for char, short and int may contain garbage. When we load
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
-    if (ty->is_unsigned){
+    if (opt_O == '2') {
+      println("\tstab @tmp1+1");
+      println("\tstaa @tmp1");
+      println("\tldx  @tmp1");
+      println("\tclra");
+      println("\tldab 0,x");
+      if (!ty->is_unsigned) {
+        char *label = new_label("L_%d");
+        println("\tbpl %s",label);
+        println("\tcoma");
+        println("%s:",label);
+      }
+    }else if (ty->is_unsigned){
       println("\tjsr __load8u");
     }else{
       println("\tjsr __load8s");
     }
   }else if (ty->size == 2){
-    println("\tjsr __load16");
+    if (opt_O == '2') {
+      println("\tstab @tmp1+1");
+      println("\tstaa @tmp1");
+      println("\tldx  @tmp1");
+      println("\tclra");
+      println("\tldab 1,x");
+      println("\tldaa 0,x");
+    }else{
+      println("\tjsr __load16");
+    }
   }else if (ty->size == 4){
     println("\tjsr __load32");
   }else{
@@ -3355,54 +3376,65 @@ void gen_expr(Node *node) {
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
-      println("\tldab %d,x",off);
-      switch(val){
-      case 1:
-        println("\tincb");
-        break;
-      case -1:
-        println("\tdecb");
-        break;
-      default:
-        println("\taddb #%d",val);
-        break;
-      }
-      println("\tstab %d,x",off);
-      if (!node->retval_unused) {
+      if (node->retval_unused) {
         switch(val){
         case 1:
-          println("\tdecb");
+          println("\tinc %d,x",off);
           break;
         case -1:
-          println("\tincb");
+          println("\tdec %d,x",off);
           break;
         default:
-          println("\tsubb #%d",val);
+          println("\tldab %d,x",off);
+          println("\taddb #%d",val);
+          println("\tstab %d,x",off);
           break;
         }
-#if 0
-        println("\tclra");
-        if (!node->lhs->ty->is_unsigned){
-          println("\tasrb");
-          println("\trolb");
-          println("\tsbca #0");
-        }
-#endif
+      }else{
+          switch(val){
+          case 1:
+            println("\tldab %d,x",off);
+            println("\tincb");
+            println("\tstab %d,x",off);
+            println("\tdecb");
+            break;
+          case -1:
+            println("\tldab %d,x",off);
+            println("\tdecb");
+            println("\tstab %d,x",off);
+            println("\tincb");
+            break;
+          default:
+            println("\tldab %d,x",off);
+            println("\taddb #%d",val);
+            println("\tstab %d,x",off);
+            println("\tsubb #%d",val);
+            break;
+          }
       }
       break;
+      // TY_BOOL, TY_CHAR
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
-      println("\tldab %d,x",off+1);
-      println("\tldaa %d,x",off);
-      println("\taddb #<%d",val);
-      println("\tadca #>%d",val);
-      println("\tstab %d,x",off+1);
-      println("\tstaa %d,x",off);
-      if (!node->retval_unused) {
-        println("\tsubb #<%d",val);
-        println("\tsbca #>%d",val);
+      if (node->retval_unused && val==1) {
+        char *label = new_label("L_%d");
+        println("\tinc %d,x",off+1);
+        println("\tbne %s",label);
+        println("\tinc %d,x",off);
+        println("%s:",label);
+      }else{
+        println("\tldab %d,x",off+1);
+        println("\tldaa %d,x",off);
+        println("\taddb #<%d",val);
+        println("\tadca #>%d",val);
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
+        if (!node->retval_unused) {
+          println("\tsubb #<%d",val);
+          println("\tsbca #>%d",val);
+        }
       }
       break;
     default:
