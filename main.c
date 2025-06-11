@@ -346,7 +346,7 @@ static void parse_args(int argc, char **argv) {
     }
     if (!strncmp(argv[i], "-O", 2)) {
       if (argv[i][2]=='\0') {
-        opt_O = argv[i][1];
+        opt_O = '1';
       }else{
         opt_O = argv[i][2];
       }
@@ -356,9 +356,6 @@ static void parse_args(int argc, char **argv) {
       case '1':
       case '2':
       case '3':
-        break;
-      case 'O':
-        opt_O = '1';
         break;
       default:
         error("unknown optimize option: %s", argv[i]);
