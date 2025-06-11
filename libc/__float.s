@@ -1622,8 +1622,18 @@ __fdiv32x32:
 	clr  @long+1
 	clr  @long
 ;
-loop:
+        bra  loop_begin
 ;
+loop:
+	asl  @long+3	; shift quotient
+	rol  @long+2
+	rol  @long+1
+	rol  @long
+	rolb		; shift reminder
+	rola
+	rol  @tmp1+1
+	rol  @tmp1
+loop_begin:
 	subb 4,x	; divient - divisor
 	sbca 3,x
 	pshb
@@ -1646,16 +1656,7 @@ skip:
 	adca 3,x
 next:
 	dec  @tmp2
-	beq  ret
-	asl  @long+3	; shift quotient
-	rol  @long+2
-	rol  @long+1
-	rol  @long
-	rolb		; shift reminder
-	rola
-	rol  @tmp1+1
-	rol  @tmp1
-	bra  loop
+	bne  loop
 ret:
 	rts
 ;
