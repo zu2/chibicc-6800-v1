@@ -259,6 +259,7 @@
 	addb @bp+1
 	adca @bp
 
+
 	stab %2,x
 	staa %1,x
 	ldab %2,x
@@ -266,6 +267,7 @@
 =
 	stab %2,x
 	staa %1,x
+
 
 	ldab %2,x
 	ldaa %1,x
@@ -273,9 +275,30 @@
 =
 	ldx %1,x
 
+
 	stab %2,x
 	staa %1,x
 	jsr __tfr_dx
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+
+
+	ldab %2,x
+	ldaa %1,x
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+=
+	ldx %1,x
+
+
+	stab %2,x
+	staa %1,x
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
 =
 	stab %2,x
 	staa %1,x
@@ -376,6 +399,7 @@
 	jsr __eq16
 	jne %1
 
+
 	jsr __eq16
 	aba
 	adca #0
@@ -405,6 +429,10 @@
 	clra
 %1:
 
+#
+# post inc/dec
+#
+
 	stab %2,x
 	staa %1,x
 	subb #<1
@@ -417,6 +445,33 @@
 	dex
 	ldab 0,x
 
+
+	stab %2,x
+	staa %1,x
+	subb #<1
+	sbca #>1
+	jsr __tfr_dx
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	dex
+
+
+	stab %2,x
+	staa %1,x
+	subb #<1
+	sbca #>1
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	dex
+
+
 	stab %2,x
 	staa %1,x
 	addb #<1
@@ -428,6 +483,34 @@
 	ldx %1,x
 	inx
 	ldab 0,x
+
+
+	stab %2,x
+	staa %1,x
+	addb #<1
+	adca #>1
+	jsr __tfr_dx
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	inx
+
+
+
+	stab %2,x
+	staa %1,x
+	addb #<1
+	adca #>1
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	inx
+
 
 	stab %2,x
 	staa %1,x
