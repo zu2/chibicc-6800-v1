@@ -1114,7 +1114,6 @@ static void load(Type *ty) {
       println("\tstab @tmp1+1");
       println("\tstaa @tmp1");
       println("\tldx  @tmp1");
-      println("\tclra");
       println("\tldab 1,x");
       println("\tldaa 0,x");
     }else{
