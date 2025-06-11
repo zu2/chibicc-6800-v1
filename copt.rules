@@ -78,6 +78,19 @@
 #
 #
 
+	stab %2
+	staa %1
+	ldab %2
+	ldaa %1
+=
+	stab %2
+	staa %1
+
+
+#
+#
+#
+
 	ldx #%1
 	ldx 0,x
 =
