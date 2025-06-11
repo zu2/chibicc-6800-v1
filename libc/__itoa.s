@@ -1,5 +1,6 @@
 ;
-;	char *_itoa(int value, char *string, int radix);
+;	char *itoa(int value, char *string, int radix);
+;	char *uitoa(unsigned int value, char *string, int radix);
 ;
 ;	convert value to sting with radix (2-36).
 ;
@@ -22,34 +23,70 @@ __p:	.word	0
 __q:	.word	0
 	.export _itoa
 	.export __itoa
+	.export _uitoa
+	.export __uitoa
 	.code
+;
+;       2<= radix <= 36 ?
+;         Z=1: yes
+;         Z=0: no
+;
+__radix_check:
+	ldab 5,x		; check radix low byte
+	cmpb #2
+	bcs __radix_check_ret
+	cmpb #36
+	bhi __radix_check_ret
+	tst 4,x			; check radix high byte
+__radix_check_ret:
+        rts
+;
 _itoa:
 __itoa:
-	tsx
-	ldx 2,x
-	stx __p
-	bne __itoa_not_null
+	stab __value+1		; save value
+	staa __value		;
+        tsx
+        bsr __radix_check
+        bne __uitoa_ret_null
 ;
-__itoa_ret_null:
+	ldab 5,x		; check radix==10?
+	cmpb #10
+        bne __uitoa_null_check
+        tsta
+        bpl __uitoa_null_check
+;
+        nega                    ; value = -value
+        neg __value+1
+        sbca #0
+        staa __value
+;
+        ldx 2,x
+        beq __uitoa_ret_null
+        ldab #'-'
+        stab 0,x
+        inx
+        bra __uitoa_main
+;
+_uitoa:
+__uitoa:
+	stab __value+1		; save value
+	staa __value		;
+        tsx
+        bsr __radix_check
+        bne __uitoa_ret_null
+__uitoa_null_check:
+	ldx 2,x
+	bne __uitoa_main
+__uitoa_ret_null:
 	clrb
 	clra
 	rts
 ;
-__itoa_not_null:
-	stab __value+1		; save value
-	staa __value		;
-;
-	tsx
-	tst 4,x			; check radix high byte
-	bne __itoa_ret_null
-	ldab 5,x		; check radix low byte
-	cmpb #2
-	bcs __itoa_ret_null
-	cmpb #37
-	bcc __itoa_ret_null
+__uitoa_main:
+	stx __p
 ;
 	ldx __value
-	bne __itoa_not_0
+	bne __uitoa_not_0
 ;
 	ldx __p
 	ldab #$30		; '0'
@@ -57,37 +94,16 @@ __itoa_not_null:
 	inx
 	clr 0,x
 ;
-__itoa_ret_str:
+__uitoa_ret_str:
 	tsx			; return str
 	ldab 3,x
 	ldaa 2,x
 	rts
 ;
-__itoa_not_0:
-	tsx
-	ldab 5,x		; check radix==10?
-	cmpb #10
-	bne __itoa_not_minus
-	tsta			; value < 0 ?
-	bpl __itoa_not_minus
-;				; radix==10 && value < 0
-	ldx __p
-	ldab #$2D		; '-'
-	stab 0,x
-	inx
-	stx __p
-;
-	ldab __value+1
-	nega
-	negb
-	sbca #0
-	stab __value+1		; save value
-	staa __value
-;
-__itoa_not_minus:
+__uitoa_not_0:
 	ldx __p
 	stx __q			; most significant digit
-__itoa_loop:
+__uitoa_loop:
 	ldab __value+1
 	ldaa __value
 	tsx
@@ -100,20 +116,20 @@ __itoa_loop:
 	ins
 ;
 	cmpb #10		; (value % radix) < 10?
-	bcc __itoa_hex
+	bcc __uitoa_hex
 	addb #$30		; +'0'
-	bra __itoa_store
+	bra __uitoa_store
 ;
-__itoa_hex:
+__uitoa_hex:
 	addb #$57		; +'a'-10
-__itoa_store:
+__uitoa_store:
 	ldx __p
 	stab 0,x
 	inx
 	stx __p
 	ldx @tmp2		; value /= radix
 	stx __value
-	bne __itoa_loop
+	bne __uitoa_loop
 ;
 	ldx __p
 	clr 0,x
@@ -123,12 +139,12 @@ __itoa_store:
 ;	reverse __p to __q
 ;
 	ldx __q
-__itoa_rev_loop:
+__uitoa_rev_loop:
 	ldab __q+1
 	ldaa __q
 	subb __p+1
 	sbca __p
-	bge __itoa_ret_str
+	bge __uitoa_ret_str
 	ldab 0,x
 	ldx __p
 	ldaa 0,x
@@ -139,5 +155,5 @@ __itoa_rev_loop:
 	staa 0,x
 	inx
 	stx __q
-	bra	__itoa_rev_loop
+	bra	__uitoa_rev_loop
 ;

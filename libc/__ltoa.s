@@ -1,5 +1,6 @@
 ;
-;	char *_ltoa(int value, char *string, int radix);
+;	char *_ltoa(long value, char *string, int radix);
+;	char *_ultoa(unsigned long value, char *string, int radix);
 ;
 ;	convert value to sting with radix (2-36).
 ;
@@ -20,34 +21,64 @@ __p:	.word	0
 __q:	.word	0
 	.export _ltoa
 	.export __ltoa
+	.export _ultoa
+	.export __ultoa
 	.code
-_ltoa:
-__ltoa:
-	tsx
-	ldx 2,x
-	stx __p
-	bne __ltoa_not_null
 ;
-__ltoa_ret_null:
-	clrb
-	clra
-	rts
+;       2<= radix <= 36 ?
+;         Z=1: yes
+;         Z=0: no
 ;
-__ltoa_not_null:
-;
-	tsx
-	tst 4,x			; check radix high byte
-	bne __ltoa_ret_null
+__radix_check:
 	ldab 5,x		; check radix low byte
 	cmpb #2
-	bcs __ltoa_ret_null
-	cmpb #37
-	bcc __ltoa_ret_null
+	bcs __radix_check_ret
+	cmpb #36
+	bhi __radix_check_ret
+	tst 4,x			; check radix high byte
+__radix_check_ret:
+        rts
 ;
-	ldx @long
-	bne __ltoa_not_0
+_ltoa:
+__ltoa:
+        tsx
+        bsr __radix_check
+        bne __ret_null
+	ldab 5,x		; check radix==10?
+	cmpb #10
+        bne __ultoa_null_check
+        tst @long
+        bpl __ultoa_null_check
+        jsr __neg32
+        tsx
+        ldx 2,x
+        beq __ret_null
+        ldab #'-'
+        stab 0,x
+        inx
+        bra __ultoa_main
+;
+;
+_ultoa:
+__ultoa:
+	tsx
+        bsr __radix_check
+        bne __ret_null
+__ultoa_null_check:
+	ldx 2,x
+        bne __ultoa_main
+__ret_null:
+	clrb
+	clra
+	rts                     ; return NULL
+__ultoa_main:
+	stx __p
+        stx __q
+;
 	ldx @long+2
-	bne __ltoa_not_0
+	bne __ultoa_not_0
+	ldx @long
+	bne __ultoa_not_0
 ;
 	ldx __p
 	ldab #$30		; '0'
@@ -55,32 +86,15 @@ __ltoa_not_null:
 	inx
 	clr 0,x
 ;
-__ltoa_ret_str:
+__ultoa_ret_str:
 	tsx			; return str
 	ldab 3,x
 	ldaa 2,x
 	rts
 ;
-__ltoa_not_0:
-	tsx
-	ldab 5,x		; check radix==10?
-	cmpb #10
-	bne __ltoa_not_minus
-	tst @long
-	bpl __ltoa_not_minus
-;				; radix==10 && value < 0
-	ldx __p
-	ldab #$2D		; '-'
-	stab 0,x
-	inx
-	stx __p
+__ultoa_not_0:
 ;
-	jsr __neg32		; @long = -@long, breaks IX
-;
-__ltoa_not_minus:
-	ldx __p
-	stx __q			; most significant digit
-__ltoa_loop:
+__ultoa_loop:
 	tsx
 	ldab 5,x		; radix
 	pshb
@@ -88,7 +102,7 @@ __ltoa_loop:
 	pshb
 	pshb
 	pshb
-	jsr __div32x32		; @long = @long / TOS
+	jsr __div32x32		; @long = @long / TOS (unsigned)
 				; @tmp1:AccAB = @long % TOS
 	ins
 	ins
@@ -96,21 +110,21 @@ __ltoa_loop:
 	ins
 ;				; here, reminder < 36
 	cmpb #10		; (value % radix) < 10?
-	bcc __ltoa_hex
+	bcc __ultoa_hex
 	addb #$30		; +'0'
-	bra __ltoa_store
+	bra __ultoa_store
 ;
-__ltoa_hex:
+__ultoa_hex:
 	addb #$57		; +'a'-10
-__ltoa_store:
+__ultoa_store:
 	ldx __p
 	stab 0,x
 	inx
 	stx __p
 	ldx @long+2
-	bne __ltoa_loop
+	bne __ultoa_loop
 	ldx @long
-	bne __ltoa_loop
+	bne __ultoa_loop
 ;
 	ldx __p
 	clr 0,x
@@ -120,12 +134,12 @@ __ltoa_store:
 ;	reverse __p to __q
 ;
 	ldx __q
-__ltoa_rev_loop:
+__ultoa_rev_loop:
 	ldab __q+1
 	ldaa __q
 	subb __p+1
 	sbca __p
-	bge __ltoa_ret_str
+	bge __ultoa_ret_str
 	ldab 0,x
 	ldx __p
 	ldaa 0,x
@@ -136,5 +150,5 @@ __ltoa_rev_loop:
 	staa 0,x
 	inx
 	stx __q
-	bra	__ltoa_rev_loop
+	bra	__ultoa_rev_loop
 ;
