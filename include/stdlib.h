@@ -52,5 +52,7 @@ void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, co
 void *bsearch(const void *key, const void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));
 
 char *itoa(int value, char *buffer, int radix);
+char *uitoa(unsigned int value, char *buffer, int radix);
 char *ltoa(long value, char *buffer, int radix);
+char *ultoa(unsigned long value, char *buffer, int radix);
 #endif // _STDLIB_H_
