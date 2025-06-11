@@ -18,7 +18,7 @@
 	.code
 	.export	_strncpy
 _strncpy:
-	pshb			; save d, access to the stack will add two.
+	pshb			; save d, the offset for stack +2
 	psha
 ;
 	tsx
@@ -26,15 +26,13 @@ _strncpy:
 	beq	_strncpy_ret
 ;
 	tsx
-	ldab	1,x		; d
-	ldaa	0,x
 	addb	7,x
 	adca	6,x
 	stab	@tmp4+1		; @tmp4 = d + n
 	staa	@tmp4
 ;
-	ldx	4,x		; get s
-	stx	@tmp3
+	ldx	4,x
+	stx	@tmp3           ; @tmp3 = s
 ;
 	tsx
 	ldx	0,x		; get d
