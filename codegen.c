@@ -857,6 +857,15 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
         return gen_addr_x(lhs,true) + val;
       }
     }
+    if (lhs->kind     == ND_VAR
+    &&  lhs->ty->kind == TY_ARRAY
+    &&  !lhs->var->is_local
+    &&  is_integer_constant(rhs,&val)) {
+      if (val <= 252) { // TODO: Preferably, use label + constant instead of IX.
+        if (test) return true;
+        return gen_addr_x(lhs,true) + val;
+      }
+    }
     return false;
 #endif
   default:
@@ -1960,10 +1969,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
       }
       break;
     case ND_ADD: {
-      // gloval array[const]
+      // global array[const]
       // (ND_DEREF ty_uchar
-      //   (+ (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) ua1 global)) 
-      //      (ND_CAST TY_PTR(10) 0)))
       Node *lhs = node->lhs->lhs;
       Node *rhs = node->lhs->rhs;
       int64_t val;
@@ -3560,17 +3567,7 @@ void gen_expr(Node *node) {
   }
   case ND_DEREF: {
     Node *lhs = node->lhs;
-#if 0
-    if (lhs->kind      == ND_CAST
-    &&  lhs->ty->kind  == TY_PTR
-    &&  lhs->lhs->kind == ND_NUM
-    &&  is_integer(lhs->lhs->ty)) {
-      println("\tldx #%ld",lhs->lhs->val);
-      IX_Dest = IX_None;
-      load_x(node->ty,0);
-      return;
-    }
-#endif
+    // TODO: global var deref
     if (can_load_x(node->ty) && test_expr_x(lhs)){
       int off = gen_expr_x(lhs,false);
       load_x(node->ty,off);
