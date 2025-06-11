@@ -220,6 +220,8 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 //
 bool gen_jump_if_false(Node *node, char *if_false)
 {
+  int64_t val;
+
   node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
@@ -272,6 +274,28 @@ bool gen_jump_if_false(Node *node, char *if_false)
     if (gen_jump_if_false_8bit(node, if_false)) {
       return 1;
     }
+  }
+
+  // special long case
+  if (lhs->ty->kind == TY_LONG
+  && is_integer_constant(rhs,&val)
+  && val == 0) {
+    if (!test_addr_x(lhs)) {
+      goto fallback;
+    }
+    switch(node->kind) {
+    case ND_LT:
+      if (lhs->ty->is_unsigned) {
+        println("; ulong < 0 is always false");
+        println("\tjmp %s",if_false);
+      }else{
+        int off = gen_addr_x(lhs,false);
+        println("\ttst %d,x",off);
+        println("\tjpl %s", if_false);
+      }
+      return 1;
+    }
+    goto fallback;
   }
 
   if (lhs->ty->kind != TY_CHAR && lhs->ty->kind != TY_INT &&
