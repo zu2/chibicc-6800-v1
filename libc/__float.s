@@ -1636,6 +1636,9 @@ loop:
 	rola
 	rol  @tmp1+1
 	rol  @tmp1
+        bne loop_begin
+        tst @tmp1+1
+        bpl next
 loop_begin:
 	subb 4,x	; divient - divisor
 	sbca 3,x
