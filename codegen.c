@@ -1855,6 +1855,8 @@ static void builtin_alloca(void) {
 //
 static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
 {
+  int64_t val;
+
   switch(node->kind){
   case ND_NUM: {
     switch (node->ty->kind) {
@@ -1969,7 +1971,6 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
       break;
     case ND_ADD: {
       // global array[const]
-      // (ND_DEREF ty_uchar
       Node *lhs = node->lhs->lhs;
       Node *rhs = node->lhs->rhs;
       int64_t val;
@@ -2003,9 +2004,38 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
           return 1;
         }
       }
-     }
-     break;
-    }
+      // (ND_DEREF ty_int (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) perm1 global) 0)
+      //                                   lhs                               rhs
+      if (is_global_array(lhs)
+      &&  is_integer_constant(rhs,&val)) {
+        switch(node->ty->kind) {
+        case TY_BOOL:
+        case TY_CHAR:
+          if (test) return 1;
+          if (val==0) {
+            println("\t%s _%s",opb,lhs->var->name);
+          }else{
+            println("\t%s _%s+%ld",opb,lhs->var->name,val);
+          }
+          return 1;
+        case TY_SHORT:
+        case TY_INT:
+        case TY_ENUM:
+        case TY_PTR:
+          if (test) return 1;
+          if (val==0) {
+            println("\t%s _%s+1",opb,lhs->var->name);
+            println("\t%s _%s",  opa,lhs->var->name);
+          }else{
+            println("\t%s _%s+%ld+1",opb,lhs->var->name,val);
+            println("\t%s _%s+%ld",  opa,lhs->var->name,val);
+          }
+          return 1;
+        }
+      }
+    } // ND_ADD
+    break;
+    } // ND_DEREF → switch ND_ADD:
     return 0;
   case ND_CAST:
     if (is_empty_cast(node->lhs->ty, node->ty)
@@ -3603,6 +3633,10 @@ void gen_expr(Node *node) {
   case ND_DEREF: {
     Node *lhs = node->lhs;
     // TODO: global var deref
+    if (can_direct(node)) {
+      gen_direct(node,"ldab","ldaa");
+      return;
+    }
     if (can_load_x(node->ty) && test_expr_x(lhs)){
       int off = gen_expr_x(lhs,false);
       load_x(node->ty,off);
@@ -3620,6 +3654,7 @@ void gen_expr(Node *node) {
     int64_t val;
 
     node = optimize_expr(node);
+
     if (node->lhs->kind == ND_DEREF
     &&  is_integer(node->lhs->ty)
     &&  node->lhs->ty->size <= 2
