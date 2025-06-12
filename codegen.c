@@ -3654,7 +3654,14 @@ void gen_expr(Node *node) {
     int64_t val;
 
     node = optimize_expr(node);
+    Node *lhs = node->lhs;
+    Node *rhs = node->rhs;
 
+    if (can_direct(lhs) && lhs->ty->size <= 2) {
+      gen_expr(rhs);
+      gen_direct(lhs,"stab","staa");
+      return;
+    }
     if (node->lhs->kind == ND_DEREF
     &&  is_integer(node->lhs->ty)
     &&  node->lhs->ty->size <= 2
