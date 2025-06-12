@@ -119,6 +119,7 @@ This will compile the source file and execute the resulting binary using the emu
 - **Source code:** [`ztest/9018-asciiartf.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9018-asciiartf.c)  
 
 - **Whetstone benchmark:** 449.5355 seconds at 1MHz on MC6800, equivalent to approximately 2.2245 KWIPS, .0022245 MWIPS
+-- Improve: 2.7544 KWIPS, 0.027544 MWIPS (2025/06/12)
 - **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone)
 
 ## String and Memory Operations
