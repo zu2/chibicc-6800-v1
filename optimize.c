@@ -449,6 +449,36 @@ Node *optimize_expr(Node *node)
         break;
       }
     }
+    if ( is_integer(node->ty)
+    &&  node->kind==ND_GT
+    && is_integer_constant(node->rhs,&val)) {
+      switch(node->ty->kind){
+      case TY_CHAR:
+        if (( node->ty->is_unsigned && node->rhs->val < UINT8_MAX)
+        ||  (!node->ty->is_unsigned && node->rhs->val < INT8_MAX)) {
+          node->rhs->val++;
+          node->kind = ND_GE;
+        }
+        break;
+      case TY_SHORT:
+      case TY_INT:
+        if (( node->ty->is_unsigned && node->rhs->val < UINT16_MAX)
+        ||  (!node->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
+          node->rhs->val++;
+          node->kind = ND_GE;
+        }
+        break;
+      case TY_LONG:
+        if (( node->ty->is_unsigned && node->rhs->val < UINT32_MAX)
+        ||  (!node->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
+          node->rhs->val++;
+          node->kind = ND_GE;
+        }
+        break;
+      }
+    }
+
+
 //  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
     if ( node_cost(node->lhs) < node_cost(node->rhs)
     ||  (node_cost(node->lhs) == node_cost(node->rhs))) {
