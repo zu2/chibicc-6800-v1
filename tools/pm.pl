@@ -32,7 +32,7 @@ while (<STDIN>) {
     next if /^\s*$/; # Skip empty lines
     my @fields = split /\s+/, $_; # Split by spaces or tabs
     my $hex = $fields[0];
-    print join("\t", @fields);
+    print join(" ", @fields);
     if (exists $hex_to_info{$hex}) {
         print "\t$hex_to_info{$hex}";
     }
