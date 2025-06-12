@@ -1246,56 +1246,59 @@ __mulf32tos4:
 	jlt	__f32retZeros	; Underflow, return zero with __sign.
 ;
 __mulf32tos03:
-;
-	clr	__work+5	; clear working area 48bit
-	clr	__work+4
+;                               ; To improve performance, use AccAB insted of work+4,5
+;	clr	__work+5	; setup working area 48bit
+;	clr	__work+4
 	clr	__work+3
-	clr	__work+2
-	clr	__work+1
-	clr	__work
-;
 	tsx
-	ldab	#24		; loop count
-	stab	@tmp3
+        ldab    5,x
+	stab	__work+2
+        ldab    4,x
+	stab	__work+1
+        ldab    3,x
+	stab	__work
+;
+	ldx	#24		; loop count
+        clrb
+        clra
+        clc
 	bra	__mulf32tos31
 ;
 __mulf32tos30:
-	asl	__work+5
-	rol	__work+4
+	aslb
+	rola
 	rol	__work+3
+__mulf32tos31:
 	rol	__work+2
 	rol	__work+1
 	rol	__work
-__mulf32tos31:
-	asl	5,x
-	rol	4,x
-	rol	3,x
 	bcc	__mulf32tos32
-	ldab	@long+3
-	addb	__work+5
-	stab	__work+5
-	ldab	@long+2
-	adcb	__work+4
-	stab	__work+4
-	ldab	@long+1
-	adcb	__work+3
-	stab	__work+3
+	addb	@long+3
+	adca	@long+2
+        psha
+	ldaa	__work+3
+	adca	@long+1
+	staa	__work+3
+        pula
 	bcc	__mulf32tos32
 	inc	__work+2
-	bne	__mulf32tos32
+        bne     __mulf32tos32
 	inc	__work+1
-	bne	__mulf32tos32
+        bne     __mulf32tos32
 	inc	__work
 __mulf32tos32:
-	dec	@tmp3
+	dex
 	bne	__mulf32tos30
 ;
-__mulf32tos65:			; end of mant*mant multiply
+        stab    __work+5
+        staa    __work+4
+;
+        			; end of mant*mant multiply
 	ldab	__exp2+1
 	ldaa	__exp2
 	tst	__work		; carryover of the MSB bit?
 	bpl	__mulf32tos70
-__mulf32tos69:
+;
 	addb	#1
 	adca	#0
 	stab	__exp2+1
