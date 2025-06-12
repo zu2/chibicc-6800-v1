@@ -84,6 +84,7 @@ __div32x32u:
 	tsx
 	jsr __div32x32x
 __pullret:
+        tsx
 	ldx 0,x
 	ins
 	ins
