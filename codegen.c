@@ -283,7 +283,7 @@ bool is_global_var(Node *node)
 }
 
 //
-// node is global variable?
+// node is global array?
 //
 bool is_global_array(Node *node)
 {
@@ -3433,7 +3433,7 @@ void gen_expr(Node *node) {
         println("\tbne %s",label);
         println("\tinc %d,x",off);
         println("%s:",label);
-      }else{
+      }else if (val>0) {
         println("\tldab %d,x",off+1);
         println("\tldaa %d,x",off);
         println("\taddb #<%d",val);
@@ -3443,6 +3443,18 @@ void gen_expr(Node *node) {
         if (!node->retval_unused) {
           println("\tsubb #<%d",val);
           println("\tsbca #>%d",val);
+        }
+      } else { // val<0
+        val = abs(val);
+        println("\tldab %d,x",off+1);
+        println("\tldaa %d,x",off);
+        println("\tsubb #<%d",val);
+        println("\tsbca #>%d",val);
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
+        if (!node->retval_unused) {
+          println("\taddb #<%d",val);
+          println("\tadca #>%d",val);
         }
       }
       break;
@@ -3467,38 +3479,62 @@ void gen_expr(Node *node) {
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
-      println("\tldab %d,x",off);
-      switch(val){
-      case 1:
-        println("\tincb");
-        break;
-      case -1:
-        println("\tdecb");
-        break;
-      default:
-        println("\taddb #%d",val);
-        break;
-      }
-      println("\tstab %d,x",off);
-      if (!node->retval_unused) {
-        println("\tclra");
-        if (!node->lhs->ty->is_unsigned){
-          println("\tasrb");
-          println("\trolb");
-          println("\tsbca #0");
+      if (node->retval_unused) {
+        switch(val){
+        case 1:
+          println("\tinc %d,x",off);
+          break;
+        case -1:
+          println("\tdec %d,x",off);
+          break;
+        default:
+          println("\tldab %d,x",off);
+          println("\taddb #%d",val);
+          println("\tstab %d,x",off);
+          break;
         }
+      }else{
+        println("\tldab %d,x",off);
+        switch(val){
+        case 1:
+          println("\tincb");
+          break;
+        case -1:
+          println("\tdecb");
+          break;
+        default:
+          println("\taddb #%d",val);
+          break;
+        }
+        println("\tstab %d,x",off);
       }
       break;
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
-      println("\tldab %d,x",off+1);
-      println("\tldaa %d,x",off);
-      println("\taddb #<%d",val);
-      println("\tadca #>%d",val);
-      println("\tstab %d,x",off+1);
-      println("\tstaa %d,x",off);
+      if (node->retval_unused && val==1) {
+        char *label = new_label("L_%d");
+        println("\tinc %d,x",off+1);
+        println("\tbne %s",label);
+        println("\tinc %d,x",off);
+        println("%s:",label);
+      }else if (val>0) {
+        println("\tldab %d,x",off+1);
+        println("\tldaa %d,x",off);
+        println("\taddb #<%d",val);
+        println("\tadca #>%d",val);
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
+      }else{ // val<0
+        val = abs(val);
+        println("\tldab %d,x",off+1);
+        println("\tldaa %d,x",off);
+        println("\tsubb #<%d",val);
+        println("\tsbca #>%d",val);
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
+      }
       break;
     default:
       assert(0);
