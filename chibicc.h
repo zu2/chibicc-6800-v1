@@ -328,6 +328,7 @@ int64_t const_expr(Token **rest, Token *tok);
 Obj *parse(Token *tok);
 Node *new_node(NodeKind kind, Token *tok);
 Node *new_binary(NodeKind kind, Node *lhs, Node *rhs, Token *tok);
+Node *new_unary(NodeKind kind, Node *expr, Token *tok);
 
 //
 // type.c

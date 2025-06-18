@@ -3581,8 +3581,6 @@ void gen_expr(Node *node) {
       println("\tstab @long");
       return;
     case TY_DOUBLE:
-      error_tok(node->tok, "gen_expr: double not implemented yet");
-      return;
     case TY_LDOUBLE:
       error_tok(node->tok, "gen_expr: double not implemented yet");
       return;
@@ -3591,7 +3589,7 @@ void gen_expr(Node *node) {
       IX_Dest = IX_None;
       return;
     case TY_CHAR:
-      println("\tnega");
+      println("\tnegb");
       return;
     }
     negd();

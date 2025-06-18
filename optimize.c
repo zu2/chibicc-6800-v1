@@ -229,6 +229,16 @@ Node *optimize_expr(Node *node)
       || node->lhs->ty->kind == TY_LONG)) {
       node->lhs = node->lhs->lhs;
     }
+    // (ND_CAST TY_CHAR(2) (- (ND_CAST TY_INT(4) (expr ...) )))
+    if (node->ty->kind == TY_CHAR
+    &&  node->lhs->kind == ND_NEG
+    &&  node->lhs->lhs->kind == ND_CAST
+    &&  node->lhs->lhs->ty->kind == TY_INT
+    &&  node->lhs->lhs->lhs->ty->kind == TY_CHAR) {
+      Node *new = new_unary(ND_NEG, node->lhs->lhs->lhs, node->tok);
+      new->ty = node->ty;
+      return new;
+    }
     if (is_integer(node->ty)
     &&  node->lhs->kind==ND_NUM
     &&  is_integer(node->lhs->ty)) {
