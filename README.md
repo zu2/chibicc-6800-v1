@@ -162,14 +162,14 @@ The IEEE754 float implementation has passed the Paranoia test for addition, subt
 ## Behavior of Each Option
 
 - **`-O0`**:  
-  No optimization is performed at this level. However, if `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization, except when `-O0` is specified, in which case no optimization is applied.
+  No optimization is performed at this level.
 
 - **`-O`, `-O1`, `-O2`**:  
-
   if `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization
 
 - **`-Os`**:  
   This option generates code aimed at minimizing the size of the object file. As a trade-off, the resulting code may run approximately 5%-25% slower.
+
 ---
 # Memo
 
