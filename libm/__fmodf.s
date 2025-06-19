@@ -26,12 +26,14 @@
 	.export _fmodf
 ;
 	.data
-__zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
-__sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
-__exp:  .byte   0
-__expdiff:.word	0	; TOS's exp - @long's exp
-__expnew:.word	0	; new exp
-__yadrs:.word   0
+__zin:	.blkb	1	; TOS & @long are Zero? Inf? NaN?
+__sign:	.blkb	1	; sign (TOS & @long sign are different? 1:differ,0:same)
+__exp:  .blkb   1
+__expdiff:.blkb	2	; TOS's exp - @long's exp
+__expnew:.word	2	; new exp
+;
+__yadrs:.blkb   2
+;
 	.code
 ;
 ;	@long = @long % TOS
@@ -274,7 +276,9 @@ __fmodf32_rup_occur:
 	sec
 	rts
 ;
+;       fmodf(x,y) = x - y * trunc(x/y)
 ;
+
 __fmodf_def:
         tsx
         inx

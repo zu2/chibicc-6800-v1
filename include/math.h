@@ -28,6 +28,7 @@ int	isinf(float x);
 int	isfinite(float x);
 float	copysignf(float x, float y);
 int	signbit(float x);
+float	nextafterf(float x, float y);
 
 float	sinf(float x);
 float	cosf(float x);

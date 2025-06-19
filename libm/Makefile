@@ -10,7 +10,7 @@ OBJ =	__floorf.o __ceilf.o __truncf.o __roundf.o \
 	atanf.o sincosf.o tanf.o  \
 	sinhf.o coshf.o tanhf.o \
 	expf.o logf.o powf.o log1pf.o \
-	__copysignf.o __nearbyintf.o \
+	__copysignf.o __nearbyintf.o __nextafterf.o \
 	__fracmask.o __get_lexp_sign.o __add_msb.o
 
 .s.o:

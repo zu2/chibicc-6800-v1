@@ -1,15 +1,15 @@
 #include <math.h>
 #include <float.h>
 
-// 7th order Taylor expansion coefficients (precomputed)
-#define C0 1.0f
-#define C1 1.0f
-#define C2 0.5f
-#define C3 0.16666667f // 1/6
-#define C4 0.04166667f // 1/24
-#define C5 0.00833333f // 1/120
-#define C6 0.00138889f // 1/720
-#define C7 0.00019841f // 1/5040
+#define C0 1.00000000f
+#define C1 0.99999994f
+#define C2 0.50000012f
+#define C3 0.16666599f
+#define C4 0.04166901f
+#define C5 0.00833123f
+#define C6 0.00139145f
+#define C7 0.00019712f
+
 
 float expf(float x)
 {
@@ -26,8 +26,11 @@ float expf(float x)
   if (x == -INFINITY) {
     return 0.0f;
   }
-  if (x > 88.722839f) {
+  if (x > 0x1.62e43000p+6) {    // 88.72284f;
     return INFINITY;
+  }
+  if (x == 88.722839f) {
+    return FLT_MAX;
   }
   if (x < -103.97208f) {
     return 0.0f;
@@ -35,14 +38,8 @@ float expf(float x)
 
   // Range reduction using frexpf for higher accuracy
   // Step 1: Calculate n such that x = n*ln2 + r, r in [-ln2/2, ln2/2]
-#if 0
-  float n_float = x * M_LOG2E;
-  int n;
-  float frac = frexpf(n_float, &n); // n_float = frac * 2^n, frac in [0.5, 1)
-  n = (int)(n_float + (x >= 0 ? 0.5f : -0.5f)); // round to nearest int
-  float r = x - n * M_LN2;
-#else
-  // Range reduction using fmodf
+
+  // Range reduction
   int n = (int)(x / M_LN2);
   float r = fmodf(x, M_LN2);
   if (r > 0.5f * M_LN2) {
@@ -52,10 +49,9 @@ float expf(float x)
     r += M_LN2;
     n -= 1;
   }
-#endif
 
   // Step 2: Polynomial approximation of exp(r) using Horner's method
-  float exp_r = C0 + r * (C1 + r * (C2 + r * (C3 + r * (C4 + r * (C5 + r * (C6 + r * (C7)))))));
+  float exp_r = C0 + r * (C1 + r * (C2 + r * (C3 + r * (C4 + r * (C5 + r * (C6 + r * C7))))));
 
   // Step 3: Combine using ldexpf
   return ldexpf(exp_r, n);

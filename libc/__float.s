@@ -1158,7 +1158,7 @@ __lsr_long_1:
 __lsr_long_2:
 	decb
 	bne	__lsr_long_1
-;	anda	#$e0
+	anda	#$e0
 	staa	@long+3
 	rts
 ;
@@ -1174,7 +1174,7 @@ __lsr_tos_1:
 __lsr_tos_2:
 	decb
 	bne	__lsr_tos_1
-;	anda	#$e0
+	anda	#$e0
 	staa	5,x
 	rts
 ;
