@@ -118,6 +118,20 @@ static void ldd_i(int n)
   }
 }
 
+static void and_i(int n)
+{
+  if ((n & 0x00ff)==0) {
+    println("\tclrb");
+  } else if ((n & 0x00ff)!=0x00ff) {
+    println("\tandb #<$%02x",n);
+  }
+  if ((n & 0x0ff00)==0) {
+    println("\tclra");
+  } else if ((n & 0xff00)!=0xff00) {
+    println("\tanda #>$%02x",n);
+  }
+}
+
 static void pushl(void) {
   if (opt_O == 's') {
     println("\tjsr __push32");
@@ -462,31 +476,110 @@ bool gen_shr(Type *ty, uint64_t val)
     }
     return true;
   case 2:
-    switch(val) {
-    case 8:
-      if (ty->is_unsigned) {
+    if (val>4) {
+      println("; %s %ld", ty->is_unsigned? "lsrd": "asrd", val);
+    }
+    if (ty->is_unsigned) {
+      switch(val) {
+      case 1:  // 4cyc,  2bytes
+      case 2:  // 8cyc,  4bytes
+      case 3:  // 12cyc, 6bytes
+      case 4:  // 16cyc, 8bytes
+      case 5:  // 20cyc, 10bytes
+        for (int i=0; i<val; i++) {
+          println("\tlsra");
+          println("\trorb");
+        }
+        return true;
+      case 6:   // 18cyc, 10bytes
+        println("\taslb");
+        println("\trola");
+        println("\trolb");
+        println("\trola");
+        println("\trolb");
+        println("\tpshb");
         println("\ttab");
+        println("\tpula");
+        println("\tanda #$03");
+        return true;
+      case 7:   // 10cyc, 6bytes
+        println("\taslb");
+        println("\trola");
+        println("\ttab");
+        println("\trola");
+        println("\tanda #$01");
+        return true;
+      case 8:   // 4cyc,  4bytes
+      case 9:   // 6cyc,  5bytes
+      case 10:  // 8cyc,  6bytes
+      case 12:  // 10cyc, 7bytes
+      case 13:  // 12cyc, 8bytes
+        println("\ttab");
+        for (int i=8; i<val; i++) {
+          println("\tlsrb");
+        }
         println("\tclra");
-      }else{
-        char *label = new_label("L_shr_%d");
-        // see. https://www.zukeran.org/shin/d/2024/12/30/6800-programing-11/
+        return true;
+      case 14:  // 12cyc, 6bytes
+      case 15:  // 8cyc,  4bytes
+        println("\tclrb");
+        for (int i=val; i<=15; i++) {
+          println("\tasla");
+          println("\trolb");
+        }
+        println("\tclra");
+        return true;
+      }
+    } else {
+      switch(val) {
+      case 1:  // 4cyc,  2bytes
+      case 2:  // 8cyc,  4bytes
+      case 3:  // 12cyc, 6bytes
+      case 4:  // 16cyc, 8bytes
+      case 5:  // 20cyc, 10bytes
+      case 6:  // 24cyc, 12bytes
+        for (int i=0; i<val; i++) {
+          println("\tasra");
+          println("\trorb");
+        }
+        return true;
+      case 7:   // 10cyc, 6bytes
+        println("\taslb");
+        println("\trola");
         println("\ttab");
-        println("\tbpl %s",label);
-        println("\tdeca");
-        println("%s:",label);
-        println("\tsba");
+        println("\tldaa #0");
+        println("\tsbca #0");
+        return true;
+      case 8:   // 4cyc,  6bytes
+      case 9:   // 6cyc,  7bytes
+      case 10:  // 8cyc,  8bytes
+      case 12:  // 10cyc, 9bytes
+      case 13:  // 12cyc, 10bytes
+        println("\ttab");
+        println("\tasla");
+        println("\tldaa #0");
+        println("\tsbca #0");
+        for (int i=8; i<val; i++) {
+          println("\tasrb");
+        }
+        return true;
+      case 14:  // 12cyc, 7bytes
+        println("\tclrb");
+        println("\tasla");
+        println("\tsbcb #0");
+        println("\tasla");
+        println("\ttba");
+        println("\trolb");
+        return true;
+      case 15:  // 8cyc,  5bytes
+        println("\tclrb");
+        println("\tasla");
+        println("\tsbcb #0");
+        println("\ttba");
+        return true;
       }
-      return true;
     }
-    for (int i=0; i<val; i++) {
-      if (ty->is_unsigned) {
-        println("\tlsra");
-      }else{
-        println("\tasra");
-      }
-      println("\trorb");
-    }
-    return true;
+    break;
   case 4:
     for (int i=0; i<val; i++) {
       if (ty->is_unsigned) {
@@ -3612,18 +3705,26 @@ void gen_expr(Node *node) {
       println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s %d",
 		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
       println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
-      for (int i=0; i<mem->bit_width + mem->bit_offset; i++){
-        println("\taslb");
-        println("\trora");
-      }
-      for (int i=0; i<mem->bit_width; i++) {
-        if (mem->ty->is_unsigned){
-          println("\tlsra");
-          println("\trolb");
+      gen_shr(ty_uint, mem->bit_offset);
+      unsigned int mask = (unsigned int)(1L << mem->bit_width) - 1;
+      and_i(mask & 0xffff);
+      if (!mem->ty->is_unsigned && mem->bit_width!=16) {
+        char *label = new_label("L_%d");
+        if (mem->bit_width<=8)  {
+          println("\tbitb #<$%04x",(int)(1L << (mem->bit_width-1)));
         }else{
-          println("\tasra");
-          println("\trolb");
-        } 
+          println("\tbita #<$%04x",(int)(1L << (mem->bit_width-9)));
+        }
+        println("\tbeq %s",label);
+        if (mem->bit_width<=8)  {
+          if (mem->bit_width!=8) {
+            println("\torb #<$%04x",(~mask)&0xffff);
+          }
+          println("\tora #$ff");
+        }else{
+          println("\tora #>$%04x",(~mask)&0xffff);
+        }
+        println("%s:",label);
       }
     }
     return;
@@ -3655,6 +3756,34 @@ void gen_expr(Node *node) {
     Node *lhs = node->lhs;
     Node *rhs = node->rhs;
 
+    if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
+      gen_addr(node->lhs);
+      push();
+      gen_expr(node->rhs);
+      popx();
+      if (!node->retval_unused){
+        push();
+      }
+
+      // If the lhs is a bitfield, we need to read the current value
+      // from memory and merge it with a new value.
+      Member *mem = node->lhs->member;
+      println("; bitfieled node->ty->size=%d, mem->bit_width=%d, mem->bit_offset=%d, %s %d",
+		      node->ty->size,mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
+      and_i((unsigned short)(1L << mem->bit_width) - 1);
+      gen_shl(ty_uint,mem->bit_offset);
+      uint16_t mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
+      println("\teorb 1,x");
+      println("\teora 0,x");
+      and_i(mask);
+      println("\teorb 1,x");
+      println("\teora 0,x");
+      store_x(node->ty,0);
+      if (!node->retval_unused){
+        pop();
+      }
+      return;
+    }
     if (can_direct(lhs) && lhs->ty->size <= 2) {
       gen_expr(rhs);
       gen_direct(lhs,"stab","staa");
@@ -3706,41 +3835,6 @@ void gen_expr(Node *node) {
     gen_addr(node->lhs);
     push();
     gen_expr(node->rhs);
-
-    if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
-      println("\tstab @tmp1+1");
-      println("\tstab @tmp1");
-
-      // If the lhs is a bitfield, we need to read the current value
-      // from memory and merge it with a new value.
-      Member *mem = node->lhs->member;
-      println("; bitfieled mem->bit_width=%d, mem->bit_offset=%d, %s %d",
-		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
-      println("\tandb #<%d", (int)(1L << mem->bit_width) - 1);
-      println("\tanda #>%d", (int)(1L << mem->bit_width) - 1);
-      for (int i=0; i<mem->bit_offset; i++){
-        println("\taslb");
-        println("\trola");
-      }
-      println("\tstab @rdi+1");
-      println("\tstaa @rdi");
-      println("\tpula");
-      println("\tpulb");
-      println("\tpshb");
-      println("\tpsha");
-      load(mem->ty);
-
-      long mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
-      println("\tandb #<%d",(int)~mask);
-      println("\tanda #>%d",(int)~mask);
-      println("\torab @rdi+1");
-      println("\toraa @rdi+1");
-      store(node->ty);
-      println("\tldab @tmp1+1");
-      println("\tldaa @tmp1");
-      return;
-    }
-
     store(node->ty);
     return;
   } // ND_ASSIGN
@@ -4313,6 +4407,45 @@ void gen_expr(Node *node) {
   case ND_ADD: {
     if (gen_direct_lr(node,"addb","adca"))
       return;
+    if (node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_INT
+    &&  node->lhs->lhs->ty->kind == TY_CHAR
+    &&  node->lhs->lhs->ty->is_unsigned
+    &&  node->rhs->kind == ND_CAST
+    &&  node->rhs->ty->kind == TY_INT
+    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  node->rhs->lhs->ty->is_unsigned ) {
+      gen_expr(node->lhs->lhs);
+      push1();
+      gen_expr(node->rhs->lhs);
+      popa();
+      println("\taba");
+      println("\ttab");
+      println("\tldaa #0");
+      println("\tadca #0");
+      return;
+    }
+    if (node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_INT
+    &&  node->lhs->lhs->ty->kind == TY_CHAR
+    &&  !node->lhs->lhs->ty->is_unsigned
+    &&  node->rhs->kind == ND_CAST
+    &&  node->rhs->ty->kind == TY_INT
+    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  !node->rhs->lhs->ty->is_unsigned ) {
+      char *label = new_label("L_%d");
+      gen_expr(node->lhs->lhs);
+      push1();
+      gen_expr(node->rhs->lhs);
+      println("\tclra");
+      println("\ttsx");
+      println("\taddb 0,x");
+      println("\tbvc %s",label);
+      println("\tdeca");
+      println("%s:",label);
+      ins(1);
+      return;
+    }
     if (node->rhs->kind     == ND_CAST
     &&  node->rhs->ty->kind == TY_INT
     &&  !node->rhs->ty->is_unsigned
@@ -4368,6 +4501,44 @@ void gen_expr(Node *node) {
       int off = gen_addr_x(node->lhs,true);
       println("\taddb %d+1,x",off);
       println("\tadca %d,x",off);
+      return;
+    }
+    if (node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_INT
+    &&  node->lhs->lhs->ty->kind == TY_CHAR
+    &&  node->lhs->lhs->ty->is_unsigned
+    &&  node->rhs->kind == ND_CAST
+    &&  node->rhs->ty->kind == TY_INT
+    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  node->rhs->lhs->ty->is_unsigned ) {
+      gen_expr(node->lhs->lhs);
+      push1();
+      gen_expr(node->rhs->lhs);
+      popa();
+      println("\tsba");
+      println("\ttab");
+      println("\tldaa #0");
+      println("\tsbca #0");
+      return;
+    }
+    if (node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_INT
+    &&  node->lhs->lhs->ty->kind == TY_CHAR
+    &&  !node->lhs->lhs->ty->is_unsigned
+    &&  node->rhs->kind == ND_CAST
+    &&  node->rhs->ty->kind == TY_INT
+    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  !node->rhs->lhs->ty->is_unsigned ) {
+      gen_expr(node->lhs->lhs);
+      println("\teorb #$80");
+      push1();
+      gen_expr(node->rhs->lhs);
+      println("\teorb #$80");
+      popa();
+      println("\tsba");
+      println("\ttab");
+      println("\tldaa #0");
+      println("\tsbca #0");
       return;
     }
     gen_expr(node->rhs);		// TODO: lhs to rhs

@@ -2878,44 +2878,62 @@ static Type *struct_union_decl(Token **rest, Token *tok) {
 }
 
 // struct-decl = struct-union-decl
+// Calculate struct layout with proper bitfield packing (16bit word, MC6800)
 static Type *struct_decl(Token **rest, Token *tok) {
-  Type *ty = struct_union_decl(rest, tok);
-  ty->kind = TY_STRUCT;
+    Type *ty = struct_union_decl(rest, tok);
+    ty->kind = TY_STRUCT;
 
-  if (ty->size < 0)
-    return ty;
+    if (ty->size < 0)
+        return ty;
 
-  // Assign offsets within the struct to members.
-  int bits = 0;
+    int bits = 0;             // Total bits from struct start
+    int regsize = 16;         // Bitfield packing unit (16 bits)
+    int remain = 0;           // Remaining bits in current word
 
-//int regsize = 8;
-  int regsize = 2;
-  for (Member *mem = ty->members; mem; mem = mem->next) {
-    if (mem->is_bitfield && mem->bit_width == 0) {
-      // Zero-width anonymous bitfield has a special meaning.
-      // It affects only alignment.
-      bits = align_to(bits, mem->ty->size * regsize);
-    } else if (mem->is_bitfield) {
-      int sz = mem->ty->size;
-      if (bits / (sz * regsize) != (bits + mem->bit_width - 1) / (sz * regsize))
-        bits = align_to(bits, sz * regsize);
+    for (Member *mem = ty->members; mem; mem = mem->next) {
+        if (mem->is_bitfield && mem->bit_width == 0) {
+            // Zero-width bitfield: align to next 16bit word boundary
+            if (remain != 0) {
+                bits += remain;
+                remain = 0;
+            }
+        } else if (mem->is_bitfield) {
+            // Start a new word if not enough bits left in current word
+            if (remain < mem->bit_width) {
+                bits += remain;
+                remain = regsize;
+            }
+            // Calculate the start bit position of the current word
+            int word_start = bits - (regsize - remain);
+            mem->offset = word_start / 8;         // Byte offset from struct start
+            mem->bit_offset = regsize - remain;   // Bit offset in the 16bit word (LSB=0)
+            bits += mem->bit_width;
+            remain -= mem->bit_width;
+        } else {
+            // Non-bitfield: align to next byte boundary
+            if (remain != 0) {
+                bits += remain;
+                remain = 0;
+            }
+            // Align to member's alignment if needed (MC6800: usually 1 or 2)
+            if (mem->align > 1 && (bits / 8) % mem->align != 0) {
+                bits = ((bits / 8 + mem->align - 1) / mem->align) * mem->align * 8;
+            }
+            mem->offset = bits / 8;
+            mem->bit_offset = -1; // Not a bitfield
+            bits += mem->ty->size * 8;
+        }
 
-      mem->offset = align_down(bits / regsize, sz);	// TODO:
-      mem->bit_offset = bits % (sz * regsize);
-      bits += mem->bit_width;
-    } else {
-      if (!ty->is_packed)
-        bits = align_to(bits, mem->align * regsize);
-      mem->offset = bits / regsize;
-      bits += mem->ty->size * regsize;
+        // Update struct alignment info
+        if (!ty->is_packed && ty->align < mem->align)
+            ty->align = mem->align;
     }
 
-    if (!ty->is_packed && ty->align < mem->align)
-      ty->align = mem->align;
-  }
-
-  ty->size = align_to(bits, ty->align * regsize) / regsize;	// TODO:
-  return ty;
+    // Final struct size: round up to next 16bit word if inside bitfield
+    if (remain != 0)
+        bits += remain;
+    ty->size = (bits + 7) / 8;
+    return ty;
 }
 
 // union-decl = struct-union-decl
