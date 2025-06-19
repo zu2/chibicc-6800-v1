@@ -12,6 +12,9 @@
 	.export __ge16s
 	.export __ge16u
 	.code
+;
+;	if AccAB!=0 then AccAB=0 else 1
+;
 __eq16:
 	bne	__false
 	tstb
@@ -24,7 +27,7 @@ __false2:
 	clrb
 	rts
 ;
-;	AccAB=0 then AccAB=0 else 1
+;	if AccAB=0 then AccAB=0 else 1
 ;
 __ne16:
 	bne	__true
@@ -44,15 +47,19 @@ __lt16s:
 	clra
 	rts
 ;
+;       a-b < 0
+;       If a < b, C becomes 1 and is moved to b's LSB.
+;
 __lt16u:
 	ldaa	#0
 	tab
-	adcb	#0
+        rolb
 	rts
 ;	bcs	__true
 ;	clrb
 ;	clra
 ;	rts
+
 ;
 ;	a-b > 0 ?
 ;
@@ -105,6 +112,8 @@ __ge16s:
 	clrb
 	clra
 	rts
+;
+;       If ! a >= b, C becomes 1 and !C moved to b's LSB.
 ;
 __ge16u:
 	ldaa	#0
