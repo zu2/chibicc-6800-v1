@@ -367,6 +367,30 @@ IX addressing can only use offsets from 0 to 255, so there are limitations. If a
 - When the total size of local variables and arguments is more than 252 bytes, certain limitations apply.
 - Local area refers to temporary variables, including those allocated by assignment, alloca, or variable-length arrays (VLA).
 
+## Bitfield Support
+
+- Bitfields are always packed into 16-bit (int) units, starting at the least significant bit (bit 0) of each word.
+- When a non-bitfield member appears in a struct, bitfield packing ends, and any following bitfields start at the next 16-bit boundary.
+- Zero-width fields (e.g., unsigned int : 0;) force alignment to the next 16-bit boundary.
+- In unions, the lowest-addressed byte corresponds to the upper 8 bits of the bitfield word, and the highest-addressed byte to the lower 8 bits.
+- The size of a struct or union containing bitfields is rounded up so that all bitfields fit into full 16-bit units.
+
+### Example:
+
+```
+struct S {
+  unsigned int a : 5;
+  _Bool        b : 1;
+  unsigned int c : 10;
+  unsigned char d;
+  unsigned int e : 12;
+};
+```
+
+- a, b, and c are packed into the first 16-bit word.
+- d is placed at the next byte.
+- e starts at the next 16-bit word.
+
 ---
 # Usage in Other Projects
 
