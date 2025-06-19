@@ -29,12 +29,15 @@ typedef uint32_t        uint_fast32_t;
 // Integer limits
 #define INT8_MIN        (-128)
 #define INT8_MAX        127
+#define UINT8_MIN	0
 #define UINT8_MAX       255
 #define INT16_MIN       (-32768)
 #define INT16_MAX       32767
+#define UINT16_MIN	0
 #define UINT16_MAX      65535U
 #define INT32_MIN       (-2147483647L-1)
 #define INT32_MAX       2147483647L
+#define UINT32_MIN	0
 #define UINT32_MAX      4294967295UL
 
 // Pointer types (assuming 16-bit pointers)
