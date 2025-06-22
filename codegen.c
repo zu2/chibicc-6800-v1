@@ -3692,19 +3692,19 @@ void gen_expr(Node *node) {
     load_var(node);
     return;
   case ND_MEMBER: {
-    if (can_load_x(node->ty) && test_addr_x(node)) {
-      off = gen_addr_x(node,false);
-      load_x(node->ty,off);
-    }else{
-      gen_addr(node);
-      load(node->ty);
-    }
 
     Member *mem = node->member;
     if (mem->is_bitfield) {
+      if (can_load_x(node->ty) && test_addr_x(node)) {
+        off = gen_addr_x(node,false);
+        load_x(ty_uint,off);
+      }else{
+        gen_addr(node);
+        load(ty_uint);
+      }
       println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s %d",
 		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
-      println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
+//    println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
       gen_shr(ty_uint, mem->bit_offset);
       unsigned int mask = (unsigned int)(1L << mem->bit_width) - 1;
       and_i(mask & 0xffff);
@@ -3726,6 +3726,14 @@ void gen_expr(Node *node) {
         }
         println("%s:",label);
       }
+      return;
+    }
+    if (can_load_x(node->ty) && test_addr_x(node)) {
+      off = gen_addr_x(node,false);
+      load_x(node->ty,off);
+    }else{
+      gen_addr(node);
+      load(node->ty);
     }
     return;
   }
@@ -3778,7 +3786,7 @@ void gen_expr(Node *node) {
       and_i(mask);
       println("\teorb 1,x");
       println("\teora 0,x");
-      store_x(node->ty,0);
+      store_x(ty_uint,0);
       if (!node->retval_unused){
         pop();
       }
@@ -3825,8 +3833,7 @@ void gen_expr(Node *node) {
       }
       return;
     }
-    if (!(node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield)
-    &&  test_addr_x(node->lhs)){
+    if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
       store_x(node->ty,off);

@@ -665,3 +665,11 @@
 	eorb #$7f
 	addb #<$ff81
 	adca #>$ff81
+
+	ldx #%1
+	jsr __store32x
+	ldx #%1
+	jsr __load32x
+=
+	ldx #%1
+	jsr __store32x
