@@ -369,6 +369,8 @@ IX addressing can only use offsets from 0 to 255, so there are limitations. If a
 
 ## Bitfield Support
 
+Bit fields enable the packing of multiple small integer values into a struct, thereby reducing memory usage. However, on the MC6800, manipulation of bit fields is generally inefficient. Accessing or modifying a bit field requires multiple shift and bitwise operations (such as AND and XOR) to isolate or update specific bits. This leads to an increased instruction count and slower execution compared to access of regular integer struct members.
+
 - Bitfields are always packed into 16-bit (int) units, starting at the least significant bit (bit 0) of each word.
 - When a non-bitfield member appears in a struct, bitfield packing ends, and any following bitfields start at the next 16-bit boundary.
 - Zero-width fields (e.g., unsigned int : 0;) force alignment to the next 16-bit boundary.
