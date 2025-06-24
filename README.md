@@ -106,6 +106,8 @@ emu6800 6800 9018-asciiartf.bin 9018-asciiartf.map
 
 This will compile the source file and execute the resulting binary using the emulator.
 
+![mandelbrot](./img/20250624-mandelbrot.png "mandelbrot ascii art")
+
 ---
 # Performance
 
