@@ -26,6 +26,7 @@ static char *opt_MF;
 static char *opt_MT;
 static char *opt_o;
 static int  opt_v = 0;
+static int  opt_lm = 0;
 char opt_O = '1';
 char opt_g = '0';
 #define copt_path  "/opt/fcc/lib/copt"
@@ -231,6 +232,9 @@ static void parse_args(int argc, char **argv) {
 
     if (!strncmp(argv[i], "-l", 2) || !strncmp(argv[i], "-Wl,", 4)) {
       strarray_push(&input_paths, argv[i]);
+      if (!strcmp(argv[i],"-lm")) {
+        opt_lm = 1;
+      }
       continue;
     }
 
@@ -719,6 +723,7 @@ static void run_linker(StringArray *inputs, char *output) {
 
   strarray_push(&arr, format("%s/crt0.o", libpath));
 
+
   for (int i = 0; i < ld_extra_args.len; i++)
     strarray_push(&arr, ld_extra_args.data[i]);
 
@@ -728,6 +733,10 @@ static void run_linker(StringArray *inputs, char *output) {
     }else{
       strarray_push(&arr, inputs->data[i]);
     }
+  }
+
+  if (!opt_lm) {
+    strarray_push(&arr, format("%s/dummyfloat.o", libpath));
   }
 
   for (int i = 0; i < inputs->len; i++) {

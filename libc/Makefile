@@ -11,7 +11,6 @@ OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o __mul8x8.o \
 	__add32.o __sub32.o __neg32.o \
 	__and32.o __or32.o __xor32.o __not32.o \
 	__and32x.o __or32x.o __xor32x.o \
-	__float.o __floatlib.o __floatconst.o \
 	__adx.o __popx.o __copy_struct.o __ins.o \
 	__memset.o __memcpy.o __memchr.o __memmove.o __memcmp.o \
 	__strcmp.o __strncmp.o __strcpy.o __strncpy.o \

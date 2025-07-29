@@ -3,7 +3,8 @@
 #
 all: libm.a
 
-OBJ =	__floorf.o __ceilf.o __truncf.o __roundf.o \
+OBJ =	__float.o __floatlib.o __floatconst.o \
+	__floorf.o __ceilf.o __truncf.o __roundf.o \
 	__fmaxf.o __fmodf.o __modff.o \
 	__frexpf.o __ldexpf.o \
 	__sqrtf.o \
