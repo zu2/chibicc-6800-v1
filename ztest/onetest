@@ -4,10 +4,15 @@ PATH=/opt/fcc/bin:$PATH
 OPT="-v -I. -DTEST"
 
 OPT_O="-Os"
+OPT_g=""
 while true; do
   case "$1" in
   -O0|-O1|-O2|-Os)
     OPT_O=$1
+    shift
+    ;;
+  -g|-g1|-g2)
+    OPT_g=$1
     shift
     ;;
   *)
@@ -16,12 +21,13 @@ while true; do
   esac
 done
 
-CCRUN="../chibicc $OPT $OPT_O "
+CCRUN="../chibicc $OPT $OPT_O $OPT_g "
 
 s=$(basename $1 .c)
+shift
 echo  "compiling:" $s
-echo $CCRUN -o $s.bin $s.c common.c -lm
-$CCRUN -o $s.bin $s.c common.c -lm
+echo $CCRUN -o $s.bin $s.c common.c $@
+$CCRUN -o $s.bin $s.c common.c $@
 err=$?
 $CCRUN -S $s.c
 if [ $err -ne 0 ] ; then
@@ -29,7 +35,7 @@ if [ $err -ne 0 ] ; then
 	rm -f $s.o $s.s $s.bin
 	exit $err;
 fi
-ls -l $s.bin
+ls -Ggl $s.bin
 echo emu6800 -d 6800 $s.bin $s.map
 emu6800 6800 $s.bin $s.map
 ret=$?
