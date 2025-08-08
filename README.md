@@ -161,7 +161,7 @@ The IEEE754 float implementation has passed the Paranoia test for addition, subt
 ## Supported Optimization Flags
 
 - The compiler supports the `-O` and `-Os` options for optimization.  
-- You can also specify `-O0`, `-O1`, and `-O2`, but note that `-O2` is not yet implemented.  
+- You can also specify `-O0`, `-O1`, and `-O2`
 - The default optimization level is `-O0`.
 
 ## Behavior of Each Option
@@ -223,7 +223,7 @@ In this implementation:
 
 ### Tradeoffs:
 
-- **1 Argument:** Efficient; no `PUSH` needed.
+- **1 Argument:** Efficient; no `PUSH` and `INS` needed.
 - **2 Arguments:** Equivalent; one `PUSH` removed but requires an `INS`.
 - **3+ Arguments:** Less efficient due to additional `INS`.
 
@@ -326,7 +326,7 @@ int tarai(int x, int y, int z)
 
 Branches "if (x\>y)" are converted to jge (bge) instructions.
 
-x\>y and x>=y have different branch costs. x-y>=0 requires one bge, but x-y>0 requires multiple branch instructions. The chibicc-6800 reduces the branch cost by treating the former as y-x\<0.
+x\>y and x>=y have different branch costs. x-y\>=0 requires one bge, but x-y\>0 requires multiple branch instructions. The chibicc-6800 reduces the branch cost by treating the former as y-x\<0.
 
 ```
 	ldab 9,x
