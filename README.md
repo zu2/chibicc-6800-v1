@@ -20,7 +20,7 @@ Dhrystone & Whetstone works now.
 - **Function parameters:** Only the first parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
 - **Return values:** Struct/union return values pass their address as an implicit first argument in a register. all other normal arguments are passed on the stack.
 
-The compiler passes basic tests, but there are still many issues remaining.
+The compiler passes basic tests, but there are still some issues remaining.
 
 IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
 
@@ -100,7 +100,7 @@ Alternatively, you can manually compile and run a test program as follows:
 
 ```sh
 cd ztest
-chibicc -v -O -o 9018-asciiartf.bin 9018-asciiartf.c
+chibicc -v -O2 -o 9018-asciiartf.bin 9018-asciiartf.c -lm
 emu6800 6800 9018-asciiartf.bin 9018-asciiartf.map
 ```
 
@@ -326,7 +326,7 @@ int tarai(int x, int y, int z)
 
 Branches "if (x\>y)" are converted to jge (bge) instructions.
 
-x\>y and x>=y have different branch costs. x-y\>=0 requires one bge, but x-y\>0 requires multiple branch instructions. The chibicc-6800 reduces the branch cost by treating the former as y-x\<0.
+`x\>y` and `x>=y` have different branch costs. `x-y\>=0` requires one bge, but `x-y\>0` requires multiple branch instructions. The chibicc-6800 reduces the branch cost by treating the former as `y-x\<0`.
 
 ```
 	ldab 9,x
@@ -399,7 +399,9 @@ struct S {
 - e starts at the next 16-bit word.
 
 ---
-# Usage in Other Projects
+# Usage in Other Platform.
+
+To run this compiler on systems other than emu6800, crt0 (the startup code), the program’s start address, and the initial stack pointer value must be changed. The link-time address should also be adjusted. Please refer to kwhr0’s Hitachi BASICMASTER project for examples.
 
 This compiler is also used in `kwhr0`'s [bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo), [kwhr0/bm2-chibicc-demo](https://github.com/kwhr0/bm2-chibicc-demo) project. 
 
