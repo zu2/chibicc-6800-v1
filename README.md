@@ -326,7 +326,7 @@ int tarai(int x, int y, int z)
 
 Branches "if (x\>y)" are converted to jge (bge) instructions.
 
-`x\>y` and `x>=y` have different branch costs. `x-y\>=0` requires one bge, but `x-y\>0` requires multiple branch instructions. The chibicc-6800 reduces the branch cost by treating the former as `y-x\<0`.
+`x>y` and `x>=y` have different branch costs. `x-y>=0` requires one bge, but `x-y>0` requires multiple branch instructions. The chibicc-6800 reduces the branch cost by treating the former as `y-x<0`.
 
 ```
 	ldab 9,x
@@ -399,7 +399,7 @@ struct S {
 - e starts at the next 16-bit word.
 
 ---
-# Usage in Other Platform.
+# Usage in Other Platform
 
 To run this compiler on systems other than emu6800, crt0 (the startup code), the program’s start address, and the initial stack pointer value must be changed. The link-time address should also be adjusted. Please refer to kwhr0’s Hitachi BASICMASTER project for examples.
 
@@ -420,12 +420,15 @@ Fuzix C and CC6303 contain compilers for the MC6800. The former also has float.
 
 acwj and mc09 are compilers for the MC6809.
 
+ack includes compilers for languages other than C as well.
+
 - [fuhsnn/slimcc: C11 compiler with C23/C2y/GNU extensions for x86-64 Linux/BSD](https://github.com/fuhsnn/slimcc)
 - [fuhsnn/widcc: Simple C compiler for x86-64 Linux able to build real-world projects including Curl, GCC, Git, PHP, Perl, Python, PostgreSQL etc](https://github.com/fuhsnn/widcc)
 - [EtchedPixels/Fuzix-Compiler-Kit: Fuzix C Compiler Project](https://github.com/EtchedPixels/Fuzix-Compiler-Kit/)
 - [zu2/CC6303: A C compiler for the 6800 series processors](https://github.com/zu2/CC6303)
 - [acwj/64\_6809\_Target at master · DoctorWkt/acwj](https://github.com/DoctorWkt/acwj/tree/master/64_6809_Target)
 - [sbc09/mc09 at os9lv2 · shinji-kono/sbc09](https://github.com/shinji-kono/sbc09/tree/os9lv2/mc09)
+- [zu2/ack-6800: The Amsterdam Compiler Kit for MC6800](https://github.com/zu2/ack-6800)
 
 ---
 ---
