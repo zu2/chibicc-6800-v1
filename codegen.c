@@ -5261,18 +5261,14 @@ static void emit_text(Obj *prog) {
     if (opt_O == 's') {
       println("\tjsr __prologue_%d",reg_param_size);
     } else {
-      switch (reg_param_size) {
-      case 1:
-      case 2:
+      if (reg_param_size==2) {
         println("\tstaa @tmp1");
       }
       println("\tldaa @bp+1");			// push old @bp
       println("\tpsha");
       println("\tldaa @bp");
       println("\tpsha");
-      switch (reg_param_size) {
-      case 1:
-      case 2:
+      if (reg_param_size==2) {
         println("\tldaa @tmp1");
       }
 
