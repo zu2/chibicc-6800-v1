@@ -153,14 +153,14 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   }
   if (can_direct(rhs)) {
     if (is_integer_constant(rhs, &val)) {
+      gen_expr(lhs);
       if (val == 0) {
-        gen_expr(lhs);
         if (node->kind != ND_EQ && node->kind != ND_NE) {
           println("\ttstb");
         }
+      }else{
+        println("\tcmpb #%ld", rhs->val);
       }
-      gen_expr(lhs);
-      println("\tcmpb #%ld", rhs->val);
     } else {
       gen_expr(lhs);
       gen_direct(rhs, "cmpb", NULL);
@@ -426,6 +426,52 @@ bool gen_jump_if_false(Node *node, char *if_false)
       }
     }
     // ↑ rhs==0
+  } else if (rhs->kind == ND_NUM
+         &&  (node->kind==ND_EQ || node->kind==ND_NE)
+         &&  lhs->kind == ND_VAR && test_addr_x(lhs)) {
+      int off = gen_addr_x(lhs, false);
+      sprintf(if_cond, "%d,x", off);
+      switch (node->kind) {
+      case ND_EQ:
+        println("\tldx %s", if_cond);
+        switch(rhs->val){
+        case 0:
+          break;
+        case 1:
+          println("\tdex");
+          break;
+        case 0xffff:
+          println("\tinx");
+          break;
+        default:
+          println("\tcpx #%ld",rhs->val);
+          break;
+        }
+        println("\tjne %s", if_false);
+        IX_Dest = IX_None;
+        return 1;
+      case ND_NE:
+        println("\tldx %s", if_cond);
+        switch(rhs->val){
+        case 0:
+          break;
+        case 1:
+          println("\tdex");
+          break;
+        case 0xffff:
+          println("\tinx");
+          break;
+        default:
+          println("\tcpx #%ld",rhs->val);
+          break;
+        }
+        println("\tjeq %s", if_false);
+        IX_Dest = IX_None;
+        return 1;
+      default: ;
+        goto fallback;  // It's strange to fail
+      }
+    // ↑ rhs==const && EQ or NE
   } else if (can_direct(rhs)) {
     gen_expr(lhs);
     if (!gen_direct(rhs, "subb", "sbca")) {
@@ -592,14 +638,14 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   } 
   if (can_direct(rhs)) {
     if (is_integer_constant(rhs, &val)) {
+      gen_expr(lhs);
       if (val == 0) {
-        gen_expr(lhs);
         if (node->kind != ND_EQ && node->kind != ND_NE) {
           println("\ttstb");
         }
+      }else{
+        println("\tcmpb #%ld", rhs->val);
       }
-      gen_expr(lhs);
-      println("\tcmpb #%ld", rhs->val);
     } else {
       gen_expr(lhs);
       gen_direct(rhs, "cmpb", NULL);
