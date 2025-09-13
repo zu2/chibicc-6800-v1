@@ -69,6 +69,22 @@ Type *is_byte(Node *node)
   return NULL;
 }
 
+Type *is_u8num(Node *node)
+{
+  int64_t val;
+
+  if (node->kind == ND_CAST && node->ty->kind == TY_INT &&
+      !node->ty->is_unsigned) { // integral promotion ?
+    node = node->lhs;
+  }
+  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
+    if (val >= 0  && val <= 255) {
+      return node->ty;
+    }
+  }
+  return NULL;
+}
+
 static int isNUM(Node *node) { return node->kind == ND_NUM; }
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
 static int isVARorNUM(Node *node) { return isVAR(node) || isNUM(node); }
@@ -138,10 +154,11 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   if (!(lty = is_byte(lhs))) {
     return false;
   }
-  if (!(rty = is_byte(rhs))) {
+  if (!(rty = is_byte(rhs)) && !(rty = is_u8num(rhs))) {
     return false;
   }
-  if (lty->is_unsigned != rty->is_unsigned) {
+  if ((lty->is_unsigned != rty->is_unsigned)
+  &&  !(lty->is_unsigned && is_u8num(rhs))) {
     return false;
   }
 
@@ -271,6 +288,13 @@ bool gen_jump_if_false(Node *node, char *if_false)
   // If one side is ND_NUM, both sides are promoted to int,
   // so this can't be optimized. TODO: Fix optimize.c
   if (is_byte(node->lhs) && is_byte(node->rhs)) {
+    if (gen_jump_if_false_8bit(node, if_false)) {
+      return 1;
+    }
+  }
+  Type *lty;
+  lty = is_byte(node->lhs);
+  if ((lty=is_byte(node->lhs)) &&  lty->is_unsigned &&  is_u8num(node->rhs)) {
     if (gen_jump_if_false_8bit(node, if_false)) {
       return 1;
     }
