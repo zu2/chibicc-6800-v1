@@ -51,6 +51,8 @@
 	.export	_isnan
 	.export	_isfinite
         .export _signbit
+        .export _frexpf
+        .export _modff
 ;
 __i16tof32:
 __u16tof32:
@@ -95,6 +97,8 @@ _isinf:
 _isnan:
 _isfinite:
 _signbit:
+_frexpf:
+_modff:
 ;
         ldx #dummy_mes
         bra mes_start
