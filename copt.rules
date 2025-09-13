@@ -450,6 +450,19 @@
 	staa %1,x
 	subb #<1
 	sbca #>1
+	stab @tmp1+1
+	staa @tmp1
+	ldx  @tmp1
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	dex
+
+	stab %2,x
+	staa %1,x
+	subb #<1
+	sbca #>1
 	jsr __load8u
 =
 	stab %2,x
@@ -457,7 +470,6 @@
 	ldx %1,x
 	dex
 	ldab 0,x
-
 
 	stab %2,x
 	staa %1,x
@@ -469,21 +481,6 @@
 	staa %1,x
 	ldx %1,x
 	dex
-
-
-	stab %2,x
-	staa %1,x
-	subb #<1
-	sbca #>1
-	stab @tmp1+1
-	staa @tmp1
-	ldx @tmp1
-=
-	stab %2,x
-	staa %1,x
-	ldx %1,x
-	dex
-
 
 	stab %2,x
 	staa %1,x
@@ -673,3 +670,20 @@
 =
 	ldx #%1
 	jsr __store32x
+
+#
+#
+#
+	andb %2
+	anda %1
+	tstb
+=
+	anda %1
+	andb %2
+
+	clra
+	ldab %1,x
+	anda #0
+=
+	clra
+	ldab %1,x
