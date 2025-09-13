@@ -1387,6 +1387,47 @@ static void store(Type *ty) {
     assert(0);
 }
 
+static void clr_x(Type *ty,int off) {
+  switch (ty->kind) {
+  case TY_STRUCT:
+  case TY_UNION:
+    assert(0);
+    return;
+  case TY_DOUBLE:
+    assert(ty->kind!=TY_DOUBLE);
+    return;
+  case TY_LDOUBLE:
+    assert(ty->kind!=TY_LDOUBLE);
+    return;
+  }
+  switch (ty->size) {
+  case 1:
+    println("\tclr %d,x",off);
+    break;
+  case 2:
+    println("\tclr %d,x",off+1);
+    println("\tclr %d,x",off);
+    break;
+  case 4:
+    if (opt_O == 's') {
+      println("\tclr %d,x",off+3);
+      println("\tclr %d,x",off+2);
+      println("\tclr %d,x",off+1);
+      println("\tclr %d,x",off);
+    }else{
+      println("\tclrb");
+      println("\tstab %d,x",off+3);
+      println("\tstab %d,x",off+2);
+      println("\tstab %d,x",off+1);
+      println("\tstab %d,x",off);
+    }
+    break;
+  default:
+    println("  mov %%rax, (%%rdi)");
+    assert(0);
+  }
+}
+
 static void store_x(Type *ty,int off) {
   switch (ty->kind) {
   case TY_STRUCT:
@@ -3499,6 +3540,98 @@ void gen_expr(Node *node) {
     }
     int val = node->rhs->val;
     int off;
+
+    if (is_global_var(node->lhs)) {
+      char *var = node->lhs->var->name;
+      switch (node->lhs->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        switch(val){
+        case 1:
+          if (!node->retval_unused)
+            println("\tldab _%s",var);
+          println("\tinc _%s",var);
+          break;
+        case -1:
+          if (!node->retval_unused)
+            println("\tldab _%s",var);
+          println("\tdec _%s",var);
+          break;
+        default:
+          println("\tldab _%s",var);
+          println("\taddb #%d",val);
+          println("\tstab _%s",var);
+          if (!node->retval_unused)
+            println("\tsubb #%d",val);
+          break;
+        }
+        break;
+        // TY_BOOL, TY_CHAR
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+      case TY_PTR:
+        if (node->retval_unused && val==1) {
+          if (opt_O == 's') {
+            println("\tldx _%s",var);
+            println("\tinx");
+            println("\tstx _%s",var);
+            IX_Dest = IX_None;
+          }else{
+            char *label = new_label("L_%d");
+            println("\tinc _%s+1",var);
+            println("\tbne %s",label);
+            println("\tinc _%s",var);
+            println("%s:",label);
+          }
+        }else if (node->retval_unused && val==2) {
+          println("\tldx _%s",var);
+          println("\tinx");
+          println("\tinx");
+          println("\tstx _%s",var);
+          IX_Dest = IX_None;
+        }else if (val>0) {
+          println("\tldab _%s+1",var);
+          println("\tldaa _%s",var);
+          println("\taddb #<%d",val);
+          println("\tadca #>%d",val);
+          println("\tstab _%s+1",var);
+          println("\tstaa _%s",var);
+          if (!node->retval_unused) {
+            println("\tsubb #<%d",val);
+            println("\tsbca #>%d",val);
+          }
+        } else if (node->retval_unused && val==-1) {
+            println("\tldx _%s",var);
+            println("\tdex");
+            println("\tstx _%s",var);
+            IX_Dest = IX_None;
+        } else if (node->retval_unused && val==-2) {
+            println("\tldx _%s",var);
+            println("\tdex");
+            println("\tdex");
+            println("\tstx _%s",var);
+            IX_Dest = IX_None;
+        } else { // val<0
+          val = abs(val);
+          println("\tldab _%s+1",var);
+          println("\tldaa _%s",var);
+          println("\tsubb #<%d",val);
+          println("\tsbca #>%d",val);
+          println("\tstab _%s+1",var);
+          println("\tstaa _%s",var);
+          if (!node->retval_unused) {
+            println("\taddb #<%d",val);
+            println("\tadca #>%d",val);
+          }
+        }
+        break;
+      default:
+        assert(0);
+      }
+      return;
+    }
+
     if (test_addr_x(node->lhs)){
       off = gen_addr_x(node->lhs,false);
     }else{
@@ -3509,41 +3642,24 @@ void gen_expr(Node *node) {
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
-      if (node->retval_unused) {
-        switch(val){
+      switch(val){
         case 1:
+          if (!node->retval_unused)
+            println("\tldab %d,x",off);
           println("\tinc %d,x",off);
           break;
         case -1:
+          if (!node->retval_unused)
+            println("\tldab %d,x",off);
           println("\tdec %d,x",off);
           break;
         default:
           println("\tldab %d,x",off);
           println("\taddb #%d",val);
           println("\tstab %d,x",off);
-          break;
-        }
-      }else{
-          switch(val){
-          case 1:
-            println("\tldab %d,x",off);
-            println("\tincb");
-            println("\tstab %d,x",off);
-            println("\tdecb");
-            break;
-          case -1:
-            println("\tldab %d,x",off);
-            println("\tdecb");
-            println("\tstab %d,x",off);
-            println("\tincb");
-            break;
-          default:
-            println("\tldab %d,x",off);
-            println("\taddb #%d",val);
-            println("\tstab %d,x",off);
+          if (!node->retval_unused)
             println("\tsubb #%d",val);
-            break;
-          }
+          break;
       }
       break;
       // TY_BOOL, TY_CHAR
@@ -3593,6 +3709,79 @@ void gen_expr(Node *node) {
     }
     int val = node->rhs->val;
     int off;
+
+    if (is_global_var(node->lhs)) {
+      char *var = node->lhs->var->name;
+      switch (node->lhs->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        switch(val){
+        case 1:
+          println("\tinc _%s",var);
+          if (!node->retval_unused)
+            println("\tldab _%s",var);
+          break;
+        case -1:
+          println("\tdec _%s",var);
+          if (!node->retval_unused)
+            println("\tldab _%s",var);
+          break;
+        default:
+          println("\tldab _%s",var);
+          println("\taddb #%d",val);
+          println("\tstab _%s",var);
+          break;
+        }
+        break;
+        // TY_BOOL, TY_CHAR
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+      case TY_PTR:
+        if (node->retval_unused && val==1 && opt_O == 's') {
+          println("\tldx _%s",var);
+          println("\tinx");
+          println("\tstx _%s",var);
+          IX_Dest = IX_None;
+        }else if (node->retval_unused && val==2 && opt_O == 's') {
+          println("\tldx _%s",var);
+          println("\tinx");
+          println("\tinx");
+          println("\tstx _%s",var);
+          IX_Dest = IX_None;
+        }else if (val>0) {
+          println("\tldab _%s+1",var);
+          println("\tldaa _%s",var);
+          println("\taddb #<%d",val);
+          println("\tadca #>%d",val);
+          println("\tstab _%s+1",var);
+          println("\tstaa _%s",var);
+        } else if (node->retval_unused && val==-1 && opt_O == 's') {
+            println("\tldx _%s",var);
+            println("\tdex");
+            println("\tstx _%s",var);
+            IX_Dest = IX_None;
+        } else if (node->retval_unused && val==-2 && opt_O == 's') {
+            println("\tldx _%s",var);
+            println("\tdex");
+            println("\tdex");
+            println("\tstx _%s",var);
+            IX_Dest = IX_None;
+        } else { // val<0
+          val = abs(val);
+          println("\tldab _%s+1",var);
+          println("\tldaa _%s",var);
+          println("\tsubb #<%d",val);
+          println("\tsbca #>%d",val);
+          println("\tstab _%s+1",var);
+          println("\tstaa _%s",var);
+        }
+        break;
+      default:
+        assert(0);
+      }
+      return;
+    }
     if (test_addr_x(node->lhs)){
       off = gen_addr_x(node->lhs,false);
     }else{
@@ -3610,6 +3799,22 @@ void gen_expr(Node *node) {
           break;
         case -1:
           println("\tdec %d,x",off);
+          break;
+        default:
+          println("\tldab %d,x",off);
+          println("\taddb #%d",val);
+          println("\tstab %d,x",off);
+          break;
+        }
+      }else if (opt_O == 's') {
+        switch(val){
+        case 1:
+          println("\tinc %d,x",off);
+          println("\tldab %d,x",off);
+          break;
+        case -1:
+          println("\tdec %d,x",off);
+          println("\tldab %d,x",off);
           break;
         default:
           println("\tldab %d,x",off);
@@ -3830,13 +4035,21 @@ void gen_expr(Node *node) {
         gen_direct(node->lhs,"stab","staa");
       }else if (test_addr_x(node->lhs)){
         int off = gen_addr_x(node->lhs,true);
-        gen_expr(node->rhs);
-        store_x(node->ty,off);
+        if (node->retval_unused && val==0) {
+          clr_x(node->ty,off);
+        }else{
+          gen_expr(node->rhs);
+          store_x(node->ty,off);
+        }
       }else{
         gen_addr(node->lhs);
         tfr_dx();
-        gen_direct(node->rhs,"ldab","ldaa");
-        store_x(node->ty,0);
+        if (node->retval_unused && val==0) {
+          clr_x(node->ty,0);
+        }else{
+          gen_direct(node->rhs,"ldab","ldaa");
+          store_x(node->ty,0);
+        }
       }
       return;
     }
