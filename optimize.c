@@ -316,8 +316,24 @@ Node *optimize_expr(Node *node)
 
     node = optimize_lr_swap(node);
     if (is_integer_constant(node->lhs,&val)
-    &&  is_integer_constant(node->rhs,&val)) {
+    &&  is_integer_constant(node->rhs,&val2)) {
       return optimize_const_expr(node);
+    }
+    if (is_integer_constant(node->rhs,&val)) {
+      if (node->lhs->kind == ND_ADD
+      &&  is_integer_constant(node->lhs->rhs,&val2)) {
+        new = new_copy(node->lhs);
+        new->rhs = new_num(val+val2,node->tok);
+        new->rhs->ty = node->lhs->rhs->ty;
+        return new;
+      }
+      if (node->lhs->kind == ND_SUB
+      &&  is_integer_constant(node->lhs->rhs,&val2)) {
+        new = new_copy(node->lhs);
+        new->rhs = new_num(val-val2,node->tok);
+        new->rhs->ty = node->lhs->rhs->ty;
+        return new;
+      }
     }
     if (node->lhs->kind == ND_CAST
     &&  node->lhs->ty->kind == TY_PTR
@@ -330,8 +346,56 @@ Node *optimize_expr(Node *node)
       new->lhs->ty = node->lhs->lhs->ty;
       return new;
     }
+    if (node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->lhs,&val)
+    &&  is_integer_constant(node->rhs,&val2)) {
+      new = new_copy(node->lhs);
+      new->lhs = new_num(val+val2,node->rhs->tok);
+      new->lhs->ty = node->rhs->ty;
+      return new;
+    }
+
     return node;
   } // ND_ADD
+  case ND_SUB: {
+    int64_t val;
+    int64_t val2;
+    Node *new;
+
+    if (is_integer_constant(node->lhs,&val)
+    &&  is_integer_constant(node->rhs,&val2)) {
+      return optimize_const_expr(node);
+    }
+    if (is_integer_constant(node->rhs,&val)) {
+      if (node->lhs->kind == ND_ADD
+      &&  is_integer_constant(node->lhs->rhs,&val2)) {
+        new = new_copy(node->lhs);
+        new->rhs = new_num(val2-val,node->tok);
+        new->rhs->ty = node->lhs->rhs->ty;
+        return new;
+      }
+      if (node->lhs->kind == ND_SUB
+      &&  is_integer_constant(node->lhs->rhs,&val2)) {
+        new = new_copy(node->lhs);
+        new->rhs = new_num(val+val2,node->tok);
+        new->rhs->ty = node->lhs->rhs->ty;
+        return new;
+      }
+    }
+    if (node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->lhs,&val)
+    &&  node->rhs->kind == ND_CAST
+    &&  node->rhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->rhs->lhs,&val2)) {
+      new = new_copy(node->lhs);
+      new->lhs = new_num(val-val2,node->tok);
+      new->lhs->ty = node->lhs->lhs->ty;
+      return new;
+    }
+    return node;
+  }
   case ND_MUL: {
     int64_t val;
 
@@ -343,7 +407,6 @@ Node *optimize_expr(Node *node)
 
     return node;
   } // ND_MUL
-  case ND_SUB:
   case ND_DIV:
   case ND_MOD: {
     int64_t val;
