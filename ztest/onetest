@@ -5,6 +5,7 @@ OPT="-v -I. -DTEST"
 
 OPT_O="-Os"
 OPT_g=""
+
 while true; do
   case "$1" in
   -O0|-O1|-O2|-Os)
@@ -26,8 +27,9 @@ CCRUN="../chibicc $OPT $OPT_O $OPT_g "
 s=$(basename $1 .c)
 shift
 echo  "compiling:" $s
-echo $CCRUN -o $s.bin $s.c common.c $@
-$CCRUN -o $s.bin $s.c common.c $@
+grep -q -e "float" -e "double" $s.c && OPT_lm="-lm" || OPT_lm=""
+echo $CCRUN -o $s.bin $s.c common.c $@ $OPT_lm
+$CCRUN -o $s.bin $s.c common.c $@ $OPT_lm
 err=$?
 $CCRUN -S $s.c
 if [ $err -ne 0 ] ; then
