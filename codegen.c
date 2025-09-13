@@ -3908,8 +3908,10 @@ void gen_expr(Node *node) {
         gen_addr(node);
         load(ty_uint);
       }
-      println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s %d",
-		      mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
+      println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s, %s %d",
+		      mem->bit_width, mem->bit_offset,
+          (mem->ty->is_unsigned? "u": "i"),
+          __FILE__, __LINE__);
 //    println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
       gen_shr(ty_uint, mem->bit_offset);
       unsigned int mask = (unsigned int)(1L << mem->bit_width) - 1;
@@ -3982,8 +3984,10 @@ void gen_expr(Node *node) {
       // If the lhs is a bitfield, we need to read the current value
       // from memory and merge it with a new value.
       Member *mem = node->lhs->member;
-      println("; bitfieled node->ty->size=%d, mem->bit_width=%d, mem->bit_offset=%d, %s %d",
-		      node->ty->size,mem->bit_width, mem->bit_offset, __FILE__, __LINE__);
+      println("; bitfieled mem->ty->size=%d, mem->bit_width=%d, mem->bit_offset=%d, %s, %s %d",
+		      mem->ty->size,mem->bit_width, mem->bit_offset,
+          (mem->ty? (mem->ty->is_unsigned? "u": "i"):"null"),
+          __FILE__, __LINE__);
       and_i((unsigned short)(1L << mem->bit_width) - 1);
       gen_shl(ty_uint,mem->bit_offset);
       uint16_t mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
