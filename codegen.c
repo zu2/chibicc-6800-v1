@@ -1949,6 +1949,7 @@ static void builtin_alloca(void) {
 static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
 {
   int64_t val;
+  int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
 
   switch(node->kind){
   case ND_NUM: {
@@ -2000,7 +2001,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
             return node->ty->is_unsigned;
           }
           println("\t%s %d,x",opb,off);
-          if (strcmp(opb,"stab") && opa) {
+          if (!is_store && opa) {
             println("\t%s #0",opa);
           }
         }else{
@@ -2017,7 +2018,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
 //          return 0;
         if (test) return 1;
         if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL) {
-   	      if (!strcmp(opb,"stab")) {
+   	      if (is_store) {
             println("\t%s _%s",opb,node->var->name);
             return 1;
           }
@@ -3793,6 +3794,12 @@ void gen_expr(Node *node) {
       return;
     }
     if (can_direct(lhs) && lhs->ty->size <= 2) {
+      if (node->retval_unused && is_integer_constant(rhs, &val)) {
+        if (val==0) {
+          gen_direct(lhs,"clr","clr");
+          return;
+        }
+      }
       gen_expr(rhs);
       gen_direct(lhs,"stab","staa");
       return;
