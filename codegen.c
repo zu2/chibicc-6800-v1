@@ -821,7 +821,7 @@ static void gen_addr(Node *node)
   error_tok(node->tok, "not an lvalue");
 }
 
-static int ldx_x(Type *ty,int off);
+int ldx_x(Type *ty,int off);
 int gen_expr_x(Node *node,bool save_d);
 bool test_expr_x(Node *node);
 
@@ -1239,7 +1239,7 @@ bool can_load_x(Type *ty)
   return is_integer(ty);
 }
 
-static int ldx_x(Type *ty,int off)
+int ldx_x(Type *ty,int off)
 {
   if (can_load_x(ty)) {
     println("\tldx %d,x",off);
@@ -2012,9 +2012,18 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
           ldd_i((uint16_t)node->val);
         }
       } else {
-        println("\t%s #<%u", opb, (uint16_t)node->val);
-        if (opa)
-          println("\t%s #>%u", opa, (uint16_t)node->val);
+        if (!((!strcmp(opa,"oraa") && ((uint16_t)node->val & 0x00ff)==0))
+        &&  !((!strcmp(opa,"anda") && ((uint16_t)node->val & 0x00ff)==0xff))
+        &&  !((!strcmp(opa,"eora") && ((uint16_t)node->val & 0x00ff)==0))){
+          println("\t%s #<%u", opb, (uint16_t)node->val);
+        }
+        if (opa) {
+          if (!((!strcmp(opa,"oraa") && ((uint16_t)node->val & 0xff00)==0))
+          &&  !((!strcmp(opa,"anda") && ((uint16_t)node->val & 0xff00)==0xff00))
+          &&  !((!strcmp(opa,"eora") && ((uint16_t)node->val & 0xff00)==0))){
+            println("\t%s #>%u", opa, (uint16_t)node->val);
+          }
+        }
       }
       return 1;
     default:
@@ -2982,7 +2991,13 @@ static void opeq(Node *node)
     case TY_ENUM:
     case TY_PTR:
       if (test_addr_x(node->lhs)) {
-        if (is_integer_constant(node->rhs,&val)) {
+        Node *rhs = node->rhs;
+        if (node->ty->kind == TY_PTR
+        &&  rhs->kind == ND_CAST
+        &&  rhs->ty->kind == TY_PTR) {
+          rhs = rhs->lhs;
+        }
+        if (is_integer_constant(rhs,&val)) {
           int off = gen_addr_x(node->lhs,true);
           println("\tldab %d,x",off+1);
           println("\tldaa %d,x",off);
@@ -3363,6 +3378,24 @@ static void opeq(Node *node)
       if (test_addr_x(node->lhs)) {
         if (is_integer_constant(node->rhs, &val)){
           int off = gen_addr_x(node->lhs,true);
+          if (node->retval_unused && val<=2) {
+            if (node->kind == ND_SHLEQ) {
+              for (int i=0; i<val; i++) {
+                println("\tasl %d,x",off);
+              }
+              return;
+            }else if (node->lhs->ty->is_unsigned) {  // ND_SHREQ && unsigned
+              for (int i=0; i<val; i++) {
+                println("\tlsr %d,x",off);
+              }
+              return;
+            }else{                                   // ND_SHREQ && signed
+              for (int i=0; i<val; i++) {
+                println("\tasr %d,x",off);
+              }
+              return;
+            }
+          }
           println("\tldab %d,x",off);
           if (val==0) {
             return;
@@ -3871,6 +3904,15 @@ void gen_expr(Node *node) {
     return;
   } // ND_PRE_INCDEC
   case ND_NEG:
+    if (node->ty->kind==TY_SHORT
+    ||  node->ty->kind==TY_INT) {
+      if (can_direct(node->lhs)) {
+        println("\tclrb");
+        println("\tclra");
+        gen_direct(node->lhs,"subb","sbca");
+        return;
+      }
+    }
     gen_expr(node->lhs);
 
     switch (node->ty->kind) {
@@ -4909,8 +4951,13 @@ void gen_expr(Node *node) {
   case ND_GE:
     if (can_direct(node->rhs)){
       gen_expr(node->lhs);
-      if(!gen_direct(node->rhs,"subb","sbca"))
+      int64_t val;
+
+      if (is_integer_constant(node->rhs, &val) && val==0){
+        println("\ttsta");
+      }else if(!gen_direct(node->rhs,"subb","sbca")) {
         assert(0);
+      }
     }else{
       gen_expr(node->rhs);
       push();

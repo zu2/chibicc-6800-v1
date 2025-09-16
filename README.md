@@ -113,7 +113,7 @@ This will compile the source file and execute the resulting binary using the emu
 
 ## Integer Operations
 - **Dhrystone benchmark:** 234 seconds at 1MHz on MC6800, equivalent to approximately 0.05 DMIPS.
-  - Improve: 108.45 seconds, 0.08 DMIPS (2025/08/09).
+  - Improve: 183.56 seconds, 0.062 DMIPS (2025/09/17).
 - **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks
 /dhrystone21/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21)
 

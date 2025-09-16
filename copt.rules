@@ -86,6 +86,10 @@
 	stab %2
 	staa %1
 
+	stab %1
+	ldab %1
+=
+	stab %1
 
 #
 #
@@ -117,6 +121,30 @@
 =
 	stab %1
 
+	ldaa %1
+	tsta
+=
+	ldaa %1
+
+	staa %1
+	tsta
+=
+	staa %1
+
+	anda %1
+	tsta
+=
+	anda %1
+
+	oraa %1
+	tsta
+=
+	oraa %1
+
+	eora %1
+	tsta
+=
+	eora %1
 
 	jsr __load8u
 	tstb
@@ -687,3 +715,9 @@
 =
 	clra
 	ldab %1,x
+
+	ora #0
+	stab %1
+=
+	stab %1
+

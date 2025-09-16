@@ -265,6 +265,17 @@ bool gen_jump_if_false(Node *node, char *if_false)
       return 1;
     }
   }
+#if 1
+  if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR)
+  && test_expr_x(node)) {
+    int off = gen_expr_x(node,true);
+//  off = ldx_x(node->ty,off);
+//  println("\tldx %d,x", off);
+    println("\tjeq %s", if_false);
+    IX_Dest = IX_None;
+    return 1;
+  }
+#endif
 
   if (node->kind == ND_LOGOR) {
     gen_jump_if_true(node->lhs, if_thru);
@@ -776,6 +787,17 @@ bool gen_jump_if_true(Node *node, char *if_true)
       return 1;
     }
   }
+#if 1
+  if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR)
+  && test_expr_x(node)) {
+    int off = gen_expr_x(node,true);
+//  off = ldx_x(node->ty,off);
+//  println("\tldx %d,x", off);
+    println("\tjne %s", if_true);
+    IX_Dest = IX_None;
+    return 1;
+  }
+#endif
 
   if (!is_compare(node)) {
     goto fallback;
