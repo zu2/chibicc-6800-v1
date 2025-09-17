@@ -287,8 +287,10 @@ static void ast_dump(Node *node)
       break;
     case TY_CHAR:
     case TY_SHORT:
-    case TY_INT:
     case TY_LONG:
+      printout("(ND_NUM %s %ld)", type_str(node->ty),node->val);
+      break;
+    case TY_INT:
       printout("%ld", node->val);
       break;
     case TY_FLOAT:
