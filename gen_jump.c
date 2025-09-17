@@ -289,7 +289,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     return true;
   }
 
-  if (!is_compare(node) || (node->ty->kind != TY_INT)) {
+  if (!is_compare(node)) {
     gen_expr(node);
     cmp_zero(node->ty);
     println("\tjeq %s", if_false);

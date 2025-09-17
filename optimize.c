@@ -466,6 +466,7 @@ Node *optimize_expr(Node *node)
     Type *lty, *rty;
 
     node = optimize_lr(node);
+#if 1
 // (== ty_int (ND_CAST TY_INT(4) (ND_DEREF ty_uchar (ND_VAR TY_PTR(10) str +4 ))) 45) 
     if ( (lty=is_byte(node->lhs))
     &&   (rty=is_byte(node->rhs)) ) {
@@ -484,16 +485,19 @@ Node *optimize_expr(Node *node)
             rhs->ty = ty_uchar;
             node->lhs = lhs;
             node->rhs = rhs;
+            node->ty = ty_uchar;
           }
         }else{
           if (val >= -128 && val <= 127) {
             rhs->ty = ty_char;
             node->lhs = lhs;
             node->rhs = rhs;
+            node->ty = ty_char;
           }
         }
       }
     }
+#endif
     if ( is_integer(node->ty)
     &&  node->kind==ND_LE
     && is_integer_constant(node->rhs,&val)) {

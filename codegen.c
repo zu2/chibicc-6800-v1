@@ -249,6 +249,8 @@ static void store32x(int off)
 }
 
 static char *helper_savex[] = {
+  "__eq8","__ne8", "__lt8s", "__lt8u", "__gt8s", "__gt8u",
+  "__le8s", "__le8u", "__ge8s", "__ge8u",
   "__eq16","__ne16", "__lt16s", "__lt16u", "__gt16s", "__gt16u",
   "__le16s", "__le16u", "__ge16s", "__ge16u",
   NULL
@@ -2012,15 +2014,15 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
           ldd_i((uint16_t)node->val);
         }
       } else {
-        if (!((!strcmp(opa,"oraa") && ((uint16_t)node->val & 0x00ff)==0))
-        &&  !((!strcmp(opa,"anda") && ((uint16_t)node->val & 0x00ff)==0xff))
-        &&  !((!strcmp(opa,"eora") && ((uint16_t)node->val & 0x00ff)==0))){
+        if (!((!strcmp(opb,"orab") && ((uint16_t)node->val & 0x00ff)==0))
+        &&  !((!strcmp(opb,"andb") && ((uint16_t)node->val & 0x00ff)==0xff))
+        &&  !((!strcmp(opb,"eorb") && ((uint16_t)node->val & 0x00ff)==0))){
           println("\t%s #<%u", opb, (uint16_t)node->val);
         }
         if (opa) {
-          if (!((!strcmp(opa,"oraa") && ((uint16_t)node->val & 0xff00)==0))
-          &&  !((!strcmp(opa,"anda") && ((uint16_t)node->val & 0xff00)==0xff00))
-          &&  !((!strcmp(opa,"eora") && ((uint16_t)node->val & 0xff00)==0))){
+          if (!((!strcmp(opb,"orab") && ((uint16_t)node->val & 0xff00)==0))
+          &&  !((!strcmp(opb,"andb") && ((uint16_t)node->val & 0xff00)==0xff00))
+          &&  !((!strcmp(opb,"eorb") && ((uint16_t)node->val & 0xff00)==0))){
             println("\t%s #>%u", opa, (uint16_t)node->val);
           }
         }
@@ -2036,12 +2038,14 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
         if (node->ty->kind==TY_ARRAY) {
           if (test) return true;
           println("\t%s @bp+1",opb);
-          println("\t%s @bp",opa);
+          if (opa)
+            println("\t%s @bp",opa);
           if (strcmp(opb,"addb")==0 && node->var->offset==0) {
             return 1;
           }
           println("\t%s #<%d",opb,node->var->offset);
-          println("\t%s #>%d",opa,node->var->offset);
+          if (opa)
+            println("\t%s #>%d",opa,node->var->offset);
           return 1;
         }
         if (!test_addr_x(node)) return 0;
@@ -2057,7 +2061,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
         }else{
           if (test) return 1;
           println("\t%s %d,x",opb,off+1);
-          println("\t%s %d,x",opa,off);
+          if (opa)
+            println("\t%s %d,x",opa,off);
         }
         return 1;
       }else{
@@ -2079,11 +2084,13 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
 	      }
         if (node->ty->kind==TY_ARRAY) {
           println("\t%s #<_%s",opb,node->var->name);
-          println("\t%s #>_%s",opa,node->var->name);
+          if (opa)
+            println("\t%s #>_%s",opa,node->var->name);
 	        return 1;
         }
         println("\t%s _%s+1",opb,node->var->name);
-        println("\t%s _%s",opa,node->var->name);
+        if (opa)
+          println("\t%s _%s",opa,node->var->name);
         return 1;
       }
     }
@@ -2140,10 +2147,12 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
         case TY_PTR:
           if (val==0) {
             println("\t%s _%s+1",opb,lhs->lhs->var->name);
-            println("\t%s _%s",  opa,lhs->lhs->var->name);
+            if (opa)
+              println("\t%s _%s",  opa,lhs->lhs->var->name);
           }else{
             println("\t%s _%s+%ld+1",opb,lhs->lhs->var->name,val);
-            println("\t%s _%s+%ld",  opa,lhs->lhs->var->name,val);
+            if (opa)
+              println("\t%s _%s+%ld",  opa,lhs->lhs->var->name,val);
           }
           return 1;
         }
@@ -2169,10 +2178,12 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
           if (test) return 1;
           if (val==0) {
             println("\t%s _%s+1",opb,lhs->var->name);
-            println("\t%s _%s",  opa,lhs->var->name);
+            if (opa)
+              println("\t%s _%s",  opa,lhs->var->name);
           }else{
             println("\t%s _%s+%ld+1",opb,lhs->var->name,val);
-            println("\t%s _%s+%ld",  opa,lhs->var->name,val);
+            if (opa)
+              println("\t%s _%s+%ld",  opa,lhs->var->name,val);
           }
           return 1;
         }
@@ -4949,6 +4960,45 @@ void gen_expr(Node *node) {
   case ND_LE:
   case ND_GT:
   case ND_GE:
+    if ((node->rhs->kind ==ND_NUM)
+    &&  (node->rhs->ty->kind != TY_INT)
+    &&  (node->lhs->ty->kind != node->rhs->ty->kind)
+    &&  (node->lhs->ty->size != node->rhs->ty->size)) {
+//    ast_node_dump(node);
+//    println("; Type mismatch between lhs and rhs");
+      error_tok(node->tok, "Type mismatch between lhs and rhs");
+    }
+    if (node->ty->kind==TY_CHAR) { // char op char
+      if (can_direct(node->rhs)){
+        gen_expr(node->lhs);
+        if(!gen_direct(node->rhs,"cmpb",NULL)) {
+          assert(0);
+        }
+      }else{
+        gen_expr(node->rhs);
+        push1();
+        gen_expr(node->lhs);
+        println("\tpula");
+        println("\tcba");
+      }
+      if (node->kind == ND_EQ) {
+        println("\tjsr __eq8");
+      } else if (node->kind == ND_NE) {
+        println("\tjsr __ne8");
+      } else if (node->kind == ND_LT) {
+        if (node->lhs->ty->is_unsigned)
+          println("\tjsr __lt8u");
+        else
+          println("\tjsr __lt8s");
+      } else if (node->kind == ND_LE) {
+        if (node->lhs->ty->is_unsigned)
+          println("\tjsr __le8u");
+        else
+          println("\tjsr __le8s");
+      }
+      return;
+    }
+    // may be TY_INT
     if (can_direct(node->rhs)){
       gen_expr(node->lhs);
       int64_t val;
