@@ -4858,21 +4858,32 @@ void gen_expr(Node *node) {
         switch (node->rhs->ty->kind) {
         case TY_INT:
         case TY_SHORT:
-          switch(node->rhs->val){
-          case 2:
-            gen_expr(node->lhs);
-            if (node->lhs->ty->is_unsigned){
-              println("\tasra");
-              println("\trorb");
-            }else{
+          if (node->lhs->ty->is_unsigned){
+            switch(node->rhs->val){
+            case 2:
+            case 4:
+            case 8:
+            case 16:
+              gen_expr(node->lhs);
+              for (int i=node->rhs->val; i>0; i-=2) {
+                println("\tlsra");
+                println("\trorb");
+              }
+              return;
+            }
+          }else{
+            switch(node->rhs->val){
+            case 2:
+              gen_expr(node->lhs);
+              println("; ND_DIV???");
               println("\tasra");
               println("\trola");
               println("\tadcb #0");
               println("\tadca #0");
               println("\tasra");
               println("\trorb");
+              return;
             }
-            return;
           }
         }
       }
