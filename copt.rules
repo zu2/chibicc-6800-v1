@@ -676,7 +676,6 @@
 	ldaa %1
 	aslb
 	rola
-	
 
 	clra
 	asrb
