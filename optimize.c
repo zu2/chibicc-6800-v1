@@ -305,9 +305,27 @@ Node *optimize_expr(Node *node)
     node =  optimize_l(node);
     return optimize_const_expr(node);
   // Below is a binary operator
-  case ND_LOGAND:
+  case ND_LOGAND: {
+    node = optimize_lr(node);
+    if (is_integer(node->lhs->ty)
+    &&  is_integer_constant(node->lhs,&val)
+    &&  node->lhs->ty == ty_int
+    &&  val==0) {
+      node = new_num(0,node->tok);
+      node->ty = ty_int;
+      return node;
+    }
+    return optimize_const_expr(node);
+  }
   case ND_LOGOR:
     node = optimize_lr(node);
+    if (is_integer(node->lhs->ty)
+    &&  is_integer_constant(node->lhs,&val)
+    &&  node->lhs->ty == ty_int
+    &&  val!=0) {
+      node = node->rhs;
+      return node;
+    }
     return optimize_const_expr(node);
   case ND_ADD: {
     int64_t val;
@@ -463,9 +481,42 @@ Node *optimize_expr(Node *node)
   case ND_GT:
   case ND_GE: {
     int64_t val;
+    int64_t lval, rval;
     Type *lty, *rty;
 
     node = optimize_lr(node);
+  
+    if (is_integer_constant(node->lhs,&lval)
+    &&  is_integer_constant(node->rhs,&rval)) {
+      if ((node->lhs->ty == ty_int) && (node->rhs->ty == ty_int)) {
+        switch(node->kind) {
+        case ND_EQ:
+          node = new_num(lval==rval,node->tok);
+          node->ty = ty_int;
+          return node;
+        case ND_NE:
+          node = new_num(lval!=rval,node->tok);
+          node->ty = ty_int;
+          return node;
+        case ND_LT:
+          node = new_num(lval<rval,node->tok);
+          node->ty = ty_int;
+          return node;
+        case ND_LE:
+          node = new_num(lval<=rval,node->tok);
+          node->ty = ty_int;
+          return node;
+        case ND_GT:
+          node = new_num(lval>rval,node->tok);
+          node->ty = ty_int;
+          return node;
+        case ND_GE:
+          node = new_num(lval>=rval,node->tok);
+          node->ty = ty_int;
+          return node;
+        }
+      }
+    }
 #if 1
 // (== ty_int (ND_CAST TY_INT(4) (ND_DEREF ty_uchar (ND_VAR TY_PTR(10) str +4 ))) 45) 
     if ( (lty=is_byte(node->lhs))
