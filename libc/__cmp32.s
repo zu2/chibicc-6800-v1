@@ -78,6 +78,7 @@ __ret:
 	ins
 	ins
 	ins
+        tstb                    ; Test AccB for comparison after return
 	jmp	0,x
 __sublt:			; @long - TOS only cc affected
 	tsx
