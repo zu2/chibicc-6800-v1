@@ -894,6 +894,48 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     }
     return 0;
   } // ND_DEREF
+  case ND_POST_INCDEC:
+    if (lhs->kind==ND_VAR) {
+      if (is_global_var(lhs)) {
+        char *var = lhs->var->name;
+        int64_t val;
+        if (is_integer_constant(node->rhs,&val)) {
+          switch(val) {
+          case 1:
+          case 2:
+            if (test) return true;
+            println("\tldx _%s",var);
+            println("\tinx");
+            if (val==2) {
+              println("\tinx");
+            }
+            println("\tstx _%s",var);
+            println("\tdex");
+            if (val==2) {
+              println("\tdex");
+            }
+            IX_Dest = IX_VAR;
+            return 0;
+          case -1:
+          case -2:
+            if (test) return true;
+            println("\tldx _%s",var);
+            println("\tdex");
+            if (val==2) {
+              println("\tdex");
+            }
+            println("\tstx _%s",var);
+            println("\tinx");
+            if (val==2) {
+              println("\tinx");
+            }
+            IX_Dest = IX_VAR;
+            return 0;
+          }
+        }
+      }
+    }
+    return false;
   case ND_ADDR: {
     if (test_addr_x(lhs)) {
       if (test) return true;
@@ -1026,6 +1068,11 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     IX_Dest = IX_None;
     return 0;
   case ND_DEREF:
+    if (0 && test_expr_x(node)) {
+      if (test) return true;
+      off = gen_expr_x(node,false);
+      return off;
+    }
     if (!test_expr_x(node->lhs)) {
       return 0;
     }
@@ -1190,7 +1237,7 @@ static void load(Type *ty) {
     if (opt_O == '2') {
       println("\tstab @tmp1+1");
       println("\tstaa @tmp1");
-      println("\tldx  @tmp1");
+      println("\tldx @tmp1");
       println("\tclra");
       println("\tldab 0,x");
       if (!ty->is_unsigned) {
@@ -1208,7 +1255,7 @@ static void load(Type *ty) {
     if (opt_O == '2') {
       println("\tstab @tmp1+1");
       println("\tstaa @tmp1");
-      println("\tldx  @tmp1");
+      println("\tldx @tmp1");
       println("\tldab 1,x");
       println("\tldaa 0,x");
     }else{
@@ -2157,8 +2204,6 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
           return 1;
         }
       }
-      // (ND_DEREF ty_int (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) perm1 global) 0)
-      //                                   lhs                               rhs
       if (is_global_array(lhs)
       &&  is_integer_constant(rhs,&val)) {
         switch(node->ty->kind) {
@@ -3096,10 +3141,10 @@ static void opeq(Node *node)
     return;
   }
   case ND_DIVEQ: {
-    gen_addr(node->lhs);
-    push();
     switch(node->ty->kind) {
     case TY_FLOAT:
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       pushl();
       println("\ttsx");
@@ -3110,6 +3155,8 @@ static void opeq(Node *node)
       depth -= 4;
       break;
     case TY_LONG:
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       pushl();
       println("\ttsx");
@@ -3125,6 +3172,8 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       push();
       println("\ttsx");
@@ -3142,6 +3191,64 @@ static void opeq(Node *node)
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
+      if (node->lhs->ty->is_unsigned) {
+        if (is_integer_constant(node->rhs, &val)){
+          switch(val) {
+          case 8:
+          case 4:
+          case 2:
+            if (is_global_var(node->lhs)) {
+              while(val>1) {
+                println("\tlsr #_%s",  node->lhs->var->name);
+                println("\tror #_%s+1",node->lhs->var->name);
+                val /= 2;
+              }
+            }else{
+              int off = gen_addr_x(node->lhs,false);
+              while(val>1) {
+                println("\tlsr %d,x",off);
+                println("\tror %d,x",off+1);
+                val /= 2;
+              }
+              IX_Dest = IX_None;
+            }
+            return;
+          }
+        }
+      }else if (is_integer_constant(node->rhs, &val)){
+        switch(val){
+        case 2:
+          if (is_global_var(node->lhs)) {
+            println("\tldab #_%s+1",node->lhs->var->name);
+            println("\tldaa #_%s",  node->lhs->var->name);
+            println("\tasra");
+            println("\trola");
+            println("\tadcb #0");
+            println("\tadca #0");
+            println("\tasra");
+            println("\trorb");
+            println("\tstab #_%s+1",node->lhs->var->name);
+            println("\tstaa #_%s",  node->lhs->var->name);
+            return;
+          }else if (test_addr_x(node->lhs)) {
+            int off = gen_addr_x(node->lhs,false);
+            println("\tldab %d,x",off+1);
+            println("\tldaa %d,x",off);
+            println("\tasra");
+            println("\trola");
+            println("\tadcb #0");
+            println("\tadca #0");
+            println("\tasra");
+            println("\trorb");
+            println("\tstab %d,x",off+1);
+            println("\tstaa %d,x",off);
+            IX_Dest = IX_None;
+            return;
+          }
+        }
+      }
+      gen_addr(node->lhs);
+      push();
       gen_expr(node->rhs);
       push();
       println("\ttsx");
