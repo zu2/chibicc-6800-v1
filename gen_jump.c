@@ -250,6 +250,24 @@ bool gen_jump_if_false(Node *node, char *if_false)
     return gen_jump_if_true(node->lhs, if_false);
   }
 
+  if (is_integer_or_ptr(node->ty) && node->ty->size == 2) {
+//  println("; gen_jump_if_false is_integer_or_ptr && node->ty->size == 2");
+    if (test_expr_x(node)) {
+//    println("; test_expr_x(node) ok");
+      gen_expr_x(node,false);
+      println("\tjeq %s", if_false);
+      IX_Dest = IX_None;
+      return 1;
+    }
+    if (test_addr_x(node)) {
+//    println("; test_addr_x(node) ok");
+      int off = gen_addr_x(node,false);
+      println("\tldx %d,x", off);
+      println("\tjeq %s", if_false);
+      IX_Dest = IX_None;
+      return 1;
+    }
+  }
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
     if (is_global_var(node)) {
       println("\tldx _%s", node->var->name);
@@ -265,6 +283,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
       return 1;
     }
   }
+
 #if 1
   if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR)
   && test_expr_x(node)) {
@@ -772,6 +791,24 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return true;
   }
 
+  if (is_integer_or_ptr(node->ty) && node->ty->size == 2) {
+//  println("; gen_jump_if_true is_integer_or_ptr && node->ty->size == 2");
+    if (test_expr_x(node)) {
+//    println("; test_expr_x(node) ok");
+      gen_expr_x(node,false);
+      println("\tjne %s", if_true);
+      IX_Dest = IX_None;
+      return 1;
+    }
+    if (test_addr_x(node)) {
+//    println("; test_addr_x(node) ok");
+      int off = gen_addr_x(node,false);
+      println("\tldx %d,x", off);
+      println("\tjne %s", if_true);
+      IX_Dest = IX_None;
+      return 1;
+    }
+  }
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
     if (is_global_var(node)) {
       println("\tldx _%s", node->var->name);
