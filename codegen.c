@@ -2147,17 +2147,18 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
           return 1;
         }
         if (!test_addr_x(node)) return 0;
-        int off = gen_addr_x(node,true);
         if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL){
           if (test) {
             return node->ty->is_unsigned;
           }
+          int off = gen_addr_x(node,true);
           println("\t%s %d,x",opb,off);
           if (!is_store && opa) {
             println("\t%s #0",opa);
           }
         }else{
           if (test) return 1;
+          int off = gen_addr_x(node,true);
           println("\t%s %d,x",opb,off+1);
           if (opa)
             println("\t%s %d,x",opa,off);
@@ -5042,7 +5043,6 @@ void gen_expr(Node *node) {
             switch(node->rhs->val){
             case 2:
               gen_expr(node->lhs);
-              println("; ND_DIV???");
               println("\tasra");
               println("\trola");
               println("\tadcb #0");

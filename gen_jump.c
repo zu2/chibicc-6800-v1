@@ -182,6 +182,13 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
       gen_expr(lhs);
       gen_direct(rhs, "cmpb", NULL);
     }
+  }else if (is_global_var(rhs)) {
+    gen_expr(lhs);
+    println("\tsubb _%s", node->var->name);
+  }else if (test_addr_x(rhs)) {
+    gen_expr(lhs);
+    int off = gen_addr_x(rhs,false);
+    println("\tsubb %d,x",off);
   }else{
     gen_expr(lhs);
     push1();
@@ -704,6 +711,13 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
       gen_expr(lhs);
       gen_direct(rhs, "cmpb", NULL);
     }
+  }else if (is_global_var(rhs)) {
+    gen_expr(lhs);
+    println("\tsubb _%s", node->var->name);
+  }else if (test_addr_x(rhs)) {
+    gen_expr(lhs);
+    int off = gen_addr_x(rhs,false);
+    println("\tsubb %d,x",off);
   }else{
     gen_expr(lhs);
     push1();
