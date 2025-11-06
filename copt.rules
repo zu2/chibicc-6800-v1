@@ -474,13 +474,26 @@
 # post inc/dec
 #
 
+	stab %1+1
+	staa %1
+	subb #<1
+	sbca #>1
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+=
+	stab %1+1
+	staa %1
+	ldx %1
+	dex
+
 	stab %2,x
 	staa %1,x
 	subb #<1
 	sbca #>1
 	stab @tmp1+1
 	staa @tmp1
-	ldx  @tmp1
+	ldx @tmp1
 =
 	stab %2,x
 	staa %1,x
@@ -521,6 +534,20 @@
 	ldx %1,x
 	inx
 	ldab 0,x
+
+
+	stab %1+1
+	staa %1
+	subb #<1
+	sbca #>1
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+=
+	stab %1+1
+	staa %1
+	ldx %1
+	inx
 
 
 	stab %2,x
@@ -720,3 +747,38 @@
 =
 	stab %1
 
+	jsr __eq%1
+	aba
+	adca #0
+=
+	jsr __eq%1
+
+	jsr __ne%1
+	aba
+	adca #0
+=
+	jsr __ne%1
+
+	jsr __gt%1
+	aba
+	adca #0
+=
+	jsr __gt%1
+
+	jsr __ge%1
+	aba
+	adca #0
+=
+	jsr __ge%1
+
+	jsr __lt%1
+	aba
+	adca #0
+=
+	jsr __lt%1
+
+	jsr __le%1
+	aba
+	adca #0
+=
+	jsr __le%1
