@@ -135,7 +135,7 @@ This will compile the source file and execute the resulting binary using the emu
 - Despite the slow function prologue and epilogue, overall performance remains high.
 - For `char` and `int`, direct branching is generated without relying on subroutines.
 - For `long`, optimized subroutines are used for comparison, providing relatively fast execution.
-- Recursive functions such as Ackermann ([`9005-ack.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9005-ack.c)) and Takeuchi's tarai ([`9100-tarai.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9100-tarai.c)) run efficiently, even with the overhead of function call setup and teardown.
+- Recursive functions such as Ackermann ([`9005-ack.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9005-ack.c)) and Takeuchi's tarai ([`9100-tarai.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9100-tarai.c)) run efficiently, even with the overhead of function prologue and epilogue.
 
 ## Details of Integer Arithmetic
 
@@ -251,7 +251,7 @@ For example, sign-extend int to long.
 L1: stx @hireg
 ```
 
-all bytes on zero page.
+all bytes on zero page (chibicc-6800).
 
 ```
     ldx #0
