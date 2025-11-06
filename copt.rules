@@ -704,6 +704,22 @@
 	aslb
 	rola
 
+# sign extend by excess 128
+
+	clra
+	asrb
+	rolb
+	sbca #0
+	addb #<%1
+	adca #>%2
+=
+	clra
+	eorb #$80
+	addb #<%1+$ff80
+	adca #>%2+$ff80
+
+# sign extend by excess 127
+
 	clra
 	asrb
 	rolb
