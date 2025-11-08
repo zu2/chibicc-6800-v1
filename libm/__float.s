@@ -687,6 +687,7 @@ __u16ffff:
 ;	→	= @long + (-TOS)
 ;
 __load32x_subf:
+__subf32x:
 	jsr	__load32x
 __subf32tos:
 	tsx

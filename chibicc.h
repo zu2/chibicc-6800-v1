@@ -127,6 +127,7 @@ int64_t eval(Node *node);
 Node *new_copy(Node *node);
 Node *new_num(int64_t val, Token *tok);
 bool is_const_expr(Node *node);
+char *new_unique_name(void);
 
 // Variable or function
 typedef struct Obj Obj;

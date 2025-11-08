@@ -2364,6 +2364,12 @@ static int gen_direct_long_and(int64_t v,char *opa, char *opb){
   uint32_t v3 = v & 0x00FF0000;
   uint32_t v4 = v & 0xFF000000;
 
+  if (opt_O == 's') {
+    println("\tjsr __and32i");
+    println("\t.word %u",(v & 0xFFFF0000)>>16);
+    println("\t.word %u",(v & 0x0000FFFF));
+    return;
+  }
   if (v1==0){
     println("\tclr @long+3");
   }else if (v1 != 0x000000FF){
@@ -2403,6 +2409,12 @@ static int gen_direct_long_or(uint64_t v,char *opa, char *opb){
   uint32_t v4 = v & 0xFF000000;
   bool b_is_ff = 0;
 
+  if (opt_O == 's') {
+    println("\tjsr __or32i");
+    println("\t.word %lu",(v & 0xFFFF0000)>>16);
+    println("\t.word %lu",(v & 0x0000FFFF));
+    return;
+  }
   if (v1==0x000000FF) {
     println("\tldab #$FF");
     println("\tstab @long+3");
@@ -2454,6 +2466,12 @@ static int gen_direct_long_xor(uint64_t v,char *opa, char *opb){
   uint32_t v3 = v & 0x00FF0000;
   uint32_t v4 = v & 0xFF000000;
 
+  if (opt_O == 's') {
+    println("\tjsr __xor32i");
+    println("\t.word %lu",(v & 0xFFFF0000)>>16);
+    println("\t.word %lu",(v & 0x0000FFFF));
+    return;
+  }
   if (v1) {
     println("\tldab @long+3");
     println("\t%s #%u", opb, v1);
@@ -3385,6 +3403,35 @@ static void opeq(Node *node)
   case ND_XOREQ: {
     switch(node->ty->kind) {
     case TY_LONG:
+#if 1
+      if (test_addr_x(node->lhs) && can_direct_long(node->lhs)){
+        gen_expr(node->rhs);
+        println("; can_direct ok");
+        switch (node->kind){
+        case ND_ANDEQ:
+          if (!gen_direct_long(node->lhs,"andb","anda")){
+            assert(0);
+          }
+          break;
+        case ND_OREQ:
+          if (!gen_direct_long(node->lhs,"orb","ora")){
+            assert(0);
+          }
+          break;
+        case ND_XOREQ:
+          if (!gen_direct_long(node->lhs,"eorb","eora")){
+            assert(0);
+          }
+          break;
+        default:
+          assert(0);
+        }
+        int off = gen_addr_x(node->lhs,false);
+        store32x(off);	// if opt_O, destroy IX
+        IX_Dest = IX_None;
+        return;
+      }
+#endif
       gen_addr(node->lhs);
       push();
       gen_expr(node->rhs);
@@ -4769,6 +4816,7 @@ void gen_expr(Node *node) {
     case ND_BITXOR:
       gen_expr(node->lhs);
       if (can_direct_long(node->rhs)){
+        println("; can_direct_long ok");
         if (gen_direct_long(node->rhs,"eorb","eora")){
           return;
         }
