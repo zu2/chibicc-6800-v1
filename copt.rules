@@ -354,16 +354,91 @@
 #
 #	-Os fusion
 #
+
+	jsr __load32x
+	jsr __addf32tos
+=
+	jsr __load32x_addf
+
+	jsr __load32x
+	jsr __subf32tos
+=
+	jsr __load32x_subf
+
+	jsr __load32x
+	jsr __mulf32tos
+=
+	jsr __load32x_mulf
+
+	jsr __load32x
+	jsr __divf32tos
+=
+	jsr __load32x_divf
+
+	jsr __load32x
+	jsr __cmpf32tos
+=
+	jsr __load32x_cmpf
+
+	jsr __store32x
+	jsr __load32x
+=
+	jsr __store32x
+
+	XXX
 	jsr __load32x
 	jsr __push32
 =
 	jsr __load32x_push
 
+
+	XXX
 	jsr __load32bx
 	jsr __push32
 =
 	jsr __load32bx_push
 
+	ldx #%1
+	jsr __store32x
+	ldx #%1
+	jsr __load32x
+=
+	ldx #%1
+	jsr __store32x
+
+	jsr __push32
+	tsx
+	ldx 4,x
+	jsr __load32x
+	jsr __%1tos
+=
+	tsx
+	ldx 0,x
+	jsr __%1x
+
+	jsr __push32
+	ldx %1
+	jsr __load32x
+	jsr __%2tos
+=
+	ldx %1
+	jsr __%2x
+
+	ldx %1
+	jsr __xor32x
+	ldx %1
+=
+	ldx %1
+	jsr __xor32x
+
+	ldx %1
+	jsr __xor32x
+	jsr __store32x
+	ldx %1
+=
+	ldx %1
+	jsr __xor32x
+	jsr __store32x
 
 	ldab #<%1
 	ldaa #>%1
@@ -372,35 +447,6 @@
 	ldab %1+1
 	ldaa %1
 
-
-	jsr __load32x
-	jsr __addf32tos
-=
-	jsr __load32x_addf
-
-
-	jsr __load32x
-	jsr __subf32tos
-=
-	jsr __load32x_subf
-
-
-	jsr __load32x
-	jsr __mulf32tos
-=
-	jsr __load32x_mulf
-
-
-	jsr __load32x
-	jsr __divf32tos
-=
-	jsr __load32x_divf
-
-
-	jsr __load32x
-	jsr __cmpf32tos
-=
-	jsr __load32x_cmpf
 
 #
 #	branch condition
@@ -732,14 +778,6 @@
 	eorb #$7f
 	addb #<$ff81
 	adca #>$ff81
-
-	ldx #%1
-	jsr __store32x
-	ldx #%1
-	jsr __load32x
-=
-	ldx #%1
-	jsr __store32x
 
 #
 #
