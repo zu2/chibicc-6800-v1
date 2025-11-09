@@ -4716,6 +4716,9 @@ void gen_expr(Node *node) {
       union { float f32; uint32_t u32; } u = { node->rhs->fval };
       println("; push float %e, %08x",u.f32,u.u32);
       gen_direct_pushl(u.u32);
+    }else if (test_addr_x(node->rhs)) {
+      int off = gen_addr_x(node->rhs,false);
+      pushlx(off);
     }else{
       gen_expr(node->rhs);	// xmm1
       pushf();
