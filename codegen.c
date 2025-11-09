@@ -1382,7 +1382,7 @@ static void load(Type *ty) {
   // register for char, short and int may contain garbage. When we load
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
-    if (opt_O == '2') {
+    if (opt_O != 's' && opt_O >= '2') {
       println("\tstab @tmp1+1");
       println("\tstaa @tmp1");
       println("\tldx @tmp1");
@@ -1400,7 +1400,7 @@ static void load(Type *ty) {
       println("\tjsr __load8s");
     }
   }else if (ty->size == 2){
-    if (opt_O == '2') {
+    if (opt_O != 's' && opt_O >= '2') {
       println("\tstab @tmp1+1");
       println("\tstaa @tmp1");
       println("\tldx @tmp1");
