@@ -1,10 +1,22 @@
 ;
 ;	long basic library sub32
 ;
+        .export __sub32i
 	.export __sub32x
 	.export __sub32tos
 
 	.code
+;
+;	__sub32i	@long -= #imm
+;
+__sub32i:		; sub 32bit immediate
+	tsx
+	ldx 0,x
+	ins
+	ins
+        bsr __sub32x
+        jmp 4,x
+;
 ;
 ;	__sub32x	@long -= (0-3,x)
 ;

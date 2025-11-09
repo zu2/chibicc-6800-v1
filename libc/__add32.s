@@ -1,11 +1,21 @@
 ;
 ;	long basic library add32
 ;
+	.export __add32i
 	.export __add32x
 	.export __add32tos
 
 	.code
 ;
+;	__add32i	@long += #imm
+;
+__add32i:		; add 32bit immediate
+	tsx
+	ldx 0,x
+	ins
+	ins
+        bsr __add32x
+	jmp  4,x
 ;
 ;	__add32x	@long += (0-3,x)
 ;

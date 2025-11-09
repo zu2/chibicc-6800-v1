@@ -13,6 +13,7 @@
         .export __load32bx_push
 	.export __push32
 	.export __push32x
+	.export __push32bx
 	.export __push32dx
 
 	.code
@@ -28,7 +29,7 @@ __load32i:		; load 32bit immediate
         bsr __load32x
 	jmp  4,x
 ;
-__load32bx:             ; loda 32bit from b,x
+__load32bx:             ; load 32bit from b,x
         clra
 __load32dx:		; load 32bit from d,x
 	jsr  __adx
@@ -89,8 +90,11 @@ __push32:
 	jmp 0,x
 ;
 ;	__push32x	push 0-3,x
-;	__push32x	push d,x
+;	__push32bx	push b,x
+;	__push32dx	push d,x
 ;
+__push32bx:
+        clra
 __push32dx:
 	jsr	__adx
 __push32x:
