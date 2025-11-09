@@ -138,12 +138,29 @@ __i16tof32:
 	;
 __i16tof32_1:
 	staa	__sign
-	bpl	__i16tof32_10
+	bpl	__i16tof32_05
 	nega			; AccAB = -AccAB
 	negb
 	sbca	#0
 	;
-__i16tof32_10:
+__i16tof32_05:
+        bne     __i16tof32_10   ; i32 in ±0〜255
+        ldaa    #$87            ; exp ($86+1), if i32>=128 then exp=$86
+__i16tof32_06:                  ; Shift left until the MSB becomes 1
+        deca
+        aslb
+        bcc     __i16tof32_06 
+;
+        asl     __sign
+        rora
+        rorb
+        stab    @long+1
+        staa    @long
+        clr     @long+3
+        clr     @long+2
+        rts
+;
+__i16tof32_10:                  ; i32 in ±256〜32768
 	stab	@long+2
 	ldab	#$8f		; exp ($8e+1), if i32>=32768 then exp=$8E
 __i16tof32_20:			; Shift left until the MSB becomes 1
