@@ -854,4 +854,14 @@
 	clra
 	ldab %1
 
-
+	jsr __load16
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	jsr 0,x
+=
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	ldx 0,x
+	jsr 0,x
