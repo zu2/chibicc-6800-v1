@@ -46,6 +46,18 @@ bool is_boolean_result(Node *node)
   return false;
 }
 
+bool is_kind_2byte(TypeKind kind)
+{
+  switch(kind) {
+  case TY_INT:
+  case TY_SHORT:
+  case TY_ENUM:
+  case TY_PTR:
+    return true;
+  }
+  return false;
+}
+
 Type *is_byte(Node *node)
 {
   int64_t val;
@@ -291,7 +303,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
   }
 
-  if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR)
+  if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR || node->ty->kind==TY_ENUM)
   && test_expr_x(node)) {
     int off = gen_expr_x(node,true);
     println("\tjeq %s", if_false);
@@ -355,15 +367,14 @@ bool gen_jump_if_false(Node *node, char *if_false)
     goto fallback;
   }
 
-  if (lhs->ty->kind != TY_CHAR && lhs->ty->kind != TY_INT &&
-      lhs->ty->kind != TY_SHORT) {
+  if (!is_kind_2byte(lhs->ty->kind)) {
     goto fallback;
   }
-  if (rhs->ty->kind != TY_CHAR && rhs->ty->kind != TY_INT &&
-      rhs->ty->kind != TY_SHORT) {
+  if (!is_kind_2byte(rhs->ty->kind)) {
     goto fallback;
   }
 
+  // if (expr op 0)
   if (rhs->kind == ND_NUM && rhs->val == 0) {
     if ((lhs->kind == ND_VAR && lhs->var->ty->kind != TY_VLA) &&
         ((lhs->var->is_local && lhs->ty->kind != TY_ARRAY) ||
@@ -482,7 +493,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
         break;
       }
     }
-    // ↑ rhs==0
+    // ↑ if (expr op 0) 
+    // ↓ if (expr op const)
   } else if (rhs->kind == ND_NUM
          &&  (node->kind==ND_EQ || node->kind==ND_NE)
          &&  lhs->kind == ND_VAR && test_addr_x(lhs)) {
@@ -835,7 +847,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     }
   }
 #if 1
-  if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR)
+  if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR || node->ty->kind==TY_ENUM)
   && test_expr_x(node)) {
     int off = gen_expr_x(node,true);
 //  off = ldx_x(node->ty,off);
@@ -858,7 +870,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   }
 
   if (lhs->ty->kind != TY_CHAR && lhs->ty->kind != TY_INT &&
-      lhs->ty->kind != TY_SHORT) {
+      lhs->ty->kind != TY_SHORT && node->ty->kind!=TY_ENUM) {
     goto fallback;
   }
 
