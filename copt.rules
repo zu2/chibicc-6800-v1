@@ -836,3 +836,22 @@
 	adca #0
 =
 	jsr __le%1
+
+#
+
+	ldab #<%1
+	ldaa #>%1
+	jsr __load8u
+	jne %2
+=
+	ldab %1
+	jne %2
+
+	ldab #<%1
+	ldaa #>%1
+	jsr __load8u
+=
+	clra
+	ldab %1
+
+
