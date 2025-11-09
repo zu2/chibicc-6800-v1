@@ -20,7 +20,7 @@ crt0.o: crt0.s
 dummyfloat.o: dummyfloat.s
 	as6800 $^
 
-install:
+install: all
 	mkdir -p /opt/chibicc/bin
 	mkdir -p /opt/chibicc/lib
 	mkdir -p /opt/chibicc/include
