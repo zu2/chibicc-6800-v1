@@ -9,9 +9,9 @@ bool is_compare(Node *node)
   case ND_LE:
   case ND_GT:
   case ND_GE:
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 bool is_compare_or_not(Node *node)
@@ -24,9 +24,9 @@ bool is_compare_or_not(Node *node)
   case ND_GT:
   case ND_GE:
   case ND_NOT:
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 bool is_boolean_result(Node *node)
@@ -41,9 +41,9 @@ bool is_boolean_result(Node *node)
   case ND_NOT:
   case ND_LOGAND:
   case ND_LOGOR:
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 Type *is_byte(Node *node)
@@ -233,7 +233,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     }
     break;
   }
-  return 1;
+  return true;
 }
 
 //
@@ -264,7 +264,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
       gen_expr_x(node,false);
       println("\tjeq %s", if_false);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
     if (test_addr_x(node)) {
 //    println("; test_addr_x(node) ok");
@@ -272,7 +272,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
       println("\tldx %d,x", off);
       println("\tjeq %s", if_false);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
   }
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
@@ -280,28 +280,24 @@ bool gen_jump_if_false(Node *node, char *if_false)
       println("\tldx _%s", node->var->name);
       println("\tjeq %s", if_false);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
     if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
       int off = gen_addr_x(node, false);
       println("\tldx %d,x", off);
       println("\tjeq %s", if_false);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
   }
 
-#if 1
   if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR)
   && test_expr_x(node)) {
     int off = gen_expr_x(node,true);
-//  off = ldx_x(node->ty,off);
-//  println("\tldx %d,x", off);
     println("\tjeq %s", if_false);
     IX_Dest = IX_None;
-    return 1;
+    return true;
   }
-#endif
 
   if (node->kind == ND_LOGOR) {
     gen_jump_if_true(node->lhs, if_thru);
@@ -319,21 +315,21 @@ bool gen_jump_if_false(Node *node, char *if_false)
     gen_expr(node);
     cmp_zero(node->ty);
     println("\tjeq %s", if_false);
-    return 1;
+    return true;
   }
 
   // If one side is ND_NUM, both sides are promoted to int,
   // so this can't be optimized. TODO: Fix optimize.c
   if (is_byte(node->lhs) && is_byte(node->rhs)) {
     if (gen_jump_if_false_8bit(node, if_false)) {
-      return 1;
+      return true;
     }
   }
   Type *lty;
   lty = is_byte(node->lhs);
   if ((lty=is_byte(node->lhs)) &&  lty->is_unsigned &&  is_u8num(node->rhs)) {
     if (gen_jump_if_false_8bit(node, if_false)) {
-      return 1;
+      return true;
     }
   }
 
@@ -354,7 +350,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         println("\ttst %d,x",off);
         println("\tjpl %s", if_false);
       }
-      return 1;
+      return true;
     }
     goto fallback;
   }
@@ -388,45 +384,45 @@ bool gen_jump_if_false(Node *node, char *if_false)
         println("\tldx %s", if_cond);
         println("\tjne %s", if_false);
         IX_Dest = IX_None;
-        return 1;
+        return true;
       case ND_NE:
         println("\tldx %s", if_cond);
         println("\tjeq %s", if_false);
         IX_Dest = IX_None;
-        return 1;
+        return true;
       case ND_LT:
         if (lhs->ty->is_unsigned) {
           println("; uint < 0 is always false");
           println("\tjmp %s", if_false);
-          return 1;
+          return true;
         }
         println("\tldaa %s", if_cond);
         println("\tjpl %s", if_false);
-        return 1;
+        return true;
       case ND_GT:
         if (lhs->ty->is_unsigned) {
           println("; uint > 0 is true for any value other than zero.");
           println("\tldx %s", if_cond);
           println("\tjeq %s", if_false);
           IX_Dest = IX_None;
-          return 1;
+          return true;
         } else {
           println("; int>0 is !(int<0) && !(int==0)");
           println("\tldx %s", if_cond);
           println("\tjmi %s", if_false);
           println("\tjeq %s", if_false);
           IX_Dest = IX_None;
-          return 1;
+          return true;
         }
         break;
       case ND_GE:
         if (lhs->ty->is_unsigned) {
           println("; uint >= 0 is always true");
-          return 1;
+          return true;
         } else {
           println("\tldaa %s", if_cond);
           println("\tjmi %s", if_false);
-          return 1;
+          return true;
         }
         break;
       case ND_LE:
@@ -435,13 +431,13 @@ bool gen_jump_if_false(Node *node, char *if_false)
           println("\tldx %s", if_cond);
           println("\tjne %s", if_false);
           IX_Dest = IX_None;
-          return 1;
+          return true;
         } else {
           println("\tldx %s", if_cond);
           println("\tjmi %s", if_false);
           println("\tjeq %s", if_false);
           IX_Dest = IX_None;
-          return 1;
+          return true;
         }
         break;
       }
@@ -455,7 +451,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         if (lhs->ty->is_unsigned) {
           println("; uint < 0 is always false");
           println("\tjmp %s", if_false);
-          return 1;
+          return true;
         }
         // 'subb #0 / sbca #0' can be substituted with 'tsta'.
         println("\ttsta");
@@ -471,7 +467,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
       case ND_GE:
         if (lhs->ty->is_unsigned) {
           println("; uint >= 0 is always true");
-          return 1;
+          return true;
         } else {
           println("\ttsta");
         }
@@ -510,7 +506,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         }
         println("\tjne %s", if_false);
         IX_Dest = IX_None;
-        return 1;
+        return true;
       case ND_NE:
         println("\tldx %s", if_cond);
         switch(rhs->val){
@@ -528,7 +524,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         }
         println("\tjeq %s", if_false);
         IX_Dest = IX_None;
-        return 1;
+        return true;
       default: ;
         goto fallback;  // It's strange to fail
       }
@@ -643,7 +639,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     //  but not using it may cause risky behavior in the future.
     //  println("\tstb");
     println("\tjne %s", if_true);
-    return 1;
+    return true;
   }
 
   if (node->kind == ND_LOGOR) {
@@ -665,14 +661,14 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
       println("\tldx _%s", node->var->name);
       println("\tjne %s", if_true);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
     if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
       int off = gen_addr_x(node, false);
       println("\tldx %d,x", off);
       println("\tjne %s", if_true);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
   }
 
@@ -762,7 +758,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     }
     break;
   }
-  return 1;
+  return true;
 }
 
 //
@@ -812,7 +808,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
       gen_expr_x(node,false);
       println("\tjne %s", if_true);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
     if (test_addr_x(node)) {
 //    println("; test_addr_x(node) ok");
@@ -820,7 +816,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
       println("\tldx %d,x", off);
       println("\tjne %s", if_true);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
   }
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
@@ -828,14 +824,14 @@ bool gen_jump_if_true(Node *node, char *if_true)
       println("\tldx _%s", node->var->name);
       println("\tjne %s", if_true);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
     if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
       int off = gen_addr_x(node, false);
       println("\tldx %d,x", off);
       println("\tjne %s", if_true);
       IX_Dest = IX_None;
-      return 1;
+      return true;
     }
   }
 #if 1
@@ -846,7 +842,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
 //  println("\tldx %d,x", off);
     println("\tjne %s", if_true);
     IX_Dest = IX_None;
-    return 1;
+    return true;
   }
 #endif
 
@@ -947,10 +943,10 @@ bool gen_jump_if_true(Node *node, char *if_true)
     }
     break;
   }
-  return 1;
+  return true;
 fallback:
   gen_expr(node);
   cmp_zero(node->ty);
   println("\tjne %s", if_true);
-  return 1;
+  return true;
 }
