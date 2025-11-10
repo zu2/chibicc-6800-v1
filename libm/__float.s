@@ -1634,12 +1634,15 @@ __fdiv32x32:
 	ldab @long	; tmp1:AccAB <- @long 24bit
 	stab @tmp1+1
 	ldaa @long+1
+;
+        clrb
+	stab @tmp1
+	stab @long+3	; clear quotient
+	stab @long+1
+	stab @long
+;
 	ldab @long+2
-	clr  @tmp1
-	clr  @long+3	; clear quotient
 	clr  @long+2
-	clr  @long+1
-	clr  @long
 ;
         bra  loop_begin
 ;
@@ -1651,10 +1654,17 @@ loop:
 	rolb		; shift reminder
 	rola
 	rol  @tmp1+1
-	rol  @tmp1
-        bne loop_begin
-        tst @tmp1+1
-        bpl next
+;       rol  @tmp1
+;       bne loop_begin
+;       tst @tmp1+1
+;       bpl next
+        bcs loop_begin_1
+        bmi loop_begin
+        dec @tmp2
+        bne loop
+        rts
+loop_begin_1:
+        rol @tmp1
 loop_begin:
 	subb 4,x	; divient - divisor
 	sbca 3,x
