@@ -96,11 +96,22 @@ __pullret:
 ;
 ;	@long = @long / (2-5,x)
 ;	@tmp1:AccAB = @long % TOS
-;	@tmp2: loop counter
+;	@tmp2:loop counter (bit) 8→0
+;	@tmp2+1:loop counter (byte) 4→0
+;       @tmp3:tmp4: divisor
 ;
 __div32x32:
 	tsx
 __div32x32x:
+        ldab 5,x
+        stab @tmp4+1
+        ldab 4,x
+        stab @tmp4
+        ldab 3,x
+        stab @tmp3+1
+        ldab 2,x
+        stab @tmp3
+;
         tst @long
         bne __div32x32x_32
         tst @long+1
@@ -140,14 +151,14 @@ loop:
 	rola
 	rol @tmp1+1
 	rol @tmp1
-	subb 5,x	; subtract the divisor
-	sbca 4,x
+	subb @tmp4+1	; subtract the divisor
+	sbca @tmp4
 	pshb
 	psha
 	ldab @tmp1+1
-	sbcb 3,x
+	sbcb @tmp3+1
 	ldaa @tmp1
-	sbca 2,x
+	sbca @tmp3
 	bcs skip
 	stab @tmp1+1	; subtracted.
 	staa @tmp1
@@ -158,8 +169,8 @@ loop:
 skip:
 	pula		; can't substract. pull it back.
 	pulb
-	addb 5,x
-	adca 4,x
+	addb @tmp4+1
+	adca @tmp4
 next:
 	dec @tmp2
 	bne loop

@@ -15,8 +15,6 @@ tmp3:	.word	0
 tmp4:	.word	0
 long:	.word	0
 	.word	0
-	.export	rdi
-rdi:	.word	0
 ;
 	.export _putchar
 	.export _getchar

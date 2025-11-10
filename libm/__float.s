@@ -1624,12 +1624,23 @@ __divf32_rup_none:
 ;
 ;	@long			= @long / TOS
 ;	@tmp1:AccA:AccB		= @long % TOS
-;	@tmp2: loop counter
+;	@tmp2:          loop counter
+;       @tmp3:@tmp4     copy of 2-4,x
 ;	mess @long
 ;
 __fdiv32x32:
-	ldab #32
+        ldab 4,x
+        stab @tmp4
+        ldab 3,x
+        stab @tmp3+1
+        ldab 2,x
+        stab @tmp3
+;
+	ldab #4
 	stab @tmp2	; loop counter
+	ldab #8
+	stab @tmp2+1	; loop counter
+        ldx #long
 ;
 	ldab @long	; tmp1:AccAB <- @long 24bit
 	stab @tmp1+1
@@ -1647,10 +1658,7 @@ __fdiv32x32:
         bra  loop_begin
 ;
 loop:
-	asl  @long+3	; shift quotient
-	rol  @long+2
-	rol  @long+1
-	rol  @long
+	asl  0,x        ; shift quotient
 	rolb		; shift reminder
 	rola
 	rol  @tmp1+1
@@ -1660,18 +1668,16 @@ loop:
 ;       bpl next
         bcs loop_begin_1
         bmi loop_begin
-        dec @tmp2
-        bne loop
-        rts
+        bra next
 loop_begin_1:
         rol @tmp1
 loop_begin:
-	subb 4,x	; divient - divisor
-	sbca 3,x
+	subb @tmp4	; divient - divisor
+	sbca @tmp3+1
 	pshb
 	psha
 	ldab @tmp1+1
-	sbcb 2,x
+	sbcb @tmp3
 	ldaa @tmp1
 	sbca #0
 	bcs  skip
@@ -1679,16 +1685,36 @@ loop_begin:
 	staa @tmp1
 	pula
 	pulb
-	inc  @long+3	; set the lower bit of the quotient
+	inc  0,x	; set the lower bit of the quotient
 	bra  next
 skip:
 	pula
 	pulb		; can't substract. pull it back.
-	addb 4,x
-	adca 3,x
+	addb @tmp4
+	adca @tmp3+1
 next:
-	dec  @tmp2
+        dec @tmp2+1
+        bne loop
+        pshb
+        ldab #8
+        stab @tmp2+1
+        pulb
+        inx
+        dec @tmp2
 	bne  loop
+;
+;        pshb
+;        psha
+;        ldab @long+3
+;        ldaa @long
+;        stab @long
+;        staa @long+3
+;        ldab @long+2
+;        ldaa @long+1
+;        stab @long+1
+;        staa @long
+;        pula
+;        pulb
 ret:
 	rts
 ;

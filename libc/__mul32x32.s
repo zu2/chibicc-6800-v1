@@ -17,6 +17,10 @@ shift8:	ldab	@long+1
 	stab	@tmp3
 	rts
 ;
+;  2,x-5,x:    Multiplicand
+;  tmp2,AccAB: multiplier
+;  long:       result
+;
 __mul32tos:
 	ldab #32
 	stab @tmp3
