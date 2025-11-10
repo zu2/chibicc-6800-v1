@@ -255,7 +255,7 @@ __fmodf32_done:				; here, AccAB = expnew-shift(normalized)
 	staa	@long
 	rts
 ;
-;	round up check, @tmp4 and @tmp4+1
+;	round up check, @long+3 and @long+2
 ;
 __fmodf32_rup_check:
 	pshb

@@ -11,7 +11,7 @@
 ;	    +2	string
 ;	    +4	radix
 ;
-;	work:
+;	working area:
 ;	__value	value
 ;	__p	string pointer
 ;	__f	first digit
