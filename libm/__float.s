@@ -1275,7 +1275,7 @@ __mulf32tos03:
 	ldx	#24		; loop count
         clrb
         clra
-        clc
+;       clc
 	bra	__mulf32tos31
 ;
 __mulf32tos30:

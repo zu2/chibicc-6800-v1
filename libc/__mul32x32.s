@@ -37,9 +37,9 @@ loop8:
         stab @tmp1
 loop:
         ldab 0,x
-        andb #$01
+        lsrb
         pulb
-        beq  skip
+        bcc  skip
 ;
         addb @long+3
         adca @long+2
