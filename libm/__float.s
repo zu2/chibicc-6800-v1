@@ -118,11 +118,9 @@ __f32iszerox:
 	andb	#$7F
 	bne	iszerox_ret
 				; Here, b is zero
-	cmpb	1,x		; cmpb is faster than tst
-	bne	iszerox_ret
-	cmpb	2,x
-	bne	iszerox_ret
-	cmpb	3,x
+        orab    1,x
+        orab    2,x
+        orab    3,x
 iszerox_ret:
 	rts
 ;
@@ -1624,7 +1622,7 @@ __divf32_rup_none:
 ;
 ;	@long			= @long / TOS
 ;	@tmp1:AccA:AccB		= @long % TOS
-;	@tmp2:          loop counter
+;	@tmp2+1:        loop counter
 ;       @tmp3:@tmp4     copy of 2-4,x
 ;	mess @long
 ;
@@ -1636,8 +1634,6 @@ __fdiv32x32:
         ldab 2,x
         stab @tmp3
 ;
-	ldab #4
-	stab @tmp2	; loop counter
 	ldab #8
 	stab @tmp2+1	; loop counter
         ldx #long
@@ -1658,17 +1654,13 @@ __fdiv32x32:
         bra  loop_begin
 ;
 loop:
-	asl  0,x        ; shift quotient
-	rolb		; shift reminder
+;	asl  0,x        ; shift quotient
+	aslb		; shift reminder
 	rola
 	rol  @tmp1+1
-;       rol  @tmp1
-;       bne loop_begin
-;       tst @tmp1+1
-;       bpl next
         bcs loop_begin_1
         bmi loop_begin
-        bra next
+        bra next        ; now, C=0
 loop_begin_1:
         rol @tmp1
 loop_begin:
@@ -1685,14 +1677,17 @@ loop_begin:
 	staa @tmp1
 	pula
 	pulb
-	inc  0,x	; set the lower bit of the quotient
+;	inc  0,x	; set the lower bit of the quotient
+        sec
 	bra  next
 skip:
 	pula
 	pulb		; can't substract. pull it back.
 	addb @tmp4
 	adca @tmp3+1
+        clc
 next:
+        rol 0,x
         dec @tmp2+1
         bne loop
         pshb
@@ -1700,21 +1695,24 @@ next:
         stab @tmp2+1
         pulb
         inx
-        dec @tmp2
-	bne  loop
+        cpx #long+3
+        bne next4
+        lsr @tmp2+1    ; loop count 8→4 / 8*3+4 = 28bit (24+G+R+S+1)
+        dec @tmp2+1    ; loop count 8+3
+        bra loop
+next4:
+        cpx #long+4
+	bne loop
 ;
-;        pshb
-;        psha
-;        ldab @long+3
-;        ldaa @long
-;        stab @long
-;        staa @long+3
-;        ldab @long+2
-;        ldaa @long+1
-;        stab @long+1
-;        staa @long
-;        pula
-;        pulb
+        pshb
+        ldab @long+3
+        aslb
+        aslb
+        aslb
+        aslb
+        aslb
+        stab @long+3
+        pulb
 ret:
 	rts
 ;
