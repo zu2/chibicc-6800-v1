@@ -1261,51 +1261,56 @@ __mulf32tos4:
 ;
 __mulf32tos03:
 ;                               ; To improve performance, use AccAB insted of work+4,5
-;	clr	__work+5	; setup working area 48bit
-;	clr	__work+4
-	clr	__work+3
+;                       	; setup working area 48bit
 	tsx
         ldab    5,x
-	stab	__work+2
+	stab	__work+5
         ldab    4,x
-	stab	__work+1
+	stab	__work+4
         ldab    3,x
-	stab	__work
+	stab	__work+3
+;	clr	__work+2        ; use AccB
+;	clr	__work+1        ; use AccA
+	clr	__work
 ;
-	ldx	#24		; loop count
-        clrb
-        clra
-;       clc
-	bra	__mulf32tos31
+        ldab    #8
+        stab    @tmp2           ; loop count
+	ldx	#__work+5
+;
+        clrb                    ; __work+2
+        clra                    ; __work+1
+;
+__mulf32tos29:
+        lsr     0,x             ; check LSbit
 ;
 __mulf32tos30:
-	aslb
-	rola
-	rol	__work+3
-__mulf32tos31:
-	rol	__work+2
-	rol	__work+1
-	rol	__work
-	bcc	__mulf32tos32
-	addb	@long+3
-	adca	@long+2
-        psha
-	ldaa	__work+3
-	adca	@long+1
-	staa	__work+3
-        pula
-	bcc	__mulf32tos32
-	inc	__work+2
-        bne     __mulf32tos32
-	inc	__work+1
-        bne     __mulf32tos32
-	inc	__work
-__mulf32tos32:
-	dex
-	bne	__mulf32tos30
 ;
-        stab    __work+5
-        staa    __work+4
+        bcc     __mulf32tos32
+        addb    @long+3
+        adca    @long+2
+        psha
+        ldaa   __work
+        adca    @long+1
+        staa    __work
+        pula
+;
+__mulf32tos32:
+        ror     __work
+	rora
+	rorb
+        ror     0,x             ; Carry used by by __mulf32tos30. Must preserve
+	dec     @tmp2
+	bne	__mulf32tos30   ; ↑ C flag must not be modified until here
+        pshb
+        ldab    #8
+        stab    @tmp2
+        pulb
+        dex
+        cpx     #__work+2
+        bne     __mulf32tos29
+;
+        stab    __work+2
+        staa    __work+1
 ;
         			; end of mant*mant multiply
 	ldab	__exp2+1
