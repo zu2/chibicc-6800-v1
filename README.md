@@ -115,18 +115,20 @@ This will compile the source file and execute the resulting binary using the emu
 - **Dhrystone benchmark:** 234 seconds at 1MHz on MC6800, equivalent to approximately 0.05 DMIPS.
   - Improve: 183.56 seconds, 0.062 DMIPS (2025/09/17).
   - Improve: 180.04 seconds, 0.063 DMIPS (2025/11/10).
+
 - **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks
 /dhrystone21/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21)
 
 ## Floating-Point Operations
-- **Mandelbrot ASCII renderer (`asciiartf`):** 266 seconds on MC6800@1MHz.
+- **Mandelbrot ASCII renderer (`asciiartf`):** 266 seconds at **1MHz on MC6800**.
   - Improve: 198.8 seconds (2025/08/09)
+  - Improve: 182.0 seconds (2025/11/12)
 - **Source code:** [`ztest/9018-asciiartf.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9018-asciiartf.c)  
 
-- **Whetstone benchmark:** 449.5355 seconds at 1MHz on MC6800, equivalent to approximately 2.2245 KWIPS, .0022245 MWIPS
+- **Whetstone benchmark:** 449.5355 seconds at **1MHz on MC6800**, equivalent to approximately 2.2245 KWIPS, .0022245 MWIPS
   - Improve: 2.7544 KWIPS, 0.027544 MWIPS (2025/06/12)
   - Improve: 358.0215 seconds, 2.793 KWIPS, .002793 MWIPS (2025/08/09)
-  - Improve: 339.4538 seconds, 2.946 KWIPS, .002946 MWIPS (2025/11/10)
+  - Improve: 317.3539 seconds, 3.151 KWIPS, .003151 MWIPS (2025/11/12)
 - **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone)
 
 ## String and Memory Operations
