@@ -630,10 +630,10 @@ bool gen_shr(Type *ty, uint64_t val)
 //    pshb          // 1 4
 //    psha          // 1 4
 //    ldab #xx      // 2 2
-//    clra          // 2 1
-//    jsr mul16x16  // 9 3
-//    ins           // 4 1
-//    ins           // 4 1
+//    clra          // 1 1
+//    jsr mul16x16  // 3 9
+//    ins           // 1 4
+//    ins           // 1 4
 //
 bool
 gen_mul16(Node *node)
@@ -766,6 +766,12 @@ gen_mul16(Node *node)
         println("\tjsr __mul100");
         return true;
       }
+    }
+    if (node->rhs->val>0 && node->rhs->val<256) {
+      println("\tldx #%ld",node->rhs->val);
+      println("\tjsr __mul16x8x");
+      IX_Dest = IX_None;
+      return true;
     }
   }
   return false;
@@ -3302,6 +3308,11 @@ static void opeq(Node *node)
       println("\tldab 1,x");
       println("\tldaa 0,x");
       IX_Dest = IX_None;
+      if (node->lhs->ty ==  node->ty
+        &&  gen_mul16(node)) {
+        store(node->ty);
+        return;
+      }
       push();
       gen_expr(node->rhs);
       println("\tjsr __mul16x16");
