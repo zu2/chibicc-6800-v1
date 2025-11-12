@@ -8,7 +8,7 @@ OPT_g=""
 
 while true; do
   case "$1" in
-  -O0|-O1|-O2|-Os)
+  -O0|-O1|-O2|-O3|-Os)
     OPT_O=$1
     shift
     ;;
