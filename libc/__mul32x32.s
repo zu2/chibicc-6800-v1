@@ -29,16 +29,15 @@ __mul32tos:
         inx
 ;
         clrb
-        pshb
         clra
 ;
 loop8:
+        pshb
         ldab #$08
         stab @tmp1
-loop:
-        ldab 0,x
-        lsrb
         pulb
+        lsr 0,x
+loop:
         bcc  skip
 ;
         addb @long+3
@@ -58,14 +57,12 @@ skip:   lsr @tmp2
         rorb
         ror 0,x
 ;
-next:   pshb
-        dec @tmp1
+next:   dec @tmp1
         bne loop
 next8:
         dex
         cpx @tmp4
         bne loop8
-        ins             ; pulb
 ret:
         tsx
         ldx 2,x
