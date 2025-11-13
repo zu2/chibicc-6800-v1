@@ -147,7 +147,7 @@ loop:
 	rol @long+2
 	rol @long+1
 	rol @long
-	rolb		; shit work area @tmp1:AccAB
+	rolb		; shift work area @tmp1:AccAB
 	rola
 	rol @tmp1+1
 	rol @tmp1
