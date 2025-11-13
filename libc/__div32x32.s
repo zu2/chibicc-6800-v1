@@ -112,41 +112,18 @@ __div32x32x:
         ldab 2,x
         stab @tmp3
 ;
-        tst @long
-        bne __div32x32x_32
-        tst @long+1
-        bne __div32x32x_24
-        ldab @long+2
-        stab @long
-        ldab @long+3
-        stab @long+1
-        clr @long+3
-        clr @long+2
-        ldab #16
-        bra __div32x32x_start
-__div32x32x_24:
-        ldab @long+1
-        stab @long
-        ldab @long+2
-        stab @long+1
-        ldab @long+3
-        stab @long+2
-        clr @long+3
-        ldab #24
-        bra __div32x32x_start
-__div32x32x_32:
-	ldab #32
-__div32x32x_start:
-	stab @tmp2
+        ldx #long
 	clra		; work area clear
 	clrb
 	stab @tmp1+1
 	staa @tmp1
+loop8:
+        pshb
+        ldab #8
+        stab @tmp2
+        pulb
 loop:
-	asl @long+3	; shift divient
-	rol @long+2
-	rol @long+1
-	rol @long
+	asl 0,x
 	rolb		; shift work area @tmp1:AccAB
 	rola
 	rol @tmp1+1
@@ -164,7 +141,7 @@ loop:
 	staa @tmp1
 	pula
 	pulb
-	inc @long+3	; set the lower bit of the quotient
+	inc 0,x 	; set the lower bit of the quotient
 	bra next
 skip:
 	pula		; can't substract. pull it back.
@@ -174,4 +151,7 @@ skip:
 next:
 	dec @tmp2
 	bne loop
+        inx
+        cpx #long+4
+        bne loop8
 	rts

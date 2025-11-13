@@ -10,12 +10,11 @@ __div16x16:
 	stx @tmp2	; divient
 	stab @tmp1+1	; divisor
 	staa @tmp1
-	ldx #16		; loop counter
+        ldx #8
 	clra
 	clrb		; carry is also cleared
 __div16x16_1:
-	rol @tmp2+1	; shift divient
-	rol @tmp2
+	rol @tmp2 	; shift divient
 	rolb
 	rola
 	subb @tmp1+1	; divisor
@@ -24,10 +23,24 @@ __div16x16_1:
 	addb @tmp1+1
 	adca @tmp1	; C must 1
 __div16x16_2:
-	dex		; quotient bit will be added to @tmp at next loop.
+        dex
 	bne __div16x16_1
-	rol @tmp2+1	; Shift to get the remaining quotient 1 bit
-	rol @tmp2
+        rol @tmp2
+        ldx #8
+        clc
+__div16x16_3:
+	rol @tmp2+1 	; shift divient
+	rolb
+	rola
+	subb @tmp1+1	; divisor
+	sbca @tmp1
+	bcc __div16x16_4
+	addb @tmp1+1
+	adca @tmp1	; C must 1
+__div16x16_4:
+        dex
+	bne __div16x16_3
+        rol @tmp2+1
 	com @tmp2+1
 	com @tmp2
 	rts
