@@ -73,7 +73,9 @@ __copy_loop:
         cpx     @tmp1
 	bne	__copy_loop
 ;
-	ror	@tmp4           ; more 1-byte need copy?
+;       ror     @tmp4
+        ldab    @tmp4           ; more 1-byte need copy?
+        rorb
 	bcc	__copy_end
 ;
 __copy_1byte:
