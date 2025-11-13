@@ -63,6 +63,7 @@
 	.export	__f32Infs
 	.export __adj_subnormal
 	.export __asl8_both
+        .export __f32NaN
 ;
 	.export __sign
 	.export __work
@@ -1253,34 +1254,38 @@ __mulf32tos4:
 	sbca	#>128
 	jge	__f32retInfs	; Overflow, returns Inf with __sign.
 ;
+; Exponent sum(=150) appears to underflow,
+; but mantissa multiplication carry can keep it subnormal.
+;
 	ldab	__exp2+1
 	ldaa	__exp2
-	subb	#<-149		; sum of exp < -149?
-	sbca	#>-149
+	subb	#<-150		; sum of exp < -150?
+	sbca	#>-150
 	jlt	__f32retZeros	; Underflow, return zero with __sign.
 ;
 __mulf32tos03:
 ;                               ; To improve performance, use AccAB insted of work+4,5
 ;                       	; setup working area 48bit
 	tsx
-        ldab    5,x
-	stab	__work+5
-        ldab    4,x
-	stab	__work+4
+        ldx     4,x
+        stx     __work+4
+        tsx
         ldab    3,x
 	stab	__work+3
 ;	clr	__work+2        ; use AccB
 ;	clr	__work+1        ; use AccA
-	clr	__work
-;
-        ldab    #8
-        stab    @tmp2           ; loop count
-	ldx	#__work+5
+        clra                    ; __work+1
+        staa    __work
 ;
         clrb                    ; __work+2
-        clra                    ; __work+1
+	ldx	#__work+5
 ;
 __mulf32tos29:
+        pshb
+        ldab    #8
+        stab    @tmp2           ; loop count
+        pulb
+;
         lsr     0,x             ; check LSbit
 ;
 __mulf32tos30:
@@ -1288,11 +1293,13 @@ __mulf32tos30:
         bcc     __mulf32tos32
         addb    @long+3
         adca    @long+2
-        psha
+;       psha
+        staa    @tmp2+1
         ldaa   __work
         adca    @long+1
         staa    __work
-        pula
+;       pula
+        ldaa    @tmp2+1         ; 1cyc faster
 ;
 __mulf32tos32:
         ror     __work
@@ -1301,10 +1308,6 @@ __mulf32tos32:
         ror     0,x             ; Carry used by by __mulf32tos30. Must preserve
 	dec     @tmp2
 	bne	__mulf32tos30   ; ↑ C flag must not be modified until here
-        pshb
-        ldab    #8
-        stab    @tmp2
-        pulb
         dex
         cpx     #__work+2
         bne     __mulf32tos29
@@ -1313,93 +1316,81 @@ __mulf32tos32:
         staa    __work+1
 ;
         			; end of mant*mant multiply
-	ldab	__exp2+1
-	ldaa	__exp2
-	tst	__work		; carryover of the MSB bit?
-	bpl	__mulf32tos70
 ;
-	addb	#1
-	adca	#0
-	stab	__exp2+1
-	staa	__exp2
-	bra	__mulf32tos71
+;  Bits 28-47 required only for rounding. To reduce shift operations,
+;  round lower 2 bytes (bits 32-47) to sticky bit beforehand.
+;
+        ldx     __work+4
+        beq     __mulf32tos50
+        ldab    __work+3
+        orab    #$10            ; set sticky
+        stab    __work+3
+__mulf32tos50:
+;
+; When highest bit is set, add 1 to the exponent.
+; Exponent can be up to 127; overflow if incremented to 128.
+;
+	ldab	__work		; carryover of the MSB bit?
+	bpl	__mulf32tos70
+        ldx     __exp2
+        inx
+        stx     __exp2
+        cpx     #128
+        bne     __mulf32tos71
+        jmp     __f32retInfs    ; Overflow, returns Inf with __sign.
+;
+; Already rounded to 32-bit, so 4-byte shift is sufficient.
+;
 __mulf32tos70:
-	asl	__work+5
-	rol	__work+4
-	rol	__work+3
+	asl	__work+3
 	rol	__work+2
 	rol	__work+1
-	rol	__work
+	rol     __work
+;
+; even number rounding
+;   ULP G R S
+;    0  0 - -   none
+;    0  1 0 0   none    to the nearest even
+;    0  1 0 1   +1 ULP
+;    0  1 1 -   +1 ULP
+;    0  0 - -   none
+;    1  1 0 0   +1 ULP  to the nearest even
+;    1  1 0 1   +1 ULP
+;    1  1 1 -   +1 ULP
+;
 __mulf32tos71:
-;
-	subb	#<128		; sum of exp>127? (>=128?)
-	sbca	#>128
-	jge	__f32retInfs	; Overflow, returns Inf with __sign.
-;
-	ldab	__exp2+1
-	ldaa	__exp2
-	subb	#<-149		; sum of exp < -149?
-	sbca	#>-149
-	jlt	__f32retZeros	; Underflow, return zero with __sign.
-;
-;	even number rounding
-;
 	ldab	__work+3
 	bpl	__mulf32tos72	; G=0, do nothing
-	pshb
-	andb	#$3F		; make sticky bit
-	orab	__work+4
-	orab	__work+5
-	pulb
-	beq	__mulf32tos721
-	orab	#$20
 __mulf32tos721:
-	pshb
-	ldab	__work+2	; check LSB
-	lsrb			; LSB -> Carry
-	pulb
-	rorb			; b7:LSB, b6:G, b5:R, b4:S
-;	bitb	#$40		; b6:G==0?		// G must 1
-;	beq	__mulf32tos72	;   Yes, do nothng
-;	andb	#$F0
-;	cmpb	#$40		; 0100:only G is 1?
-	andb	#$B0		; 1011:LSB,R,S=0 ?
+	ldaa	__work+2	; check LSB
+	lsra
+	rorb			; b7:ULP, b6:G, b5:R, b4-0:S
+	andb	#$BF		; 1011 1111:ULP,R,S are all 0 ?
 	beq	__mulf32tos72	;   Yes, do nothng
 ;
-	inc	__work+2		; round up
+	inc	__work+2	; round up
 	bne	__mulf32tos72
 	inc	__work+1
 	bne	__mulf32tos72
 	inc	__work+0
 	bne	__mulf32tos72
 ;
-	ldab	__exp2+1
-	ldaa	__exp2
-	addb	#1
-	adca	#0
-	stab	__exp2+1
-	staa	__exp2
-	subb	#<128		; sum of exp>127? (>=128?)
-	sbca	#>128
-	jge	__f32retInfs	; Overflow, returns Inf with __sign.
+        ldx     __exp2          ; Rounding changed exponent
+        inx
+        stx     __exp2
+        cpx     #128            ; Recheck for overflow
+	jeq	__f32retInfs	; Overflow, returns Inf with __sign.
 	lsr	__work+0
 	ror	__work+1
 	ror	__work+2
 ;
 __mulf32tos72:
-	ldab	__work+3
-	orab	__work+2
-	orab	__work+1
-	orab	__work
-	jeq	__f32retZeros	; The mantissa is all 0, so the value is 0.
-;
 	ldab	__exp2+1
 	ldaa	__exp2
-	subb	#<-126
+	subb	#<-126          ; exp is subnormal ?
 	sbca	#>-126
 	jge	__mulf32tos74
-	;			; subnormal
-__mulf32tos73:
+__mulf32tos73:			; subnormal
 	lsr	__work		; 1bit shift right
 	ror	__work+1
 	ror	__work+2
@@ -1408,6 +1399,11 @@ __mulf32tos73:
 	ldab	#-127
 	stab	__exp2+1
 __mulf32tos74:
+	ldab	__work+2
+	orab	__work+1
+	orab	__work
+	jeq	__f32retZeros	; The mantissa is all 0, so the value is 0.
+__mulf32tos75:
 	ldab	__work+2
 	stab	@long+3
 	ldab	__work+1
@@ -1489,7 +1485,7 @@ __divf32tos01:
 ;
 	ldab	__expdiff+1
 	ldaa	__expdiff
-	subb	#<-149
+	subb	#<-149          ; TODO: Exponent may be incremented later.
 	sbca	#>-149
 	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
 ;
