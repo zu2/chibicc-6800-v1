@@ -1497,19 +1497,19 @@ __divf32tos01:
 ;
 __divf32tos03:
 	jsr	__fdiv32x32		; @long = @long / TOS, @tmp1:AB = rem
-	orab	@tmp1
+	orab	@tmp1                   ; Set sticky bit if any remainder.
 	orab	@tmp1+1
 	staa	@tmp1
 	orab	@tmp1
 	beq	____divf32_norem
 	ldab	@long+3			; set sticky
-	orab	#$20
+	orab	#$10
 	stab	@long+3
 ____divf32_norem:
 	ldab	__expdiff+1
 	ldaa	__expdiff
 	tst	@long
-	bmi	__divf32tos04		; MSB==1 needn't shitft
+	bmi	__divf32tos04		; if MSB==1 needn't shift
 ;
 __divf32_0301:
 	subb	#1			; exp--
@@ -1607,9 +1607,8 @@ __divf32_rup_check:
 __divf32_rup_nosticky:
 	ldaa	@long+2
 	lsra
-	rorb				; AccB b7 LSB, b6 G, b5 R, b4 S
-	andb	#$F0
-	cmpb	#$40			; only G=1 and LSB,R,S == 0 ?
+	rorb				; AccB b7 LSB, b6 G, b5 R, b4-b0 S
+	andb	#$7F			; only G=1 and LSB,R,S == 0 ?
 	beq	__divf32_rup_none
 	pula
 	pulb
@@ -1699,15 +1698,13 @@ next:
         cpx #long+3
         bne next4
         lsr @tmp2+1    ; loop count 8→4 / 8*3+4 = 28bit (24+G+R+S+1)
-        dec @tmp2+1    ; loop count 8+3
         bra loop
 next4:
         cpx #long+4
 	bne loop
 ;
         pshb
-        ldab @long+3
-        aslb
+        ldab @long+3    ; Last byte has only 4 bits; shift left by 4 bits.
         aslb
         aslb
         aslb
