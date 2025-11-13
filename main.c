@@ -668,8 +668,8 @@ static void run_copt(char *input, char *output) {
   int argc=0;
 
   args[argc++] = copt_path;
-  if (access("copt.rules",F_OK)==0 && access("copt.rules",X_OK) == 0) {
-    args[argc++] = "rules.chibicc";
+  if (access("./copt.rules",F_OK)==0 && access("./copt.rules",X_OK) == 0) {
+    args[argc++] = "./copt.rules";
   }else{
     args[argc++] = copt_rules;
   }
