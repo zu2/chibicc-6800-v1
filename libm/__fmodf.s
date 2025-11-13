@@ -95,12 +95,14 @@ __fmodf_02:				; Here, fabsf(x)>fabsf(y)
         ldaa    2,x
         aslb
         rola
-        staa    __exp
+        staa    __exp                   ; TOS exp
         ldab    @long+1
         ldaa    @long
         aslb
         rola
-        suba    __exp
+        suba    __exp                   ; @long exp - TOS exp
+        cmpa    #48
+        jcc     __f32NaN                ; TODO: 
         cmpa    #10
         jcc     __fmodf_def             ; calculate x - y * truncf(x/y)
 ;
@@ -319,4 +321,3 @@ __fmodf_ok:
         staa @long
 ;
 	rts
-;
