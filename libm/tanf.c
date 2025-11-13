@@ -2,8 +2,11 @@
 
 float tanf(float x)
 {
-  if (x < 0) {
-    return -tanf(-x);
+  if (fabsf(x)<0.00006) {
+    return x;
+  }
+  if (x < 0.0) {
+    return -tanf(fabsf(x));
   }
 
   x = fmodf(x, M_TWOPI);
