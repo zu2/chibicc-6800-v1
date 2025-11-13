@@ -96,11 +96,11 @@ int main(int argc, char **argv)
 	if (cmpfl(f*h,0xBC23D70B))
 		return 32;
 	if (cmpfl(h*f,0xBC23D70B))
-		return 32;
+		return 33;
 	if (cmpfl(f*e,0xBCF5C290))
-		return 33;
+		return 34;
 	if (cmpfl(e*f,0xBCF5C290))
-		return 33;
+		return 35;
 
 	f = 2.0;
 	g = 10.0;
@@ -112,6 +112,6 @@ int main(int argc, char **argv)
 	if (g*h!=1.0)
 		return 42;
 	if (g*h*f!=2.0)
-		return 42;
+		return 43;
 	return	0;
 }
