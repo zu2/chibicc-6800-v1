@@ -112,9 +112,13 @@ This will compile the source file and execute the resulting binary using the emu
 # Performance
 
 ## Integer Operations
+
 - **Dhrystone benchmark:** 234 seconds at 1MHz on MC6800, equivalent to approximately 0.05 DMIPS.
   - Improve: 183.56 seconds, 0.062 DMIPS (2025/09/17).
-  - Improve: 180.04 seconds, 0.063 DMIPS (2025/11/10).
+  - Improve: 179.84 seconds, 0.063 DMIPS (2025/11/13).
+
+If running on 2MHz MC68B00: 0.1266 DMIPS, comparable to HITECH C CPM V309-15 (0.1278  DMIPS).
+MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
 
 - **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks
 /dhrystone21/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21)
@@ -128,7 +132,8 @@ This will compile the source file and execute the resulting binary using the emu
 - **Whetstone benchmark:** 449.5355 seconds at **1MHz on MC6800**, equivalent to approximately 2.2245 KWIPS, .0022245 MWIPS
   - Improve: 2.7544 KWIPS, 0.027544 MWIPS (2025/06/12)
   - Improve: 358.0215 seconds, 2.793 KWIPS, .002793 MWIPS (2025/08/09)
-  - Improve: 317.3539 seconds, 3.151 KWIPS, .003151 MWIPS (2025/11/12)
+  - Improve: 317.2384 seconds, 3.152 KWIPS, .003152 MWIPS (2025/11/13)
+
 - **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone)
 
 ## String and Memory Operations

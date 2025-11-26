@@ -8,8 +8,11 @@
 	.export __rem32x32s
 	.export __div32x32	; @long / TOS
 	.export __div32x32x	; @long / (2-5,x)
+;
+        .data
+sign:   .blkb    1
+;
 	.code
-
 ;
 ;	@long = @long % TOS	signed
 ;
@@ -24,7 +27,7 @@ __rem32x32s:
 	jsr __neg32x
 __rem32x32s_10:
 	ldab @long
-	stab @tmp2+1		; save sign
+	stab sign		; save sign
 	bpl __rem32x32s_20
 	jsr __neg32
 __rem32x32s_20:
@@ -36,7 +39,7 @@ __rem32x32s_20:
 	ldaa @tmp1
 	stab @long+1
 	staa @long
-	ldab @tmp2+1
+	ldab sign
 	bpl __pullret
 	jsr __neg32
 	bra __pullret
@@ -60,7 +63,7 @@ __rem32x32u:
 __div32x32s:
 	tsx
 	ldab 2,x
-	stab @tmp2+1		; sign
+	stab sign
 	bpl __div32x32s_10
 	inx
 	inx
@@ -68,12 +71,12 @@ __div32x32s:
 __div32x32s_10:
 	ldab @long
 	bpl __div32x32s_20
-	com @tmp2+1		; flip sign
+	com sign		; flip sign
 	jsr __neg32
 __div32x32s_20:
 	tsx
 	jsr __div32x32x
-	ldab @tmp2+1
+	ldab sign
 	bpl __pullret
 	jsr __neg32
 	bra __pullret
@@ -103,14 +106,12 @@ __pullret:
 __div32x32:
 	tsx
 __div32x32x:
-        ldab 5,x
-        stab @tmp4+1
-        ldab 4,x
-        stab @tmp4
-        ldab 3,x
-        stab @tmp3+1
-        ldab 2,x
-        stab @tmp3
+        stx @tmp1       ; 5 2
+        ldx 4,x         ; 6 2
+        stx @tmp4       ; 5 2
+        ldx @tmp1       ; 4 2
+        ldx 2,x         ; 6 2
+        stx @tmp3       ; 5 2   / ↑31cyc, 12bytes
 ;
         ldx #long
 	clra		; work area clear
@@ -118,20 +119,22 @@ __div32x32x:
 	stab @tmp1+1
 	staa @tmp1
 loop8:
-        pshb
+;       pshb
+        stab @tmp2+1
         ldab #8
         stab @tmp2
-        pulb
+;       pulb
+        ldab @tmp2+1
 loop:
 	asl 0,x
 	rolb		; shift work area @tmp1:AccAB
 	rola
 	rol @tmp1+1
 	rol @tmp1
-	subb @tmp4+1	; subtract the divisor
-	sbca @tmp4
 	pshb
 	psha
+	subb @tmp4+1	; subtract the divisor
+	sbca @tmp4
 	ldab @tmp1+1
 	sbcb @tmp3+1
 	ldaa @tmp1
@@ -141,13 +144,13 @@ loop:
 	staa @tmp1
 	pula
 	pulb
+        subb @tmp4+1
+        sbca @tmp4
 	inc 0,x 	; set the lower bit of the quotient
 	bra next
 skip:
 	pula		; can't substract. pull it back.
 	pulb
-	addb @tmp4+1
-	adca @tmp4
 next:
 	dec @tmp2
 	bne loop

@@ -5486,7 +5486,7 @@ void gen_expr(Node *node) {
     IX_Dest = IX_None;
     return;
   } // ND_SHR
-  default:
+  default: ;
   }
   error_tok(node->tok, "invalid expression");
 }
@@ -6143,7 +6143,7 @@ no_params_locals:
 no_params_locals2:
     println("\trts");		// 5 1
     println(";");
-epilogue_end:
+epilogue_end: ;
   }
 }
 

@@ -2,6 +2,11 @@
 ;	@tmp2 = TOS / AccAB
 ;	AccAB = TOS % AccAB
 ;
+;       @tmp1:  divisor
+;       @tmp2:  quotient
+;       AccAB:  remainder
+;       @tmp4: sign (see. div32x32s)
+;
 	.export __div16x16
 	.code
 __div16x16:
@@ -21,7 +26,7 @@ __div16x16_1:
 	sbca @tmp1
 	bcc __div16x16_2
 	addb @tmp1+1
-	adca @tmp1	; C must 1
+	adca @tmp1	; C=1
 __div16x16_2:
         dex
 	bne __div16x16_1
@@ -36,7 +41,7 @@ __div16x16_3:
 	sbca @tmp1
 	bcc __div16x16_4
 	addb @tmp1+1
-	adca @tmp1	; C must 1
+	adca @tmp1	; C=1
 __div16x16_4:
         dex
 	bne __div16x16_3

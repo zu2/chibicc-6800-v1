@@ -29,16 +29,16 @@ __mul16x16_40:
         bcs __mul16x16_55
         beq __mul16x16_70
 __mul16x16_50:
-        bcc __mul16x16_60
+        bcc __mul16x16_60       ; 4 2
 __mul16x16_55:
-	addb @tmp1+1
-	adca @tmp1
+	addb @tmp1+1            ; 3 2
+	adca @tmp1              ; 3 2
 __mul16x16_60:
-        rora
-        rorb
-        ror @tmp2+1
-        dex
-	bne __mul16x16_50
+        rora                    ; 2 1
+        rorb                    ; 2 1
+        ror @tmp2+1             ; 6 3
+        dex                     ; 4 1
+	bne __mul16x16_50       ; 4 2   ↑ 28cyc/loop
 ;
         ldx #8
 __mul16x16_70:
