@@ -5303,7 +5303,7 @@ void gen_expr(Node *node) {
       return;
     }
     if (node->ty->kind == TY_BOOL
-    &&  node->ty->kind == TY_CHAR) {
+    ||  node->ty->kind == TY_CHAR) {
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
