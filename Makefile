@@ -1,4 +1,5 @@
-CC=clang
+#CC=gcc
+#CC=clang
 CFLAGS=-std=c11 -g -fno-common -Wall -Wno-switch -g3 -std=c99
 
 SRCS=$(wildcard *.c)
