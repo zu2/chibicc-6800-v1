@@ -348,6 +348,7 @@ Node *optimize_expr(Node *node)
       if (node->lhs->kind == ND_SUB
       &&  is_integer_constant(node->lhs->rhs,&val2)) {
         new = new_copy(node->lhs);
+        new->kind = ND_ADD;
         new->rhs = new_num(val-val2,node->tok);
         new->rhs->ty = node->lhs->rhs->ty;
         return new;
