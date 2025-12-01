@@ -663,7 +663,7 @@ Node *optimize_expr(Node *node)
     node = optimize_lr(node);
     return optimize_const_expr(node);
   case ND_SHLEQ:
-  case ND_SHREQ:
+  case ND_SHREQ: ;
     int64_t val;
     node = optimize_lr(node);
     if (is_integer_constant(node->rhs,&val)) {
