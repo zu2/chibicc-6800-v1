@@ -91,6 +91,26 @@
 =
 	stab %1
 
+	stab %2,x
+	staa %1,x
+	ldab %2,x
+	ldaa %1,x
+=
+	stab %2,x
+	staa %1,x
+
+	ldab %2,x
+	ldaa %1,x
+	pshb
+	psha
+	ldab %2,x
+	ldaa %1,x
+=
+	ldab %2,x
+	ldaa %1,x
+	pshb
+	psha
+
 #
 #
 #
@@ -543,6 +563,23 @@
 =
 	stab %2,x
 	staa %1,x
+	ldx %1,x
+	dex
+
+	ldab %2,x
+	ldaa %1,x
+	addb #<1
+	adca #>1
+	stab %2,x
+	staa %1,x
+	subb #<1
+	sbca #>1
+	jsr __load8u
+=
+	inc %2,x
+	bne INC%M
+	inc %1,x
+INC%M:
 	ldx %1,x
 	dex
 
