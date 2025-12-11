@@ -79,6 +79,16 @@ void popx(void) {
 
 static void ins(int n)
 {
+  if (n>=3 && depth==n && !current_fn->use_alloca) {
+    println("; stack depth = %d",depth);
+    if (IX_Dest != IX_BP) {
+      println("\tldx @bp");
+    }
+    println("\ttxs");
+    IX_Dest = IX_BP;
+    depth = 0;
+    return;
+  }
   depth -= n;
   while (n-->0) {
     println("\tins");
