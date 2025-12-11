@@ -11,6 +11,7 @@
 	.export	_abs
 _abs:
 	tsta
+        bpl __abs_ret
 __neg16:
 	nega
 	negb
