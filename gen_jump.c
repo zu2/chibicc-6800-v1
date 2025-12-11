@@ -184,9 +184,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
       if (val == 0) {
-        if (node->kind != ND_EQ && node->kind != ND_NE) {
-          println("\ttstb");
-        }
+        println("\ttstb");
       }else{
         println("\tcmpb #%ld", rhs->val);
       }
@@ -813,6 +811,13 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return true;
   }
 
+  if (!is_compare(node)) {
+    gen_expr(node);
+    cmp_zero(node->ty);
+    println("\tjne %s",if_true);
+    return true;
+  }
+
   if (is_integer_or_ptr(node->ty) && node->ty->size == 2) {
 //  println("; gen_jump_if_true is_integer_or_ptr && node->ty->size == 2");
     if (test_expr_x(node)) {
@@ -857,10 +862,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return true;
   }
 #endif
-
-  if (!is_compare(node)) {
-    goto fallback;
-  }
 
   if (lhs->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR) {
     if (gen_jump_if_true_8bit(node, if_true)) {
