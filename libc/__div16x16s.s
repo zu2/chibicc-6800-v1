@@ -6,11 +6,11 @@
 	.export __div16x16s
 	.export __rem16x16s
 ;
-;	AccAB = TOS % AccAB
+;	AccAB = AccAB % TOS
 ;
 __rem16x16s:
 	tsx
-	tsta
+	staa @tmp4
 	bpl __rem1
 	nega
 	negb
@@ -21,15 +21,12 @@ __rem1: pshb
 	; 2-3,x	TOS
 	ldab 3,x	; TOS
 	ldaa 2,x
-	staa @tmp4
 	bpl __rem2
 	nega
 	negb
 	sbca #0
 __rem2:
 	jsr __div16x16	; AccAB = TOS % AccAB
-			; Please note that TOS and AccAB are reversed
-			;   after this function was called.
 	tst @tmp4
 	bpl __rem3
 	nega
@@ -40,7 +37,7 @@ __rem3:
 	ins
 	rts
 ;
-;	AccAB = TOS / AccAB
+;	AccAB = AccAB / TOS
 ;
 __div16x16s:
 	tsx
@@ -61,16 +58,18 @@ __div2:
 	sbca #0
 __div3:
 	jsr __div16x16	; @tmp2 = TOS / AccAB
-			; Please note that TOS and AccAB are reversed
-			;   after this function was called.
-	ldab @tmp2+1
+	ldab @tmp2+1    ; The div16x16a returns the bit-inverted quotient.
 	ldaa @tmp2
 	tst @tmp4
 	bpl __div4
-	nega
-	negb
-	sbca #0
-__div4:
+        addb #1
+        adca #0
 	ins
 	ins
 	rts
+__div4:
+        comb
+        coma
+        ins
+        ins
+        rts
