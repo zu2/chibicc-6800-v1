@@ -582,6 +582,7 @@
 INC%M:
 	ldx %1,x
 	dex
+	ldab 0,x
 
 	stab %2,x
 	staa %1,x
