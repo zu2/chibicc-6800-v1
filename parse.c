@@ -2960,18 +2960,17 @@ static Type *union_decl(Token **rest, Token *tok) {
 // Find a struct member by name.
 static Member *get_struct_member(Type *ty, Token *tok) {
   for (Member *mem = ty->members; mem; mem = mem->next) {
-    // Anonymous struct member
-    if ((mem->ty->kind == TY_STRUCT || mem->ty->kind == TY_UNION) &&
-        !mem->name) {
-      if (get_struct_member(mem->ty, tok))
+    if (mem->name) {
+      // Regular struct member
+      if (mem->name->len == tok->len
+      && !memcmp(mem->name->loc, tok->loc,  tok->len))
         return mem;
-      continue;
+    } else {
+      // Anonymous struct member
+      if ((mem->ty->kind == TY_STRUCT || mem->ty->kind == TY_UNION) &&
+        get_struct_member(mem->ty, tok))
+        return mem;
     }
-
-    // Regular struct member
-    if (mem->name->len == tok->len &&
-        !strncmp(mem->name->loc, tok->loc, tok->len))
-      return mem;
   }
   return NULL;
 }
