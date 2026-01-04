@@ -78,7 +78,7 @@ _cpu_counter:
 	staa $fefb;
 	rts
 ;
-	.bss
+        .data
 exitsp:
 	.word 0
-
+	.bss

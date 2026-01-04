@@ -78,7 +78,8 @@ _kbhit:
         clra
         rts
 ;
-	.bss
+        .data
 exitsp:
 	.word 0
+	.bss
 
