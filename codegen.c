@@ -585,22 +585,27 @@ bool gen_shr(Type *ty, uint64_t val)
         println("\taslb");
         println("\trola");
         println("\ttab");
-        println("\tldaa #0");
         println("\tsbca #0");
+        println("\tsba");
         return true;
-      case 8:   // 4cyc,  6bytes
-      case 9:   // 6cyc,  7bytes
-      case 10:  // 8cyc,  8bytes
-      case 12:  // 10cyc, 9bytes
-      case 13:  // 12cyc, 10bytes
+      // https://www.zukeran.org/shin/d/2024/12/30/6800-programing-11/
+      case 8:   // 10cyc,  5bytes.
+      case 9:   // 12cyc,  6bytes
+      case 10:  // 14cyc,  7bytes
+      case 12:  // 16cyc,  8bytes
+      case 13:  // 18cyc,  9bytes
+      {
+        char *label = new_label("L_%d");
         println("\ttab");
-        println("\tasla");
-        println("\tldaa #0");
-        println("\tsbca #0");
+        println("\tbpl %s",label);
+        println("\tdeca");
+        println("%s:",label);
+        println("\tsba");
         for (int i=8; i<val; i++) {
           println("\tasrb");
         }
         return true;
+      }
       case 14:  // 12cyc, 7bytes
         println("\tclrb");
         println("\tasla");
