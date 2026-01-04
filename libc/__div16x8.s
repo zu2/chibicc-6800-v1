@@ -2,24 +2,18 @@
 ;	AccB = IX / AccB
 ;
 	.export __div16x8
-        .data
-__divient
-        .word 0
-__divisor:
-        .byte 0
-;
 	.code
 __div16x8:
 	tsx
 	ldx 2,x
-	stx @tmp2	; divient
+	stx @tmp2	; dividend
 	stab @tmp1+1	; divisor
 	staa @tmp1
 	ldx #16		; loop counter
 	clra
 	clrb		; carry is also cleared
 __div16x16_1:
-	rol @tmp2+1	; shift divient
+	rol @tmp2+1	; shift dividend
 	rol @tmp2
 	rolb
 	rola

@@ -112,6 +112,8 @@ __uitoa_loop:
 	ldab 5,x		; radix
 	ldaa 4,x
 	jsr __div16x16		; AccAB = TOS % AccAB	@tmp2 = TOS / AccAB
+        com @tmp2+1
+        com @tmp2
 	ins
 	ins
 ;

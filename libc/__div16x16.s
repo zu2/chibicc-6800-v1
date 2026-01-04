@@ -9,17 +9,18 @@
 ;
 	.export __div16x16
 	.code
+;
 __div16x16:
 	tsx
 	ldx 2,x
-	stx @tmp2	; divient
+	stx @tmp2	; dividend
 	stab @tmp1+1	; divisor
 	staa @tmp1
         ldx #8
 	clra
-	clrb		; carry is also cleared
+	clrb
 __div16x16_1:
-	rol @tmp2 	; shift divient
+	rol @tmp2 	; shift dividend
 	rolb
 	rola
 	subb @tmp1+1	; divisor
@@ -32,9 +33,9 @@ __div16x16_2:
 	bne __div16x16_1
         rol @tmp2
         ldx #8
-        clc
+;       clc
 __div16x16_3:
-	rol @tmp2+1 	; shift divient
+	rol @tmp2+1 	; shift dividend
 	rolb
 	rola
 	subb @tmp1+1	; divisor
@@ -46,8 +47,6 @@ __div16x16_4:
         dex
 	bne __div16x16_3
         rol @tmp2+1
-	com @tmp2+1
-	com @tmp2
 	rts
 ;
 ; Note:

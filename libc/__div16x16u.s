@@ -18,8 +18,6 @@ __rem1: pshb
 	ldaa 2,x
 __rem2:
 	jsr __div16x16	; AccAB = TOS % AccAB
-			; Please note that TOS and AccAB are reversed
-			;   after this function was called.
 __rem3:
 	ins
 	ins
@@ -36,10 +34,10 @@ __div2:
 	ldaa 2,x
 __div3:
 	jsr __div16x16	; @tmp2 = TOS / AccAB
-			; Please note that TOS and AccAB are reversed
-			;   after this function was called.
-	ldab @tmp2+1
+	ldab @tmp2+1    ; The div16x16 returns the bit-inverted quotient.
 	ldaa @tmp2
+        comb
+        coma
 __div4:
 	ins
 	ins
