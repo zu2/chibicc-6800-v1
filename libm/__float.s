@@ -1664,7 +1664,7 @@ loop:
 loop_begin_1:
         rol @tmp1
 loop_begin:
-	subb @tmp4	; divient - divisor
+	subb @tmp4	; dividend - divisor
 	sbca @tmp3+1
 	pshb
 	psha
