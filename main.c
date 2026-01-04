@@ -6,6 +6,10 @@ typedef enum {
   FILE_NONE, FILE_C, FILE_ASM, FILE_OBJ, FILE_AR, FILE_DSO,
 } FileType;
 
+typedef enum {
+  T_EMU6800,T_BM
+} MachineType;
+
 StringArray include_paths;
 bool opt_fcommon = false;
 
@@ -29,6 +33,8 @@ static int  opt_v = 0;
 static int  opt_lm = 0;
 char opt_O = '1';
 char opt_g = '0';
+MachineType opt_t = T_EMU6800;
+
 #define copt_path  "/opt/fcc/lib/copt"
 #define copt_rules "/opt/chibicc/lib/copt.rules"
 
@@ -383,6 +389,19 @@ static void parse_args(int argc, char **argv) {
       }
       continue;
     }
+    if (!strncmp(argv[i], "-t", 2)) {
+      if (argv[i][2]=='\0') {
+        error("unknown macine name: %s", argv[i]);
+      }
+      if (!strcmp(argv[i]+2,"emu6800")) {
+        opt_t = T_EMU6800;
+      }else if (!strcmp(argv[i]+2,"bm")) {
+        opt_t = T_BM;
+      }else{
+        error("unknown macine name: %s", argv[i]);
+      }
+      continue;
+    }
 
     // These options are ignored for now.
     if (!strncmp(argv[i], "-W", 2) ||
@@ -710,8 +729,18 @@ static void run_linker(StringArray *inputs, char *output) {
 //ld6800 -v -b -C256 -Z0 -m $s.map -o $s.bin ../crt0.o $s.o ../libc/libc.a
   strarray_push(&arr, "ld6800");
   strarray_push(&arr, "-b");
-  strarray_push(&arr, "-C256");
-  strarray_push(&arr, "-Z0");
+  switch(opt_t) {
+  case T_EMU6800:
+    strarray_push(&arr, "-C256");
+    strarray_push(&arr, "-Z0");
+    break;
+  case T_BM:
+    strarray_push(&arr, "-C4096");  // 0x1000
+    strarray_push(&arr, "-Z212"); // 0x00D4
+    break;
+  default:
+    error("unknown machine type %d",opt_t);
+  }
   strarray_push(&arr, "-m");
   char *mapfile = replace_extn(output, ".map");
   strarray_push(&arr, mapfile);
@@ -721,8 +750,14 @@ static void run_linker(StringArray *inputs, char *output) {
 
   char *libpath = find_libpath();
 
-  strarray_push(&arr, format("%s/crt0.o", libpath));
-
+  switch(opt_t) {
+  case T_EMU6800:
+    strarray_push(&arr, format("%s/crt0.o", libpath));
+    break;
+  case T_BM:
+    strarray_push(&arr, format("%s/crt0_bm.o", libpath));
+    break;
+  }
 
   for (int i = 0; i < ld_extra_args.len; i++)
     strarray_push(&arr, ld_extra_args.data[i]);
