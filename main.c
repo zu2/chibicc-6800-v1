@@ -7,7 +7,7 @@ typedef enum {
 } FileType;
 
 typedef enum {
-  T_EMU6800,T_BM,T_JR100,T_JR200
+  T_EMU6800,T_MIKBUG,T_BM,T_JR100,T_JR200
 } MachineType;
 
 StringArray include_paths;
@@ -396,6 +396,8 @@ static void parse_args(int argc, char **argv) {
       }
       if (!strcmp(argv[i]+2,"emu6800")) {
         opt_t = T_EMU6800;
+      }else if (!strcmp(argv[i]+2,"mikbug")) {
+        opt_t = T_MIKBUG;
       }else if (!strcmp(argv[i]+2,"bm")) {
         opt_t = T_BM;
       }else if (!strcmp(argv[i]+2,"jr100")) {
@@ -750,6 +752,10 @@ static void run_linker(StringArray *inputs, char *output) {
     C = opt_C? opt_C:0x0100;
     Z = 0;
     break;
+  case T_MIKBUG:    // MIKBUG 1.0
+    C = opt_C? opt_C:0x100;
+    Z = 0x40;   // ???
+    break;
   case T_BM:    // hitach BASIC MASTER
     C = opt_C? opt_C:0x1000;
     Z = 0xd4;
@@ -779,6 +785,9 @@ static void run_linker(StringArray *inputs, char *output) {
   switch(opt_t) {
   case T_EMU6800:
     strarray_push(&arr, format("%s/crt0.o", libpath));
+    break;
+  case T_MIKBUG:
+    strarray_push(&arr, format("%s/crt0_mikbug.o", libpath));
     break;
   case T_BM:
     strarray_push(&arr, format("%s/crt0_bm.o", libpath));
