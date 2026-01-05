@@ -60,14 +60,21 @@ doexit:
 ;
 ;	minimal I/O routine
 ;       cf. http://cmpslv3.stars.ne.jp/Jr200/EnrJr2.htm
+;       cf. https://gitlab.com/retroabandon/panasonic-jr/
 ;
 _putchar:
         tba
         jmp $ebe7
 _getchar:
-        swi     ; ???
+        jsr $e8fe
+        tab
+        clra
+        rts
 _kbhit:
-        swi     ; ???
+        jsr $e892
+        tan
+        clra
+        rts
 ;
         .data
 exitsp:
