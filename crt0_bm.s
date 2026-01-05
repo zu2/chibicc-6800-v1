@@ -72,7 +72,6 @@ __kbhit_ret:
         rts
 _kbhit:
         jsr $f00f
-        tab
         bcc __kbhit_ret
         clrb
         clra

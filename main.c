@@ -7,7 +7,7 @@ typedef enum {
 } FileType;
 
 typedef enum {
-  T_EMU6800,T_BM
+  T_EMU6800,T_BM,T_JR100,T_JR200
 } MachineType;
 
 StringArray include_paths;
@@ -29,6 +29,7 @@ static bool opt_shared;
 static char *opt_MF;
 static char *opt_MT;
 static char *opt_o;
+static uint16_t opt_C = 0;
 static int  opt_v = 0;
 static int  opt_lm = 0;
 char opt_O = '1';
@@ -397,9 +398,20 @@ static void parse_args(int argc, char **argv) {
         opt_t = T_EMU6800;
       }else if (!strcmp(argv[i]+2,"bm")) {
         opt_t = T_BM;
+      }else if (!strcmp(argv[i]+2,"jr100")) {
+        opt_t = T_JR100;
+      }else if (!strcmp(argv[i]+2,"jr200")) {
+        opt_t = T_JR200;
       }else{
         error("unknown macine name: %s", argv[i]);
       }
+      continue;
+    }
+    if (!strncmp(argv[i], "-C", 2)) {
+      if (argv[i][2]=='\0' || !isdigit(argv[i][2])) {
+        error("invalid code segment base: %s", argv[i]);
+      }
+      opt_C = (uint16_t)strtol(&argv[i][2],NULL,0);
       continue;
     }
 
@@ -725,22 +737,36 @@ static char *find_libpath(void) {
 
 static void run_linker(StringArray *inputs, char *output) {
   StringArray arr = {};
+  uint16_t C,Z;
 
 //ld6800 -v -b -C256 -Z0 -m $s.map -o $s.bin ../crt0.o $s.o ../libc/libc.a
   strarray_push(&arr, "ld6800");
   strarray_push(&arr, "-b");
+  static char buf_C[256];
+  static char buf_Z[256];
+
   switch(opt_t) {
   case T_EMU6800:
-    strarray_push(&arr, "-C256");
-    strarray_push(&arr, "-Z0");
+    C = opt_C? opt_C:0x0100;
+    Z = 0;
     break;
-  case T_BM:
-    strarray_push(&arr, "-C4096");  // 0x1000
-    strarray_push(&arr, "-Z212"); // 0x00D4
+  case T_BM:    // hitach BASIC MASTER
+    C = opt_C? opt_C:0x1000;
+    Z = 0xd4;
+    break;
+  case T_JR100: // national JR-100
+    C = opt_C? opt_C:0x1000;
+    Z = 0xe3;
+    break;
+  case T_JR200: // national JR-100
+    C = opt_C? opt_C:0x1000;
+    Z = 0xc8;
     break;
   default:
     error("unknown machine type %d",opt_t);
   }
+  sprintf(buf_C,"-C%d",C); strarray_push(&arr, buf_C);
+  sprintf(buf_Z,"-Z%d",Z); strarray_push(&arr, buf_Z);
   strarray_push(&arr, "-m");
   char *mapfile = replace_extn(output, ".map");
   strarray_push(&arr, mapfile);
@@ -756,6 +782,12 @@ static void run_linker(StringArray *inputs, char *output) {
     break;
   case T_BM:
     strarray_push(&arr, format("%s/crt0_bm.o", libpath));
+    break;
+  case T_JR100:
+    strarray_push(&arr, format("%s/crt0_jr100.o", libpath));
+    break;
+  case T_JR200:
+    strarray_push(&arr, format("%s/crt0_jr200.o", libpath));
     break;
   }
 
