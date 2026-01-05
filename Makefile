@@ -10,7 +10,7 @@ TEST_SRCS=$(wildcard test/*.c)
 TESTS=$(TEST_SRCS:.c=.bin)
 
 
-all: dirs chibicc lib crt0.o dummyfloat.o crt0_bm.o
+all: dirs chibicc lib crt0.o dummyfloat.o crt0_bm.o crt0_jr100.o crt0_jr200.o
 
 lib:
 	(cd libc ; make)
@@ -20,6 +20,12 @@ crt0.o: crt0.s
 	as6800 $^
 
 crt0_bm.o: crt0_bm.s
+	as6800 $^
+
+crt0_jr100.o: crt0_jr100.s
+	as6800 $^
+
+crt0_jr200.o: crt0_jr200.s
 	as6800 $^
 
 dummyfloat.o: dummyfloat.s
@@ -35,6 +41,8 @@ install: all
 	install -c chibicc /opt/chibicc/bin
 	install -c crt0.o /opt/chibicc/lib
 	install -c crt0_bm.o /opt/chibicc/lib
+	install -c crt0_jr100.o /opt/chibicc/lib
+	install -c crt0_jr200.o /opt/chibicc/lib
 	install -c dummyfloat.o /opt/chibicc/lib
 	install -c libc/libc.a /opt/chibicc/lib
 	install -c libm/libm.a /opt/chibicc/lib
