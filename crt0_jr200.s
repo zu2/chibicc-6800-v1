@@ -61,6 +61,7 @@ doexit:
 ;	minimal I/O routine
 ;       cf. http://cmpslv3.stars.ne.jp/Jr200/EnrJr2.htm
 ;       cf. https://gitlab.com/retroabandon/panasonic-jr/
+;       cf. https://github.com/0cjs/sedoc/blob/main/8bit/jr-200/rom.md
 ;
 _putchar:
         tba
@@ -72,7 +73,7 @@ _getchar:
         rts
 _kbhit:
         jsr $e892
-        tan
+        tab
         clra
         rts
 ;
