@@ -3749,17 +3749,18 @@ static void opeq(Node *node)
         int off = gen_addr_x(node->lhs,true);
         println("\tldab %d,x",off);
         if (node->kind == ND_SHLEQ) {
-          println("\tjsr __shl16");
+          println("\tjsr __shl8");
         }else if (node->lhs->ty->is_unsigned) {
-          println("\tjsr __shr16u");
+          println("\tjsr __shr8u");
         }else{
-          println("\tjsr __shr16s");
+          char *label = new_label("L_%d");
+          println("\tjsr __shr8s");
         }
         println("\tstab %d,x",off);
         ins(1);
         IX_Dest = IX_None;
         return;
-      }
+      } // TY_BOOL, TY_CHAR
       gen_addr(node->lhs); 
       push();
       gen_expr(node->rhs);
@@ -3773,7 +3774,7 @@ static void opeq(Node *node)
       }else if (node->lhs->ty->is_unsigned) {
         println("\tjsr __shr16u");
       }else{
-        println("\tjsr __shr16s");
+        println("\tjsr __shr16s ; XXX 2");
       }
       println("\tstab 0,x");
       ins(1);
@@ -3817,7 +3818,7 @@ static void opeq(Node *node)
         }else if (node->lhs->ty->is_unsigned) {
           println("\tjsr __shr16u");
         }else{
-          println("\tjsr __shr16s");
+          println("\tjsr __shr16s ; XXX 3");
         }
         println("\tstab %d,x",off+1);
         println("\tstaa %d,x",off);
@@ -3838,7 +3839,7 @@ static void opeq(Node *node)
       }else if (node->lhs->ty->is_unsigned) {
         println("\tjsr __shr16u");
       }else{
-        println("\tjsr __shr16s");
+        println("\tjsr __shr16s ; XXX 4");
       }
       ins(1);
       IX_Dest = IX_None;
@@ -4999,7 +5000,6 @@ void gen_expr(Node *node) {
         return;
       }
       if (can_direct_long(node->rhs)){
-        println("; can_direct_long ok");
         if (gen_direct_long(node->rhs,"eorb","eora")){
           return;
         }
@@ -5492,10 +5492,22 @@ void gen_expr(Node *node) {
     gen_expr(node->lhs);
 //  cast(node->lhs->ty, node->ty);
 //  shr16: AccAB >> TOS(16bit)
-    if (node->lhs->ty->is_unsigned){
-      println("\tjsr __shr16u");
-    }else{
-      println("\tjsr __shr16s");
+    switch (node->lhs->ty->kind) {
+    case TY_BOOL:
+    case TY_CHAR:
+      if (node->lhs->ty->is_unsigned){
+        println("\tjsr __shr8u");
+      }else{
+        println("\tjsr __shr8s");
+      }
+      break;
+    default:
+      if (node->lhs->ty->is_unsigned){
+        println("\tjsr __shr16u");
+      }else{
+        println("\tjsr __shr16s ; XXX 1");
+      }
+      break;
     }
     ins(1);
     IX_Dest = IX_None;

@@ -647,6 +647,19 @@ Node *optimize_expr(Node *node)
         return new;
       }
     }
+    if (node->kind == ND_SHR) {
+      if (node->ty->kind == TY_INT
+      &&  node->lhs->kind == ND_CAST
+      &&  node->lhs->ty->kind == TY_INT
+      &&  node->lhs->lhs->ty->kind == TY_CHAR) {
+        Node *n1 = new_binary(ND_SHR,node->lhs->lhs,node->rhs,node->tok);
+        n1->ty = node->lhs->lhs->ty;
+        Node *n2 = new_copy(node->lhs);
+        n2->lhs = n1;
+        n2->ty = node->ty;
+        return n2;
+      }
+    }
     return optimize_const_expr(node);
   } // ND_SHL, ND_SHR
   case ND_POST_INCDEC:
@@ -663,7 +676,7 @@ Node *optimize_expr(Node *node)
     node = optimize_lr(node);
     return optimize_const_expr(node);
   case ND_SHLEQ:
-  case ND_SHREQ: ;
+  case ND_SHREQ: {
     int64_t val;
     node = optimize_lr(node);
     if (is_integer_constant(node->rhs,&val)) {
@@ -680,6 +693,7 @@ Node *optimize_expr(Node *node)
       }
     }
     return optimize_const_expr(node);
+  }
   case ND_BULKINIT:
     return node;
   }
