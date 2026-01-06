@@ -79,6 +79,14 @@ void popx(void) {
 
 static void ins(int n)
 {
+  // current function has no params, no locals, no alloca
+  if (!current_fn->params && !current_fn->stack_size && !current_fn->use_alloca) {
+    depth -= n;
+    while (n-->0) {
+      println("\tins");
+    }
+    return;
+  }
   if (n>=3 && depth==n && !current_fn->use_alloca) {
     println("; stack depth = %d",depth);
     if (IX_Dest != IX_BP) {
@@ -6096,7 +6104,7 @@ no_params_locals:
 	   	    	fn->stack_size,reg_param_size);
     println("; fn->ty->return_ty->size = %d", fn->ty->return_ty->size);
     println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
-    if (!fn->params && !fn->stack_size & !fn->use_alloca) {
+    if (!fn->params && !fn->stack_size && !fn->use_alloca) {
       println("; function has no params & locals");
       IX_Dest = IX_None;
       goto no_params_locals2;
