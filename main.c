@@ -26,10 +26,12 @@ static bool opt_cc1;
 static bool opt_hash_hash_hash;
 static bool opt_static;
 static bool opt_shared;
+static bool opt_nostartfiles = 0;
 static char *opt_MF;
 static char *opt_MT;
 static char *opt_o;
 static uint16_t opt_C = 0;
+static uint16_t opt_Z = 0;
 static int  opt_v = 0;
 static int  opt_lm = 0;
 char opt_O = '1';
@@ -49,7 +51,7 @@ static StringArray input_paths;
 static StringArray tmpfiles;
 
 static void usage(int status) {
-  fprintf(stderr, "chibicc [-v][-O][-Os][-D name][-o <path>][-I dir][-tarch][-Caddr]  <file> [-lxx]\n");
+  fprintf(stderr, "chibicc [-v][-g][-O][-Os][-D name][-o <path>][-I dir][-tarch][-Zaddr][-Caddr][-nostartfiles]  <file> [-lxx]\n");
   exit(status);
 }
 
@@ -376,16 +378,23 @@ static void parse_args(int argc, char **argv) {
     if (!strncmp(argv[i], "-g", 2)) {
       if (argv[i][2]=='\0') {
         opt_g = '1';
-      }else{
+      }else if (argv[i][2]=='g') {
+        opt_g = '2';
+        if (argv[i][3]=='g') {
+          opt_g = '3';
+        }
+      }else if(isdigit(argv[i][2])){
         opt_g = argv[i][2];
-      }
-      switch (opt_g) {
-      case '0':
-      case '1':
-      case '2':
-      case '3':
-        break;
-      default:
+        switch (opt_g) {
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+          break;
+        default:
+          error("unknown debug option: %s", argv[i]);
+        }
+      }else{
         error("unknown debug option: %s", argv[i]);
       }
       continue;
@@ -414,6 +423,18 @@ static void parse_args(int argc, char **argv) {
         error("invalid code segment base: %s", argv[i]);
       }
       opt_C = (uint16_t)strtol(&argv[i][2],NULL,0);
+      continue;
+    }
+    if (!strncmp(argv[i], "-Z", 2)) {
+      if (argv[i][2]=='\0' || !isdigit(argv[i][2])) {
+        error("invalid zero page work area: %s", argv[i]);
+      }
+      opt_Z = (uint16_t)strtol(&argv[i][2],NULL,0);
+      continue;
+    }
+
+    if (!strcmp(argv[i], "-nostartfiles")) {
+      opt_nostartfiles = 1;
       continue;
     }
 
@@ -750,23 +771,23 @@ static void run_linker(StringArray *inputs, char *output) {
   switch(opt_t) {
   case T_EMU6800:
     C = opt_C? opt_C:0x0100;
-    Z = 0;
+    Z = opt_Z;
     break;
   case T_MIKBUG:    // MIKBUG 1.0
     C = opt_C? opt_C:0x100;
-    Z = 0x40;   // ???
+    Z = opt_Z? opt_Z:0x40;   // ???
     break;
   case T_BM:    // hitach BASIC MASTER
     C = opt_C? opt_C:0x1000;
-    Z = 0xd4;
+    Z = opt_Z? opt_Z:0xd4;
     break;
   case T_JR100: // national JR-100
     C = opt_C? opt_C:0x1000;
-    Z = 0xe3;
+    Z = opt_Z? opt_Z:0xe3;
     break;
   case T_JR200: // national JR-100
     C = opt_C? opt_C:0x1000;
-    Z = 0xc8;
+    Z = opt_Z? opt_Z:0xc8;
     break;
   default:
     error("unknown machine type %d",opt_t);
@@ -782,22 +803,24 @@ static void run_linker(StringArray *inputs, char *output) {
 
   char *libpath = find_libpath();
 
-  switch(opt_t) {
-  case T_EMU6800:
-    strarray_push(&arr, format("%s/crt0.o", libpath));
-    break;
-  case T_MIKBUG:
-    strarray_push(&arr, format("%s/crt0_mikbug.o", libpath));
-    break;
-  case T_BM:
-    strarray_push(&arr, format("%s/crt0_bm.o", libpath));
-    break;
-  case T_JR100:
-    strarray_push(&arr, format("%s/crt0_jr100.o", libpath));
-    break;
-  case T_JR200:
-    strarray_push(&arr, format("%s/crt0_jr200.o", libpath));
-    break;
+  if (!opt_nostartfiles) {
+    switch(opt_t) {
+    case T_EMU6800:
+      strarray_push(&arr, format("%s/crt0.o", libpath));
+      break;
+    case T_MIKBUG:
+      strarray_push(&arr, format("%s/crt0_mikbug.o", libpath));
+      break;
+    case T_BM:
+      strarray_push(&arr, format("%s/crt0_bm.o", libpath));
+      break;
+    case T_JR100:
+      strarray_push(&arr, format("%s/crt0_jr100.o", libpath));
+      break;
+    case T_JR200:
+      strarray_push(&arr, format("%s/crt0_jr200.o", libpath));
+      break;
+    }
   }
 
   for (int i = 0; i < ld_extra_args.len; i++)
