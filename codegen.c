@@ -381,6 +381,22 @@ Type *is_integer_constant(Node *node, int64_t *val)
   return node->ty;
 }
 
+
+Type *is_pointer_constant(Node *node, int64_t *val)
+{
+  if (node->kind == ND_CAST && node->ty->kind == TY_PTR) {
+    node = node->lhs;
+  }
+  if (node->kind != ND_NUM)
+    return NULL;
+  if (!is_integer_or_ptr(node->ty))
+    return NULL;
+
+  *val = node->val;
+
+  return node->ty;
+}
+
 Type *is_long_constant(Node *node, int64_t *val)
 {
   if (node->kind == ND_CAST && node->ty->kind == TY_LONG) {
@@ -1411,7 +1427,7 @@ static void load(Type *ty) {
   // register for char, short and int may contain garbage. When we load
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
-    if (opt_O != 's' && opt_O >= '2') {
+    if (0 && opt_O != 's' && opt_O >= '2') {
       println("\tstab @tmp1+1");
       println("\tstaa @tmp1");
       println("\tldx @tmp1");
@@ -1968,7 +1984,10 @@ static void push_args2(Node *args,bool is_variadic)
   if (!args)
     return;
   push_args2(args->next,is_variadic);
-
+  if (opt_g >= '2') {
+    println("; push_args2");
+    ast_node_dump(args);
+  }
   switch (args->ty->kind) {
   case TY_DOUBLE:
   case TY_LDOUBLE: 
@@ -2220,7 +2239,7 @@ static void builtin_alloca(void) {
 //
 // If node is a simple expression, it is computed directly without pushing it onto the stack.
 //
-static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
+static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_char)
 {
   int64_t val;
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
@@ -2282,7 +2301,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
         if (!test_addr_x(node)) return 0;
         if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL){
           if (test) {
-            return node->ty->is_unsigned;
+            return is_char || node->ty->is_unsigned;
           }
           int off = gen_addr_x(node,true);
           println("\t%s %d,x",opb,off);
@@ -2424,15 +2443,15 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
     return 0;
   case ND_CAST:
     if (is_empty_cast(node->lhs->ty, node->ty)
-    &&  gen_direct_sub(node->lhs, opb, opa, test))
+    &&  gen_direct_sub(node->lhs, opb, opa, test,0))
       return 1;
     if ((node->ty->kind == TY_INT || node->ty->kind == TY_SHORT)
     &&  node->lhs->ty->kind == TY_CHAR
-    &&  gen_direct_sub(node->lhs, opb, opa, test)) {
+    &&  gen_direct_sub(node->lhs, opb, opa, test,0)) {
       return 1;
     }
     if (node->ty->kind      == TY_PTR
-    &&  gen_direct_sub(node->lhs, opb, opa, test))
+    &&  gen_direct_sub(node->lhs, opb, opa, test, 0))
       return 1;
     // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) m +0 )
     if (node->ty->kind == TY_PTR
@@ -2458,14 +2477,26 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, int test)
 
 bool can_direct(Node *rhs)
 {
-  int r = gen_direct_sub(rhs,NULL,NULL,1);	// test mode
+  int r = gen_direct_sub(rhs,NULL,NULL,1,0);	// test mode
+
+  return r;
+}
+
+bool can_direct_char(Node *rhs)
+{
+  int r = gen_direct_sub(rhs,NULL,NULL,1,1);	// test mode
 
   return r;
 }
 
 bool gen_direct(Node *rhs,char *opb, char *opa)
 {
-  return gen_direct_sub(rhs,opb,opa,0);
+  return gen_direct_sub(rhs,opb,opa,0,0);
+}
+
+bool gen_direct_char(Node *rhs,char *opb, char *opa)
+{
+  return gen_direct_sub(rhs,opb,opa,0,1);
 }
 
 //
@@ -2965,6 +2996,89 @@ static void gen_funcall(Node *node)
     builtin_alloca();
     return;
   }
+  if (node->lhs->kind == ND_VAR
+  && !strcmp(node->lhs->var->name, "memset")) {
+    println("; call memset");
+    ast_node_dump(node);
+    ast_node_dump(node->args);
+    ast_node_dump(node->args->next);
+    ast_node_dump(node->args->next->next);
+  }
+  if (node->lhs->kind == ND_VAR
+  && !strcmp(node->lhs->var->name, "memset")
+  && node->args && node->args->next && node->args->next->next) {
+    int64_t dst, val, num;
+    if (is_pointer_constant(node->args, &dst)
+    &&  is_integer_constant(node->args->next, &val)
+    &&  is_integer_constant(node->args->next->next, &num)) {
+      println("; ND_FUNCALL: builtin_memset(%04x,%u,%u)",
+                                (uint16_t)dst,(uint16_t)val,(uint16_t)num);
+      if (num==0) {
+        return;
+      }
+      int odd = (num & 1);
+      char *loop = new_label("L_%d");
+      println("\tldab #%d",(uint16_t)val);
+      println("\tldx #%d",(uint16_t)dst);
+      println("%s:",loop);
+      for (int i=odd; i<2; i++) {
+        println("\tstab 0,x");
+        println("\tinx");
+      }
+      println("\tcpx #%d",(uint16_t)(dst+num));
+      println("\tbne %s",loop);
+      IX_Dest = IX_None;
+      if (!node->retval_unused) {
+        ldd_i(dst);
+      }
+      return;
+    }
+  }
+
+  if (node->lhs->kind == ND_VAR
+  && !strcmp(node->lhs->var->name, "memcpy")
+  && node->args && node->args->next && node->args->next->next) {
+    int64_t dst, src, num;
+    if (is_pointer_constant(node->args, &dst)
+    &&  is_pointer_constant(node->args->next, &src)
+    &&  is_integer_constant(node->args->next->next, &num)
+    &&  abs(dst-src)<=255 ) {
+      println("; ND_FUNCALL: builtin_memcpy(%04x,%04x,%u)",
+                                (uint16_t)dst,(uint16_t)src,(uint16_t)num);
+      if (num==0) {
+        return;
+      }
+      int odd = (num & 1);
+      char *loop = new_label("L_%d");
+      if (dst>src) {
+        println("\tldx #%d",(uint16_t)src);
+        println("%s:",loop);
+        for (int i=odd; i<2; i++) {
+          println("\tldaa 0,x");
+          println("\tstaa %d,x",(uint16_t)(dst-src));
+          println("\tinx");
+        }
+        println("\tcpx #%d",(uint16_t)(src+num));
+        println("\tbne %s",loop);
+      }else if (dst<src) {
+        println("\tldx #%d",(uint16_t)dst);
+        println("%s:",loop);
+        for (int i=odd; i<2; i++) {
+          println("\tldaa %d,x",(uint16_t)(src-dst));
+          println("\tstaa 0,x");
+          println("\tinx");
+        }
+        println("\tcpx #%d",(uint16_t)(dst+num));
+        println("\tbne %s",loop);
+      }
+      IX_Dest = IX_None;
+      if (!node->retval_unused) {
+        ldd_i(dst);
+      }
+      return;
+    }
+  }
+
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "__builtin_va_start_addr")) {
     println("; __builtin_va_start_addr: current_fn->params");
@@ -3782,7 +3896,7 @@ static void opeq(Node *node)
       }else if (node->lhs->ty->is_unsigned) {
         println("\tjsr __shr16u");
       }else{
-        println("\tjsr __shr16s ; XXX 2");
+        println("\tjsr __shr16s");
       }
       println("\tstab 0,x");
       ins(1);
@@ -3826,7 +3940,7 @@ static void opeq(Node *node)
         }else if (node->lhs->ty->is_unsigned) {
           println("\tjsr __shr16u");
         }else{
-          println("\tjsr __shr16s ; XXX 3");
+          println("\tjsr __shr16s");
         }
         println("\tstab %d,x",off+1);
         println("\tstaa %d,x",off);
@@ -3847,7 +3961,7 @@ static void opeq(Node *node)
       }else if (node->lhs->ty->is_unsigned) {
         println("\tjsr __shr16u");
       }else{
-        println("\tjsr __shr16s ; XXX 4");
+        println("\tjsr __shr16s");
       }
       ins(1);
       IX_Dest = IX_None;
@@ -5098,6 +5212,23 @@ void gen_expr(Node *node) {
   case ND_ADD: {
     if (gen_direct_lr(node,"addb","adca"))
       return;
+    // (+ TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
+    if (node->ty->kind == TY_CHAR) {
+      bool tmp = node->rhs->ty->is_unsigned;
+      if (can_direct_char(node->rhs)){
+        gen_expr(node->lhs);
+        if(gen_direct(node->rhs,"addb",NULL))
+          return;
+        assert(0);
+      }
+      gen_expr(node->lhs);
+      push1();
+      gen_expr(node->rhs);
+      popa();
+      println("\taba");
+      println("\ttab");
+      return;
+    }
     if (node->lhs->kind == ND_CAST
     &&  node->lhs->ty->kind == TY_INT
     &&  node->lhs->lhs->ty->kind == TY_CHAR
@@ -5135,6 +5266,7 @@ void gen_expr(Node *node) {
       println("\tdeca");
       println("%s:",label);
       ins(1);
+      IX_Dest = IX_None;
       return;
     }
     if (node->rhs->kind     == ND_CAST
@@ -5166,6 +5298,24 @@ void gen_expr(Node *node) {
     return;
   } // ND_ADD
   case ND_SUB:
+    // (+ TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
+    if (node->ty->kind == TY_CHAR) {
+      bool tmp = node->rhs->ty->is_unsigned;
+      if (can_direct_char(node->rhs)){
+        gen_expr(node->lhs);
+        if(gen_direct(node->rhs,"subb",NULL))
+          return;
+        assert(0);
+      }
+      gen_expr(node->lhs);
+      push1();
+      gen_expr(node->rhs);
+      popa();
+      println("\tnegb");
+      println("\taba");
+      println("\ttab");
+      return;
+    }
     if (can_direct(node->rhs)){
       gen_expr(node->lhs);
       if(gen_direct(node->rhs,"subb","sbca"))
@@ -5182,16 +5332,24 @@ void gen_expr(Node *node) {
     if (test_addr_x(node->rhs)){
       gen_expr(node->lhs);
       int off = gen_addr_x(node->rhs,true);
-      println("\tsubb %d+1,x",off);
-      println("\tsbca %d,x",off);
+      if ( node->ty->size == 1) {
+        println("\tsubb %d,x",off);
+      }else{
+        println("\tsubb %d+1,x",off);
+        println("\tsbca %d,x",off);
+      }
       return;
     }
     if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       negd();
       int off = gen_addr_x(node->lhs,true);
-      println("\taddb %d+1,x",off);
-      println("\tadca %d,x",off);
+      if ( node->ty->size == 1) {
+        println("\taddb %d+1,x",off);
+      }else{
+        println("\taddb %d+1,x",off);
+        println("\tadca %d,x",off);
+      }
       return;
     }
     if (node->lhs->kind == ND_CAST
@@ -5513,7 +5671,7 @@ void gen_expr(Node *node) {
       if (node->lhs->ty->is_unsigned){
         println("\tjsr __shr16u");
       }else{
-        println("\tjsr __shr16s ; XXX 1");
+        println("\tjsr __shr16s");
       }
       break;
     }
@@ -5983,7 +6141,7 @@ static void emit_text(Obj *prog) {
       continue;
     }
     // Prologue
-    println("; function %s prologue emit_text %s %d",fn->name,__FILE__,__LINE__);
+    println("; function %s prologue emit_text",fn->name);
     println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
     if (!fn->params && !fn->stack_size && !fn->use_alloca) {
       println("; function has no params & locals");
@@ -6099,7 +6257,7 @@ no_params_locals:
 
     // Epilogue
     println("L_return_%d:", fn->function_no);
-    println("; function %s epilogue emit_text %s %d",fn->name,__FILE__,__LINE__);
+    println("; function %s epilogue emit_text",fn->name);
     println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 	   	    	fn->stack_size,reg_param_size);
     println("; fn->ty->return_ty->size = %d", fn->ty->return_ty->size);
