@@ -365,12 +365,6 @@
 	staa %1,x
 	ldx %1,x
 
-
-	jsr __load8u
-	tstb
-=
-	jsr __load8u
-
 #
 #	-Os fusion
 #
@@ -582,6 +576,27 @@
 INC%M:
 	ldx %1,x
 	dex
+	clra
+	ldab 0,x
+
+	ldab %2,x
+	ldaa %1,x
+	addb #<1
+	adca #>1
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	dex
+	clra
+	ldab 0,x
+=
+	inc %2,x
+	bne INC%M
+	inc %1,x
+INC%M:
+	ldx %1,x
+	dex
+	clra
 	ldab 0,x
 
 	stab %2,x
@@ -892,6 +907,15 @@ INC%M:
 	clra
 	ldab %1
 
+	ldab %2,x
+	ldaa %1,x
+	jsr __load8u
+=
+	ldx %1,x
+	clra
+	ldab 0,x
+
+
 	jsr __load16
 	stab @tmp1+1
 	staa @tmp1
@@ -903,3 +927,10 @@ INC%M:
 	ldx @tmp1
 	ldx 0,x
 	jsr 0,x
+
+	clra
+	ldab %1,x
+	clra
+=
+	clra
+	ldab %1,x
