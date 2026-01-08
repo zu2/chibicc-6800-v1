@@ -811,13 +811,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return true;
   }
 
-  if (!is_compare(node)) {
-    gen_expr(node);
-    cmp_zero(node->ty);
-    println("\tjne %s",if_true);
-    return true;
-  }
-
   if (is_integer_or_ptr(node->ty) && node->ty->size == 2) {
 //  println("; gen_jump_if_true is_integer_or_ptr && node->ty->size == 2");
     if (test_expr_x(node)) {
@@ -851,7 +844,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
       return true;
     }
   }
-#if 1
+
   if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR || node->ty->kind==TY_ENUM)
   && test_expr_x(node)) {
     int off = gen_expr_x(node,true);
@@ -861,7 +854,13 @@ bool gen_jump_if_true(Node *node, char *if_true)
     IX_Dest = IX_None;
     return true;
   }
-#endif
+
+  if (!is_compare(node)) {
+    gen_expr(node);
+    cmp_zero(node->ty);
+    println("\tjne %s",if_true);
+    return true;
+  }
 
   if (lhs->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR) {
     if (gen_jump_if_true_8bit(node, if_true)) {
