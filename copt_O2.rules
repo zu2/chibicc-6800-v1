@@ -1,0 +1,9 @@
+#
+#	copt_O2.rules
+#
+
+	jsr __tfr_dx
+=
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
