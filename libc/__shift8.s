@@ -51,17 +51,17 @@ __shr8s:
         stx @tmp1
 	tsx
 	ldaa 2,x
-	beq shr_ret
+	beq shrs_ret
 	cmpa #8
-	bcc shr_ret2
+	bcc shrs_ret2
 shrsloop:
 	asrb
         deca
 	bne shrsloop
-shr_ret:
+shrs_ret:
         ldx @tmp1
 	rts
-shr_ret2:
+shrs_ret2:
         aslb            ; return (AccB>=0)? 0: 255;
         ldab #0
         sbcb #0
