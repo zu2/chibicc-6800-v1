@@ -29,11 +29,21 @@ int subi(int x,int y)
 int main(int argc, char **argv)
 {
 	int r;
+  char x = 1;
+  char y = 2;
 
 	if(r=subc(1,2))
-		return r;
+		return 1;
 	if(r=subi(1,2))
-		return r;
+		return 2;
+	if(r=subc(x,y))
+		return 3;
+	if(r=subi(x,y))
+		return 4;
+	if(r=subc(y-x,x+x))
+		return 5;
+	if(r=subi(y-x,x+x))
+		return 6;
 
 	return 0;
 }
