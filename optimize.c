@@ -147,6 +147,18 @@ Node *optimize_const_expr(Node *node)
     }
     return node;
 }
+Node *optimize_args(Node *args)
+{
+  if (!args->next) {
+    return optimize_expr(args);
+  }
+  Node *new;
+
+  new = optimize_expr(args);
+  new->next = optimize_args(args->next);
+  return new;
+}
+
 Node *optimize_expr(Node *node)
 {
   Node *new;
@@ -239,6 +251,19 @@ Node *optimize_expr(Node *node)
       new->ty = node->ty;
       return new;
     }
+    // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
+    if (node->ty->kind == TY_CHAR
+    &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
+    &&  node->lhs->lhs->kind == ND_CAST
+    &&  node->lhs->lhs->ty->kind == TY_INT
+    &&  node->lhs->lhs->lhs->ty->kind == TY_CHAR
+    &&  node->lhs->rhs->kind == ND_CAST
+    &&  node->lhs->rhs->ty->kind == TY_INT
+    &&  node->lhs->rhs->lhs->ty->kind == TY_CHAR) {
+      Node *new = new_binary(node->lhs->kind,node->lhs->lhs->lhs,node->lhs->rhs->lhs,node->tok);
+      new->ty = node->ty;
+      return new;
+    }
     if (is_integer(node->ty)
     &&  node->lhs->kind==ND_NUM
     &&  is_integer(node->lhs->ty)) {
@@ -278,6 +303,9 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_FUNCALL:
     node->lhs = optimize_expr(node->lhs);
+    Node *top = new_num(0,node->tok);
+    top->next = node->args;
+    node->args = optimize_args(top)->next;
     return node;
   case ND_LABEL_VAL:
     return node;
