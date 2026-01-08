@@ -38,6 +38,18 @@ bool is_integer_or_ptr(Type *ty) {
          k == TY_PTR;
 }
 
+bool is_int16(Type *ty) {
+  TypeKind k = ty->kind;
+
+  return k == TY_SHORT || k == TY_INT  || k == TY_ENUM;
+}
+
+bool is_int16_or_ptr(Type *ty) {
+  TypeKind k = ty->kind;
+
+  return k == TY_SHORT || k == TY_INT  || k == TY_ENUM  || k == TY_PTR;
+}
+
 bool is_flonum(Type *ty) {
   return ty->kind == TY_FLOAT || ty->kind == TY_DOUBLE ||
          ty->kind == TY_LDOUBLE;

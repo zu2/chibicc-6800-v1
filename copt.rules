@@ -223,9 +223,7 @@
 
 	ldab #<%1
 	ldaa #>%1
-	stab @tmp1+1
-	staa @tmp1
-	ldx @tmp1
+	jsr __tfr_dx
 =
 	ldx #%1
 
@@ -345,28 +343,8 @@
 	staa %1,x
 	ldx %1,x
 
-
-	ldab %2,x
-	ldaa %1,x
-	stab @tmp1+1
-	staa @tmp1
-	ldx @tmp1
-=
-	ldx %1,x
-
-
-	stab %2,x
-	staa %1,x
-	stab @tmp1+1
-	staa @tmp1
-	ldx @tmp1
-=
-	stab %2,x
-	staa %1,x
-	ldx %1,x
-
 #
-#	-Os fusion
+#	32bit load fusion
 #
 
 	jsr __load32x
@@ -543,31 +521,29 @@
 # post inc/dec
 #
 
+%check 1 <= %3 <= 2
 	stab %1+1
 	staa %1
-	subb #<1
-	sbca #>1
-	stab @tmp1+1
-	staa @tmp1
-	ldx @tmp1
+	subb #<%3
+	sbca #>%3
+	jsr __tfr_dx
 =
 	stab %1+1
 	staa %1
 	ldx %1
-	dex
+	dex %3
 
+%check 1 <= %3 <= 2
 	stab %2,x
 	staa %1,x
-	subb #<1
-	sbca #>1
-	stab @tmp1+1
-	staa @tmp1
-	ldx @tmp1
+	subb #<%3
+	sbca #>%3
+	jsr __tfr_dx
 =
 	stab %2,x
 	staa %1,x
 	ldx %1,x
-	dex
+	dex %3
 
 	ldab %2,x
 	ldaa %1,x
@@ -608,82 +584,81 @@ INC%M:
 	clra
 	ldab 0,x
 
+%check 1 <= %3 <= 2
 	stab %2,x
 	staa %1,x
-	subb #<1
-	sbca #>1
+	subb #<%3
+	sbca #>%3
 	jsr __load8u
 =
 	stab %2,x
 	staa %1,x
 	ldx %1,x
-	dex
+	dex %3
 	ldab 0,x
 
+%check 1 <= %3 <= 2
 	stab %2,x
 	staa %1,x
-	subb #<1
-	sbca #>1
+	subb #<%3
+	sbca #>%3
+	jsr __load16
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	dex %3
+	ldab 1,x
+	ldaa 0,x
+
+%check 1 <= %3 <= 2
+	stab %2,x
+	staa %1,x
+	subb #<%3
+	sbca #>%3
 	jsr __tfr_dx
 =
 	stab %2,x
 	staa %1,x
 	ldx %1,x
-	dex
+	dex %3
 
+%check 1 <= %3 <= 2
 	stab %2,x
 	staa %1,x
-	addb #<1
-	adca #>1
+	addb #<%3
+	adca #>%3
 	jsr __load8u
 =
 	stab %2,x
 	staa %1,x
 	ldx %1,x
-	inx
-	ldab 0,x
+	ldab %3,x
 
-
-	stab %1+1
-	staa %1
-	subb #<1
-	sbca #>1
-	stab @tmp1+1
-	staa @tmp1
-	ldx @tmp1
-=
-	stab %1+1
-	staa %1
-	ldx %1
-	inx
-
-
+%check 0 <= %3 <= 254
 	stab %2,x
 	staa %1,x
-	addb #<1
-	adca #>1
+	addb #<%3
+	adca #>%3
+	jsr __load16
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+	ldab %3+1,x
+	ldaa %3,x
+
+%check 1 <= %3 <= 2
+	stab %2,x
+	staa %1,x
+	addb #<%3
+	adca #>%3
 	jsr __tfr_dx
 =
 	stab %2,x
 	staa %1,x
 	ldx %1,x
-	inx
-
-
-
-	stab %2,x
-	staa %1,x
-	addb #<1
-	adca #>1
-	stab @tmp1+1
-	staa @tmp1
-	ldx @tmp1
-=
-	stab %2,x
-	staa %1,x
-	ldx %1,x
-	inx
-
+	inx %3
 
 	stab %2,x
 	staa %1,x
@@ -692,6 +667,8 @@ INC%M:
 	stab %2,x
 	staa %1,x
 	ldx %1,x
+	ldab 1,x
+	ldaa 0,x
 
 
 	clra
@@ -943,3 +920,59 @@ INC%M:
 =
 	clra
 	ldab %1,x
+
+#
+#	array access
+#
+%check 0 <= %3 <= 255
+	ldab %2,x
+	ldaa %1,x
+	addb #<%3
+	adca #>%3
+	jsr __load8u
+=
+	ldx %1,x
+	clra
+	ldab %3,x
+
+%check 0 <= %3 <= 255
+	ldab %2,x
+	ldaa %1,x
+	addb #<%3
+	adca #>%3
+	jsr __tfr_dx
+	pulb
+	stab 0,x
+=
+	ldx %1,x
+	pulb
+	stab %3,x
+
+# delete garbarge
+	pshb
+	ldx @bp
+	ldx %1,x
+	pulb
+=
+	ldx @bp
+	ldx %1,x
+
+# expand macros
+	inx 1
+=
+	inx
+
+	inx 2
+=
+	inx
+	inx
+
+	dex 1
+=
+	dex
+
+	dex 2
+=
+	dex
+	dex
+

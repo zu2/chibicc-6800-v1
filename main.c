@@ -39,7 +39,9 @@ char opt_g = '0';
 MachineType opt_t = T_EMU6800;
 
 #define copt_path  "/opt/fcc/lib/copt"
-#define copt_rules "/opt/chibicc/lib/copt.rules"
+#define chibicc_lib_path "/opt/chibicc/lib/"
+#define copt_rules "copt.rules"
+#define copt_O2_rules "copt_O2.rules"
 
 static StringArray ld_extra_args;
 static StringArray std_include_paths;
@@ -716,16 +718,38 @@ int can_copt(void)
   return access(copt_path,F_OK)==0 && access(copt_path,X_OK) == 0;
 }
 
+char *has_copt_rules(char *path, char *file)
+{
+  size_t bufsize = strlen(chibicc_lib_path) + strlen(file) + 1;
+  char *buf = malloc(bufsize);
 
-static void run_copt(char *input, char *output) {
+  if (snprintf(buf,bufsize,"%s%s",path,file)>=bufsize) {
+     error("copt path error %s%s",path,file);
+  }
+  if (access(buf,F_OK)==0 && access(buf,X_OK) == 0) {
+    return buf;
+  }
+
+  return NULL;
+}
+
+static void run_copt(char *input, char *output, char *copt_file) {
   char **args = calloc(10, sizeof(char *));
   int argc=0;
+  char *path;
+
+  if (!can_copt()) {
+    error("can't access copt %s\n",copt_path);
+  }
 
   args[argc++] = copt_path;
-  if (access("./copt.rules",F_OK)==0 && access("./copt.rules",X_OK) == 0) {
-    args[argc++] = "./copt.rules";
+
+  if ((path=has_copt_rules("./",copt_file))) {
+    args[argc++] = path;
+  }else if ((path=has_copt_rules(chibicc_lib_path,copt_file))) {
+    args[argc++] = path;
   }else{
-    args[argc++] = copt_rules;
+    error("copt file not found %s",copt_file);
   }
   run_subprocess(args,input,output);
 }
@@ -940,7 +964,7 @@ int main(int argc, char **argv) {
       if (opt_O && opt_O != '0' && can_copt()) {
         char *tmp3 = create_tmpfile();
         run_cc1(argc, argv, input, tmp3);
-        run_copt(tmp3,output);
+        run_copt(tmp3,output,copt_rules);
       }else{
         run_cc1(argc, argv, input, output);
       }
@@ -953,7 +977,7 @@ int main(int argc, char **argv) {
       run_cc1(argc, argv, input, tmp);
       if (opt_O && opt_O != '0' && can_copt()) {
         char *tmp3 = create_tmpfile();
-        run_copt(tmp,tmp3);
+        run_copt(tmp,tmp3,copt_rules);
         tmp = tmp3;
       }
       assemble(tmp, output);
@@ -966,7 +990,12 @@ int main(int argc, char **argv) {
     run_cc1(argc, argv, input, tmp1);
     if (opt_O && opt_O != '0' && can_copt()) {
       char *tmp3 = create_tmpfile();
-      run_copt(tmp1,tmp3);
+      run_copt(tmp1,tmp3,copt_rules);
+      tmp1 = tmp3;
+    }
+    if (opt_O && opt_O == '2' && can_copt()) {
+      char *tmp3 = create_tmpfile();
+      run_copt(tmp1,tmp3,copt_O2_rules);
       tmp1 = tmp3;
     }
     assemble(tmp1, tmp2);

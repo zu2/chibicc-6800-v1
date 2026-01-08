@@ -430,6 +430,8 @@ extern Type *ty_ldouble;
 
 bool is_integer(Type *ty);
 bool is_integer_or_ptr(Type *ty);
+bool is_int16(Type *ty);
+bool is_int16_or_ptr(Type *ty);
 bool is_flonum(Type *ty);
 bool is_numeric(Type *ty);
 bool is_redundant_cast(Node *expr, Type *ty);

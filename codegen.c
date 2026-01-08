@@ -88,7 +88,7 @@ static void ins(int n)
     return;
   }
   if (n>=3 && depth==n && !current_fn->use_alloca) {
-    println("; stack depth = %d",depth);
+//  println("; stack depth = %d",depth);
     if (IX_Dest != IX_BP) {
       println("\tldx @bp");
     }
@@ -188,8 +188,8 @@ static void negd()
 static void ldx_bp()
 {
   if (IX_Dest != IX_BP){
-    if (opt_g >= '2') {
-      println("; stack depth = %d",depth);
+    if (opt_g >= '3') {
+//     println("; stack depth = %d",depth);
     }
     if(depth==0 && !current_fn->use_alloca) {
       println("\ttsx");
@@ -202,13 +202,7 @@ static void ldx_bp()
 
 static void tfr_dx()
 {
-  if (opt_O == 's') {
-    println("\tjsr __tfr_dx");
-  }else{
-    println("\tstab @tmp1+1");
-    println("\tstaa @tmp1");
-    println("\tldx @tmp1");
-  }
+  println("\tjsr __tfr_dx");
   IX_Dest = IX_None;
 }
 
@@ -936,7 +930,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
   case ND_NEG:
     return false;
   case ND_VAR:
-    if (node->ty->kind == TY_SHORT || node->ty->kind == TY_INT) {
+    if (is_int16_or_ptr(node->ty)) {
       if (is_global_var(node)) {
         if (test) return true;
         println("\tldx _%s",node->var->name);
@@ -981,7 +975,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return 0;
   } // ND_DEREF
   case ND_POST_INCDEC:
-    if ((node->ty->kind == TY_SHORT || node->ty->kind == TY_INT)) {
+    if (is_int16(node->ty)) {
         if (lhs->kind==ND_VAR) {
           if (is_global_var(lhs)) {
             char *var = lhs->var->name;
@@ -1132,8 +1126,8 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       }
     }
     //; (+ ty_int (ND_VAR ty_int y +0 ) 1)
-    if ((node->ty->kind == TY_SHORT || node->ty->kind == TY_INT)
-    &&  ( lhs->ty->kind == TY_SHORT ||  lhs->ty->kind == TY_INT)
+    if (is_int16(node->ty)
+    &&  is_int16(lhs->ty)
     &&  test_expr_x(lhs)
     &&  is_integer_constant(rhs,&val)) {
       switch(val) {
@@ -1161,8 +1155,8 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     }
     return false;
   case ND_SUB:
-    if ((node->ty->kind == TY_SHORT || node->ty->kind == TY_INT)
-    &&  ( lhs->ty->kind == TY_SHORT ||  lhs->ty->kind == TY_INT)
+    if (is_int16(node->ty)
+    &&  is_int16(lhs->ty)
     &&  test_expr_x(lhs)
     &&  is_integer_constant(rhs,&val)) {
       switch(val) {
@@ -1428,9 +1422,7 @@ static void load(Type *ty) {
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
     if (0 && opt_O != 's' && opt_O >= '2') {
-      println("\tstab @tmp1+1");
-      println("\tstaa @tmp1");
-      println("\tldx @tmp1");
+      tfr_dx();
       println("\tclra");
       println("\tldab 0,x");
       if (!ty->is_unsigned) {
@@ -1446,9 +1438,7 @@ static void load(Type *ty) {
     }
   }else if (ty->size == 2){
     if (opt_O != 's' && opt_O >= '2') {
-      println("\tstab @tmp1+1");
-      println("\tstaa @tmp1");
-      println("\tldx @tmp1");
+      tfr_dx();
       println("\tldab 1,x");
       println("\tldaa 0,x");
     }else{
@@ -2047,7 +2037,7 @@ static void push_args2(Node *args,bool is_variadic)
         gen_direct_pushl(args->lhs->val);
         break;
       }
-      if ((args->lhs->ty->kind==TY_INT || args->lhs->ty->kind==TY_SHORT)
+      if (is_int16(args->lhs->ty)
       &&  args->lhs->kind==ND_NUM
       &&  args->lhs->val>=0) {
         gen_direct_pushl(args->lhs->val);
@@ -2445,7 +2435,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     if (is_empty_cast(node->lhs->ty, node->ty)
     &&  gen_direct_sub(node->lhs, opb, opa, test,0))
       return 1;
-    if ((node->ty->kind == TY_INT || node->ty->kind == TY_SHORT)
+    if (is_int16(node->ty)
     &&  node->lhs->ty->kind == TY_CHAR
     &&  gen_direct_sub(node->lhs, opb, opa, test,0)) {
       return 1;
@@ -2995,14 +2985,6 @@ static void gen_funcall(Node *node)
     println("; ND_FUNCALL: call builtin_alloca()  %s %d",__FILE__,__LINE__);
     builtin_alloca();
     return;
-  }
-  if (node->lhs->kind == ND_VAR
-  && !strcmp(node->lhs->var->name, "memset")) {
-    println("; call memset");
-    ast_node_dump(node);
-    ast_node_dump(node->args);
-    ast_node_dump(node->args->next);
-    ast_node_dump(node->args->next->next);
   }
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "memset")
@@ -4294,7 +4276,7 @@ void gen_expr(Node *node) {
           println("\tstab %d,x",off);
           break;
         }
-      }else if (opt_O == 's') {
+      }else{
         switch(val){
         case 1:
           println("\tinc %d,x",off);
@@ -4310,20 +4292,6 @@ void gen_expr(Node *node) {
           println("\tstab %d,x",off);
           break;
         }
-      }else{
-        println("\tldab %d,x",off);
-        switch(val){
-        case 1:
-          println("\tincb");
-          break;
-        case -1:
-          println("\tdecb");
-          break;
-        default:
-          println("\taddb #%d",val);
-          break;
-        }
-        println("\tstab %d,x",off);
       }
       break;
     case TY_SHORT:
@@ -4615,7 +4583,7 @@ void gen_expr(Node *node) {
     return;
   case ND_CAST:
     if (node->ty->kind==TY_LONG
-    &&  (node->lhs->ty->kind==TY_INT || node->lhs->ty->kind==TY_SHORT)
+    &&  is_int16(node->lhs->ty)
     &&  node->lhs->kind==ND_NUM
     &&  node->lhs->val>=0) {
       gen_expr(node->lhs);

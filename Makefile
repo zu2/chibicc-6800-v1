@@ -38,7 +38,6 @@ dirs:
 	mkdir -p /opt/chibicc/bin
 	mkdir -p /opt/chibicc/lib
 	mkdir -p /opt/chibicc/include
-	install -c copt.rules  /opt/chibicc/lib
 
 install: all
 	install -c chibicc /opt/chibicc/bin
@@ -51,6 +50,8 @@ install: all
 	install -c libc/libc.a /opt/chibicc/lib
 	install -c libm/libm.a /opt/chibicc/lib
 	install -c $(INCS)  /opt/chibicc/include
+	install -c copt.rules  /opt/chibicc/lib
+	install -c copt_O2.rules  /opt/chibicc/lib
 	
 
 # Stage 1
