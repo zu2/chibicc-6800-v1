@@ -6347,8 +6347,7 @@ void codegen(Obj *prog, FILE *out) {
 
   File **files = get_input_files();
   for (int i = 0; files[i]; i++)
-    println(";\t.file %d \"%s\"", files[i]->file_no, files[i]->name);
-
+    println(";\t.file %d \"%s\" %s %s", files[i]->file_no, files[i]->name,__DATE__,__TIME__);
   assign_lvar_offsets(prog);
   emit_data(prog);
   emit_text(prog);
