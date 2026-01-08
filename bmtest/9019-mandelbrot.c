@@ -1,6 +1,9 @@
 extern void putchar(int ch);
 extern void getchar(void);
 
+static unsigned char x2bw[] = { 0x80,0x40,0x20,0x10,8,4,2,1 };
+static unsigned char x2bb[] = { 0x7f,0xbf,0xdf,0xef,0xf7,0xfb,0xfd,0xfe };
+
 void setgr(unsigned char mode)
 {
   *((char *)0xefe0) = mode;
@@ -8,16 +11,32 @@ void setgr(unsigned char mode)
 
 void plot(unsigned char x, unsigned char y, unsigned char z)
 {
+#if 0
   static unsigned char *p;
 
   p = (y<<5) + (x>>3) + 0x2100;
   x = 7 - (x&7);
 
   if (z) {
-    *p |= (1<<x);
+    *p |= ((unsigned char)1<<x);
   }else{
-    *p &= ~(1<<x);
+    *p &= ~((unsigned char)1<<x);
   }
+#else
+  static unsigned char *p;
+
+  if (y>191)
+    return;
+
+  p = (y<<5) + (x>>3) + 0x2100;
+  x &= 7;
+
+  if (z) {
+    *p |= x2bw[x];
+  }else{
+    *p &= x2bb[x];
+  }
+#endif
 }
 
 void cls()
