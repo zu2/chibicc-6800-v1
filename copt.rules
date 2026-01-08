@@ -399,6 +399,15 @@
 =
 	jsr __store32x
 
+	jsr __u16to32
+	jsr __push32
+=
+	pshb
+	psha
+	clrb
+	pshb
+	pshb
+
 	XXX
 	jsr __load32x
 	jsr __push32
