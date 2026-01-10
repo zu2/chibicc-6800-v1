@@ -37,6 +37,9 @@ static int  opt_lm = 0;
 char opt_O = '1';
 char opt_g = '0';
 MachineType opt_t = T_EMU6800;
+bool opt_fbuiltin_memcpy = true;
+bool opt_fbuiltin_memset = true;
+bool opt_fbuiltin_strcpy = true;
 
 #define copt_path  "/opt/fcc/lib/copt"
 #define chibicc_lib_path "/opt/chibicc/lib/"
@@ -188,6 +191,19 @@ static void parse_args(int argc, char **argv) {
 
     if (!strcmp(argv[i], "-fno-common")) {
       opt_fcommon = false;
+      continue;
+    }
+
+    if (!strcmp(argv[i], "-fno-builtin-memcpy")) {
+      opt_fbuiltin_memcpy = false;
+      continue;
+    }
+    if (!strcmp(argv[i], "-fno-builtin-memset")) {
+      opt_fbuiltin_memset = false;
+      continue;
+    }
+    if (!strcmp(argv[i], "-fno-builtin-strcpy")) {
+      opt_fbuiltin_strcpy = false;
       continue;
     }
 
@@ -962,9 +978,15 @@ int main(int argc, char **argv) {
     // Compile
     if (opt_S) {
       if (opt_O && opt_O != '0' && can_copt()) {
+        char *tmp = create_tmpfile();
         char *tmp3 = create_tmpfile();
-        run_cc1(argc, argv, input, tmp3);
-        run_copt(tmp3,output,copt_rules);
+        run_cc1(argc, argv, input, tmp);
+        if (opt_O && opt_O == '2' && can_copt()) {
+          run_copt(tmp, tmp3,  copt_rules);
+          run_copt(tmp3,output,copt_O2_rules);
+        }else{
+          run_copt(tmp, output,copt_rules);
+        }
       }else{
         run_cc1(argc, argv, input, output);
       }
@@ -978,6 +1000,11 @@ int main(int argc, char **argv) {
       if (opt_O && opt_O != '0' && can_copt()) {
         char *tmp3 = create_tmpfile();
         run_copt(tmp,tmp3,copt_rules);
+        tmp = tmp3;
+      }
+      if (opt_O && opt_O == '2' && can_copt()) {
+        char *tmp3 = create_tmpfile();
+        run_copt(tmp,tmp3,copt_O2_rules);
         tmp = tmp3;
       }
       assemble(tmp, output);

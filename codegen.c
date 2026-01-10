@@ -1,5 +1,6 @@
 #include "chibicc.h"
 
+
 static FILE *output_file;
 int depth;
 static Obj *current_fn;
@@ -119,7 +120,7 @@ static void ldab_i(int n)
   }
 }
 
-static void ldd_i(int n)
+void ldd_i(int n)
 {
   if ((n & 0x00ff)==0) {
     println("\tclrb");
@@ -200,7 +201,7 @@ static void ldx_bp()
   IX_Dest = IX_BP;
 }
 
-static void tfr_dx()
+void tfr_dx()
 {
   println("\tjsr __tfr_dx");
   IX_Dest = IX_None;
@@ -2231,7 +2232,6 @@ static void builtin_alloca(void) {
 //
 static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_char)
 {
-  int64_t val;
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
 
   switch(node->kind){
@@ -2966,11 +2966,11 @@ static int check_in_char(Node *node)
   if (node->kind==ND_NUM) {
     if (node->ty->is_unsigned) {
       if (node->val > 255) {
-	return 0;
+        return 0;
       }
     }else{ // signed
       if (node->val<128 || node->val > 127) {
-	return 0;
+        return 0;
       }
     }
   }
@@ -2986,79 +2986,14 @@ static void gen_funcall(Node *node)
     builtin_alloca();
     return;
   }
-  if (node->lhs->kind == ND_VAR
-  && !strcmp(node->lhs->var->name, "memset")
-  && node->args && node->args->next && node->args->next->next) {
-    int64_t dst, val, num;
-    if (is_pointer_constant(node->args, &dst)
-    &&  is_integer_constant(node->args->next, &val)
-    &&  is_integer_constant(node->args->next->next, &num)) {
-      println("; ND_FUNCALL: builtin_memset(%04x,%u,%u)",
-                                (uint16_t)dst,(uint16_t)val,(uint16_t)num);
-      if (num==0) {
-        return;
-      }
-      int odd = (num & 1);
-      char *loop = new_label("L_%d");
-      println("\tldab #%d",(uint16_t)val);
-      println("\tldx #%d",(uint16_t)dst);
-      println("%s:",loop);
-      for (int i=odd; i<2; i++) {
-        println("\tstab 0,x");
-        println("\tinx");
-      }
-      println("\tcpx #%d",(uint16_t)(dst+num));
-      println("\tbne %s",loop);
-      IX_Dest = IX_None;
-      if (!node->retval_unused) {
-        ldd_i(dst);
-      }
-      return;
-    }
+  if (opt_fbuiltin_memcpy && builtin_memcpy(node)) {
+    return;
   }
-
-  if (node->lhs->kind == ND_VAR
-  && !strcmp(node->lhs->var->name, "memcpy")
-  && node->args && node->args->next && node->args->next->next) {
-    int64_t dst, src, num;
-    if (is_pointer_constant(node->args, &dst)
-    &&  is_pointer_constant(node->args->next, &src)
-    &&  is_integer_constant(node->args->next->next, &num)
-    &&  abs(dst-src)<=255 ) {
-      println("; ND_FUNCALL: builtin_memcpy(%04x,%04x,%u)",
-                                (uint16_t)dst,(uint16_t)src,(uint16_t)num);
-      if (num==0) {
-        return;
-      }
-      int odd = (num & 1);
-      char *loop = new_label("L_%d");
-      if (dst>src) {
-        println("\tldx #%d",(uint16_t)src);
-        println("%s:",loop);
-        for (int i=odd; i<2; i++) {
-          println("\tldaa 0,x");
-          println("\tstaa %d,x",(uint16_t)(dst-src));
-          println("\tinx");
-        }
-        println("\tcpx #%d",(uint16_t)(src+num));
-        println("\tbne %s",loop);
-      }else if (dst<src) {
-        println("\tldx #%d",(uint16_t)dst);
-        println("%s:",loop);
-        for (int i=odd; i<2; i++) {
-          println("\tldaa %d,x",(uint16_t)(src-dst));
-          println("\tstaa 0,x");
-          println("\tinx");
-        }
-        println("\tcpx #%d",(uint16_t)(dst+num));
-        println("\tbne %s",loop);
-      }
-      IX_Dest = IX_None;
-      if (!node->retval_unused) {
-        ldd_i(dst);
-      }
-      return;
-    }
+  if (opt_fbuiltin_memset && builtin_memset(node)) {
+    return;
+  }
+  if (opt_fbuiltin_strcpy && builtin_strcpy(node)) {
+    return;
   }
 
   if (node->lhs->kind == ND_VAR
@@ -3857,7 +3792,6 @@ static void opeq(Node *node)
         }else if (node->lhs->ty->is_unsigned) {
           println("\tjsr __shr8u");
         }else{
-          char *label = new_label("L_%d");
           println("\tjsr __shr8s");
         }
         println("\tstab %d,x",off);
@@ -4154,14 +4088,21 @@ void gen_expr(Node *node) {
           println("\tsubb #<%d",val);
           println("\tsbca #>%d",val);
         }
+      }else if (node->retval_unused && val==-1) {
+        char *label = new_label("L_%d");
+        println("\ttst %d,x",off+1);  // 7 2
+        println("\tbne %s",label);    // 4 2
+        println("\tdec %d,x",off);    // 7 2
+        println("%s:",label);
+        println("\tdec %d,x",off+1);  // 7 2    // total: 25 8
       } else { // val<0
         val = abs(val);
-        println("\tldab %d,x",off+1);
-        println("\tldaa %d,x",off);
-        println("\tsubb #<%d",val);
-        println("\tsbca #>%d",val);
-        println("\tstab %d,x",off+1);
-        println("\tstaa %d,x",off);
+        println("\tldab %d,x",off+1); // 5 2
+        println("\tldaa %d,x",off);   // 5 2
+        println("\tsubb #<%d",val);   // 2 2
+        println("\tsbca #>%d",val);   // 2 2
+        println("\tstab %d,x",off+1); // 6 2
+        println("\tstaa %d,x",off);   // 6 2    // total 26 12
         if (!node->retval_unused) {
           println("\taddb #<%d",val);
           println("\tadca #>%d",val);
@@ -5182,7 +5123,6 @@ void gen_expr(Node *node) {
       return;
     // (+ TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
     if (node->ty->kind == TY_CHAR) {
-      bool tmp = node->rhs->ty->is_unsigned;
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
         if(gen_direct(node->rhs,"addb",NULL))
@@ -5268,7 +5208,6 @@ void gen_expr(Node *node) {
   case ND_SUB:
     // (+ TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
     if (node->ty->kind == TY_CHAR) {
-      bool tmp = node->rhs->ty->is_unsigned;
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
         if(gen_direct(node->rhs,"subb",NULL))
