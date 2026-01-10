@@ -14,7 +14,7 @@ all: dirs chibicc lib crt0.o dummyfloat.o crt0_mikbug.o crt0_bm.o crt0_jr100.o c
 
 lib:
 	(cd libc ; make)
-	(cd libm ; make)
+	(cd libm ; make setup ; make)
 
 crt0.o: crt0.s
 	as6800 $^

@@ -20,6 +20,10 @@ OBJ =	__float.o __floatlib.o __floatconst.o \
 .c.o:
 	../chibicc -O2 -c $<
 
+setup:
+	ln -sf ../copt.rules .
+	ln -sf ../copt_O2.rules .
+
 libm.a: $(OBJ)
 	rm -f libm.a
 	ar qc libm.a `lorderz80 $(OBJ) | tsort`
