@@ -10,8 +10,8 @@ However, it is a compiler that works reasonably well. I hope it will be helpful 
 
 Dhrystone & Whetstone works now. 
 
-- https://github.com/z88dk/z88dk/tree/master/libsrc/\_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21
-- https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone
+- https://github.com/z88dk/z88dk/tree/master/support/benchmarks/dhrystone21
+- https://github.com/z88dk/z88dk/tree/master/support/benchmarks/whetstone
 ----
 # Topics
 
@@ -116,12 +116,12 @@ This will compile the source file and execute the resulting binary using the emu
 - **Dhrystone benchmark:** 234 seconds at 1MHz on MC6800, equivalent to approximately 0.05 DMIPS.
   - Improve: 183.56 seconds, 0.062 DMIPS (2025/09/17).
   - Improve: 179.84 seconds, 0.063 DMIPS (2025/11/13).
+  - Improve: 160.84 seconds, 0.070 DMIPS (2026/01/10).
 
-If running on 2MHz MC68B00: 0.1266 DMIPS, comparable to HITECH C CPM V309-15 (0.1278  DMIPS).
+If running on 2MHz MC68B00: 0.1407 DMIPS, comparable to HITECH C CPM V309-15 (0.1278 DMIPS).
 MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
 
-- **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks
-/dhrystone21/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21)
+- **Source code:** z88dk/support/benchmarks/dhrystone21 at master · z88dk/z88dk : https://github.com/z88dk/z88dk/tree/master/support/benchmarks/dhrystone21
 
 ## Floating-Point Operations
 - **Mandelbrot ASCII renderer (`asciiartf`):** 266 seconds at **1MHz on MC6800**.
@@ -134,7 +134,7 @@ MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
   - Improve: 358.0215 seconds, 2.793 KWIPS, .002793 MWIPS (2025/08/09)
   - Improve: 317.2384 seconds, 3.152 KWIPS, .003152 MWIPS (2025/11/13)
 
-- **Source code:** [`z88dk/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone/`](https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/whetstone)
+- **Source code:** [z88dk/support/benchmarks/whetstone at master · z88dk/z88dk](https://github.com/z88dk/z88dk/tree/master/support/benchmarks/whetstone)
 
 ## String and Memory Operations
 - `strcmp`, `strcpy`, and `strcat` operate on two bytes at a time, resulting in high performance.
