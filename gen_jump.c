@@ -138,8 +138,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   }
 
   if (node->kind == ND_LOGOR) {
-    char if_thru[32];
-    sprintf(if_thru, "L_thru_%d", count());
+    char *if_thru = new_label("L_thru_%d");
     gen_jump_if_true(lhs, if_thru);
     gen_jump_if_false(rhs, if_false);
     println("%s:", if_thru);
@@ -259,9 +258,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
   node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
-  char if_thru[32];
+  char *if_thru = new_label("L_thru_%d");
   char if_cond[32];
-  sprintf(if_thru, "L_thru_%d", count());
 
   if (node->kind == ND_NOT) {
     return gen_jump_if_true(node->lhs, if_false);
@@ -658,8 +656,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     return true;
   }
   if (node->kind == ND_LOGAND) {
-    char if_thru[32];
-    sprintf(if_thru, "L_thru_%d", count());
+    char *if_thru = new_label("L_thru_%d");
     gen_jump_if_false(node->lhs, if_thru);
     gen_jump_if_true(node->rhs, if_true);
     println("%s:", if_thru);
