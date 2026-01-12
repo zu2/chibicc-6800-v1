@@ -152,7 +152,7 @@ struct Obj {
   bool is_tentative;
   bool is_tls;
   bool is_literal;
-  char *init_data;
+  unsigned char *init_data;
   Relocation *rel;
 
   // Function

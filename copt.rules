@@ -245,6 +245,14 @@
 	pshb
 	pshb
 
+	ldab %2,x
+	ldaa %1,x
+	jsr __u16to32
+=
+	ldx %1,x
+	stx @long+2
+	ldx #0
+	stx @long
 
 	ldab %4,x
 	stab @long+3
@@ -818,6 +826,28 @@ INC%M:
 	addb #<$ff81
 	adca #>$ff81
 
+# Omit sign extension for the AND operation.
+
+%check 0 <= %1 <= 127
+	clra
+	asrb
+	rolb
+	sbca #0
+	andb #<%1
+	anda #>%1
+=
+	clra
+	andb #<%1
+
+# Omit sign extension after load8s
+	jsr __load8s
+	clra
+	asrb
+	rolb
+	sbca #0
+=
+	jsr __load8s
+
 #
 #
 #
@@ -948,6 +978,7 @@ INC%M:
 	pulb
 	stab %3,x
 
+
 # delete garbarge
 	pshb
 	ldx @bp
@@ -1012,3 +1043,7 @@ INC%M:
 =
 	subb %1
 	jge %2
+
+	cmpb #<0
+=
+	tstb
