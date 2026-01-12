@@ -2,10 +2,10 @@
 ;	@tmp2 = TOS / AccAB
 ;	AccAB = TOS % AccAB
 ;
-;       @tmp1:  divisor
-;       @tmp2:  quotient
-;       AccAB:  remainder
-;       @tmp4: sign (see. div32x32s)
+;       @tmp1: divisor
+;       @tmp2: quotient (complemented)
+;       AccAB: remainder
+;       @tmp4: sign (see. div16x16s,rem16x16s)
 ;
 	.export __div16x16
 	.code
