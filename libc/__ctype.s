@@ -69,21 +69,19 @@ __ret0:
 ;
 ;	isspace: (c == ' '  || c == '\f' || c == '\n'
 ;              || c == '\r' || c == '\t' || c == '\v')
+;
+;       isspace: (c == ' ' || ('\t' <= c && c <= '\n'))
+;
 _isspace:
 	tsta
 	bne	__ret0
 	cmpb	#' '
 	beq	__ret1
-	cmpb	#'\f'
-	beq	__ret1
-	cmpb	#'\n'
-	beq	__ret1
-	cmpb	#'\r'
-	beq	__ret1
-	cmpb	#'\t'
-	beq	__ret1
-	cmpb	#'\v'
-	beq	__ret1
+	cmpb	#$09            ; \t
+        bcs     __ret00
+	cmpb	#$0D+1          ; \r
+	bcs	__ret1
+__ret00:
 ;	clra			; At this point, AccA is 0.
 	clrb
 	rts
@@ -120,7 +118,7 @@ _isblank:			; (c == ' ' || c == '\t')
 	bne	__ret0
 	cmpb	#$20
 	beq	__ret1
-	cmpb	#'\t'
+	cmpb	#$09            ; TAB
 	beq	__ret1
 ;	clra			; At this point, AccA is 0.
 	clrb
