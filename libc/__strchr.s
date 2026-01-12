@@ -32,9 +32,8 @@ _strchr_loop:
 	beq	_strchr_found
 	ldaa	0,x
 	bne	_strchr_loop
-_strchr_end:
 	clrb
-	clra
+;	clra                    ; here, AccA==0
 	rts
 _strchr_found:
 	stx	@tmp1
