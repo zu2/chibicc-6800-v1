@@ -1,4 +1,5 @@
-OPT=-vv -O -DPRINTF=1 -Ddouble_t=float '-Dscanf(x,y)={*y=20000;}' -DTIMEFUNC '-Dnative_timer_start=cpu_counter' '-Dnative_timer_stop=cpu_counter'
+#OPT=-vv -O2 -DPRINTF=1 -Ddouble_t=float '-Dscanf(x,y)={*y=20000;}' -DTIMEFUNC '-Dnative_timer_start=cpu_counter' '-Dnative_timer_stop=cpu_counter'
+OPT=-vv -O2 -Ddouble_t=float '-Dscanf(x,y)={*y=20000;}' -DTIMEFUNC '-Dnative_timer_start=cpu_counter' '-Dnative_timer_stop=cpu_counter'
 
 benchmark: all
 
@@ -13,11 +14,11 @@ all: dhry_1.c dhry_2.c dhry.h my_printf.c
 setup:	dhry_1.c dhry_2.c dhry.h
 
 dhry_1.c:
-	wget -nc https://raw.githubusercontent.com/z88dk/z88dk/refs/heads/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21/dhry_1.c
+	wget -nc https://raw.githubusercontent.com/z88dk/z88dk/refs/heads/master/support/benchmarks/dhrystone21/dhry_1.c
 
 dhry_2.c:
-	wget -nc https://raw.githubusercontent.com/z88dk/z88dk/refs/heads/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21/dhry_2.c
+	wget -nc https://raw.githubusercontent.com/z88dk/z88dk/refs/heads/master/support/benchmarks/dhrystone21/dhry_2.c
 
 
 dhry.h:
-	wget -nc https://raw.githubusercontent.com/z88dk/z88dk/refs/heads/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/dhrystone21/dhry.h
+	wget -nc https://raw.githubusercontent.com/z88dk/z88dk/refs/heads/master/support/benchmarks/dhrystone21/dhry.h
