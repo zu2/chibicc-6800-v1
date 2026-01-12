@@ -5852,7 +5852,12 @@ static void gen_stmt(Node *node)
         break;
       }
     }
-
+    if (!current_fn->params && !current_fn->stack_size && !current_fn->use_alloca) {
+      println("; function has no params & locals");
+      IX_Dest = IX_None;
+      println("\trts");
+      return;
+    }
     println("\tjmp L_return_%d", current_fn->function_no);
 //    println("\tjmp L_return_%s", current_fn->name);
     return;

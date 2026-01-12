@@ -957,6 +957,34 @@ INC%M:
 	ldx @bp
 	ldx %1,x
 
+	ldx @bp
+	txs
+	jmp L_return_%1
+=
+	jmp L_return_%1
+
+	ins
+	jmp L_return_%1
+=
+	jmp L_return_%1
+
+	jmp %1
+	clrb
+	clra
+%1:
+=
+%1:
+
+	rts
+	clrb
+	clra
+%1:
+=
+%1:
+	rts
+
+
+
 # expand macros
 	inx 1
 =
@@ -976,3 +1004,11 @@ INC%M:
 	dex
 	dex
 
+	XXX
+	clra
+	subb %1
+	sbca #0
+	jge %2
+=
+	subb %1
+	jge %2
