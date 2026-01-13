@@ -1,5 +1,5 @@
 #
-#	copt_O2.rules
+# copt_O2.rules
 #
 
 	jsr __tfr_dx
@@ -7,3 +7,29 @@
 	stab @tmp1+1
 	staa @tmp1
 	ldx @tmp1
+
+#
+# 32bit operation
+#
+	
+	jsr __push32
+=
+	ldab @long+3
+	pshb
+	ldab @long+2
+	pshb
+	ldab @long+1
+	pshb
+	ldab @long
+	pshb
+
+	jsr __load32x
+=
+	ldab %4,x
+	stab @long+3
+	ldab %3,x
+	stab @long+2
+	ldab %2,x
+	stab @long+1
+	ldab %1,x
+	stab @long
