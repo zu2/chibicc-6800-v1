@@ -171,6 +171,11 @@
 =
 	jsr __load8u
 
+	jsr __load8u
+	clra
+=
+	jsr __load8u
+
 
 	stab %1
 	clra
@@ -1014,6 +1019,31 @@ INC%M:
 %1:
 	rts
 
+	jsr %1
+	rts
+=
+	jmp %1
+
+
+	jsr %1
+%2:
+	rts
+=
+	jmp %1
+%2:
+	rts
+
+	rts
+%1:
+	rts
+=
+%1:
+	rts
+
+	rts
+	rts
+=
+	rts
 
 
 # expand macros

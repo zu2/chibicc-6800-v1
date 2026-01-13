@@ -5896,6 +5896,7 @@ static void gen_stmt(Node *node)
       return;
     }
     println("\tjmp L_return_%d", current_fn->function_no);
+    current_fn->return_count++;
 //    println("\tjmp L_return_%s", current_fn->name);
     return;
   case ND_EXPR_STMT:
@@ -6077,21 +6078,22 @@ static void emit_text(Obj *prog) {
     if (!fn->is_static)
       println("\t.export _%s", fn->name);
 
+    // Prologue
+    println("; function %s prologue emit_text",fn->name);
+    println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
+    println("; fn->body->kind=%d",fn->body->kind);
     println("\t.code");
-//    println("\t.type %s, @function", fn->name);
+//  println("\t.type %s, @function", fn->name);
     println("_%s:", fn->name);
     current_fn = fn;
     current_fn->function_no = count();
-    println("; fn->body->kind=%d",fn->body->kind);
+    current_fn->return_count = 0;
     if(fn->body->kind==ND_BLOCK && fn->body->body==NULL){	// empty function
       println("\trts	; empty function");
       println(";");
       IX_Dest = IX_None;
       continue;
     }
-    // Prologue
-    println("; function %s prologue emit_text",fn->name);
-    println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
     if (!fn->params && !fn->stack_size && !fn->use_alloca) {
       println("; function has no params & locals");
       IX_Dest = IX_None;
@@ -6205,19 +6207,27 @@ no_params_locals:
     }
 
     // Epilogue
-    println("L_return_%d:", fn->function_no);
-    println("; function %s epilogue emit_text",fn->name);
-    println("; recover sp, fn->stack_size=%d reg_param_size=%d",
+    if (fn->return_count){
+      println("L_return_%d:", fn->function_no);
+    }
+    if (opt_g > '2') {
+      println("; function %s epilogue emit_text",fn->name);
+      println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 	   	    	fn->stack_size,reg_param_size);
-    println("; fn->ty->return_ty->size = %d", fn->ty->return_ty->size);
-    println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
+      println("; fn->ty->return_ty->size = %d", fn->ty->return_ty->size);
+      println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
+    }
     if (!fn->params && !fn->stack_size && !fn->use_alloca) {
-      println("; function has no params & locals");
+      if (opt_g > '2') {
+        println("; function has no params & locals");
+      }
       IX_Dest = IX_None;
       goto no_params_locals2;
     }
     if (fn->stack_size + reg_param_size <= 10){
-      println("; fn->stack_size %d, reg_param_size %d",fn->stack_size,reg_param_size);
+      if (opt_g > '2') {
+        println("; fn->stack_size %d, reg_param_size %d",fn->stack_size,reg_param_size);
+      }
       int npops = fn->stack_size + reg_param_size - 1;
       if (npops>=0) {
         println("\tlds @bp");

@@ -196,7 +196,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     println("\tsubb _%s", node->var->name);
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
-    int off = gen_addr_x(rhs,false);
+    int off = gen_addr_x(rhs,true);
     println("\tsubb %d,x",off);
   }else{
     gen_expr(lhs);
@@ -546,6 +546,15 @@ bool gen_jump_if_false(Node *node, char *if_false)
     gen_expr(node);
     println("\tjeq  %s", if_false);
     return true;
+  } else if (is_global_var(rhs)) {
+    gen_expr(lhs);
+    println("\tsubb _%s+1",rhs->var->name);
+    println("\tsbca _%s",  rhs->var->name);
+  } else if (test_addr_x(rhs)) {
+    gen_expr(lhs);
+    int off = gen_addr_x(rhs,false);
+    println("\tsubb %d,x",off+1);
+    println("\tsbca %d,x",off);
   } else {
     gen_expr(rhs);
     push();

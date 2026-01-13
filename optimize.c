@@ -67,6 +67,30 @@ Node *negate_condition(Node *node)
   return node;
 }
 
+Node *flip_condition(Node *node)
+{
+  switch(node->kind){
+  case ND_EQ:
+  case ND_NE:
+    break;
+  case ND_LT:
+    node->kind = ND_GT;
+    break;
+  case ND_LE:
+    node->kind = ND_GE;
+    break;
+  case ND_GT:
+    node->kind = ND_LT;
+    break;
+  case ND_GE:
+    node->kind = ND_LE;
+    break;
+  default:
+    assert(0);
+  }
+  return node;
+}
+
 Node *swap_lr(Node *node)
 {
   Node *tmp;
@@ -79,24 +103,22 @@ Node *swap_lr(Node *node)
 
 static int node_cost(Node *node)
 {
-  int sign;
+  int  sign = !node->ty->is_unsigned;
 
-  switch(node->kind){
-  case ND_NUM:
+  if (node->kind==ND_NUM) {
     return 1;
-  case ND_VAR:
-    sign = !node->ty->is_unsigned;
-    if (node->var->ty->kind == TY_VLA)
-      return 150 + sign;
-    if (node->var->is_local)
-      return (test_addr_x(node)?50:100) +sign;
-    return (test_addr_x(node)?160:200) + sign;
-  case ND_CAST:
-    sign = !node->ty->is_unsigned;
+  }else if (is_global_var(node)) {
+    return 150+sign;
+  }else if (test_addr_x(node)) {
+    return 200+sign;
+  }else if (node->kind==ND_VAR) {
+    return 250+sign;
+  }else if (node->kind==ND_CAST) {
     return node_cost(node->lhs)+10+sign;
-  case ND_FUNCALL:
+  }else if (node->kind==ND_FUNCALL) {
     return 400;
   }
+
   return 1000;
 }
 
@@ -513,8 +535,11 @@ Node *optimize_expr(Node *node)
     int64_t lval, rval;
     Type *lty, *rty;
 
-    node = optimize_lr(node);
-  
+    node->lhs = optimize_expr(node->lhs);
+    node->rhs = optimize_expr(node->rhs);
+    if (node_cost(node->lhs) < node_cost(node->rhs)) {
+      node = flip_condition(swap_lr(node));
+    }
     if (is_integer_constant(node->lhs,&lval)
     &&  is_integer_constant(node->rhs,&rval)) {
       if ((node->lhs->ty == ty_int) && (node->rhs->ty == ty_int)) {
@@ -633,8 +658,46 @@ Node *optimize_expr(Node *node)
         }
         break;
       }
+    }  
+//  lhs -1 <  rhs → lhs<=rhs
+//  lhs +1 <= rhs → lhs< rhs
+//  signed integer: UB, unsigned integer: modulo
+    if ( is_integer(node->ty) && !node->lhs->ty->is_unsigned) {
+      if ((node->kind==ND_LT && node->lhs->kind==ND_SUB)
+      ||  (node->kind==ND_LE && node->lhs->kind==ND_ADD)) {
+        if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
+          node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
+          node->lhs = optimize_expr(node->lhs->lhs);
+        }
+//  lhs -1 >= rhs → lhs>  rhs
+//  lhs +1 >  rhs → lhs>= rhs
+      }else if ((node->kind==ND_GE && node->lhs->kind==ND_SUB)
+      ||  (node->kind==ND_GT && node->lhs->kind==ND_ADD)) {
+        if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
+          node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
+          node->lhs = optimize_expr(node->lhs->lhs);
+        }
+      }
     }
-
+//  lhs <  rhs +1 → lhs<=rhs
+//  lhs <= rhs -1 → lhs< rhs
+    if ( is_integer(node->ty) && !node->rhs->ty->is_unsigned) {
+      if ((node->kind==ND_LT && node->rhs->kind==ND_ADD)
+      ||  (node->kind==ND_LE && node->rhs->kind==ND_SUB)) {
+        if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
+          node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
+          node->rhs = optimize_expr(node->rhs->lhs);
+        }
+//  lhs >= rhs +1 → lhs>  rhs
+//  lhs >  rhs -1 → lhs>= rhs
+      }else if ((node->kind==ND_GE && node->rhs->kind==ND_ADD)
+      ||  (node->kind==ND_GT && node->rhs->kind==ND_SUB)) {
+        if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
+          node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
+          node->rhs = optimize_expr(node->rhs->lhs);
+        }
+      }
+    }
 
 //  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
     if ( node_cost(node->lhs) < node_cost(node->rhs)

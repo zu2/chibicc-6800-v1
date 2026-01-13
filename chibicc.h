@@ -164,6 +164,7 @@ struct Obj {
   Obj *alloca_bottom;
   int stack_size;
   int function_no;
+  int return_count;
   bool use_alloca;
 
   // Static inline function
