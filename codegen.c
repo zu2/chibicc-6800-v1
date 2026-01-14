@@ -1071,6 +1071,12 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 //case ND_STMT_EXPR:
 //case ND_COMMA:
   case ND_CAST: {
+    if (!is_int16_or_ptr(node->ty)) {
+      return false;
+    }
+    if (!is_int16_or_ptr(node->lhs->ty)) {
+      return false;
+    }
     if (test_expr_x(lhs)) {
       if (test) return true;
       off = gen_expr_x(lhs,true);
@@ -1280,6 +1286,9 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
   case ND_COMMA:
     return false;
   case ND_MEMBER:
+    if (node->member->is_bitfield) {
+      return false;
+    }
     if (!test_addr_x(lhs)) {
       return 0;
     }
@@ -4631,7 +4640,7 @@ void gen_expr(Node *node) {
     sprintf(L_end, "L_end_%d",c);
 
     Node *cond;
-    cond = optimize_expr(node->cond);
+    cond = optimize_condition(node->cond);
 
     if (!gen_jump_if_false(cond,L_else)){
       gen_expr(cond);
@@ -5682,7 +5691,7 @@ static void gen_stmt(Node *node)
       sprintf(L_end, "L_end_%d"  ,c);
       strcpy(L_else,L_end);
     }
-    cond = optimize_expr(cond);
+    cond = optimize_condition(cond);
     if (!gen_jump_if_false(cond,L_else)){
       gen_expr(cond);
       if (!is_compare_or_not(cond))
@@ -5711,7 +5720,7 @@ static void gen_stmt(Node *node)
     println("L_begin_%d:", c);
     IX_Dest = IX_None;
     if (cond) {
-      cond = optimize_expr(cond);
+      cond = optimize_condition(cond);
       if (is_integer_constant(cond,&val)) {
         if (val==0) {
 //        println("\tjmp %s", if_false);
