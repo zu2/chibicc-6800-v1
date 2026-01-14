@@ -25,11 +25,24 @@
 
 	jsr __load32x
 =
-	ldab %4,x
+	ldab 3,x
 	stab @long+3
-	ldab %3,x
+	ldab 2,x
 	stab @long+2
-	ldab %2,x
+	ldab 1,x
 	stab @long+1
-	ldab %1,x
+	ldab 0,x
+	stab @long
+
+%check 0 <= %1 <= 252
+	ldab #<%1
+	jsr __load32bx
+=
+	ldab %1+3,x
+	stab @long+3
+	ldab %1+2,x
+	stab @long+2
+	ldab %1+1,x
+	stab @long+1
+	ldab %1+0,x
 	stab @long
