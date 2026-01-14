@@ -456,8 +456,10 @@ void ast_node_dump(Node *node);
 // optimize.c
 //
 Node *optimize_expr(Node *node);
+Node *optimize_condition(Node *node);
 Obj *optimize(Obj *prog);
 Node *negate_condition(Node *node);
+Node *flip_condition(Node *node);
 Node *swap_lr(Node *node);
 
 //
