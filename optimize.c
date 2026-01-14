@@ -357,24 +357,29 @@ Node *optimize_expr(Node *node)
   // Below is a binary operator
   case ND_LOGAND: {
     node = optimize_lr(node);
-    if (is_integer(node->lhs->ty)
-    &&  is_integer_constant(node->lhs,&val)
-    &&  node->lhs->ty == ty_int
-    &&  val==0) {
-      node = new_num(0,node->tok);
-      node->ty = ty_int;
-      return node;
+    if (is_integer_constant(node->lhs,&val)) {
+      if (val==0) {
+        node = new_num(0,node->tok);
+        node->ty = ty_int;
+        return node;
+      }else{
+        node = node->rhs;
+        return node;
+      }
     }
     return optimize_const_expr(node);
   }
   case ND_LOGOR:
     node = optimize_lr(node);
-    if (is_integer(node->lhs->ty)
-    &&  is_integer_constant(node->lhs,&val)
-    &&  node->lhs->ty == ty_int
-    &&  val!=0) {
-      node = node->rhs;
-      return node;
+    if (is_integer_constant(node->lhs,&val)) {
+      if (val==0) {
+        node = node->rhs;
+        return node;
+      }else{
+        node = new_num(1,node->tok);
+        node->ty = ty_int;
+        return node;
+      }
     }
     return optimize_const_expr(node);
   case ND_ADD: {
@@ -791,7 +796,46 @@ Node *optimize_expr(Node *node)
   return node;
 }
 
+Node *optimize_condition(Node *node)
+{
+  int64_t val;
+
+#if 1
+  if (!node)
+    return node;
+  node = optimize_expr(node);
+
+  if (node->kind == ND_NOT && node->lhs->kind == ND_NOT) {
+    node = optimize_condition(node->lhs->lhs);
+  }
+  if (node->kind == ND_NOT && is_compare(node->lhs)) {
+    node = negate_condition(optimize_condition(node->lhs));
+  }
+  if (node->kind==ND_EQ
+  &&  is_integer(node->lhs->ty)
+  &&  is_integer_constant(node->rhs,&val)
+  &&  val==0 ) {
+    node = new_unary(ND_NOT, optimize_condition(node->lhs), node->tok);
+  }
+  if (node->kind==ND_NE
+  &&  is_integer(node->lhs->ty)
+  &&  is_integer_constant(node->rhs,&val)
+  &&  val==0 ) {
+    node = optimize_condition(node->lhs);
+  }
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_INT
+  &&  (node->lhs->ty->kind == TY_INT || node->lhs->ty->kind == TY_CHAR)) {
+    node = node->lhs;
+  }
+#endif
+
+  return node;
+}
+
+
 Obj *optimize(Obj *prog)
 {
 	return prog;
 }
+
