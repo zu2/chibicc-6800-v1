@@ -180,7 +180,7 @@ static void and_i(int n)
 static void pushl(void) {
   // push32/32x/32bx/32dx destroy IX, which may require reloading IX later.
   // Generating the value directly at -O2 can reduce this overhead.
-  if (opt_O=='2') {
+  if (opt_O >= '2') {
     println("\tldab @long+3");
     println("\tpshb");
     println("\tldab @long+2");
@@ -5610,6 +5610,22 @@ void gen_expr(Node *node) {
     push1();
     gen_expr(node->lhs);
 //  shl16: AccAB << TOS(8bit)
+    if (opt_O >= '2') {
+      char *skip = new_label("L_%d");
+      char *loop = new_label("L_%d");
+      println("\ttsx");
+      println("\ttst 0,x");
+      println("\tbeq %s",skip);
+      println("%s:",loop);
+      println("\taslb");
+      println("\trola");
+      println("\tdec 0,x");
+      println("\tbne %s",loop);
+      println("%s:",skip);
+      IX_Dest = IX_None;
+      ins(1);
+      return;
+    }
     println("\tjsr __shl16");
     IX_Dest = IX_None;
     ins(1);
@@ -5631,28 +5647,63 @@ void gen_expr(Node *node) {
     gen_expr(node->rhs);
     push1();
     gen_expr(node->lhs);
-//  cast(node->lhs->ty, node->ty);
-//  shr16: AccAB >> TOS(16bit)
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
+      //  shr8: AccB >> TOS(8bit)
+      if (opt_O >= '2') {
+        char *skip = new_label("L_%d");
+        char *loop = new_label("L_%d");
+        popa();
+        println("\ttsta");
+        println("\tbeq %s",skip);
+        println("%s:",loop);
+        if (node->lhs->ty->is_unsigned){
+          println("\tlsrb");
+        }else{
+          println("\tasrb");
+        }
+        println("\tdeca");
+        println("\tbne %s",loop);
+        println("%s:",skip);
+        return;
+      }
       if (node->lhs->ty->is_unsigned){
         println("\tjsr __shr8u");
       }else{
         println("\tjsr __shr8s");
       }
-      break;
+      IX_Dest = IX_None;
+      ins(1);
+      return;
     default:
-      if (node->lhs->ty->is_unsigned){
+      //  shr16: AccAB >> TOS(8bit)
+      if (opt_O >= '2') {
+        char *skip = new_label("L_%d");
+        char *loop = new_label("L_%d");
+        println("\ttsx");
+        println("\ttst 0,x");
+        println("\tbeq %s",skip);
+        println("%s:",loop);
+        if (node->lhs->ty->is_unsigned){
+          println("\tlsra");
+          println("\trorb");
+        }else{
+          println("\tasra");
+          println("\trorb");
+        }
+        println("\tdec 0,x");
+        println("\tbne %s",loop);
+        println("%s:",skip);
+      }else if (node->lhs->ty->is_unsigned){
         println("\tjsr __shr16u");
       }else{
         println("\tjsr __shr16s");
       }
-      break;
+      IX_Dest = IX_None;
+      ins(1);
+      return;
     }
-    IX_Dest = IX_None;
-    ins(1);
-    return;
   } // ND_SHR
   default: ;
   }

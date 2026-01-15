@@ -9,7 +9,7 @@ bool builtin_memset(Node *node)
     if (is_pointer_constant(node->args, &dst)
     &&  is_integer_constant(node->args->next, &val)
     &&  is_integer_constant(node->args->next->next, &num)) {
-      println("; ND_FUNCALL: builtin_memset(%04x,%u,%u)",
+      println("; ND_FUNCALL: builtin_memset(0x%04x,%u,%u)",
                                 (uint16_t)dst,(uint16_t)val,(uint16_t)num);
       if (num==0) {
         return true;
@@ -45,7 +45,7 @@ bool builtin_memcpy(Node *node)
     &&  is_pointer_constant(node->args->next, &src)
     &&  is_integer_constant(node->args->next->next, &num)
     &&  abs(dst-src)<=255 ) {
-      println("; ND_FUNCALL: builtin_memcpy(%04x,%04x,%u)",
+      println("; ND_FUNCALL: builtin_memcpy(0x%04x,0x%04x,%u)",
                                 (uint16_t)dst,(uint16_t)src,(uint16_t)num);
       if (num==0) {
         return true;

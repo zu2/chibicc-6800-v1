@@ -1014,6 +1014,12 @@ INC%M:
 %1:
 	rts
 
+	ora #0
+=
+
+	anda #0
+=
+	clra
 
 
 # expand macros

@@ -8,6 +8,14 @@
 	staa @tmp1
 	ldx @tmp1
 
+	jsr __load8u
+=
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	ldab 0,x
+
+
 #
 # 32bit operation
 #
@@ -116,3 +124,26 @@ INC32_%M:
 	dex
 	stx @long
 DEC32_%M:
+
+#
+# shift operation optimize
+#
+
+	ldab %1,x
+	pshb
+	ldab %2,x
+	pula
+	tsta
+=
+	ldab %2,x
+	ldaa %1,x
+
+
+#
+# delete garbage
+#
+	sta%1 %2,x
+	lda%1 %2,x
+=
+	sta%1 %2,x
+

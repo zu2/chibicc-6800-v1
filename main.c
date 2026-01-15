@@ -981,7 +981,7 @@ int main(int argc, char **argv) {
         char *tmp = create_tmpfile();
         char *tmp3 = create_tmpfile();
         run_cc1(argc, argv, input, tmp);
-        if (opt_O && opt_O == '2' && can_copt()) {
+        if (opt_O && opt_O >= '2' && can_copt()) {
           run_copt(tmp, tmp3,  copt_rules);
           run_copt(tmp3,output,copt_O2_rules);
         }else{
@@ -1002,7 +1002,7 @@ int main(int argc, char **argv) {
         run_copt(tmp,tmp3,copt_rules);
         tmp = tmp3;
       }
-      if (opt_O && opt_O == '2' && can_copt()) {
+      if (opt_O && opt_O >= '2' && can_copt()) {
         char *tmp3 = create_tmpfile();
         run_copt(tmp,tmp3,copt_O2_rules);
         tmp = tmp3;
@@ -1020,7 +1020,7 @@ int main(int argc, char **argv) {
       run_copt(tmp1,tmp3,copt_rules);
       tmp1 = tmp3;
     }
-    if (opt_O && opt_O == '2' && can_copt()) {
+    if (opt_O && opt_O >= '2' && can_copt()) {
       char *tmp3 = create_tmpfile();
       run_copt(tmp1,tmp3,copt_O2_rules);
       tmp1 = tmp3;
