@@ -44,6 +44,8 @@ bss_clear:
 	bne bss_clear
 ;
 call_main:
+        tsx
+        stx @bp
 	clra
 	clrb
 	pshb
