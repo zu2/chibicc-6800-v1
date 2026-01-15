@@ -10,13 +10,13 @@
 ;	__inc32	        @long++
 ;
 __inc32:
-        ldx @long+2
-        inx
-        stx @long+2
+        inc @long+3
         bne __inc32_ret
-        ldx @long
-        inx
-        stx @long
+        inc @long+2
+        bne __inc32_ret
+        inc @long+1
+        bne __inc32_ret
+        inc @long
 __inc32_ret:
 	rts
 ;
