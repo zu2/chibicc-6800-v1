@@ -1,7 +1,7 @@
 #!/bin/sh
 
 for i in [0-9]*.c; do
-  for opt in O0 O1 O2 Os; do
+  for opt in O0 O1 O2 O3 Os; do
     ./onetest -$opt $i -lm
     ret=$?
     echo $ret
