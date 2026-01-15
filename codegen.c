@@ -78,30 +78,56 @@ void popx(void) {
   depth-=2;
 }
 
+//
+// Use ins_only(n) to preserve flags.
+//
 static void ins(int n)
 {
-  // current function has no params, no locals, no alloca
-  if (!current_fn->params && !current_fn->stack_size && !current_fn->use_alloca) {
-    depth -= n;
-    while (n-->0) {
-      println("\tins");
-    }
-    return;
-  }
-  if (n>=3 && depth==n && !current_fn->use_alloca) {
-//  println("; stack depth = %d",depth);
-    if (IX_Dest != IX_BP) {
-      println("\tldx @bp");
-    }
-    println("\ttxs");
-    IX_Dest = IX_BP;
-    depth = 0;
-    return;
-  }
-  depth -= n;
-  while (n-->0) {
+  for (int i=0; i<n; i++) {
     println("\tins");
   }
+  depth -= n;
+
+  return;
+}
+
+// 
+// Removes stack args (flags may be affected).
+//
+static void remove_args(int n)
+{
+  assert(depth>=n && n>=0);
+  if (opt_g > '2') {
+    println("; remove_args(%d), depth=%d",n,depth);
+  }
+  if (n==0) {
+    return;
+  }
+  if (current_fn->params || current_fn->stack_size || current_fn->use_alloca) {
+    if (n>=3 && depth==n) { // Removes all stack args.
+      if (IX_Dest != IX_BP) {
+        println("\tldx @bp");
+      }
+      println("\ttxs");
+      IX_Dest = IX_BP;
+      depth = 0;
+      return;
+    }
+    if ((opt_O == 's' && n*2 > depth+3) // Fewer bytes
+    ||  (n*2 > depth+2)) {              // Reduce cycles?
+      println("\tldx @bp");
+      for (int i=n; i<depth; i++) {
+        println("\tdex");
+      }
+      println("\ttxs");
+      depth -= n;
+      IX_Dest = IX_None;
+      return;
+    }
+  }
+  ins(n);
+
+  return;
 }
 static void des(int n)
 {
@@ -152,10 +178,9 @@ static void and_i(int n)
 }
 
 static void pushl(void) {
-  if (opt_O == 's') {
-    println("\tjsr __push32");
-    IX_Dest = IX_None;
-  }else{
+  // push32/32x/32bx/32dx destroy IX, which may require reloading IX later.
+  // Generating the value directly at -O2 can reduce this overhead.
+  if (opt_O=='2') {
     println("\tldab @long+3");
     println("\tpshb");
     println("\tldab @long+2");
@@ -164,7 +189,11 @@ static void pushl(void) {
     println("\tpshb");
     println("\tldab @long");
     println("\tpshb");
+    depth+=4;
+    return;
   }
+  println("\tjsr __push32");
+  IX_Dest = IX_None;
   depth+=4;
 }
 
@@ -190,10 +219,16 @@ static void ldx_bp()
 {
   if (IX_Dest != IX_BP){
     if (opt_g >= '3') {
-//     println("; stack depth = %d",depth);
+      println("; stack depth = %d",depth);
     }
     if(depth==0 && !current_fn->use_alloca) {
       println("\ttsx");
+    }else if (!current_fn->params && !current_fn->stack_size && !current_fn->use_alloca) {
+      // function has no @bp
+      println("\ttsx");
+      for (int i=0; i<depth; i++) {
+        println("\tdex");
+      }
     }else{
       println("\tldx @bp");	// TSX cannot be used because of VLA/alloca
     }
@@ -209,38 +244,16 @@ void tfr_dx()
 
 static void load32x(int off)
 {
-  if (opt_O == 's') {
-    if (off==0) {
-      println("\tjsr __load32x");
-    }else if (off<=255) {
-      println("\tldab #<%d",off);
-      println("\tjsr __load32bx");
-      IX_Dest = IX_None;
-    }else{
-      ldd_i(off);
-      println("\tjsr __load32dx");
-      IX_Dest = IX_None;
-    }
+  if (off==0) {
+    println("\tjsr __load32x");
+  }else if (1<=off && off<=255) {
+    println("\tldab #<%d",off);
+    println("\tjsr __load32bx");
+    IX_Dest = IX_None;
   }else{
-#if 1
-    println("\tstx @tmp1");       // 5 2
-    println("\tldx %d,x",off+2);  // 6 2
-    println("\tstx @long+2");     // 5 2
-    println("\tldx @tmp1");       // 4 2
-    println("\tldx %d,x",off);    // 6 2
-    println("\tstx @long");       // 5 2
-    IX_Dest = IX_None;            // 31 12 total
-#else
-    println("\tldab %d,x",off+3); // 5 2
-    println("\tstab @long+3");    // 4 2
-    println("\tldab %d,x",off+2); // 5 2
-    println("\tstab @long+2");    // 4 2
-    println("\tldab %d,x",off+1); // 5 2
-    println("\tstab @long+1");    // 4 2
-    println("\tldab %d,x",off);   // 5 2
-    println("\tstab @long");      // 4 2
-    //                            // 36 16  total
-#endif
+    ldd_i(off);
+    println("\tjsr __load32dx");
+    IX_Dest = IX_None;
   }
 }
 
@@ -251,23 +264,14 @@ static void store32x(int off)
 {
   if (off == 0) {
     println("\tjsr __store32x");
-  }else if (off > 255 || off<0) {           // Offset too large for 1 byte
-    ldd_i(off);
-    println("\tjsr __store32dx");
-    IX_Dest = IX_None;
-  }else if (opt_O == 's' || off>252) {      // -Os enabled or   long offset > 255
+  }else if (1<=off && off<=255) {              // Offset too large for 1 byte
     println("\tldab #%d",off);
     println("\tjsr __store32bx");
     IX_Dest = IX_None;
   }else{
-    println("\tldab @long+3");
-    println("\tstab %d,x",off+3);
-    println("\tldab @long+2");
-    println("\tstab %d,x",off+2);
-    println("\tldab @long+1");
-    println("\tstab %d,x",off+1);
-    println("\tldab @long");
-    println("\tstab %d,x",off);
+    ldd_i(off);
+    println("\tjsr __store32dx");
+    IX_Dest = IX_None;
   }
   return;
 }
@@ -1583,14 +1587,14 @@ void load_var(Node *node)
     case 4:
       if (opt_O == 's') {
         println("\tldx #_%s",node->var->name);
-        println("\tjsr __load32x");
+        load32x(0);
       }else{
         println("\tldx _%s+2",node->var->name);
         println("\tstx @long+2");
         println("\tldx _%s",  node->var->name);
         println("\tstx @long");
+        IX_Dest = IX_None;
       }
-      IX_Dest = IX_None;
       break;
     default:
       assert(0);
@@ -1971,27 +1975,44 @@ gen_direct_pushl(int64_t val)
 void
 pushlx(int off)
 {
-  if (opt_O == 's') {
+  if (opt_O >= '2') {
+    // push32/32x/32bx/32dx destroy IX, which may require reloading IX later.
+    // Generating the value directly at -O2 can reduce this overhead.
     if (off==0) {
-      println("\tjsr __push32x");
-    }else if (off>0 && off<=255) {
-      ldab_i(off);
-      println("\tjsr __push32bx");
-    }else{
-      ldd_i(off);
-      println("\tjsr __push32dx");
+      println("\tldab 3,x");
+      println("\tpshb");
+      println("\tldab 2,x");
+      println("\tpshb");
+      println("\tldab 1,x");
+      println("\tpshb");
+      println("\tldab 0,x");
+      println("\tpshb");
+      depth+=4;
+      return;
+    }else if (1<=off && off<=252) {
+      println("\tldab %d,x",off+3);
+      println("\tpshb");
+      println("\tldab %d,x",off+2);
+      println("\tpshb");
+      println("\tldab %d,x",off+1);
+      println("\tpshb");
+      println("\tldab %d,x",off);
+      println("\tpshb");
+      depth+=4;
+      return;
     }
-    IX_Dest = IX_None;
-  }else{
-    println("\tldab %d,x",off+3);
-    println("\tpshb");
-    println("\tldab %d,x",off+2);
-    println("\tpshb");
-    println("\tldab %d,x",off+1);
-    println("\tpshb");
-    println("\tldab %d,x",off);
-    println("\tpshb");
   }
+
+  if (off==0) {
+    println("\tjsr __push32x");
+  }else if (1<=off && off<=255) {
+    ldab_i(off);
+    println("\tjsr __push32bx");
+  }else{
+    ldd_i(off);
+    println("\tjsr __push32dx");
+  }
+  IX_Dest = IX_None;
   depth+=4;
 }
 
@@ -3158,7 +3179,7 @@ static void gen_funcall(Node *node)
     println("\tldaa @tmp2");		// 3
     depth-=stack_args;
   }else{
-    ins(stack_args);
+    remove_args(stack_args);
   }
   // If the return value is a type shorter than an int,
   // the upper bytes contain garbage, so we correct it.
@@ -3265,10 +3286,9 @@ static void opeq(Node *node)
       println("\tjsr __push32");
       println("\ttsx");
       println("\tldx 4,x");
-      println("\tjsr __load32x");
+      load32x(0);
       println("\tjsr __subf32tos");
       store(node->ty);
-      IX_Dest = IX_None;
       return;
     case TY_LONG:
       gen_addr(lhs);
@@ -3400,6 +3420,7 @@ static void opeq(Node *node)
       push();
       gen_expr(node->rhs);
       println("\tjsr __mul16x16");
+      IX_Dest = IX_None;
       ins(2);
       break;
     case TY_SHORT:
@@ -3418,6 +3439,7 @@ static void opeq(Node *node)
       push();
       gen_expr(node->rhs);
       println("\tjsr __mul16x16");
+      IX_Dest = IX_None;
       ins(2);
       break;
     default:
@@ -3435,8 +3457,7 @@ static void opeq(Node *node)
       pushl();
       println("\ttsx");
       println("\tldx 4,x");
-      println("\tjsr __load32x");
-      IX_Dest = IX_None;
+      load32x(0);
       println("\tjsr __divf32tos");
       depth -= 4;
       break;
@@ -3447,7 +3468,7 @@ static void opeq(Node *node)
       pushl();
       println("\ttsx");
       println("\tldx 4,x");
-      println("\tjsr __load32x");
+      load32x(0);
       if (node->ty->is_unsigned) {
         println("\tjsr __div32x32u");
       }else{
@@ -3471,8 +3492,8 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __div16x16s");
       }
-      ins(2);
       IX_Dest = IX_None;
+      ins(2);
       break;
     case TY_SHORT:
     case TY_INT:
@@ -3546,8 +3567,8 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __div16x16s");
       }
-      ins(2);
       IX_Dest = IX_None;
+      ins(2);
       break;
     default:
       assert(0);
@@ -3565,7 +3586,7 @@ static void opeq(Node *node)
       pushl();
       println("\ttsx");
       println("\tldx 4,x");
-      println("\tjsr __load32x");
+      load32x(0);
       if (node->ty->is_unsigned) {
         println("\tjsr __rem32x32u");
       }else{
@@ -3587,8 +3608,8 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __rem16x16s");
       }
-      ins(2);
       IX_Dest = IX_None;
+      ins(2);
       break;
     case TY_SHORT:
     case TY_INT:
@@ -3604,8 +3625,8 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __rem16x16s");
       }
-      ins(2);
       IX_Dest = IX_None;
+      ins(2);
       break;
     default:
       assert(0);
@@ -3650,7 +3671,7 @@ static void opeq(Node *node)
       pushl();
       println("\ttsx");
       println("\tldx 4,x");
-      println("\tjsr __load32x");
+      load32x(0);
       println("\tjsr __%stos",op);
       depth -= 4;
       IX_Dest = IX_None;
@@ -3762,7 +3783,7 @@ static void opeq(Node *node)
       if (is_global_var(node->lhs)) {
         gen_expr(node->rhs);
         println("\tldx #_%s",node->lhs->var->name);
-        println("\tjsr __load32x");
+        load32x(0);
         if (node->kind == ND_SHLEQ) {
           println("\tjsr __shl32");
         }else if (node->lhs->ty->is_unsigned) {
@@ -3781,7 +3802,7 @@ static void opeq(Node *node)
         push1();
         println("\ttsx");
         println("\tldx 1,x");
-        println("\tjsr __load32x");
+        load32x(0);
         pop1();
       }
       if (node->kind == ND_SHLEQ) {
@@ -3843,8 +3864,8 @@ static void opeq(Node *node)
           println("\tjsr __shr8s");
         }
         println("\tstab %d,x",off);
-        ins(1);
         IX_Dest = IX_None;
+        ins(1);
         return;
       } // TY_BOOL, TY_CHAR
       gen_addr(node->lhs); 
@@ -3863,8 +3884,8 @@ static void opeq(Node *node)
         println("\tjsr __shr16s");
       }
       println("\tstab 0,x");
-      ins(1);
       IX_Dest = IX_None;
+      ins(1);
       return;
     case TY_SHORT:
     case TY_INT:
@@ -3908,8 +3929,8 @@ static void opeq(Node *node)
         }
         println("\tstab %d,x",off+1);
         println("\tstaa %d,x",off);
-        ins(1);
         IX_Dest = IX_None;
+        ins(1);
         return;
       }
       gen_addr(node->lhs); 
@@ -3927,8 +3948,8 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __shr16s");
       }
-      ins(1);
       IX_Dest = IX_None;
+      ins(1);
       break;
     default:
       assert(0);
@@ -4810,7 +4831,8 @@ void gen_expr(Node *node) {
       println("\tadca #>%d",node->var->offset);
     }
     println("\tjsr _memcpy");
-    ins(4);
+    IX_Dest = IX_None;
+    remove_args(4);
     return;
   }
   // Above is a unary operator
@@ -4921,7 +4943,7 @@ void gen_expr(Node *node) {
         gen_expr(lhs);
         if (val==1) {
           println("\tjsr __inc32");
-          IX_Dest = IX_None;
+//        IX_Dest = IX_None;
           return;
         }
         if (val==-1) {
@@ -5221,8 +5243,8 @@ void gen_expr(Node *node) {
       println("\tbvc %s",label);
       println("\tdeca");
       println("%s:",label);
-      ins(1);
       IX_Dest = IX_None;
+      ins(1);
       return;
     }
     if (node->rhs->kind     == ND_CAST
@@ -5249,8 +5271,8 @@ void gen_expr(Node *node) {
     IX_Dest = IX_None;
     println("\taddb 1,x");
     println("\tadca 0,x");
-    ins(2);
     IX_Dest = IX_None;
+    ins(2);
     return;
   } // ND_ADD
   case ND_SUB:
@@ -5354,8 +5376,8 @@ void gen_expr(Node *node) {
     println("\ttsx");
     println("\tsubb 1,x");
     println("\tsbca 0,x");
-    ins(2);
     IX_Dest = IX_None;
+    ins(2);
     return;
   case ND_MUL:
     gen_expr(node->lhs);
@@ -5366,8 +5388,8 @@ void gen_expr(Node *node) {
     push();
     gen_expr(node->rhs);
     println("\tjsr __mul16x16");
-    ins(2);
     IX_Dest = IX_None;
+    ins(2);
     return;
   case ND_DIV:
     if (node->lhs->ty ==  node->ty){
@@ -5415,8 +5437,8 @@ void gen_expr(Node *node) {
     }else{
       println("\tjsr __div16x16s");
     }
-    ins(2);
     IX_Dest = IX_None;
+    ins(2);
     return;
   case ND_MOD:
     gen_expr(node->rhs);
@@ -5429,8 +5451,8 @@ void gen_expr(Node *node) {
     }else{
       println("\tjsr __rem16x16s");
     }
-    ins(2);
     IX_Dest = IX_None;
+    ins(2);
     return;
   case ND_BITAND:
     if (gen_direct_lr(node,"andb","anda")){
@@ -5442,8 +5464,8 @@ void gen_expr(Node *node) {
       push1();
       gen_expr(node->rhs);
       println("\ttsx");
-      IX_Dest = IX_None;
       println("\tandb 0,x");
+      IX_Dest = IX_None;
       ins(1);
       return;
     }
@@ -5451,9 +5473,9 @@ void gen_expr(Node *node) {
     push();
     gen_expr(node->rhs);
     println("\ttsx");
-    IX_Dest = IX_None;
     println("\tandb 1,x");
     println("\tanda 0,x");
+    IX_Dest = IX_None;
     ins(2);
     return;
   case ND_BITOR:
@@ -5464,9 +5486,9 @@ void gen_expr(Node *node) {
     push();
     gen_expr(node->rhs);
     println("\ttsx");
-    IX_Dest = IX_None;
     println("\torab 1,x");
     println("\toraa 0,x");
+    IX_Dest = IX_None;
     ins(2);
     return;
   case ND_BITXOR:
@@ -5477,9 +5499,9 @@ void gen_expr(Node *node) {
     push();
     gen_expr(node->rhs);
     println("\ttsx");
-    IX_Dest = IX_None;
     println("\teorb 1,x");
     println("\teora 0,x");
+    IX_Dest = IX_None;
     ins(2);
     return;
   case ND_EQ:
@@ -5589,8 +5611,8 @@ void gen_expr(Node *node) {
     gen_expr(node->lhs);
 //  shl16: AccAB << TOS(8bit)
     println("\tjsr __shl16");
-    ins(1);
     IX_Dest = IX_None;
+    ins(1);
     return;
   } // ND_SHL
   case ND_SHR: {
@@ -5628,8 +5650,8 @@ void gen_expr(Node *node) {
       }
       break;
     }
-    ins(1);
     IX_Dest = IX_None;
+    ins(1);
     return;
   } // ND_SHR
   default: ;

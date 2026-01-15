@@ -23,6 +23,31 @@
 	ldab @long
 	pshb
 
+	jsr __push32x
+=
+	ldab 3,x
+	pshb
+	ldab 2,x
+	pshb
+	ldab 1,x
+	pshb
+	ldab 0,x
+	pshb
+
+%check 0 <= %1 <= 252
+	ldab #<%1
+	jsr __push32bx
+=
+	ldab %1+3,x
+	pshb
+	ldab %1+2,x
+	pshb
+	ldab %1+1,x
+	pshb
+	ldab %1,x
+	pshb
+
+
 	jsr __load32x
 =
 	ldab 3,x
@@ -32,17 +57,62 @@
 	ldab 1,x
 	stab @long+1
 	ldab 0,x
-	stab @long
+	stab @long+0
 
 %check 0 <= %1 <= 252
 	ldab #<%1
 	jsr __load32bx
 =
-	ldab %1+3,x
-	stab @long+3
-	ldab %1+2,x
-	stab @long+2
-	ldab %1+1,x
-	stab @long+1
-	ldab %1+0,x
-	stab @long
+	stx @tmp1
+	ldx %1+2,x
+	stx @long+2
+	ldx @tmp1
+	ldx %1,x
+	stx @long
+
+	jsr __store32x
+=
+	ldab @long+3
+	stab 3,x
+	ldab @long+2
+	stab 2,x
+	ldab @long+1
+	stab 1,x
+	ldab @long
+	stab 0,x
+
+%check 0 <= %1 <= 252
+	ldab #<%1
+	jsr __store32bx
+=
+	ldab @long+3
+	stab 3,x
+	ldab @long+2
+	stab 2,x
+	ldab @long+1
+	stab 1,x
+	ldab @long
+	stab 0,x
+
+	jsr __inc32
+=
+	inc @long+3
+	bne INC32_%M
+	inc @long+2
+	bne INC32_%M
+	inc @long+1
+	bne INC32_%M
+	inc @long
+INC32_%M:
+
+	jsr __dec32
+=
+	ldx @long+2
+	dex
+	stx @long+2
+	inx
+	bne DEC32_%M
+	ldx @long
+	dex
+	stx @long
+DEC32_%M:

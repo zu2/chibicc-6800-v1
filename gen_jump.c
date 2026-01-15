@@ -546,8 +546,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
     gen_expr(node);
     println("\tjeq  %s", if_false);
     return true;
-#if 0
-// It's buggy... why?
   } else if (is_global_var(rhs)) {
     gen_expr(lhs);
     println("\tsubb _%s+1",rhs->var->name);
@@ -557,7 +555,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
     int off = gen_addr_x(rhs,false);
     println("\tsubb %d,x",off+1);
     println("\tsbca %d,x",off);
-#endif
   } else {
     gen_expr(rhs);
     push();
