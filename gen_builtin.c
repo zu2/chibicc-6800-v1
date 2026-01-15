@@ -132,10 +132,10 @@ bool builtin_strcpy(Node *node)
     }
     if (size==0) {  // XXX ?
       error("strcpy literal size==0");
-    }else if ((opt_O != '0')
-          ||  (opt_O == 's' && size<=4)
-          ||  (opt_O == '1' && size<=16)
-          ||  (opt_O >= '2' && size<=32)){
+    }else if (!opt('O','0')
+          ||  (opt('O','s') && size<=4)
+          ||  (opt('O','1') && size<=16)
+          ||  (opt('O','2') && size<=32)){
       println("; ND_FUNCALL: builtin_strcpy(..., _%s)",var->name);
       if (size+off>=256) {
         println("\tldab #%d",off);

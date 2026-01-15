@@ -15,6 +15,16 @@
 	ldx @tmp1
 	ldab 0,x
 
+	jsr __load8s
+=
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	clra
+	ldab 0,x
+	bpl SIGN_%M
+	deca
+SIGN_%M:
 
 #
 # 32bit operation

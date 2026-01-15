@@ -41,6 +41,42 @@ bool opt_fbuiltin_memcpy = true;
 bool opt_fbuiltin_memset = true;
 bool opt_fbuiltin_strcpy = true;
 
+bool opt(char op, char lv)
+{
+  switch(op) {
+  case 'O':
+    switch(lv) {
+    case 's':
+      return opt_O == 's';
+    case '0':
+      return opt_O == '0';
+    case '1':
+      return opt_O != 's' && opt_O != '0';
+    case '2':
+      return opt_O == '2' || opt_O == '3';
+    case '3':
+      return opt_O == '3';
+    default:
+      return false;
+    }
+  case 'g':
+    switch(lv) {
+    case '0':
+      return opt_g == '0';
+    case '1':
+      return opt_g == '1' || opt_g == '2' || opt_g == '3';
+    case '2':
+      return opt_g == '2' || opt_g == '3';
+    case '3':
+      return opt_g == '3';
+    default:
+      return false;
+    }
+  }
+  assert(op=='O' || op=='g');
+  return false;
+}
+
 #define copt_path  "/opt/fcc/lib/copt"
 #define chibicc_lib_path "/opt/chibicc/lib/"
 #define copt_rules "copt.rules"
@@ -977,11 +1013,11 @@ int main(int argc, char **argv) {
 
     // Compile
     if (opt_S) {
-      if (opt_O && opt_O != '0' && can_copt()) {
+      if (!opt('O','0') && can_copt()) {
         char *tmp = create_tmpfile();
         char *tmp3 = create_tmpfile();
         run_cc1(argc, argv, input, tmp);
-        if (opt_O && opt_O >= '2' && can_copt()) {
+        if (opt('O','2') && can_copt()) {
           run_copt(tmp, tmp3,  copt_rules);
           run_copt(tmp3,output,copt_O2_rules);
         }else{
@@ -997,12 +1033,12 @@ int main(int argc, char **argv) {
     if (opt_c) {
       char *tmp = create_tmpfile();
       run_cc1(argc, argv, input, tmp);
-      if (opt_O && opt_O != '0' && can_copt()) {
+      if (!opt('O','0') && can_copt()) {
         char *tmp3 = create_tmpfile();
         run_copt(tmp,tmp3,copt_rules);
         tmp = tmp3;
       }
-      if (opt_O && opt_O >= '2' && can_copt()) {
+      if (opt('O','2') && can_copt()) {
         char *tmp3 = create_tmpfile();
         run_copt(tmp,tmp3,copt_O2_rules);
         tmp = tmp3;
@@ -1015,12 +1051,12 @@ int main(int argc, char **argv) {
     char *tmp1 = create_tmpfile();
     char *tmp2 = create_tmpfile();
     run_cc1(argc, argv, input, tmp1);
-    if (opt_O && opt_O != '0' && can_copt()) {
+    if (!opt('O','0') && can_copt()) {
       char *tmp3 = create_tmpfile();
       run_copt(tmp1,tmp3,copt_rules);
       tmp1 = tmp3;
     }
-    if (opt_O && opt_O >= '2' && can_copt()) {
+    if (opt('O','2') && can_copt()) {
       char *tmp3 = create_tmpfile();
       run_copt(tmp1,tmp3,copt_O2_rules);
       tmp1 = tmp3;

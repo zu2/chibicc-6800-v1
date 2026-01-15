@@ -542,7 +542,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     if (!gen_direct(rhs, "subb", "sbca")) {
       assert(0);
     }
-  } else if (0 && opt_O == 's' && is_compare(node)) {
+  } else if (0 && opt('O','s') && is_compare(node)) {
     gen_expr(node);
     println("\tjeq  %s", if_false);
     return true;
@@ -889,7 +889,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     } else if (!gen_direct(rhs, "subb", "sbca")) {
       assert(0);
     }
-  } else if (0 && opt_O == 's' && is_compare(node)) {
+  } else if (0 && opt('O','s') && is_compare(node)) {
     gen_expr(node);
     println("\tjne  %s", if_true);
     return true;

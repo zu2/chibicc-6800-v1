@@ -378,7 +378,7 @@ static Obj *new_anon_gvar(Type *ty) {
 
 static Obj *new_string_literal(char *p, Type *ty) {
   Obj *var = new_anon_gvar(ty);
-  var->init_data = p;
+  var->init_data = (unsigned char *)p;
   var->is_literal = 1;
   return var;
 }
@@ -1587,7 +1587,7 @@ static void gvar_initializer(Token **rest, Token *tok, Obj *var) {
   Relocation head = {};
   char *buf = calloc(1, var->ty->size);
   write_gvar_data(&head, init, var->ty, buf, 0);
-  var->init_data = buf;
+  var->init_data = (unsigned char *)buf;
   var->rel = head.next;
 }
 

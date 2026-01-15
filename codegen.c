@@ -66,7 +66,7 @@ void pop(void) {
 }
 
 void popx(void) {
-  if (opt_O == 's') {
+  if (opt('O','s')) {
     println("\tjsr __popx");
   } else {
     println("\ttsx");
@@ -97,7 +97,7 @@ static void ins(int n)
 static void remove_args(int n)
 {
   assert(depth>=n && n>=0);
-  if (opt_g > '2') {
+  if (opt('g','2')) {
     println("; remove_args(%d), depth=%d",n,depth);
   }
   if (n==0) {
@@ -113,7 +113,7 @@ static void remove_args(int n)
       depth = 0;
       return;
     }
-    if ((opt_O == 's' && n*2 > depth+3) // Fewer bytes
+    if ((opt('O','s') && n*2 > depth+3) // Fewer bytes
     ||  (n*2 > depth+2)) {              // Reduce cycles?
       println("\tldx @bp");
       for (int i=n; i<depth; i++) {
@@ -180,7 +180,7 @@ static void and_i(int n)
 static void pushl(void) {
   // push32/32x/32bx/32dx destroy IX, which may require reloading IX later.
   // Generating the value directly at -O2 can reduce this overhead.
-  if (opt_O >= '2') {
+  if (opt('O','2')) {
     println("\tldab @long+3");
     println("\tpshb");
     println("\tldab @long+2");
@@ -218,7 +218,7 @@ static void negd()
 static void ldx_bp()
 {
   if (IX_Dest != IX_BP){
-    if (opt_g >= '3') {
+    if (opt('g','3')) {
       println("; stack depth = %d",depth);
     }
     if(depth==0 && !current_fn->use_alloca) {
@@ -719,7 +719,7 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 5:
-        if (opt_O == 's')
+        if (opt('O','s'))
           return false;
         println("\tstab @tmp1+1");
         println("\tstaa @tmp1");
@@ -731,7 +731,7 @@ gen_mul16(Node *node)
         println("\tadca @tmp1");
         return true;
       case 6:
-        if (opt_O == 's')
+        if (opt('O','s'))
           return false;
         println("\tstab @tmp1+1");
         println("\tstaa @tmp1");
@@ -743,7 +743,7 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 7:
-        if (opt_O == 's')
+        if (opt('O','s'))
           return false;
         println("\tstab @tmp1+1");
         println("\tstaa @tmp1");
@@ -765,7 +765,7 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 10:
-        if (opt_O == 's')
+        if (opt('O','s'))
           return false;
         println("\tstab @tmp1+1");
         println("\tstaa @tmp1");
@@ -1394,7 +1394,7 @@ static void load32i(uint32_t val)
   uint16_t hi = (uint16_t)((val>>16)&0x0ffff);
   uint16_t lo = (uint16_t)(val&0x0ffff);
 
-  if (opt_O == 's' && hi!=lo) {
+  if (opt('O','s') && hi!=lo) {
     println("\tjsr __load32i");
     word32i(val);
     IX_Dest = IX_None;
@@ -1451,7 +1451,7 @@ static void load(Type *ty) {
   // register for char, short and int may contain garbage. When we load
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
-    if (0 && opt_O != 's' && opt_O >= '2') {
+    if (0 && opt('O','2')) {
       tfr_dx();
       println("\tclra");
       println("\tldab 0,x");
@@ -1467,7 +1467,7 @@ static void load(Type *ty) {
       println("\tjsr __load8s");
     }
   }else if (ty->size == 2){
-    if (opt_O != 's' && opt_O >= '2') {
+    if (opt('O','2')) {
       tfr_dx();
       println("\tldab 1,x");
       println("\tldaa 0,x");
@@ -1585,7 +1585,7 @@ void load_var(Node *node)
       println("\tldaa _%s",  node->var->name);
       break;
     case 4:
-      if (opt_O == 's') {
+      if (opt('O','s')) {
         println("\tldx #_%s",node->var->name);
         load32x(0);
       }else{
@@ -1671,7 +1671,7 @@ static void clr_x(Type *ty,int off) {
     println("\tclr %d,x",off);
     break;
   case 4:
-    if (opt_O == 's') {
+    if (opt('O','s')) {
       println("\tclr %d,x",off+3);
       println("\tclr %d,x",off+2);
       println("\tclr %d,x",off+1);
@@ -1975,7 +1975,7 @@ gen_direct_pushl(int64_t val)
 void
 pushlx(int off)
 {
-  if (opt_O >= '2') {
+  if (opt('O','2')) {
     // push32/32x/32bx/32dx destroy IX, which may require reloading IX later.
     // Generating the value directly at -O2 can reduce this overhead.
     if (off==0) {
@@ -2021,7 +2021,7 @@ static void push_args2(Node *args,bool is_variadic)
   if (!args)
     return;
   push_args2(args->next,is_variadic);
-  if (opt_g >= '2') {
+  if (opt('g','2')) {
     println("; push_args2");
     ast_node_dump(args);
   }
@@ -2564,7 +2564,7 @@ static int gen_direct_long_and(int64_t v,char *opa, char *opb){
   uint32_t v3 = v & 0x00FF0000;
   uint32_t v4 = v & 0xFF000000;
 
-  if (opt_O == 's') {
+  if (opt('O','s')) {
     println("\tjsr __and32i");
     word32i(v);
     return 1;
@@ -2608,7 +2608,7 @@ static int gen_direct_long_or(uint64_t v,char *opa, char *opb){
   uint32_t v4 = v & 0xFF000000;
   bool b_is_ff = 0;
 
-  if (opt_O == 's') {
+  if (opt('O','s')) {
     println("\tjsr __or32i");
     word32i(v);
     return 1;
@@ -2664,7 +2664,7 @@ static int gen_direct_long_xor(uint64_t v,char *opa, char *opb){
   uint32_t v3 = v & 0x00FF0000;
   uint32_t v4 = v & 0xFF000000;
 
-  if (opt_O == 's') {
+  if (opt('O','s')) {
     println("\tjsr __xor32i");
     word32i(v);
     return 1;
@@ -2805,7 +2805,7 @@ int gen_direct_shr_long(Node *node,int64_t val)
 //
 static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
 {
-  if (opt_O == 's')
+  if (opt('O','s'))
     return 0;
   switch(rhs->kind){
   case ND_NUM: {
@@ -3157,7 +3157,7 @@ static void gen_funcall(Node *node)
   IX_Dest = IX_None;
   
   // Removes pushed arguments before calling a function for speed
-  if (opt_O == 's' && stack_args>4) {         // Smaller, but too slow
+  if (opt('O','s') && stack_args>4) {         // Smaller, but too slow
     println("\tjsr __ins_i");
     if (stack_args>255) {
       assert(0);
@@ -3165,7 +3165,7 @@ static void gen_funcall(Node *node)
     println("\t.byte  %d",stack_args);
     depth-=stack_args;
   }else if (stack_args>20 ||                       // Both faster and smaller
-           (opt_O != 's' && stack_args*4 > 34)) {  // Faster, but larger
+           (!opt('O','s') && stack_args*4 > 34)) {  // Faster, but larger
     println("; ins*%d",stack_args);
     println("\tstaa @tmp2");		// 4
     println("\tsts @tmp1");		// 5
@@ -3316,7 +3316,7 @@ static void opeq(Node *node)
               println("\tinc %d,x",off);
               return;
             case 2:
-              if (opt_O == 's') {
+              if (opt('O','s')) {
                 println("\tdec %d,x",off);
                 println("\tdec %d,x",off);
                 return;
@@ -4045,7 +4045,7 @@ void gen_expr(Node *node) {
       case TY_ENUM:
       case TY_PTR:
         if (node->retval_unused && val==1) {
-          if (opt_O == 's') {
+          if (opt('O','s')) {
             println("\tldx _%s",var);
             println("\tinx");
             println("\tstx _%s",var);
@@ -4218,12 +4218,12 @@ void gen_expr(Node *node) {
       case TY_INT:
       case TY_ENUM:
       case TY_PTR:
-        if (node->retval_unused && val==1 && opt_O == 's') {
+        if (node->retval_unused && val==1 && opt('O','s')) {
           println("\tldx _%s",var);
           println("\tinx");
           println("\tstx _%s",var);
           IX_Dest = IX_None;
-        }else if (node->retval_unused && val==2 && opt_O == 's') {
+        }else if (node->retval_unused && val==2 && opt('O','s')) {
           println("\tldx _%s",var);
           println("\tinx");
           println("\tinx");
@@ -4236,12 +4236,12 @@ void gen_expr(Node *node) {
           println("\tadca #>%d",val);
           println("\tstab _%s+1",var);
           println("\tstaa _%s",var);
-        } else if (node->retval_unused && val==-1 && opt_O == 's') {
+        } else if (node->retval_unused && val==-1 && opt('O','s')) {
             println("\tldx _%s",var);
             println("\tdex");
             println("\tstx _%s",var);
             IX_Dest = IX_None;
-        } else if (node->retval_unused && val==-2 && opt_O == 's') {
+        } else if (node->retval_unused && val==-2 && opt('O','s')) {
             println("\tldx _%s",var);
             println("\tdex");
             println("\tdex");
@@ -4422,6 +4422,50 @@ void gen_expr(Node *node) {
   }
   case ND_DEREF: {
     Node *lhs = node->lhs;
+    if (opt('O','3')) {
+      if (node->ty->kind == TY_CHAR
+      &&  lhs->kind == ND_ADD
+      &&  lhs->ty->kind == TY_ARRAY
+      &&  is_global_array(lhs->rhs)
+      &&  lhs->rhs->ty->array_len<=256) {
+        char *offset = new_label("L_%d");
+        char *label = new_label("L_%d");
+        gen_expr(lhs->lhs);
+        println("\tldx #_%s",lhs->rhs->var->name);
+        println("\tstab %s+2    ; XXX!",offset);
+        println("%s:",offset);
+        println("\tclra");
+        println("\tldab 0,x");
+        if (!node->ty->is_unsigned) {
+          println("\tbpl %s",label);
+          println("\tdeca");
+          println("%s:",label);
+        }
+        IX_Dest = IX_None;
+        return;
+      }
+      if (node->ty->kind == TY_CHAR
+      &&  lhs->kind == ND_ADD
+      &&  lhs->ty->kind == TY_ARRAY
+      &&  is_global_array(lhs->lhs)
+      &&  lhs->lhs->ty->array_len<=256) {
+        char *offset = new_label("L_%d");
+        char *label = new_label("L_%d");
+        gen_expr(lhs->rhs);
+        println("\tldx #_%s",lhs->lhs->var->name);
+        println("\tstab %s+2    ; XXX!",offset);
+        println("%s:",offset);
+        println("\tclra");
+        println("\tldab 0,x");
+        if (!node->ty->is_unsigned) {
+          println("\tbpl %s",label);
+          println("\tdeca");
+          println("%s:",label);
+        }
+        IX_Dest = IX_None;
+        return;
+      }
+    }
     // TODO: global var deref
     if (can_direct(node)) {
       gen_direct(node,"ldab","ldaa");
@@ -5610,7 +5654,7 @@ void gen_expr(Node *node) {
     push1();
     gen_expr(node->lhs);
 //  shl16: AccAB << TOS(8bit)
-    if (opt_O >= '2') {
+    if (opt('O','2')) {
       char *skip = new_label("L_%d");
       char *loop = new_label("L_%d");
       println("\ttsx");
@@ -5651,7 +5695,7 @@ void gen_expr(Node *node) {
     case TY_BOOL:
     case TY_CHAR:
       //  shr8: AccB >> TOS(8bit)
-      if (opt_O >= '2') {
+      if (opt('O','2')) {
         char *skip = new_label("L_%d");
         char *loop = new_label("L_%d");
         popa();
@@ -5678,7 +5722,7 @@ void gen_expr(Node *node) {
       return;
     default:
       //  shr16: AccAB >> TOS(8bit)
-      if (opt_O >= '2') {
+      if (opt('O','2')) {
         char *skip = new_label("L_%d");
         char *loop = new_label("L_%d");
         println("\ttsx");
@@ -5716,7 +5760,7 @@ void stmt_dump(char *p)
   char *q = s;
   static char *pp = NULL;
 
-  if (opt_g < '1') {
+  if (!opt('g','2')) {
     return;
   }
   if (pp!=p) {
@@ -5747,7 +5791,7 @@ static void gen_stmt(Node *node)
   stmt_dump(node->loc);
   // With -g2 or higher, AST node details are also embedded;
   // Assembly may sometimes fail in such cases.
-  if (opt_g >= '2') {
+  if (opt('g','2')) {
     ast_node_dump(node);
   }
 
@@ -6200,7 +6244,7 @@ static void emit_text(Obj *prog) {
         }
       }
     }
-    if (opt_O == 's') {
+    if (opt('O','s')) {
       println("\tjsr __prologue_%d",reg_param_size);
     } else {
       if (reg_param_size==2) {
@@ -6236,7 +6280,7 @@ static void emit_text(Obj *prog) {
       println("\ttsx");	 	      // 4 1
       println("\tstx @bp");			// 5 2
       IX_Dest = IX_BP;
-    }else if (opt_O == 's') {
+    }else if (opt('O','s')) {
       println("\tsts @bp");
       if (fn->stack_size-1<=255) {
         println("\tldab #%u",fn->stack_size-1);
@@ -6292,7 +6336,7 @@ no_params_locals:
     if (fn->return_count){
       println("L_return_%d:", fn->function_no);
     }
-    if (opt_g > '2') {
+    if (opt('g','2')) {
       println("; function %s epilogue emit_text",fn->name);
       println("; recover sp, fn->stack_size=%d reg_param_size=%d",
 	   	    	fn->stack_size,reg_param_size);
@@ -6300,14 +6344,14 @@ no_params_locals:
       println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
     }
     if (!fn->params && !fn->stack_size && !fn->use_alloca) {
-      if (opt_g > '2') {
+      if (opt('g','2')) {
         println("; function has no params & locals");
       }
       IX_Dest = IX_None;
       goto no_params_locals2;
     }
     if (fn->stack_size + reg_param_size <= 10){
-      if (opt_g > '2') {
+      if (opt('g','2')) {
         println("; fn->stack_size %d, reg_param_size %d",fn->stack_size,reg_param_size);
       }
       int npops = fn->stack_size + reg_param_size - 1;
@@ -6330,7 +6374,7 @@ no_params_locals:
       default:
         println("\tpshb");
       }
-      if (opt_O == 's' && fn->stack_size+reg_param_size-1 < 256) {
+      if (opt('O','s') && fn->stack_size+reg_param_size-1 < 256) {
         println("\tldab #%u",fn->stack_size+reg_param_size-1);
         println("\tjsr __add_bp_b");
       }else{
@@ -6355,7 +6399,7 @@ no_params_locals:
     case TY_VOID:
     case TY_LONG:
     case TY_FLOAT:
-      if (opt_O == 's') {
+      if (opt('O','s')) {
         println("\tjmp __pulbp_rts");
       }else{
         println("\tpulb");

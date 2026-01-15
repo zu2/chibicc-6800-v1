@@ -465,6 +465,7 @@ Node *swap_lr(Node *node);
 //
 // codegen.c
 //
+bool opt(char op, char lv);
 __attribute__((format(printf, 1, 2)))
 void println(char *fmt, ...);
 __attribute__((format(printf, 1, 2)))
