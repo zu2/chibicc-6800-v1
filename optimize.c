@@ -109,10 +109,12 @@ static int node_cost(Node *node)
     return 1;
   }else if (is_global_var(node)) {
     return 150+sign;
-  }else if (test_addr_x(node)) {
+  }else if (can_direct(node)) {
     return 200+sign;
-  }else if (node->kind==ND_VAR) {
+  }else if (test_addr_x(node)) {
     return 250+sign;
+  }else if (node->kind==ND_VAR) {
+    return 300+sign;
   }else if (node->kind==ND_CAST) {
     return node_cost(node->lhs)+10+sign;
   }else if (node->kind==ND_FUNCALL) {

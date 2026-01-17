@@ -81,6 +81,7 @@ bool opt(char op, char lv)
 #define chibicc_lib_path "/opt/chibicc/lib/"
 #define copt_rules "copt.rules"
 #define copt_O2_rules "copt_O2.rules"
+#define copt_O3_rules "copt_O3.rules"
 
 static StringArray ld_extra_args;
 static StringArray std_include_paths;
@@ -1017,7 +1018,11 @@ int main(int argc, char **argv) {
         char *tmp = create_tmpfile();
         char *tmp3 = create_tmpfile();
         run_cc1(argc, argv, input, tmp);
-        if (opt('O','2') && can_copt()) {
+        if (opt('O','3') && can_copt()) {
+          run_copt(tmp, tmp3,  copt_rules);
+          run_copt(tmp3,tmp  , copt_O2_rules);
+          run_copt(tmp, output,copt_O3_rules);
+        }else if (opt('O','2') && can_copt()) {
           run_copt(tmp, tmp3,  copt_rules);
           run_copt(tmp3,output,copt_O2_rules);
         }else{
@@ -1037,11 +1042,15 @@ int main(int argc, char **argv) {
         char *tmp3 = create_tmpfile();
         run_copt(tmp,tmp3,copt_rules);
         tmp = tmp3;
-      }
-      if (opt('O','2') && can_copt()) {
-        char *tmp3 = create_tmpfile();
-        run_copt(tmp,tmp3,copt_O2_rules);
-        tmp = tmp3;
+        if (opt('O','3') && can_copt()) {
+          char *tmp2 = create_tmpfile();
+          run_copt(tmp ,tmp2,copt_O2_rules);
+          run_copt(tmp2,tmp, copt_O3_rules);
+        }else if (opt('O','2') && can_copt()) {
+          char *tmp2 = create_tmpfile();
+          run_copt(tmp,tmp2,copt_O2_rules);
+          tmp = tmp2;
+        }
       }
       assemble(tmp, output);
       continue;
@@ -1049,18 +1058,22 @@ int main(int argc, char **argv) {
 
     // Compile, assemble and link
     char *tmp1 = create_tmpfile();
-    char *tmp2 = create_tmpfile();
     run_cc1(argc, argv, input, tmp1);
     if (!opt('O','0') && can_copt()) {
       char *tmp3 = create_tmpfile();
       run_copt(tmp1,tmp3,copt_rules);
       tmp1 = tmp3;
     }
-    if (opt('O','2') && can_copt()) {
+    if (opt('O','3') && can_copt()) {
+      char *tmp3 = create_tmpfile();
+      run_copt(tmp1,tmp3,copt_O2_rules);
+      run_copt(tmp3,tmp1,copt_O3_rules);
+    }else if (opt('O','2') && can_copt()) {
       char *tmp3 = create_tmpfile();
       run_copt(tmp1,tmp3,copt_O2_rules);
       tmp1 = tmp3;
     }
+    char *tmp2 = create_tmpfile();
     assemble(tmp1, tmp2);
     strarray_push(&ld_args, tmp2);
     continue;

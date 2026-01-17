@@ -826,6 +826,14 @@ INC%M:
 	addb #<$ff81
 	adca #>$ff81
 
+# Two's complement of 0 is 0.
+
+	clra
+	nega
+=
+	clra
+
+
 # Omit sign extension for the AND operation.
 
 %check 0 <= %1 <= 127
@@ -1020,6 +1028,13 @@ INC%M:
 	anda #0
 =
 	clra
+
+	clra
+	ldab %1
+	clra
+=
+	clra
+	ldab %1
 
 
 # expand macros

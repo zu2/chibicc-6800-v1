@@ -432,6 +432,7 @@ extern Type *ty_ldouble;
 bool is_integer(Type *ty);
 bool is_integer_or_ptr(Type *ty);
 Type *is_pointer_constant(Node *node, int64_t *val);
+bool is_int8(Type *ty);
 bool is_int16(Type *ty);
 bool is_int16_or_ptr(Type *ty);
 bool is_flonum(Type *ty);
@@ -516,6 +517,12 @@ extern IX_Type	IX_Dest;
 bool gen_jump_if_false(Node *node,char *if_false);
 bool gen_jump_if_true(Node *node,char *if_true);
 Type *is_byte(Node *node);
+
+//
+// opt_O3.c
+//
+void load8u(void);
+void load8s(void);
 
 //
 // unicode.c

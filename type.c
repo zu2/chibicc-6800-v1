@@ -38,6 +38,12 @@ bool is_integer_or_ptr(Type *ty) {
          k == TY_PTR;
 }
 
+bool is_int8(Type *ty) {
+  TypeKind k = ty->kind;
+
+  return k == TY_BOOL || k == TY_CHAR;
+}
+
 bool is_int16(Type *ty) {
   TypeKind k = ty->kind;
 

@@ -4337,14 +4337,11 @@ void gen_expr(Node *node) {
     return;
   } // ND_PRE_INCDEC
   case ND_NEG:
-    if (node->ty->kind==TY_SHORT
-    ||  node->ty->kind==TY_INT) {
-      if (can_direct(node->lhs)) {
-        println("\tclrb");
-        println("\tclra");
-        gen_direct(node->lhs,"subb","sbca");
-        return;
-      }
+    if (is_int16(node->ty) && can_direct(node->lhs)) {
+      println("\tclrb");
+      println("\tclra");
+      gen_direct(node->lhs,"subb","sbca");
+      return;
     }
     gen_expr(node->lhs);
 
@@ -4373,7 +4370,6 @@ void gen_expr(Node *node) {
     load_var(node);
     return;
   case ND_MEMBER: {
-
     Member *mem = node->member;
     if (mem->is_bitfield) {
       if (can_load_x(node->ty) && test_addr_x(node)) {
@@ -5236,7 +5232,7 @@ void gen_expr(Node *node) {
     if (gen_direct_lr(node,"addb","adca"))
       return;
     // (+ TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
-    if (node->ty->kind == TY_CHAR) {
+    if (is_int8(node->ty)) {
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
         if(gen_direct(node->rhs,"addb",NULL))
@@ -5252,12 +5248,12 @@ void gen_expr(Node *node) {
       return;
     }
     if (node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_INT
-    &&  node->lhs->lhs->ty->kind == TY_CHAR
+    &&  is_int16(node->lhs->ty)
+    &&  is_int8(node->lhs->lhs->ty)
     &&  node->lhs->lhs->ty->is_unsigned
     &&  node->rhs->kind == ND_CAST
-    &&  node->rhs->ty->kind == TY_INT
-    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  is_int16(node->rhs->ty)
+    &&  is_int8(node->rhs->lhs->ty)
     &&  node->rhs->lhs->ty->is_unsigned ) {
       gen_expr(node->lhs->lhs);
       push1();
@@ -5270,12 +5266,12 @@ void gen_expr(Node *node) {
       return;
     }
     if (node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_INT
-    &&  node->lhs->lhs->ty->kind == TY_CHAR
+    &&  is_int16(node->lhs->ty)
+    &&  is_int8(node->lhs->lhs->ty)
     &&  !node->lhs->lhs->ty->is_unsigned
     &&  node->rhs->kind == ND_CAST
-    &&  node->rhs->ty->kind == TY_INT
-    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  is_int16(node->rhs->ty)
+    &&  is_int8(node->rhs->lhs->ty)
     &&  !node->rhs->lhs->ty->is_unsigned ) {
       char *label = new_label("L_%d");
       gen_expr(node->lhs->lhs);
@@ -5292,9 +5288,9 @@ void gen_expr(Node *node) {
       return;
     }
     if (node->rhs->kind     == ND_CAST
-    &&  node->rhs->ty->kind == TY_INT
+    &&  is_int16(node->rhs->ty)
     &&  !node->rhs->ty->is_unsigned
-    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  is_int8(node->rhs->lhs->ty)
     &&  !node->rhs->lhs->ty->is_unsigned
     &&  test_addr_x(node->rhs->lhs)) {
       gen_expr(node->lhs);
@@ -5321,7 +5317,7 @@ void gen_expr(Node *node) {
   } // ND_ADD
   case ND_SUB:
     // (+ TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
-    if (node->ty->kind == TY_CHAR) {
+    if (is_int8(node->ty)) {
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
         if(gen_direct(node->rhs,"subb",NULL))
@@ -5332,8 +5328,7 @@ void gen_expr(Node *node) {
       push1();
       gen_expr(node->rhs);
       popa();
-      println("\tnegb");
-      println("\taba");
+      println("\tsba");
       println("\ttab");
       return;
     }

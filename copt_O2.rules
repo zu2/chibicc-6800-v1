@@ -157,3 +157,24 @@ DEC32_%M:
 =
 	sta%1 %2,x
 
+
+#
+# special pattern
+#
+	pshb
+	psha
+	ldab %2,x
+	ldaa %1,x
+	addb #<%3
+	adca #>%3
+	tsx
+	addb 1,x
+	adca 0,x
+	ins
+	ins
+=
+	addb %2,x
+	adca %1,x
+	addb #<%3
+	adca #>%3
+

@@ -52,6 +52,7 @@ install: all
 	install -c $(INCS)  /opt/chibicc/include
 	install -c copt.rules  /opt/chibicc/lib
 	install -c copt_O2.rules  /opt/chibicc/lib
+	install -c copt_O3.rules  /opt/chibicc/lib
 	
 
 # Stage 1
