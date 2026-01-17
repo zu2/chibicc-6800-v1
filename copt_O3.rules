@@ -1,0 +1,22 @@
+#
+# copt_O3.rules
+#
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	ldab 0,x
+	clra
+=
+	stab XXX_%M+2
+	staa XXX_%M+1
+XXX_%M: 
+	ldab $FFFF
+        clra 
+
+
+	anda #>%1
+	andb #<%1
+	jeq %2
+=
+	andb #<%1
+	jeq %2
