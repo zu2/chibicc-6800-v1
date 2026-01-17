@@ -20,3 +20,61 @@ XXX_%M:
 =
 	andb #<%1
 	jeq %2
+
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	ldab 0,x
+	j%1 %2
+=
+	stab XXX_%M+2
+	staa XXX_%M+1
+XXX_%M: 
+	ldab $FFFF
+	j%1 %2
+
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	pulb
+	stab 0,x
+=
+	stab XXX_%M+2
+	staa XXX_%M+1
+	pulb
+XXX_%M: 
+	stab $FFFF
+
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	clr 0,x
+=
+	stab XXX_%M+2
+	staa XXX_%M+1
+XXX_%M: 
+	clr $FFFF
+
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	ldab #<%1
+	stab 0,x
+=
+	stab XXX_%M+2
+	staa XXX_%M+1
+	ldab #<%1
+XXX_%M: 
+	stab $FFFF
+
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+	ldab 0,x
+	cmpb %1
+=
+	stab XXX_%M+2
+	staa XXX_%M+1
+XXX_%M: 
+	ldab $FFFF
+	cmpb %1
