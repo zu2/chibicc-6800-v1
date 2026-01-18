@@ -157,6 +157,13 @@ DEC32_%M:
 =
 	sta%1 %2,x
 
+	adca #0
+	jne %1
+	clra
+=
+	adca #0
+	jne %1
+
 
 #
 # special pattern
