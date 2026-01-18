@@ -46,18 +46,6 @@ bool is_boolean_result(Node *node)
   return false;
 }
 
-bool is_kind_2byte(TypeKind kind)
-{
-  switch(kind) {
-  case TY_INT:
-  case TY_SHORT:
-  case TY_ENUM:
-  case TY_PTR:
-    return true;
-  }
-  return false;
-}
-
 Type *is_byte(Node *node)
 {
   int64_t val;
@@ -66,7 +54,7 @@ Type *is_byte(Node *node)
       !node->ty->is_unsigned) { // integral promotion ?
     node = node->lhs;
   }
-  if (node->ty->kind == TY_CHAR || node->ty->kind == TY_BOOL) {
+  if (is_int8(node->ty)) {
     return node->ty;
   }
 
@@ -363,10 +351,10 @@ bool gen_jump_if_false(Node *node, char *if_false)
     goto fallback;
   }
 
-  if (!is_kind_2byte(lhs->ty->kind)) {
+  if (!is_int16_or_ptr(lhs->ty)) {
     goto fallback;
   }
-  if (!is_kind_2byte(rhs->ty->kind)) {
+  if (!is_int16_or_ptr(rhs->ty)) {
     goto fallback;
   }
 
