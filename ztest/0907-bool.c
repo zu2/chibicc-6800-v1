@@ -52,5 +52,31 @@ int main(void)
     return 23;
   }
 
+  r = 1;
+  r += 255;
+  if (r!=1) {
+    return 30;
+  }
+  r = 1;
+  r += 65535;
+  if (r!=1) {
+    return 31;
+  }
+  r = 1;
+  r -= -65535;
+  if (r!=1) {
+    return 32;
+  }
+  r = 1;
+  r *= 2;
+  if (r!=1) {
+    return 33;
+  }
+  r = 10;
+  r /= 2;
+  if (r!=0) {
+    return 34;
+  }
+
   return 0;
 }

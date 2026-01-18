@@ -166,7 +166,11 @@ Node *optimize_const_expr(Node *node)
       val = eval(node);
       Node *new = new_node(ND_NUM, node->tok);
       new->val = val;
-      new->ty = node->lhs->ty;
+      if (node->lhs->ty->kind == TY_BOOL) {
+        new->ty = node->rhs->ty;
+      }else{
+        new->ty = node->lhs->ty;
+      }
       return new;
     }
     return node;

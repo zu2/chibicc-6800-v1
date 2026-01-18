@@ -1778,7 +1778,7 @@ static int getTypeId(Type *ty) {
     assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
     return F32;
   }
-  return U16;
+  return U16; // TY_PTR,TY_ENUM
 }
 
 // The table for type casts
@@ -1868,16 +1868,28 @@ static void cast(Type *from, Type *to) {
     return;
 
   if (to->kind == TY_BOOL) {
-    cmp_zero(from);
-    int c = count();
-    println("\tbeq L_false_%d", c);
+    if (from->kind == TY_BOOL)
+      return;
+    if (from->kind == TY_CHAR) {
+      println("\tclra");
+      println("\tnegb");    // if AccB==0 then C=0 else C=1
+      println("\ttab");     // Zero AccB preserving carry flag
+      println("\trolb");    // C to AccB
+      return;
+    }
+    if (is_int16_or_ptr(from)) {
+      cmp_zero(from);
+      println("\tclrb");
+      println("\tnega");
+      println("\ttba");
+      println("\trolb");
+      return;
+    }
+    cmp_zero(from);         // if zero, Z=1 AccB=0 else Z=0 AccB!=0
     println("\tclra");
-    println("\tldab #1");
-    println("\tbra L_end_%d", c);
-    println("L_false_%d:", c);
-    println("\tclra");
-    println("\tclrb");
-    println("L_end_%d:", c);
+    println("\tnegb");      // if AccB==0 then C=0 else C=1
+    println("\ttab");       // Zero AccB preserving carry flag
+    println("\trolb");      // C to AccB
     return;
   }
 
@@ -1893,10 +1905,8 @@ static void cast(Type *from, Type *to) {
 static int is_empty_cast(Type *from, Type *to) {
   if (to->kind == TY_VOID)
     return 0;
-#if 0
   if (to->kind == TY_BOOL)
-    return 0;
-#endif
+    return from->kind == TY_BOOL;
   int t1 = getTypeId(from);
   int t2 = getTypeId(to);
   return cast_table[t1][t2]==NULL;
@@ -3232,7 +3242,19 @@ static void opeq(Node *node)
       store(node->ty);
       IX_Dest = IX_None;
       return;
+    // Handle non-char/int RHS case? XXX
     case TY_BOOL:
+      gen_addr(lhs);
+      push();
+      gen_expr(rhs);
+      cast(rhs->ty,ty_int);
+      popx();
+      println("\taddb 0,x");
+      println("\tadca #0");
+      cast(ty_int,ty_bool);
+      println("\tstab 0,x");
+      IX_Dest = IX_None;
+      return;
     case TY_CHAR:
       if (test_addr_x(lhs)) {
         gen_expr(rhs);
@@ -3302,6 +3324,19 @@ static void opeq(Node *node)
       IX_Dest = IX_None;
       return;
     case TY_BOOL:
+      // Handle non-char/int RHS case?
+      gen_addr(lhs);
+      push();
+      gen_expr(rhs);
+      negd();
+      cast(rhs->ty,ty_int);
+      popx();
+      println("\taddb 0,x");
+      println("\tadca #0");
+      cast(ty_int,ty_bool);
+      println("\tstab 0,x");
+      IX_Dest = IX_None;
+      return;
     case TY_CHAR:
       if (test_addr_x(lhs)) {
         int off = gen_addr_x(lhs,true);
@@ -3391,7 +3426,7 @@ static void opeq(Node *node)
     assert(0);
   }
   case ND_MULEQ: {
-    gen_addr(node->lhs);
+    gen_addr(lhs);
     push();
     switch(node->ty->kind) {
     case TY_FLOAT:
@@ -3401,7 +3436,8 @@ static void opeq(Node *node)
       IX_Dest = IX_None;
       gen_expr(node->rhs);
       println("\tjsr __mulf32tos");
-      break;
+      store(node->ty);
+      return;
     case TY_LONG:
       println("\ttsx");
       println("\tldx 0,x");
@@ -3409,7 +3445,8 @@ static void opeq(Node *node)
       IX_Dest = IX_None;
       gen_expr(node->rhs);
       println("\tjsr __mul32tos");
-      break;
+      store(node->ty);
+      return;
     case TY_BOOL:
     case TY_CHAR: 
       println("\ttsx");
@@ -3418,11 +3455,16 @@ static void opeq(Node *node)
       println("\tclra");
       IX_Dest = IX_None;
       push();
-      gen_expr(node->rhs);
+      gen_expr(rhs);
+      cast(rhs->ty,ty_int);
       println("\tjsr __mul16x16");
-      IX_Dest = IX_None;
       ins(2);
-      break;
+      IX_Dest = IX_None;
+      if (node->ty->kind==TY_BOOL) {
+        cast(ty_int,ty_bool);
+      }
+      store(node->ty);
+      return;
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
@@ -3438,15 +3480,16 @@ static void opeq(Node *node)
       }
       push();
       gen_expr(node->rhs);
+      cast(rhs->ty,ty_int);
       println("\tjsr __mul16x16");
       IX_Dest = IX_None;
       ins(2);
-      break;
+      store(node->ty);
+      return;
     default:
       assert(0);
     }
-    store(node->ty);
-    return;
+    assert(0);
   }
   case ND_DIVEQ: {
     switch(node->ty->kind) {
@@ -3479,12 +3522,12 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
-      gen_addr(node->lhs);
+      gen_addr(lhs);
       push();
-      gen_expr(node->rhs);
+      gen_expr(rhs);
       push();
       println("\ttsx");
-      println("\tldx 0,x");
+      println("\tldx 2,x");
       println("\tldab 0,x");
       println("\tclra");
       if (node->ty->is_unsigned) {
@@ -3493,6 +3536,9 @@ static void opeq(Node *node)
         println("\tjsr __div16x16s");
       }
       IX_Dest = IX_None;
+      if (node->ty->kind==TY_BOOL) {
+        cast(ty_int,ty_bool);
+      }
       ins(2);
       break;
     case TY_SHORT:
@@ -4526,7 +4572,37 @@ void gen_expr(Node *node) {
         return;
       }
     }
-    if (can_direct(lhs) && lhs->ty->size <= 2) {
+    if (lhs->ty->size == 1) {
+      if (is_integer_constant(rhs, &val)) {
+        if (val==0) {
+          if (node->retval_unused) {
+            if (can_direct(lhs)) {
+              gen_direct(lhs,"clr","clr");
+              return;
+            }else if (test_addr_x(lhs)) {
+              int off = gen_addr_x(node->lhs,true);
+              println("\tclr %d,x",off);
+              return;
+            }
+          }
+        }else{ // val!=0
+          if (lhs->ty->kind == TY_BOOL) {
+            val = !!val;
+          }
+          if (can_direct(lhs)) {
+            println("\tldab #%ld",val);
+            gen_direct(node->lhs,"stab","staa");
+            return;
+          }else if (test_addr_x(lhs)) {
+            println("\tldab #%ld",val);
+            int off = gen_addr_x(node->lhs,true);
+            println("\tstab %d,x",off);
+            return;
+          }
+        }
+      }
+    }
+    if (can_direct(lhs) && lhs->ty->size == 2) {
       if (node->retval_unused && is_integer_constant(rhs, &val)) {
         if (val==0) {
           gen_direct(lhs,"clr","clr");

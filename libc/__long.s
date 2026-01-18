@@ -55,13 +55,15 @@ __s16to32_1:
 	rts
 ;
 ;	if (@long == zero)
-;		set Z
+;		Z=1, AccB==0
+;       else
+;               Z=0, AccB!=0
 ;
 __iszero32:
-	ldx	@long+2
-	bne	__iszero32_end
-	ldx	@long
-__iszero32_end:
+        ldab    @long+3
+        orab    @long+2
+        orab    @long+1
+        orab    @long
 	rts
 
  
