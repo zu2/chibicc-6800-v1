@@ -53,13 +53,13 @@ int main(int argc, char **argv)
 	  return 23;
 
 	if (!(ua==0))
-	  return 20;
+	  return 30;
 	if (ua!=0)
-	  return 21;
+	  return 31;
 	if (ub==0)
-	  return 22;
+	  return 32;
 	if (!(ub!=0))
-	  return 23;
+	  return 33;
 
 	return 0;
 }
