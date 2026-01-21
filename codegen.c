@@ -662,6 +662,110 @@ bool gen_shr(Type *ty, uint64_t val)
   assert(0); // what's?
 }
 
+
+bool
+gen_mul8u(Node *node)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+  int64_t val;
+
+  if (node->lhs->kind == ND_CAST
+  &&  node->lhs->ty->kind == TY_INT) {
+    lhs = lhs->lhs;
+  }
+  if (node->rhs->kind == ND_CAST
+  &&  node->rhs->ty->kind == TY_INT) {
+    rhs = rhs->lhs;
+  }
+  if (lhs->ty->kind == TY_CHAR
+  &&  rhs->ty->kind == TY_CHAR) {
+    if (lhs->ty->is_unsigned
+    &&  rhs->ty->is_unsigned) {
+      if (is_integer_constant(rhs,&val)) {
+        switch(val){
+        case 0:
+          println("\tclrb");
+          println("\tclra");
+          return;
+        case 1:
+          gen_expr(lhs);
+          println("\tclra");
+          return;
+        case 2:
+        case 4:
+        case 8:
+        case 16:
+          gen_expr(lhs);
+          println("\tclra");
+          for(int i=2; i<=val; i*=2) {
+            println("\taslb");
+            println("\trola");
+          }
+          return;
+        }
+      }
+      if (can_direct(node->rhs)) {
+        gen_expr(lhs);
+        gen_direct(rhs,"ldaa",NULL);
+      }else if (test_addr_x(rhs)) {
+        gen_expr(lhs);
+        int off = gen_addr_x(rhs,false);
+        println("\tldaa %d,x",off);
+      }else{
+        gen_expr(lhs);
+        push1();
+        gen_expr(rhs);
+        popa();
+      }
+      println("\tjsr __mul8x8u");
+      IX_Dest = IX_None;
+      return true;
+    }
+  }
+  return false;
+}
+bool
+gen_mul8s(Node *node)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+
+  if (node->lhs->kind == ND_CAST
+  &&  node->lhs->ty->kind == TY_INT
+  && !node->lhs->ty->is_unsigned) {
+    lhs = lhs->lhs;
+  }
+  if (node->rhs->kind == ND_CAST
+  &&  node->rhs->ty->kind == TY_INT
+  && !node->rhs->ty->is_unsigned) {
+    rhs = rhs->lhs;
+  }
+  if (lhs->ty->kind == TY_CHAR
+  &&  rhs->ty->kind == TY_CHAR) {
+    if (!lhs->ty->is_unsigned
+    &&  !rhs->ty->is_unsigned) {
+      if (can_direct(node->rhs)) {
+        gen_expr(lhs);
+        gen_direct(rhs,"ldaa",NULL);
+      }else if (test_addr_x(rhs)) {
+        gen_expr(lhs);
+        int off = gen_addr_x(rhs,false);
+        println("\tldaa %d,x",off);
+      }else{
+        gen_expr(lhs);
+        push1();
+        gen_expr(rhs);
+        popa();
+      }
+      println("\tjsr __mul8x8s");
+      IX_Dest = IX_None;
+      return true;
+    }
+  }
+  return false;
+}
+
 //
 // jsr mul16x16 uses 10bytes; unrolled if smaller, even for Os
 //
@@ -5495,6 +5599,12 @@ void gen_expr(Node *node) {
     ins(2);
     return;
   case ND_MUL:
+    if (gen_mul8u(node)) {
+      return;
+    }
+    if (gen_mul8s(node)) {
+      return;
+    }
     gen_expr(node->lhs);
     node = optimize_expr(node);
     if (gen_mul16(node)) {
@@ -6277,7 +6387,8 @@ static void emit_text(Obj *prog) {
 
     // Prologue
     println("; function %s prologue emit_text",fn->name);
-    println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
+    println("; function %s use alloca/vla %d use functions %d",
+                fn->name,fn->use_alloca,fn->use_funcall);
     println("; fn->body->kind=%d",fn->body->kind);
     println("\t.code");
 //  println("\t.type %s, @function", fn->name);

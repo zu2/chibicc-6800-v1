@@ -15,7 +15,7 @@ __mul16x16:
         bne __mul16x16_20
 ;
         ldaa 3,x
-        jmp __mul8x8
+        jmp __mul8x8u
 ;
 __mul16x16_20:
 	stab @tmp1+1
