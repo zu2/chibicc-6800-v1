@@ -164,6 +164,18 @@ DEC32_%M:
 	adca #0
 	jne %1
 
+#
+# logcal op.
+#
+%check 0 <= %1 <= 255
+	ora #>%1
+=
+
+%check 0 <= %1 <= 255
+	anda #>%1
+=
+	clra
+
 
 #
 # special pattern
@@ -184,4 +196,3 @@ DEC32_%M:
 	adca %1,x
 	addb #<%3
 	adca #>%3
-
