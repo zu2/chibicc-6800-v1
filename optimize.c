@@ -236,10 +236,18 @@ Node *optimize_expr(Node *node)
   case ND_ASSIGN:
     node = optimize_lr(node);
     if(node->rhs->ty->kind == TY_BOOL
-    || node->rhs->ty->kind == TY_CHAR) {
-      if (is_integer_constant(node->rhs,&val)) {
-        node->rhs->ty = node->lhs->ty;
-      }
+    && is_integer_constant(node->rhs,&val)) {
+      node->rhs = new_num(val!=0,node->rhs->tok);
+      node->rhs->ty = node->lhs->ty;
+      node->ty = node->lhs->ty;
+      return;
+    }
+    if(node->rhs->ty->kind == TY_CHAR
+    && is_integer_constant(node->rhs,&val)) {
+      node->rhs = new_num(val&255,node->rhs->tok);
+      node->rhs->ty = node->lhs->ty;
+      node->ty = node->lhs->ty;
+      return;
     }
     return node;
   case ND_STMT_EXPR:
