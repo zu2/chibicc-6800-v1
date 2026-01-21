@@ -3185,8 +3185,10 @@ static Node *funcall(Token **rest, Token *tok, Node *fn) {
     node->ret_buffer = new_lvar("", node->ty);
 
   if (fn->var && fn->var->name && strcmp(fn->var->name,"alloca")==0) {
-    current_fn->use_alloca = 1;
+    current_fn->use_alloca = true;
+    return node;
   }
+  current_fn->use_funcall = true;
   return node;
 }
 
