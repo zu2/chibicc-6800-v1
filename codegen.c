@@ -3619,7 +3619,7 @@ static void opeq(Node *node)
       if (node->ty->is_unsigned) {
         println("\tjsr __div32x32u");
       }else{
-        println("\tjsr -_div32x32s");
+        println("\tjsr __div32x32s");
       }
       depth -= 4;
       IX_Dest = IX_None;
