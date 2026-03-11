@@ -134,9 +134,11 @@ shrs32ret:
 	rts
 ;
 __shr32s:
+        ldaa @long      ; MSB bit (b31)==1 ?
+        bpl __shr32u    ; MSB bit==0, do unsigned shift.
 	cmpb #32
 	bcc shrs32ret
-	bsr shru_check
+	bsr shrs_check
 	beq ret		; the shift count is 0/8/16/24, done.
 shrsloop:
 	asr @long
@@ -147,13 +149,22 @@ shrsloop:
 	bne shrsloop
 	rts
 ;
+; note: MSB bit b31==1
+;
+shrs_check:
+	cmpb #24
+	bcc __shrs32x24
+	cmpb #16
+	bcc __shrs32x16
+	cmpb #8
+	bcc __shrs32x8
+	tstb		; If AccB is 0, do nothing.
+	rts
 ;
 __shrs32x24:
 	ldaa @long
 	staa @long+3
-	asla
-	ldaa #0
-	sbca #0
+        ldaa #$ff
 	staa @long+2
 	staa @long+1
 	staa @long
@@ -164,9 +175,7 @@ __shrs32x16:
 	staa @long+3
 	ldaa @long
 	staa @long+2
-	asla
-	ldaa #0
-	sbca #0
+        ldaa #$ff
 	staa @long+1
 	staa @long
 	subb #16
@@ -178,20 +187,7 @@ __shrs32x8:
 	staa @long+2
 	ldaa @long
 	staa @long+1
-	asla
-	ldaa #0
-	sbca #0
+        ldaa #$ff
 	staa @long
 	subb #8
 	rts
-;
-shls_check:
-	cmpb #24
-	bcc __shrs32x24
-	cmpb #16
-	bcc __shrs32x16
-	cmpb #8
-	bcc __shrs32x8
-	tstb		; If AccB is 0, do nothing.
-	rts
-;
