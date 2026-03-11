@@ -4,6 +4,7 @@
 ;	it's very slow
 ;
 	.export __mul32tos
+	.export __mul32x
 	.code
 ;
 ;  __mul32tos: @long = @long * TOS
@@ -15,6 +16,10 @@
 ;  tmp1:       loop counter
 ;  tmp4:       loop end (IX)
 ;
+__mul32x:
+        jsr __push32x
+        bsr __mul32tos
+        rts
 __mul32tos:
         ldx #0
         stx @tmp3
