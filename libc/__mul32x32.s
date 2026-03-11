@@ -17,7 +17,10 @@
 ;  tmp4:       loop end (IX)
 ;
 __mul32x:
-        jsr __push32x
+        stx @tmp2
+        jsr __push32
+        ldx @tmp2
+        jsr __load32x
         bsr __mul32tos
         rts
 __mul32tos:
