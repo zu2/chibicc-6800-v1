@@ -1047,9 +1047,10 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
         return 0;
       }
       if (is_local_var(node)) {
-        if (test) return true;
+        off = node->var->offset;
+        if (test) return (0<=off && off<256);
         ldx_bp();
-        println("\tldx %d,x",node->var->offset);
+        println("\tldx %d,x",off);
         IX_Dest = IX_None;
         return 0;
       }
@@ -3211,6 +3212,8 @@ static void gen_funcall(Node *node)
   if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
     println("\tjsr _%s",node->lhs->var->name);
   }else if (test_expr_x(node->lhs)) { // TODO: gen_expr_x
+    println("; do gen_expr_x");
+    ast_node_dump(node->lhs);
     int off = gen_expr_x(node->lhs,true);
     println("\tjsr %d,x",off);
   }else{
