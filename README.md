@@ -82,14 +82,14 @@ All commands should return the path to the respective binaries.
 
 ## Example: Running Test Programs
 
-You can run all test programs automatically using the provided onetest script:
+You can run test programs automatically using the provided onetest script:
 
 ```sh
 cd ztest
 ./onetest 9018-asciiartf.c
 ```
 
-To run all tests, use runtest.
+To run all tests, use runall.
 
 ```sh
 cd ztest
