@@ -3709,7 +3709,7 @@ static void opeq(Node *node)
       gen_expr(node->rhs);
       push();
       println("\ttsx");
-      println("\tldx 0,x");
+      println("\tldx 2,x");
       println("\tldab 1,x");
       println("\tldaa 0,x");
       if (node->ty->is_unsigned) {
@@ -3750,7 +3750,7 @@ static void opeq(Node *node)
       gen_expr(node->rhs);
       push();
       println("\ttsx");
-      println("\tldx 0,x");
+      println("\tldx 2,x");
       println("\tldab 0,x");
       println("\tclra");
       if (node->ty->is_unsigned) {
@@ -3767,7 +3767,7 @@ static void opeq(Node *node)
       gen_expr(node->rhs);
       push();
       println("\ttsx");
-      println("\tldx 0,x");
+      println("\tldx 2,x");
       println("\tldab 1,x");
       println("\tldaa 0,x");
       if (node->ty->is_unsigned) {
