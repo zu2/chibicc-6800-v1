@@ -5481,6 +5481,20 @@ void gen_expr(Node *node) {
     &&  is_int16(node->rhs->ty)
     &&  is_int8(node->rhs->lhs->ty)
     &&  !node->rhs->lhs->ty->is_unsigned ) {
+      if (test_addr_x(node->lhs->lhs)
+      &&  test_addr_x(node->rhs->lhs)) {
+        println("\tclra");
+        off = gen_addr_x(node->lhs->lhs,true);
+        println("\tldab %d,x",off);
+        off = gen_addr_x(node->rhs->lhs,true);
+        println("\taddb %d,x",off);
+        char *label = new_label("L_%d");
+        println("\tbge %s",label);
+        println("\tdeca");
+        println("%s:",label);
+        IX_Dest = IX_None;
+        return;
+      }
       char *label = new_label("L_%d");
       gen_expr(node->lhs->lhs);
       push1();
@@ -5602,6 +5616,20 @@ void gen_expr(Node *node) {
     &&  node->rhs->ty->kind == TY_INT
     &&  node->rhs->lhs->ty->kind == TY_CHAR
     &&  !node->rhs->lhs->ty->is_unsigned ) {
+      if (test_addr_x(node->lhs->lhs)
+      &&  test_addr_x(node->rhs->lhs)) {
+        println("\tclra");
+        off = gen_addr_x(node->lhs->lhs,true);
+        println("\tldab %d,x",off);
+        off = gen_addr_x(node->rhs->lhs,true);
+        println("\tsubb %d,x",off);
+        char *label = new_label("L_%d");
+        println("\tbge %s",label);
+        println("\tdeca");
+        println("%s:",label);
+        IX_Dest = IX_None;
+        return;
+      }
       gen_expr(node->lhs->lhs);
       println("\teorb #$80");
       push1();
