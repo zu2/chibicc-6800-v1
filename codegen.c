@@ -2136,7 +2136,7 @@ static void push_args2(Node *args,bool is_variadic)
   if (!args)
     return;
   push_args2(args->next,is_variadic);
-  if (opt('g','2')) {
+  if (opt('g','3')) {
     println("; push_args2");
     ast_node_dump(args);
   }
@@ -2621,6 +2621,32 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     }
     return 0;
   default:
+    if (test_addr_x(node)) {
+      switch(node->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        if (test) {
+          return is_char || node->ty->is_unsigned;
+        }
+        int off = gen_addr_x(node,true);
+        println("\t%s %d,x",opb,off);
+        if (!is_store && opa) {
+          println("\t%s #0",opa);
+        }
+        return 1;
+      case TY_INT:
+      case TY_SHORT:
+      case TY_ENUM:
+        if (test) return 1;
+        off = gen_addr_x(node,true);
+        println("\t%s %d,x",opb,off+1);
+        if (opa)
+          println("\t%s %d,x",opa,off);
+        return 1;
+      default:
+        return 0;
+      }
+    }
     return 0;
   }
   return 0;
@@ -3213,7 +3239,6 @@ static void gen_funcall(Node *node)
     println("\tjsr _%s",node->lhs->var->name);
   }else if (test_expr_x(node->lhs)) { // TODO: gen_expr_x
     println("; do gen_expr_x");
-    ast_node_dump(node->lhs);
     int off = gen_expr_x(node->lhs,true);
     println("\tjsr %d,x",off);
   }else{
@@ -5445,7 +5470,7 @@ void gen_expr(Node *node) {
       println("\taba");
       println("\ttab");
       println("\tldaa #0");
-      println("\tadca #0");
+      println("\trola");
       return;
     }
     if (node->lhs->kind == ND_CAST
@@ -5742,7 +5767,6 @@ void gen_expr(Node *node) {
     &&  (node->rhs->ty->kind != TY_INT)
     &&  (node->lhs->ty->kind != node->rhs->ty->kind)
     &&  (node->lhs->ty->size != node->rhs->ty->size)) {
-//    ast_node_dump(node);
 //    println("; Type mismatch between lhs and rhs");
       error_tok(node->tok, "Type mismatch between lhs and rhs");
     }
@@ -5944,7 +5968,7 @@ void stmt_dump(char *p)
   char *q = s;
   static char *pp = NULL;
 
-  if (!opt('g','2')) {
+  if (!opt('g','2') && !opt('g','3')) {
     return;
   }
   if (pp!=p) {
@@ -5975,7 +5999,7 @@ static void gen_stmt(Node *node)
   stmt_dump(node->loc);
   // With -g2 or higher, AST node details are also embedded;
   // Assembly may sometimes fail in such cases.
-  if (opt('g','2')) {
+  if (opt('g','3')) {
     ast_node_dump(node);
   }
 
