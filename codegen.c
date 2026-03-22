@@ -998,6 +998,64 @@ static void gen_addr(Node *node)
 }
 
 int ldx_x(Type *ty,int off);
+
+char *gen_ext_sub(Node *node, bool test)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+  int off;
+  int64_t val;
+  char *s;
+
+  switch(node->kind) {
+// case ND_NULL_EXPR:
+// case ND_NUM:
+// case ND_NEG:
+  case ND_VAR:
+    if (is_int16_or_ptr(node->ty)) {
+      if (is_global_var(node)) {
+        s = malloc(strlen(node->var->name)+2);
+        sprintf(s,"_%s",node->var->name);
+        return s;
+      }
+    }
+    return NULL;
+  case ND_MEMBER: {
+    Member *mem = node->member;
+    if (mem->is_bitfield) {     // bitfield cannot be move to IX
+      return NULL;
+    }
+    return NULL;
+  }; // ND_MEMBER:
+  case ND_DEREF: {
+    return NULL;
+  } // ND_DEREF
+  case ND_ADDR: {
+    return NULL;
+  } // ND_ADDR;
+// case ND_ASSIGN:
+// case ND_STMT_EXPR:
+// case ND_COMMA:
+// case ND_CAST:
+// case ND_MEMZERO:
+// case ND_COND:
+// case ND_NOT:
+// case ND_BITNOT:
+// case ND_LOGAND:
+// case ND_LOGOR:
+// case ND_FUNCALL:
+// case ND_LABEL_VAL:
+// case ND_ADD:
+// case ND_SUB:
+  default:
+    return NULL;
+  }
+  if (test) {
+    return NULL;
+  }
+  error_tok(node->tok, "invalid expression at %s node->kind %d",__func__,node->kind);
+}
+
 int gen_expr_x(Node *node,bool save_d);
 bool test_expr_x(Node *node);
 
@@ -4617,14 +4675,15 @@ void gen_expr(Node *node) {
       &&  lhs->kind == ND_ADD
       &&  lhs->ty->kind == TY_ARRAY
       &&  is_global_array(lhs->rhs)
-      &&  lhs->rhs->ty->array_len<=256) {
+      &&  lhs->rhs->ty->array_len<=256
+      &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
         char *label = new_label("L_%d");
         gen_expr(lhs->lhs);
         println("\tldx #_%s",lhs->rhs->var->name);
         println("\tstab %s+2    ; XXX!",offset);
         println("%s:",offset);
-        println("\tclra");
+        println("\tclra ;");
         println("\tldab 0,x");
         if (!node->ty->is_unsigned) {
           println("\tbpl %s",label);
@@ -4638,14 +4697,15 @@ void gen_expr(Node *node) {
       &&  lhs->kind == ND_ADD
       &&  lhs->ty->kind == TY_ARRAY
       &&  is_global_array(lhs->lhs)
-      &&  lhs->lhs->ty->array_len<=256) {
+      &&  lhs->lhs->ty->array_len<=256
+      &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
         char *label = new_label("L_%d");
         gen_expr(lhs->rhs);
         println("\tldx #_%s",lhs->lhs->var->name);
         println("\tstab %s+2    ; XXX!",offset);
         println("%s:",offset);
-        println("\tclra");
+        println("\tclra ;");
         println("\tldab 0,x");
         if (!node->ty->is_unsigned) {
           println("\tbpl %s",label);
@@ -4681,6 +4741,7 @@ void gen_expr(Node *node) {
     Node *lhs = node->lhs;
     Node *rhs = node->rhs;
 
+    // bit-field
     if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
       gen_addr(node->lhs);
       push();
@@ -4710,8 +4771,9 @@ void gen_expr(Node *node) {
         pop();
       }
       return;
-    } // ND_MEMBER
-    if (lhs->ty->size==2 && rhs->ty->size==2) {
+    } // ND_MEMBER, bit-field
+
+    if (node->retval_unused && lhs->ty->size==2 && rhs->ty->size==2) {
       if (is_global_var(node->lhs)
       &&  can_direct(node->lhs)
       &&  test_expr_x(node->rhs)) {
@@ -4809,6 +4871,14 @@ void gen_expr(Node *node) {
       gen_expr(node->rhs);
       int off = gen_addr_x(node->lhs,true);
       store_x(node->ty,off);
+      return;
+    }
+    if (is_global_var(node->rhs)
+    &&  can_direct(node->rhs)) {
+      gen_addr(node->lhs);
+      tfr_dx();
+      gen_direct(node->rhs,"ldab","ldaa");
+      store_x(node->ty,0);
       return;
     }
     if (node->rhs->ty->size == 1) {
