@@ -215,7 +215,7 @@ static void negd()
   println("\tsbca #0");
 }
 
-static void ldx_bp()
+void ldx_bp()
 {
   if (IX_Dest != IX_BP){
     if (opt('g','3')) {
@@ -1182,6 +1182,22 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
   case ND_CAST: {
     if (!is_int16_or_ptr(node->ty)) {
       return false;
+    }
+    // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) p +0 ))
+    if (node->kind == ND_CAST
+    &&  node->ty->kind == TY_PTR
+    &&  node->lhs->kind == ND_VAR
+    &&  node->lhs->ty->kind == TY_ARRAY
+    &&  node->lhs->var->is_local
+    &&  node->lhs->var->offset<=6) {
+      if (test) return true;
+      ldx_bp();
+      IX_Dest = IX_BP;
+      for (int i=0; i<node->lhs->var->offset; i++) {
+        println("\tinx");
+        IX_Dest = IX_None;
+      }
+      return 0;
     }
     if (!is_int16_or_ptr(node->lhs->ty)) {
       return false;
@@ -2177,7 +2193,7 @@ static void push_args2(Node *args,bool is_variadic)
   case TY_FLOAT:
     if (args->pass_by_stack && args->kind==ND_NUM) {
       union { float f32; uint32_t u32; } u = { args->fval };
-      println("; push float %e, %08x",u.f32,u.u32);
+      println("; push float %e, 0x%08x",u.f32,u.u32);
       gen_direct_pushl(u.u32);
     }else{
       gen_expr(args);
