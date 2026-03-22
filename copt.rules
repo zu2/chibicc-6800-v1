@@ -441,14 +441,6 @@
 	jsr __xor32x
 	jsr __store32x
 
-	ldab #<%1
-	ldaa #>%1
-	jsr __load16
-=
-	ldab %1+1
-	ldaa %1
-
-
 #
 #	branch condition
 #
@@ -663,13 +655,12 @@ INC%M:
 	stab %2,x
 	staa %1,x
 	jsr __load16
-= 
+=
 	stab %2,x
 	staa %1,x
 	ldx %1,x
 	ldab 1,x
 	ldaa 0,x
-
 
 	clra
 	ldab %1,x
