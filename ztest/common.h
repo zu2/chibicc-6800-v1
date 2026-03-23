@@ -18,6 +18,9 @@
 #endif
 
 // chibicc, fcc, cc68
+#if defined(__CHIBICC_6800__)
+#include <math.h>
+#endif
 #if defined(__CHIBICC_6800__) || defined(__FCC__)
 extern	void print(int i);
 extern	void putchar(int ch);
