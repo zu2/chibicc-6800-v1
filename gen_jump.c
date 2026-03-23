@@ -117,9 +117,9 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     if (!is_byte(node)) {
       return false;
     }
+    load_var(node);
     //  This tstb is unnecessary in the current codegen.c:load_var(),
     //  but not using it may cause risky behavior in the future.
-    load_var(node);
     //  println("\tstb");
     println("\tjeq %s", if_false);
     return true;
@@ -181,11 +181,11 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     }
   }else if (is_global_var(rhs)) {
     gen_expr(lhs);
-    println("\tsubb _%s", node->var->name);
+    println("\tcmpb _%s", node->var->name);
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
     int off = gen_addr_x(rhs,true);
-    println("\tsubb %d,x",off);
+    println("\tcmpb %d,x",off);
   }else{
     gen_expr(lhs);
     push1();
@@ -660,20 +660,10 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     return true;
   }
 
-  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
-    if (is_global_var(node)) {
-      println("\tldx _%s", node->var->name);
-      println("\tjne %s", if_true);
-      IX_Dest = IX_None;
-      return true;
-    }
-    if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
-      int off = gen_addr_x(node, false);
-      println("\tldx %d,x", off);
-      println("\tjne %s", if_true);
-      IX_Dest = IX_None;
-      return true;
-    }
+  if (node->kind == ND_BITAND && check_in_char(rhs)) {
+    println("\tandb #$%02lx", rhs->val);
+    println("\tjne %s", if_true);
+    return true;
   }
 
   if (!is_compare(node)) {
@@ -688,9 +678,11 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   if (!(rty = is_byte(rhs))) {
     return false;
   }
-  if (lty->is_unsigned != rty->is_unsigned) {
+  if ((lty->is_unsigned != rty->is_unsigned)
+  &&  !(lty->is_unsigned && is_u8num(rhs))) {
     return false;
   }
+
   if (lhs->kind == ND_CAST && lhs->ty->kind == TY_INT) {
     lhs = lhs->lhs;
   }
@@ -713,11 +705,11 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     }
   }else if (is_global_var(rhs)) {
     gen_expr(lhs);
-    println("\tsubb _%s", node->var->name);
+    println("\tcmpb _%s", node->var->name);
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
     int off = gen_addr_x(rhs,false);
-    println("\tsubb %d,x",off);
+    println("\tcmpb %d,x",off);
   }else{
     gen_expr(lhs);
     push1();
