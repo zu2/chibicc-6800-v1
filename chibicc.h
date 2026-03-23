@@ -475,6 +475,7 @@ void printout(char *fmt, ...);
 bool is_local_var(Node *node);
 bool is_global_var(Node *node);
 bool test_addr_x(Node *node);
+void ldx_bp(void);
 int ldx_x(Type *ty,int off);
 void tfr_dx();
 int gen_expr_x(Node *node,bool save_d);

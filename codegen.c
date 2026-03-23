@@ -687,11 +687,11 @@ gen_mul8u(Node *node)
         case 0:
           println("\tclrb");
           println("\tclra");
-          return;
+          return true;
         case 1:
           gen_expr(lhs);
           println("\tclra");
-          return;
+          return true;
         case 2:
         case 4:
         case 8:
@@ -702,7 +702,7 @@ gen_mul8u(Node *node)
             println("\taslb");
             println("\trola");
           }
-          return;
+          return true;
         }
       }
       if (can_direct(node->rhs)) {
@@ -1001,10 +1001,10 @@ int ldx_x(Type *ty,int off);
 
 char *gen_ext_sub(Node *node, bool test)
 {
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-  int off;
-  int64_t val;
+//Node *lhs = node->lhs;
+//Node *rhs = node->rhs;
+//int off;
+//int64_t val;
   char *s;
 
   switch(node->kind) {
@@ -2758,13 +2758,28 @@ int gen_direct_lr(Node *node, char *opb, char *opa)
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
 
-    if (can_direct(node->rhs)){
+    int can_direct_lhs = can_direct(node->lhs);
+    int can_direct_rhs = can_direct(node->rhs);
+
+    if (can_direct_lhs && can_direct_rhs){
+      if (node->rhs->kind == ND_CAST
+      &&  is_int16(node->rhs->ty)
+      &&  is_int8(node->rhs->lhs->ty)
+      &&  node->rhs->lhs->ty->is_unsigned) {
+        gen_expr(node->rhs);
+        if (gen_direct(node->lhs,opb,opa))
+          return 1;
+        assert(0);
+      }
+    }
+
+    if (can_direct_rhs){
       gen_expr(node->lhs);
       if (gen_direct(node->rhs,opb,opa))
         return 1;
       assert(0);
     }
-    if (can_direct(node->lhs)){
+    if (can_direct_lhs){
       gen_expr(node->rhs);
       if (gen_direct(node->lhs,opb,opa))
         return 1;
@@ -5525,7 +5540,6 @@ void gen_expr(Node *node) {
   case ND_ADD: {
     if (gen_direct_lr(node,"addb","adca"))
       return;
-    // (+ TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
     if (is_int8(node->ty)) {
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
