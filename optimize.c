@@ -103,10 +103,10 @@ Node *swap_lr(Node *node)
 
 static int node_cost(Node *node)
 {
-  int  sign = !node->ty->is_unsigned;
+  int sign = !node->ty->is_unsigned;
 
   if (node->kind==ND_NUM) {
-    return 1;
+    return 2;
   }else if (is_global_var(node)) {
     return 150+sign;
   }else if (can_direct(node)) {
@@ -141,6 +141,7 @@ static Node *optimize_lr_swap(Node *node)
 {
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
+
     if (node_cost(node->lhs) < node_cost(node->rhs))
       return swap_lr(node);
     return node;
@@ -240,14 +241,14 @@ Node *optimize_expr(Node *node)
       node->rhs = new_num(val!=0,node->rhs->tok);
       node->rhs->ty = node->lhs->ty;
       node->ty = node->lhs->ty;
-      return;
+      return node;
     }
     if(node->rhs->ty->kind == TY_CHAR
     && is_integer_constant(node->rhs,&val)) {
       node->rhs = new_num(val&255,node->rhs->tok);
       node->rhs->ty = node->lhs->ty;
       node->ty = node->lhs->ty;
-      return;
+      return node;
     }
     return node;
   case ND_STMT_EXPR:
