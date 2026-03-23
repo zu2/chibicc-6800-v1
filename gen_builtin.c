@@ -98,7 +98,6 @@ bool builtin_strcpy(Node *node)
 // node->kind == ND_VAR
     Node *arg1 = node->args;
     Node *arg2 = node->args->next;
-    ast_node_dump(arg2);
     
     if (arg2->kind == ND_CAST
     &&  arg2->ty->kind == TY_PTR) {
@@ -121,15 +120,16 @@ bool builtin_strcpy(Node *node)
     println("; var->init_data[] %s",var->init_data);
     size_t size = var->ty->size;  // Size includes the trailing \0
 
+    ast_node_dump(arg1);
     IX_Dest = IX_None;
     int off = 0;
     if (test_expr_x(arg1)) {
       off = gen_expr_x(arg1,false);
-      IX_Dest = IX_None;
     }else{
       gen_expr(arg1);
       tfr_dx();
     }
+    IX_Dest = IX_None;
     if (size==0) {  // XXX ?
       error("strcpy literal size==0");
     }else if (!opt('O','0')
