@@ -93,13 +93,13 @@
 	jsr __store32bx
 =
 	ldab @long+3
-	stab 3,x
+	stab %1+3,x
 	ldab @long+2
-	stab 2,x
+	stab %1+2,x
 	ldab @long+1
-	stab 1,x
+	stab %1+1,x
 	ldab @long
-	stab 0,x
+	stab %1,x
 
 	jsr __inc32
 =
@@ -123,6 +123,23 @@ INC32_%M:
 	dex
 	stx @long
 DEC32_%M:
+
+	jsr __add32i
+	.word %1
+	.word %2
+=
+	ldab @long+3
+	addb #%eval(%2 256 %%)
+	stab @long+3
+	ldab @long+2
+	adcb #%eval(%2 256 /)
+	stab @long+2
+	ldab @long+1
+	adcb #%eval(%1 256 %%)
+	stab @long+1
+	ldab @long
+	adcb #%eval(%1 256 /)
+	stab @long
 
 #
 # shift operation optimize

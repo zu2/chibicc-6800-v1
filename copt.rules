@@ -2,11 +2,15 @@
 #	jmp & bra
 #
 
+	rts
+	rts
+=
+	rts
+
 	jmp %1
 %1:
 =
 %1:
-
 
 	jmp %1
 %2:
@@ -14,7 +18,6 @@
 =
 %2:
 %1:
-
 
 	jmp %1
 %3:
@@ -24,7 +27,6 @@
 %3:
 %2:
 %1:
-
 
 	jmp %1
 	jmp %2
@@ -1045,3 +1047,27 @@ INC%M:
 =
 	dex
 	dex
+
+# special pattern
+
+	tsx
+	ldx %1,x
+	ldab %3,x
+	tsx
+	ldx %2,x
+	stab %5,x
+	tsx
+	ldx %1,x
+	ldab %4,x
+	tsx
+	ldx %2,x
+	stab %6,x
+=
+	tsx
+	ldx %1,x
+	ldab %3,x
+	ldaa %4,x
+	tsx
+	ldx %2,x
+	stab %5,x
+	staa %6,x
