@@ -5,6 +5,7 @@ static FILE *output_file;
 int depth;
 static Obj *current_fn;
 IX_Type	IX_Dest = IX_None;
+int IX_PTR_off = -1;
 
 static void gen_stmt(Node *node);
 
@@ -234,6 +235,17 @@ void ldx_bp()
     }
   }
   IX_Dest = IX_BP;
+}
+
+void ldx_bp_ptr_off(int off)
+{
+  if (IX_Dest == IX_PTR && IX_PTR_off == off){
+    return;
+  }
+  ldx_bp();
+  println("\tldx %d,x",off);
+  IX_Dest = IX_PTR;
+  IX_PTR_off = off;
 }
 
 void tfr_dx()
@@ -1107,9 +1119,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       if (is_local_var(node)) {
         off = node->var->offset;
         if (test) return (0<=off && off<256);
-        ldx_bp();
-        println("\tldx %d,x",off);
-        IX_Dest = IX_None;
+        ldx_bp_ptr_off(off);
         return 0;
       }
     }
@@ -1408,9 +1418,8 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     if (node->var->ty->kind == TY_VLA){
       if (node->var->offset<=254) {
         if (test) return 1;
-        ldx_bp();
-        println("\tldx %d,x	; gen_addr_x():TY_LDA ",node->var->offset);
-        IX_Dest = IX_None;
+        println("; gen_addr_x():TY_LDA,%d ",node->var->offset);
+        ldx_bp_ptr_off(off);
         return 0;
       }
       goto fallback;
@@ -1684,6 +1693,11 @@ int ldx_x(Type *ty,int off)
 {
   if (can_load_x(ty)) {
     println("\tldx %d,x",off);
+    if (IX_Dest == IX_BP) {
+      IX_Dest = IX_PTR;
+      IX_PTR_off = off;
+      return 0;
+    }
     IX_Dest = IX_None;
     return 0;
   }
@@ -5302,6 +5316,7 @@ void gen_expr(Node *node) {
         }
         println("\tjsr __add32i");
         word32i(val);
+        IX_Dest = IX_None;
         return;
       }
       if (can_direct_long2(node)){
@@ -5538,8 +5553,6 @@ void gen_expr(Node *node) {
   // The following is a binary operator, length less than or equal to an int
   switch (node->kind) {
   case ND_ADD: {
-    if (gen_direct_lr(node,"addb","adca"))
-      return;
     if (is_int8(node->ty)) {
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
@@ -5555,6 +5568,8 @@ void gen_expr(Node *node) {
       println("\ttab");
       return;
     }
+    if (gen_direct_lr(node,"addb","adca"))
+      return;
     if (node->lhs->kind == ND_CAST
     &&  is_int16(node->lhs->ty)
     &&  is_int8(node->lhs->lhs->ty)

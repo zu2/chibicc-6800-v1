@@ -509,6 +509,7 @@ typedef	enum {
   IX_None,
   IX_BP,
   IX_VAR,
+  IX_PTR,
 } IX_Type;
 
 extern IX_Type	IX_Dest;
