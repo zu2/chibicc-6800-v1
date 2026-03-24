@@ -158,10 +158,10 @@
 =
 	eora %1
 
-	jsr __load8u
+	jsr __load8
 	tstb
 =
-	jsr __load8u
+	jsr __load8
 
 
 	stab %1
@@ -545,7 +545,7 @@
 	staa %1,x
 	subb #<1
 	sbca #>1
-	jsr __load8u
+	jsr __load8
 =
 	inc %2,x
 	bne INC%M
@@ -553,7 +553,6 @@
 INC%M:
 	ldx %1,x
 	dex
-	clra
 	ldab 0,x
 
 	ldab %2,x
@@ -581,7 +580,7 @@ INC%M:
 	staa %1,x
 	subb #<%3
 	sbca #>%3
-	jsr __load8u
+	jsr __load8
 =
 	stab %2,x
 	staa %1,x
@@ -620,7 +619,7 @@ INC%M:
 	staa %1,x
 	addb #<%3
 	adca #>%3
-	jsr __load8u
+	jsr __load8
 =
 	stab %2,x
 	staa %1,x
@@ -830,15 +829,6 @@ INC%M:
 	clra
 	andb #<%1
 
-# Omit sign extension after load8s
-	jsr __load8s
-	clra
-	asrb
-	rolb
-	sbca #0
-=
-	jsr __load8s
-
 #
 #
 #
@@ -901,7 +891,7 @@ INC%M:
 
 	ldab #<%1
 	ldaa #>%1
-	jsr __load8u
+	jsr __load8
 	jne %2
 =
 	ldab %1
@@ -909,19 +899,16 @@ INC%M:
 
 	ldab #<%1
 	ldaa #>%1
-	jsr __load8u
+	jsr __load8
 =
-	clra
 	ldab %1
 
 	ldab %2,x
 	ldaa %1,x
-	jsr __load8u
+	jsr __load8
 =
 	ldx %1,x
-	clra
 	ldab 0,x
-
 
 	jsr __load16
 	stab @tmp1+1
@@ -950,10 +937,9 @@ INC%M:
 	ldaa %1,x
 	addb #<%3
 	adca #>%3
-	jsr __load8u
+	jsr __load8
 =
 	ldx %1,x
-	clra
 	ldab %3,x
 
 %check 0 <= %3 <= 255

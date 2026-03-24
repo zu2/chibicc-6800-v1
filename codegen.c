@@ -1632,28 +1632,13 @@ static void load(Type *ty) {
   }
 
 // char *insn = ty->is_unsigned ? "movz" : "movs";
-
   // When we load a char or a short value to a register, we always
   // extend them to the size of int, so we can assume the lower half of
   // a register always contains a valid value. The upper half of a
   // register for char, short and int may contain garbage. When we load
   // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
-    if (0 && opt('O','2')) {
-      tfr_dx();
-      println("\tclra");
-      println("\tldab 0,x");
-      if (!ty->is_unsigned) {
-        char *label = new_label("L_%d");
-        println("\tbpl %s",label);
-        println("\tcoma");
-        println("%s:",label);
-      }
-    }else if (ty->is_unsigned){
-      println("\tjsr __load8u");
-    }else{
-      println("\tjsr __load8s");
-    }
+    println("\tjsr __load8");
   }else if (ty->size == 2){
     if (opt('O','2')) {
       tfr_dx();
