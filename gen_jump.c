@@ -139,6 +139,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   }
 
   if (node->kind == ND_BITAND && check_in_char(rhs)) {
+    gen_expr(lhs);
     println("\tandb #$%02lx", rhs->val);
     println("\tjeq %s", if_false);
     return true;
@@ -304,6 +305,11 @@ bool gen_jump_if_false(Node *node, char *if_false)
   if (node->kind == ND_LOGAND) {
     gen_jump_if_false(node->lhs, if_false);
     gen_jump_if_false(node->rhs, if_false);
+    return true;
+  }
+
+  if (node->kind == ND_BITAND && is_int8(node->ty)) {
+    gen_jump_if_false_8bit(node,if_false);
     return true;
   }
 
@@ -661,6 +667,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   }
 
   if (node->kind == ND_BITAND && check_in_char(rhs)) {
+    gen_expr(lhs);
     println("\tandb #$%02lx", rhs->val);
     println("\tjne %s", if_true);
     return true;
@@ -838,6 +845,11 @@ bool gen_jump_if_true(Node *node, char *if_true)
 //  println("\tldx %d,x", off);
     println("\tjne %s", if_true);
     IX_Dest = IX_None;
+    return true;
+  }
+
+  if (node->kind == ND_BITAND && is_int8(node->ty)) {
+    gen_jump_if_true_8bit(node,if_true);
     return true;
   }
 
