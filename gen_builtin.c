@@ -120,7 +120,7 @@ bool builtin_strcpy(Node *node)
     println("; var->init_data[] %s",var->init_data);
     size_t size = var->ty->size;  // Size includes the trailing \0
 
-    ast_node_dump(arg1);
+//  ast_node_dump(arg1);
     IX_Dest = IX_None;
     int off = 0;
     if (test_expr_x(arg1)) {
