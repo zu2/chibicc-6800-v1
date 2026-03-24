@@ -277,7 +277,7 @@ static void store32x(int off)
   if (off == 0) {
     println("\tjsr __store32x");
   }else if (1<=off && off<=255) {              // Offset too large for 1 byte
-    println("\tldab #%d",off);
+    println("\tldab #<%d",off);
     println("\tjsr __store32bx");
     IX_Dest = IX_None;
   }else{
@@ -5298,6 +5298,35 @@ void gen_expr(Node *node) {
           println("\tjsr __dec32");
           IX_Dest = IX_None;
           return;
+        }
+        if (opt('O','2')) {
+          char *skip = new_label("L_%d");
+          switch(val) {
+          case 1:
+            println("\tldx @long+2");
+            println("\tinx");
+            println("\tstx @long+2");
+            println("\tbne %s",skip);
+            println("\tldx @long");
+            println("\tinx");
+            println("\tstx @long");
+            println("\t%s:",skip);
+            IX_Dest = IX_None;
+            return;
+          case 0xffff:
+          case -1:
+            println("\tldx @long+2");
+            println("\tbne %s",skip);
+            println("\tldx @long");
+            println("\tdex");
+            println("\tstx @long");
+            println("\tldx @long+2");
+            println("\t%s:",skip);
+            println("\tdex");
+            println("\tstx @long+2");
+            IX_Dest = IX_None;
+            return;
+          }
         }
         println("\tjsr __add32i");
         word32i(val);
