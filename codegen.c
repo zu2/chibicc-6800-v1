@@ -1419,7 +1419,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       if (node->var->offset<=254) {
         if (test) return 1;
         println("; gen_addr_x():TY_LDA,%d ",node->var->offset);
-        ldx_bp_ptr_off(off);
+        ldx_bp_ptr_off(node->var->offset);
         return 0;
       }
       goto fallback;
