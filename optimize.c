@@ -114,14 +114,16 @@ static int node_cost(Node *node)
   }else if (test_addr_x(node)) {
     return 250+sign;
   }else if (node->kind==ND_VAR) {
-    return 300+sign;
+    return 300+sign
+      + ((node->ty->kind == TY_PTR)?   100:0)
+      + ((node->ty->kind == TY_ARRAY)? 200:0);
   }else if (node->kind==ND_CAST) {
     return node_cost(node->lhs)+10+sign;
   }else if (node->kind==ND_FUNCALL) {
-    return 400;
+    return 1000;
   }
 
-  return 1000;
+  return 2000;
 }
 
 static Node *optimize_lr(Node *node)
