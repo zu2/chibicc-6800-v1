@@ -30,6 +30,12 @@ void putstr(unsigned char *s)
 	while (*s)
 		putchar(*s++);
 }
+void puts(unsigned char *s)
+{
+	while (*s)
+		putchar(*s++);
+}
+
 #endif
 
 void
