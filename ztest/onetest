@@ -12,7 +12,7 @@ while true; do
     OPT_O=$1
     shift
     ;;
-  -g|-g1|-g2)
+  -g|-g1|-g2|-g3|-gg|-ggg)
     OPT_g=$1
     shift
     ;;
