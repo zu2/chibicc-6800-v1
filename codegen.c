@@ -27,11 +27,6 @@ void printout(char *fmt, ...) {
   va_end(ap);
 }
 
-int count(void) {
-  static int i = 1;
-  return i++;
-}
-
 char *new_label(char *fmt)
 {
   char *buf = calloc(1,strlen(fmt)+20); // 20?
@@ -40,6 +35,40 @@ char *new_label(char *fmt)
 
   return buf;
 }
+
+typedef struct label_link {
+  char *label;
+  struct label_link *next;
+} label_link_t;
+
+label_link_t *llink = NULL;
+
+static bool check_used_label(char *s)
+{
+  label_link_t *p = llink;
+
+  while (p != NULL) {
+    if (strcmp(s,p->label)==0) {
+      return true;
+    }
+    p = p->next;
+  }
+  return false;
+}
+
+static void mark_used_label(char *s)
+{
+  if (check_used_label(s)) {
+    return;
+  }
+
+  label_link_t *p = malloc(sizeof(label_link_t));
+
+  p->label = s;
+  p->next = llink;
+  llink = p;
+}
+
 
 void push1(void) {	// push char parameter
   println("\tpshb");
@@ -5964,8 +5993,10 @@ static void gen_stmt(Node *node)
       }
     }
     gen_stmt(node->then);
-    println("_%s:", node->cont_label);
-    IX_Dest = IX_None;
+    if (check_used_label(node->cont_label)) {
+      println("_%s:", node->cont_label);
+      IX_Dest = IX_None;
+    }
     if (node->inc) {
       stmt_dump(node->inc->loc);
       node->inc->retval_unused = true;
@@ -5985,7 +6016,10 @@ static void gen_stmt(Node *node)
     println("%s:",L_begin);
     IX_Dest = IX_None;
     gen_stmt(node->then);
-    println("_%s:", node->cont_label);
+    if (check_used_label(node->cont_label)) {
+      println("_%s:", node->cont_label);
+      IX_Dest = IX_None;
+    }
     stmt_dump(cond->loc);
     cond = optimize_expr(cond);
     if (is_integer_constant(cond,&val)) {
@@ -6102,6 +6136,7 @@ static void gen_stmt(Node *node)
     return;
   case ND_GOTO:
     println("\tjmp _%s", node->unique_label);
+    mark_used_label(node->unique_label);
     return;
   case ND_GOTO_EXPR:
     gen_expr(node->lhs);
