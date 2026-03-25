@@ -307,6 +307,11 @@ Node *optimize_expr(Node *node)
       new->ty = node->ty;
       return new;
     }
+    if (node->lhs->kind == ND_COND) {
+      node->lhs->ty = node->ty;
+      node->lhs = optimize_expr(node->lhs);
+      return node;
+    }
     if (is_integer(node->ty)
     &&  node->lhs->kind==ND_NUM
     &&  is_integer(node->lhs->ty)) {
@@ -343,6 +348,18 @@ Node *optimize_expr(Node *node)
     node->cond = optimize_expr(node->cond);
     node->then = optimize_expr(node->then);
     node->els  = optimize_expr(node->els);
+    switch(node->then->kind) {
+    case ND_CAST:
+    case ND_COND:
+      node->then->ty = node->ty;
+      node->then = optimize_expr(node->then);
+    }
+    switch(node->els->kind) {
+    case ND_CAST:
+    case ND_COND:
+      node->els->ty = node->ty;
+      node->els = optimize_expr(node->els);
+    }
     return node;
   case ND_FUNCALL:
     node->lhs = optimize_expr(node->lhs);
