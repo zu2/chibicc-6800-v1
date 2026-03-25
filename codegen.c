@@ -4798,10 +4798,13 @@ void gen_expr(Node *node) {
         cmp_zero(cond->ty);
       println("\tjeq %s",L_else);
     }
+    IX_Type  IX_Save = IX_Dest;
+    int IX_Save_PTR_off = IX_PTR_off;
     gen_expr(node->then);
     println("\tjmp %s",L_end);
     println("%s:", L_else);
-    IX_Dest = IX_None;
+    IX_Dest = IX_Save;
+    IX_PTR_off = IX_Save_PTR_off;
     gen_expr(node->els);
     println("%s:", L_end);
     IX_Dest = IX_None;
