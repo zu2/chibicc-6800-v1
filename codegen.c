@@ -5439,6 +5439,36 @@ void gen_expr(Node *node) {
       println("\tadca #0");
       return;
     }
+    if (node->lhs->kind == ND_MUL
+    &&  node->lhs->ty == ty_int
+    &&  is_integer_constant(node->lhs->rhs, &val)
+    &&  val==2
+    &&  is_int16(node->lhs->lhs->ty)
+    &&  test_addr_x(node->lhs->lhs)) {
+      gen_expr(node->rhs);
+      off = gen_addr_x(node->lhs->lhs,false);
+      println("\taddb %d,x",off+1);
+      println("\tadca %d,x",off);
+      println("\taddb %d,x",off+1);
+      println("\tadca %d,x",off);
+      return;
+    }
+    if (node->lhs->kind == ND_MUL
+    &&  is_int16(node->lhs->ty)
+    &&  node->lhs->lhs->kind == ND_CAST
+    &&  is_int16(node->lhs->lhs->ty)
+    &&  is_integer_constant(node->lhs->rhs, &val)
+    &&  val==2
+    &&  is_int8(node->lhs->lhs->lhs->ty)
+    &&  test_addr_x(node->lhs->lhs->lhs)) {
+      gen_expr(node->rhs);
+      off = gen_addr_x(node->lhs->lhs->lhs,false);
+      println("\taddb %d,x",off);
+      println("\tadca #0");
+      println("\taddb %d,x",off);
+      println("\tadca #0");
+      return;
+    }
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);
