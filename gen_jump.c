@@ -255,16 +255,13 @@ bool gen_jump_if_false(Node *node, char *if_false)
   }
 
   if (is_integer_or_ptr(node->ty) && node->ty->size == 2) {
-//  println("; gen_jump_if_false is_integer_or_ptr && node->ty->size == 2");
     if (test_expr_x(node)) {
-//    println("; test_expr_x(node) ok");
       gen_expr_x(node,false);
       println("\tjeq %s", if_false);
       IX_Dest = IX_None;
       return true;
     }
     if (test_addr_x(node)) {
-//    println("; test_addr_x(node) ok");
       int off = gen_addr_x(node,false);
       println("\tldx %d,x", off);
       println("\tjeq %s", if_false);
@@ -288,8 +285,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
   }
 
-  if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR || node->ty->kind==TY_ENUM)
-  && test_expr_x(node)) {
+  if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
     int off = gen_expr_x(node,true);
     println("\tjeq %s", if_false);
     IX_Dest = IX_None;
@@ -805,16 +801,13 @@ bool gen_jump_if_true(Node *node, char *if_true)
   }
 
   if (is_integer_or_ptr(node->ty) && node->ty->size == 2) {
-//  println("; gen_jump_if_true is_integer_or_ptr && node->ty->size == 2");
     if (test_expr_x(node)) {
-//    println("; test_expr_x(node) ok");
       gen_expr_x(node,false);
       println("\tjne %s", if_true);
       IX_Dest = IX_None;
       return true;
     }
     if (test_addr_x(node)) {
-//    println("; test_addr_x(node) ok");
       int off = gen_addr_x(node,false);
       println("\tldx %d,x", off);
       println("\tjne %s", if_true);
@@ -838,11 +831,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
     }
   }
 
-  if ((node->ty->kind==TY_SHORT || node->ty->kind==TY_INT || node->ty->kind==TY_PTR || node->ty->kind==TY_ENUM)
-  && test_expr_x(node)) {
+  if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
     int off = gen_expr_x(node,true);
-//  off = ldx_x(node->ty,off);
-//  println("\tldx %d,x", off);
     println("\tjne %s", if_true);
     IX_Dest = IX_None;
     return true;

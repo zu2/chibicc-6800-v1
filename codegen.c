@@ -82,7 +82,7 @@ void popx(void) {
 //
 // Use ins_only(n) to preserve flags.
 //
-static void ins(int n)
+void ins(int n)
 {
   for (int i=0; i<n; i++) {
     println("\tins");
@@ -209,7 +209,7 @@ int align_to(int n, int align) {
 //  return (n + align - 1) / align * align;
 }
 
-static void negd()
+void negd()
 {
   println("\tnega");
   println("\tnegb");
@@ -379,6 +379,14 @@ bool is_global_var_or_array(Node *node)
 
 Type *is_integer_constant(Node *node, int64_t *val)
 {
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_PTR
+  &&  node->lhs->kind == ND_NUM
+  &&  node->lhs->val == 0) {
+    *val = 0;
+    return node->ty;
+  }
+
   if (node->kind == ND_CAST && node->ty->kind == TY_INT) {
     node = node->lhs;
   }
@@ -674,262 +682,6 @@ bool gen_shr(Type *ty, uint64_t val)
   assert(0); // what's?
 }
 
-
-bool
-gen_mul8u(Node *node)
-{
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-  int64_t val;
-
-  if (node->lhs->kind == ND_CAST
-  &&  node->lhs->ty->kind == TY_INT) {
-    lhs = lhs->lhs;
-  }
-  if (node->rhs->kind == ND_CAST
-  &&  node->rhs->ty->kind == TY_INT) {
-    rhs = rhs->lhs;
-  }
-  if (lhs->ty->kind == TY_CHAR
-  &&  rhs->ty->kind == TY_CHAR) {
-    if (lhs->ty->is_unsigned
-    &&  rhs->ty->is_unsigned) {
-      if (is_integer_constant(rhs,&val)) {
-        switch(val){
-        case 0:
-          println("\tclrb");
-          println("\tclra");
-          return true;
-        case 1:
-          gen_expr(lhs);
-          println("\tclra");
-          return true;
-        case 2:
-        case 4:
-        case 8:
-        case 16:
-          gen_expr(lhs);
-          println("\tclra");
-          for(int i=2; i<=val; i*=2) {
-            println("\taslb");
-            println("\trola");
-          }
-          return true;
-        }
-      }
-      if (can_direct(node->rhs)) {
-        gen_expr(lhs);
-        gen_direct(rhs,"ldaa",NULL);
-      }else if (test_addr_x(rhs)) {
-        gen_expr(lhs);
-        int off = gen_addr_x(rhs,false);
-        println("\tldaa %d,x",off);
-      }else{
-        gen_expr(lhs);
-        push1();
-        gen_expr(rhs);
-        popa();
-      }
-      println("\tjsr __mul8x8u");
-      IX_Dest = IX_None;
-      return true;
-    }
-  }
-  return false;
-}
-bool
-gen_mul8s(Node *node)
-{
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-
-  if (node->lhs->kind == ND_CAST
-  &&  node->lhs->ty->kind == TY_INT
-  && !node->lhs->ty->is_unsigned) {
-    lhs = lhs->lhs;
-  }
-  if (node->rhs->kind == ND_CAST
-  &&  node->rhs->ty->kind == TY_INT
-  && !node->rhs->ty->is_unsigned) {
-    rhs = rhs->lhs;
-  }
-  if (lhs->ty->kind == TY_CHAR
-  &&  rhs->ty->kind == TY_CHAR) {
-    if (!lhs->ty->is_unsigned
-    &&  !rhs->ty->is_unsigned) {
-      if (can_direct(node->rhs)) {
-        gen_expr(lhs);
-        gen_direct(rhs,"ldaa",NULL);
-      }else if (test_addr_x(rhs)) {
-        gen_expr(lhs);
-        int off = gen_addr_x(rhs,false);
-        println("\tldaa %d,x",off);
-      }else{
-        gen_expr(lhs);
-        push1();
-        gen_expr(rhs);
-        popa();
-      }
-      println("\tjsr __mul8x8s");
-      IX_Dest = IX_None;
-      return true;
-    }
-  }
-  return false;
-}
-
-//
-// jsr mul16x16 uses 10bytes; unrolled if smaller, even for Os
-//
-//    pshb          // 1 4
-//    psha          // 1 4
-//    ldab #xx      // 2 2
-//    clra          // 1 1
-//    jsr mul16x16  // 3 9
-//    ins           // 1 4
-//    ins           // 1 4
-//
-bool
-gen_mul16(Node *node)
-{
-  switch(node->rhs->kind){
-  case ND_NUM:
-    switch (node->rhs->ty->kind) {
-    case TY_INT:
-    case TY_SHORT:
-    case TY_ENUM:
-      switch(node->rhs->val){
-      case -4:
-        println("\taslb");
-        println("\trola");
-        // thru
-      case -2:
-        println("\taslb");
-        println("\trola");
-        // thru
-      case -1:
-        negd();
-        return true;
-      case 0:
-        println("\tclrb");
-        println("\tclra");
-        return true;
-      case 1:
-        return true;
-      case 2:
-        println("\taslb");
-        println("\trola");
-        return true;
-      case 3:
-        println("\tstab @tmp1+1");
-        println("\tstaa @tmp1");
-        println("\taslb");
-        println("\trola");
-        println("\taddb @tmp1+1");
-        println("\tadca @tmp1");
-        return true;
-      case 4:
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        return true;
-      case 5:
-        if (opt('O','s'))
-          return false;
-        println("\tstab @tmp1+1");
-        println("\tstaa @tmp1");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taddb @tmp1+1");
-        println("\tadca @tmp1");
-        return true;
-      case 6:
-        if (opt('O','s'))
-          return false;
-        println("\tstab @tmp1+1");
-        println("\tstaa @tmp1");
-        println("\taslb");
-        println("\trola");
-        println("\taddb @tmp1+1");
-        println("\tadca @tmp1");
-        println("\taslb");
-        println("\trola");
-        return true;
-      case 7:
-        if (opt('O','s'))
-          return false;
-        println("\tstab @tmp1+1");
-        println("\tstaa @tmp1");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\tsubb @tmp1+1");
-        println("\tsbca @tmp1");
-        return true;
-      case 8:
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        return true;
-      case 10:
-        if (opt('O','s'))
-          return false;
-        println("\tstab @tmp1+1");
-        println("\tstaa @tmp1");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taddb @tmp1+1");
-        println("\tadca @tmp1");
-        println("\taslb");
-        println("\trola");
-        return true;
-      case 16:
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        return true;
-      case 32:
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        println("\taslb");
-        println("\trola");
-        return true;
-      case 100:
-        println("\tjsr __mul100");
-        return true;
-      }
-    }
-    if (node->rhs->val>0 && node->rhs->val<256) {
-      println("\tldx #%ld",node->rhs->val);
-      println("\tjsr __mul16x8x");
-      IX_Dest = IX_None;
-      return true;
-    }
-  }
-  return false;
-}
 
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
@@ -5784,23 +5536,17 @@ void gen_expr(Node *node) {
     ins(2);
     return;
   case ND_MUL:
+    node = optimize_expr(node);
     if (gen_mul8u(node)) {
       return;
     }
     if (gen_mul8s(node)) {
       return;
     }
-    gen_expr(node->lhs);
-    node = optimize_expr(node);
     if (gen_mul16(node)) {
       return;
     }
-    push();
-    gen_expr(node->rhs);
-    println("\tjsr __mul16x16");
-    IX_Dest = IX_None;
-    ins(2);
-    return;
+    assert(0);
   case ND_DIV:
     if (node->lhs->ty ==  node->ty){
       switch(node->rhs->kind){
@@ -6693,9 +6439,17 @@ no_params_locals:
     // a special rule for the main function. Reaching the end of the
     // main function is equivalent to returning 0, even though the
     // behavior is undefined for the other functions.
-    if (strcmp(fn->name, "main") == 0){
-      println("\tclrb");
-      println("\tclra");
+    if (strcmp(fn->name, "main") == 0) {
+      switch(fn->ty->return_ty->kind) {
+      case TY_VOID:
+      case TY_LONG:
+      case TY_FLOAT:
+        break;
+      default:
+        println("\tclrb");
+        println("\tclra");
+        break;
+      }
     }
 
     // Epilogue

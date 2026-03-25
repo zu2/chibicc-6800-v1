@@ -475,6 +475,7 @@ void printout(char *fmt, ...);
 bool is_local_var(Node *node);
 bool is_global_var(Node *node);
 bool test_addr_x(Node *node);
+void negd(void);
 void ldx_bp(void);
 int ldx_x(Type *ty,int off);
 void tfr_dx();
@@ -497,6 +498,7 @@ void pop(void);
 void pop1(void);
 void popa(void);
 void popx(void);
+void ins(int n);
 void ldd_i(int n);
 void load_var(Node *node);
 void cmp_zero(Type *ty);
@@ -520,6 +522,14 @@ extern IX_Type	IX_Dest;
 bool gen_jump_if_false(Node *node,char *if_false);
 bool gen_jump_if_true(Node *node,char *if_true);
 Type *is_byte(Node *node);
+
+//
+// gen_mul.c
+//
+bool gen_mul8u(Node *node);
+bool gen_mul8s(Node *node);
+bool gen_mul16(Node *node);
+
 
 //
 // opt_O3.c
