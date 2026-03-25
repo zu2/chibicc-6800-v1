@@ -107,6 +107,10 @@ static int node_cost(Node *node)
 
   if (node->kind==ND_NUM) {
     return 2;
+  }else if (node->kind == ND_CAST
+        &&  node->ty->kind == TY_PTR
+        &&  node->lhs->kind == ND_NUM) {
+    return 5;
   }else if (is_global_var(node)) {
     return 150+sign;
   }else if (can_direct(node)) {
@@ -817,9 +821,9 @@ Node *optimize_condition(Node *node)
 {
   int64_t val;
 
-#if 1
   if (!node)
     return node;
+
   node = optimize_expr(node);
 
   if (node->kind == ND_NOT && node->lhs->kind == ND_NOT) {
@@ -829,13 +833,13 @@ Node *optimize_condition(Node *node)
     node = negate_condition(optimize_condition(node->lhs));
   }
   if (node->kind==ND_EQ
-  &&  is_integer(node->lhs->ty)
+  &&  is_integer_or_ptr(node->lhs->ty)
   &&  is_integer_constant(node->rhs,&val)
   &&  val==0 ) {
     node = new_unary(ND_NOT, optimize_condition(node->lhs), node->tok);
   }
   if (node->kind==ND_NE
-  &&  is_integer(node->lhs->ty)
+  &&  is_integer_or_ptr(node->lhs->ty)
   &&  is_integer_constant(node->rhs,&val)
   &&  val==0 ) {
     node = optimize_condition(node->lhs);
@@ -845,7 +849,6 @@ Node *optimize_condition(Node *node)
   &&  (node->lhs->ty->kind == TY_INT || node->lhs->ty->kind == TY_CHAR)) {
     node = node->lhs;
   }
-#endif
 
   return node;
 }
