@@ -2398,6 +2398,29 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
   } // ND_VAR
   case ND_DEREF:
     switch(node->lhs->kind){
+    // (ND_DEREF ty_int (ND_VAR TY_ARRAY(12) _L_1 global)
+    case ND_VAR: {
+      if (!is_integer(node->ty) || node->ty->kind==TY_LONG)
+        return 0;
+      if (node->lhs->ty->kind == TY_ARRAY
+      &&  !node->lhs->var->is_local) {
+        if (test) return 1;
+        switch(node->ty->kind) {
+        case TY_BOOL:
+        case TY_CHAR:
+          println("\t%s _%s",opb,node->lhs->var->name);
+          return 1;
+        case TY_SHORT:
+        case TY_INT:
+        case TY_ENUM:
+        case TY_PTR:
+          println("\t%s _%s+1",opb,node->lhs->var->name);
+          println("\t%s _%s",  opa,node->lhs->var->name);
+          return 1;
+        }
+      }
+    } // ND_VAR
+      break;
     case ND_CAST:
       if (!is_integer(node->ty) || node->ty->kind==TY_LONG)
         return 0;
@@ -2415,7 +2438,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         case TY_ENUM:
         case TY_PTR:
           println("\t%s %ld+1",opb,node->lhs->lhs->val);
-          println("\t%s %ld",opb,node->lhs->lhs->val);
+          println("\t%s %ld",  opa,node->lhs->lhs->val);
           return 1;
         }
       }
@@ -2448,11 +2471,11 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
           if (val==0) {
             println("\t%s _%s+1",opb,lhs->lhs->var->name);
             if (opa)
-              println("\t%s _%s",  opa,lhs->lhs->var->name);
+              println("\t%s _%s",opa,lhs->lhs->var->name);
           }else{
             println("\t%s _%s+%ld+1",opb,lhs->lhs->var->name,val);
             if (opa)
-              println("\t%s _%s+%ld",  opa,lhs->lhs->var->name,val);
+              println("\t%s _%s+%ld",opa,lhs->lhs->var->name,val);
           }
           return 1;
         }
