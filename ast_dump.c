@@ -321,6 +321,9 @@ static void ast_dump(Node *node)
   case ND_POST_INCDEC:
     ast_dump_binary(node,"ND_POST_INCDEC");
     return;
+  case ND_PRE_INCDEC:
+    ast_dump_binary(node,"ND_PRE_INCDEC");
+    return;
   case ND_ADDEQ:
     ast_dump_binary(node,"+=");
     return;
