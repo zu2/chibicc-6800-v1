@@ -347,6 +347,21 @@ bool is_local_var(Node *node)
   }
   return 0;
 }
+//
+// node is local array ?
+//
+bool is_local_array(Node *node)
+{
+  if (node->kind != ND_VAR)
+    return 0;
+  if (node->var->ty->kind == TY_VLA)
+    return 0;
+  if (!node->var->is_local)
+    return 0;
+  if (node->ty->kind == TY_ARRAY)
+     return 1;
+  return 0;
+}
 
 //
 // node is global variable?
@@ -792,63 +807,6 @@ static void gen_addr(Node *node)
 
 int ldx_x(Type *ty,int off);
 
-char *gen_ext_sub(Node *node, bool test)
-{
-//Node *lhs = node->lhs;
-//Node *rhs = node->rhs;
-//int off;
-//int64_t val;
-  char *s;
-
-  switch(node->kind) {
-// case ND_NULL_EXPR:
-// case ND_NUM:
-// case ND_NEG:
-  case ND_VAR:
-    if (is_int16_or_ptr(node->ty)) {
-      if (is_global_var(node)) {
-        s = malloc(strlen(node->var->name)+2);
-        sprintf(s,"_%s",node->var->name);
-        return s;
-      }
-    }
-    return NULL;
-  case ND_MEMBER: {
-    Member *mem = node->member;
-    if (mem->is_bitfield) {     // bitfield cannot be move to IX
-      return NULL;
-    }
-    return NULL;
-  }; // ND_MEMBER:
-  case ND_DEREF: {
-    return NULL;
-  } // ND_DEREF
-  case ND_ADDR: {
-    return NULL;
-  } // ND_ADDR;
-// case ND_ASSIGN:
-// case ND_STMT_EXPR:
-// case ND_COMMA:
-// case ND_CAST:
-// case ND_MEMZERO:
-// case ND_COND:
-// case ND_NOT:
-// case ND_BITNOT:
-// case ND_LOGAND:
-// case ND_LOGOR:
-// case ND_FUNCALL:
-// case ND_LABEL_VAL:
-// case ND_ADD:
-// case ND_SUB:
-  default:
-    return NULL;
-  }
-  if (test) {
-    return NULL;
-  }
-  error_tok(node->tok, "invalid expression at %s node->kind %d",__func__,node->kind);
-}
-
 int gen_expr_x(Node *node,bool save_d);
 bool test_expr_x(Node *node);
 
@@ -1192,6 +1150,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   int off;
+  int64_t val;
 
   switch (node->kind) {
   case ND_VAR:
@@ -1227,6 +1186,31 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     IX_Dest = IX_None;
     return 0;
   case ND_DEREF:
+    // (ND_DEREF ty_uchar (ND_POST_INCDEC (ND_VAR TY_PTR(10) src +8 ) 1))
+    if (node->lhs->kind == ND_POST_INCDEC
+    &&  (is_int8(node->ty) || is_int16_or_ptr(node->ty))
+    &&  test_addr_x(node->lhs->lhs)
+    &&  node->lhs->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->rhs,&val)
+    &&  val==1 ){
+      if (test) return 1;
+      if (is_global_var(node->lhs->lhs)) {
+        println("\tldx _%s",node->lhs->lhs->var->name);
+        println("\tinx");
+        println("\tstx _%s",node->lhs->lhs->var->name);
+      }else{
+        int off = gen_addr_x(node->lhs->lhs,false);
+        char *label = new_label("L_%d");
+        println("\tinc %d,x",off+1);
+        println("\tbne %s",label);
+        println("\tinc %d,x",off);
+        println("%s:",label);
+        println("\tldx %d,x",off);
+      }
+      println("\tdex");
+      IX_Dest = IX_None;
+      return 0;
+    }
     if (node->lhs->kind == ND_ADD) {
       int64_t val;
          
@@ -1347,6 +1331,66 @@ bool test_addr_x(Node *node)
 {
   int r =  gen_addr_x_sub(node,true,true);
   return r;
+}
+
+int gen_addr_array_sub(Node *node,bool test)
+{
+  int64_t val;
+
+// (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +16 ) (ND_VAR ty_int i +0 )))
+  if (node->kind == ND_DEREF
+  &&  node->lhs->kind == ND_ADD
+  &&  node->lhs->ty->kind == TY_ARRAY
+  &&  is_local_array(node->lhs->lhs)
+  &&  node->lhs->lhs->var->offset <=252
+  &&  is_local_var(node->lhs->rhs)) {
+    if (is_int16(node->lhs->rhs->ty)) {
+      if (test) return true;
+      println("\tldab @bp+1");
+      println("\tldaa @bp");
+      println("\taddb %d,x",node->lhs->rhs->var->offset+1);
+      println("\tadca %d,x",node->lhs->rhs->var->offset);
+      tfr_dx();
+      IX_Dest = IX_None;
+      return node->lhs->lhs->var->offset;
+    }
+  }
+  // (ND_DEREF ty_int (+ TY_ARRAY(12) (* ty_int (ND_VAR ty_int l +16 ) 2) (ND_VAR TY_ARRAY(12) m +2 )))
+  if (node->kind == ND_DEREF
+  &&  node->lhs->kind == ND_ADD
+  &&  node->lhs->ty->kind == TY_ARRAY
+  &&  is_local_array(node->lhs->rhs)
+  &&  node->lhs->rhs->var->offset <=252
+  &&  node->lhs->lhs->kind == ND_MUL
+  &&  node->lhs->lhs->ty == ty_int
+  &&  is_integer_constant(node->lhs->lhs->rhs,&val)
+  &&  val==2
+  &&  is_local_var(node->lhs->lhs->lhs)) {
+    if (is_int16(node->lhs->lhs->lhs->ty)) {
+      if (test) return true;
+      println("\tldab %d,x",node->lhs->lhs->lhs->var->offset+1);
+      println("\tldaa %d,x",node->lhs->lhs->lhs->var->offset);
+      println("\taslb");
+      println("\trola");
+      println("\taddb @bp+1");
+      println("\tadca @bp");
+      tfr_dx();
+      IX_Dest = IX_None;
+      return node->lhs->rhs->var->offset;
+    }
+  }
+
+  return false;
+}
+
+bool test_addr_array(Node *node)
+{
+  return gen_addr_array_sub(node,true);
+}
+
+int gen_addr_array(Node *node)
+{
+  return gen_addr_array_sub(node,false);
 }
 
 static void word32i(uint32_t val)
@@ -3257,6 +3301,12 @@ static void opeq(Node *node)
       IX_Dest = IX_None;
       return;
     case TY_CHAR:
+      if (is_global_var(lhs)) {
+        gen_expr(rhs);
+        println("\taddb _%s",lhs->var->name);
+        println("\tstab _%s",lhs->var->name);
+        return;
+      }
       if (test_addr_x(lhs)) {
         gen_expr(rhs);
         int off = gen_addr_x(lhs,true);
@@ -3276,6 +3326,14 @@ static void opeq(Node *node)
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
+      if (is_global_var(lhs)) {
+        gen_expr(rhs);
+        println("\taddb _%s+1",lhs->var->name);
+        println("\tadca _%s",lhs->var->name);
+        println("\tstab _%s+1",lhs->var->name);
+        println("\tstaa _%s",lhs->var->name);
+        return;
+      }
       if (test_addr_x(lhs)) {
         gen_expr(rhs);
         int off = gen_addr_x(lhs,true);
@@ -3351,7 +3409,7 @@ static void opeq(Node *node)
             case -1:  // -= -1;
               println("\tinc %d,x",off);
               return;
-            case 2:
+            case 2:   // -= 2;
               if (opt('O','s')) {
                 println("\tdec %d,x",off);
                 println("\tdec %d,x",off);
@@ -4511,6 +4569,38 @@ void gen_expr(Node *node) {
         return;
       }
     }
+    // (ND_DEREF ty_uchar (ND_POST_INCDEC (ND_VAR TY_PTR(10) src +8 ) 1)))
+    if (node->lhs->kind == ND_POST_INCDEC
+    &&  (is_int8(node->ty) || is_int16_or_ptr(node->ty))
+    &&  test_addr_x(node->lhs->lhs)
+    &&  node->lhs->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->rhs,&val)
+    &&  val==1 ){
+      if (is_global_var(node->lhs->lhs)) {
+        println("\tldx _%s",node->lhs->lhs->var->name);
+        println("\tinx");
+        println("\tstx _%s",node->lhs->lhs->var->name);
+      }else{
+        int off = gen_addr_x(node->lhs->lhs,false);
+        char *label = new_label("L_%d");
+        println("\tinc %d,x",off+1);
+        println("\tbne %s",label);
+        println("\tinc %d,x",off);
+        println("%s:",label);
+        println("\tldx %d,x",off);
+      }
+      println("\tdex");
+      if (is_int8(node->ty)) {
+        println("\tldab 0,x");
+      }else if (is_int16(node->ty)) {
+        println("\tldab 1,x");
+        println("\tldaa 0,x");
+      }else{
+        assert(0);  // what?
+      }
+      IX_Dest = IX_None;
+      return;
+    }
     // TODO: global var deref
     if (can_direct(node)) {
       gen_direct(node,"ldab","ldaa");
@@ -4644,6 +4734,14 @@ void gen_expr(Node *node) {
         gen_direct(node->lhs,"stab","staa");
       }else if (test_addr_x(node->lhs)){
         int off = gen_addr_x(node->lhs,true);
+        if (node->retval_unused && val==0) {
+          clr_x(node->ty,off);
+        }else{
+          gen_expr(node->rhs);
+          store_x(node->ty,off);
+        }
+      }else if (test_addr_array(node->lhs)) {
+        int off = gen_addr_array(node->lhs);
         if (node->retval_unused && val==0) {
           clr_x(node->ty,off);
         }else{
