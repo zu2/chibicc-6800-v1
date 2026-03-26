@@ -305,7 +305,7 @@ static void store32x(int off)
 {
   if (off == 0) {
     println("\tjsr __store32x");
-  }else if (1<=off && off<=255) {              // Offset too large for 1 byte
+  }else if (1<=off && off<=255) {
     println("\tldab #<%d",off);
     println("\tjsr __store32bx");
     IX_Dest = IX_None;
@@ -637,8 +637,9 @@ bool gen_shr(Type *ty, uint64_t val)
       case 8:   // 4cyc,  4bytes
       case 9:   // 6cyc,  5bytes
       case 10:  // 8cyc,  6bytes
-      case 12:  // 10cyc, 7bytes
-      case 13:  // 12cyc, 8bytes
+      case 11:  // 10cyc, 7bytes
+      case 12:  // 12cyc, 7bytes
+      case 13:  // 14cyc, 8bytes
         println("\ttab");
         for (int i=8; i<val; i++) {
           println("\tlsrb");
@@ -679,8 +680,9 @@ bool gen_shr(Type *ty, uint64_t val)
       case 8:   // 10cyc,  5bytes.
       case 9:   // 12cyc,  6bytes
       case 10:  // 14cyc,  7bytes
-      case 12:  // 16cyc,  8bytes
-      case 13:  // 18cyc,  9bytes
+      case 11:  // 16cyc,  8bytes
+      case 12:  // 18cyc,  9bytes
+      case 13:  // 20cyc,  10bytes
       {
         char *label = new_label("L_%d");
         println("\ttab");
