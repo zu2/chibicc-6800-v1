@@ -539,44 +539,6 @@
 	ldx %1,x
 	dex%3
 
-	ldab %2,x
-	ldaa %1,x
-	addb #<1
-	adca #>1
-	stab %2,x
-	staa %1,x
-	subb #<1
-	sbca #>1
-	jsr __load8
-=
-	inc %2,x
-	bne INC%M
-	inc %1,x
-INC%M:
-	ldx %1,x
-	dex
-	ldab 0,x
-
-	ldab %2,x
-	ldaa %1,x
-	addb #<1
-	adca #>1
-	stab %2,x
-	staa %1,x
-	ldx %1,x
-	dex
-	clra
-	ldab 0,x
-=
-	inc %2,x
-	bne INC%M
-	inc %1,x
-INC%M:
-	ldx %1,x
-	dex
-	clra
-	ldab 0,x
-
 %check 1 <= %3 <= 2
 	stab %2,x
 	staa %1,x
