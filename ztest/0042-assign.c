@@ -19,13 +19,14 @@ main(int argc, char **argv)
 	for (i=0; i<10; i++){
 	  print(a[i]);
 	}
-// TODO: check C standardcheck C standard
-#if 0
-	if (a[0]!=100)
-	  return 1;
-	if (a[1]!=1)
-	  return 2;
-#endif
+
+  // Current tests assume undefined LHS/RHS evaluation order
+  if (a[0]!=100)
+    return 1;
+  if (a[1]!=1)
+    return 2;
+  if (a[9]!=109)
+    return 9;
 
 	return 0;
 }
