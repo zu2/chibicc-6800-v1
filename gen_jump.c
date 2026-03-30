@@ -258,14 +258,12 @@ bool gen_jump_if_false(Node *node, char *if_false)
     if (test_expr_x(node)) {
       gen_expr_x(node,false);
       println("\tjeq %s", if_false);
-      IX_Dest = IX_None;
       return true;
     }
     if (test_addr_x(node)) {
       int off = gen_addr_x(node,false);
-      println("\tldx %d,x", off);
+      ldx_nX(off);
       println("\tjeq %s", if_false);
-      IX_Dest = IX_None;
       return true;
     }
   }
@@ -278,9 +276,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
     if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
       int off = gen_addr_x(node, false);
-      println("\tldx %d,x", off);
+      ldx_nX(off);
       println("\tjeq %s", if_false);
-      IX_Dest = IX_None;
       return true;
     }
   }
@@ -288,7 +285,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
   if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
     int off = gen_expr_x(node,true);
     println("\tjeq %s", if_false);
-    IX_Dest = IX_None;
     return true;
   }
 
@@ -521,7 +517,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
           break;
         }
         println("\tjeq %s", if_false);
-        IX_Dest = IX_None;
         return true;
       default: ;
         goto fallback;  // It's strange to fail
@@ -804,14 +799,12 @@ bool gen_jump_if_true(Node *node, char *if_true)
     if (test_expr_x(node)) {
       gen_expr_x(node,false);
       println("\tjne %s", if_true);
-      IX_Dest = IX_None;
       return true;
     }
     if (test_addr_x(node)) {
       int off = gen_addr_x(node,false);
-      println("\tldx %d,x", off);
+      ldx_nX(off);
       println("\tjne %s", if_true);
-      IX_Dest = IX_None;
       return true;
     }
   }
@@ -824,9 +817,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
     }
     if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
       int off = gen_addr_x(node, false);
-      println("\tldx %d,x", off);
+      ldx_nX(off);
       println("\tjne %s", if_true);
-      IX_Dest = IX_None;
       return true;
     }
   }
@@ -834,7 +826,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
   if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
     int off = gen_expr_x(node,true);
     println("\tjne %s", if_true);
-    IX_Dest = IX_None;
     return true;
   }
 

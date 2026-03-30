@@ -266,15 +266,24 @@ void ldx_bp()
   IX_Dest = IX_BP;
 }
 
-void ldx_bp_ptr_off(int off)
+void ldx_nX(int off)
+{
+  println("\tldx %d,x",off);
+  if (IX_Dest != IX_BP) {
+    IX_Dest = IX_None;
+    return;
+  }
+  IX_Dest = IX_PTR;
+  IX_PTR_off = off;
+}
+
+void ldx_bp_nX(int off)
 {
   if (IX_Dest == IX_PTR && IX_PTR_off == off){
     return;
   }
   ldx_bp();
-  println("\tldx %d,x",off);
-  IX_Dest = IX_PTR;
-  IX_PTR_off = off;
+  ldx_nX(off);
 }
 
 void tfr_dx()
@@ -860,7 +869,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       if (is_local_var(node)) {
         off = node->var->offset;
         if (test) return (0<=off && off<256);
-        ldx_bp_ptr_off(off);
+        ldx_bp_nX(off);
         return 0;
       }
     }
@@ -1161,7 +1170,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       if (node->var->offset<=254) {
         if (test) return 1;
         println("; gen_addr_x():TY_LDA,%d ",node->var->offset);
-        ldx_bp_ptr_off(node->var->offset);
+        ldx_bp_nX(node->var->offset);
         return 0;
       }
       goto fallback;
@@ -1223,9 +1232,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       &&  is_integer_constant(node->lhs->rhs,&val)
       &&  (0<=val && val<256)) {
         if (test) return true;
-        ldx_bp();
-        println("\tldx %d,x",node->lhs->lhs->var->offset);
-        IX_Dest = IX_None;
+        ldx_bp_nX(node->lhs->lhs->var->offset);
         return val;
       }
     }
@@ -4559,9 +4566,9 @@ void gen_expr(Node *node) {
         char *label = new_label("L_%d");
         gen_expr(lhs->lhs);
         println("\tldx #_%s",lhs->rhs->var->name);
-        println("\tstab %s+2    ; XXX!",offset);
-        println("%s:",offset);
+        println("\tstab %s+1    ; XXX !",offset);
         println("\tclra ;");
+        println("%s:",offset);
         println("\tldab 0,x");
         if (!node->ty->is_unsigned) {
           println("\tbpl %s",label);
@@ -4581,9 +4588,9 @@ void gen_expr(Node *node) {
         char *label = new_label("L_%d");
         gen_expr(lhs->rhs);
         println("\tldx #_%s",lhs->lhs->var->name);
-        println("\tstab %s+2    ; XXX!",offset);
-        println("%s:",offset);
+        println("\tstab %s+1    ; XXX !",offset);
         println("\tclra ;");
+        println("%s:",offset);
         println("\tldab 0,x");
         if (!node->ty->is_unsigned) {
           println("\tbpl %s",label);
@@ -4920,6 +4927,7 @@ void gen_expr(Node *node) {
       if (!is_compare_or_not(cond))
         cmp_zero(cond->ty);
       println("\tjeq %s",L_else);
+      println("; %s %s %d",__func__,__FILE__,__LINE__);
     }
     IX_Type  IX_Save = IX_Dest;
     int IX_Save_PTR_off = IX_PTR_off;
@@ -4986,6 +4994,7 @@ void gen_expr(Node *node) {
       need_bool = 1;
     }else{
       gen_expr(node->lhs);
+      println("; %s %s %d",__func__,__FILE__,__LINE__);
       if (is_compare_or_not(node->lhs)) {
         println("\tjeq %s",L_end);
       }else{
@@ -5946,6 +5955,22 @@ void gen_expr(Node *node) {
       println("\tclra");
       return;
     }
+    if (node->ty->kind == TY_CHAR) {
+      char *skip = new_label("L_%d");
+      char *loop = new_label("L_%d");
+      gen_expr(node->lhs);
+      push1();
+      gen_expr(node->rhs);
+      println("\ttba");
+      println("\tpulb");
+      println("\tbeq %s",skip);
+      println("%s:",loop);
+      println("\taslb");
+      println("\tdeca");
+      println("\tbne %s",loop);
+      println("%s:",skip);
+      return;
+    }
     gen_expr(node->rhs);
     push1();
     gen_expr(node->lhs);
@@ -6109,6 +6134,7 @@ static void gen_stmt(Node *node)
       gen_expr(cond);
       if (!is_compare_or_not(cond))
         cmp_zero(cond->ty);
+      println("; %s %s %d",__func__,__FILE__,__LINE__);
       println("\tjeq %s",L_else);
     }
     gen_stmt(node->then);
@@ -6144,6 +6170,7 @@ static void gen_stmt(Node *node)
           gen_expr(cond);
           if (!is_compare_or_not(cond))
             cmp_zero(cond->ty);
+          println("; %s %s %d",__func__,__FILE__,__LINE__);
           println("\tjeq %s", if_false);
         }
       }
