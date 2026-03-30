@@ -723,6 +723,13 @@
 	jmp __popx_stxbp
 
 	andb %1
+	clra
+	tstb
+=
+	clra
+	andb %1
+
+	andb %1
 	tstb
 =
 	andb %1
@@ -958,6 +965,11 @@
 	ora #0
 =
 
+%check 0 <= %1 <= 255
+	anda #>%1
+=
+	clra
+
 	anda #0
 =
 	clra
@@ -989,6 +1001,15 @@
 	ldab %2
 	ldaa %1
 	j%2 %3
+
+	ldab %1,x
+	cmpb #%2
+	j%3 __L_7
+	ldab %1,x
+=
+	ldab %1,x
+	cmpb #%2
+	j%3 __L_7
 
 # expand macros
 
