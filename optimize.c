@@ -307,6 +307,12 @@ Node *optimize_expr(Node *node)
       new->ty = node->ty;
       return new;
     }
+    // (ND_CAST TY_CHAR(2) (<< TY_INT(4)
+    if (node->ty->kind == TY_CHAR
+    &&  node->lhs->kind == ND_SHL) {
+      node->lhs->ty = node->ty;
+      return node->lhs;
+    }
     if (node->lhs->kind == ND_COND) {
       node->lhs->ty = node->ty;
       node->lhs = optimize_expr(node->lhs);
