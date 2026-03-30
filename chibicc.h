@@ -477,6 +477,8 @@ bool is_global_var(Node *node);
 bool test_addr_x(Node *node);
 void negd(void);
 void ldx_bp(void);
+void ldx_bp_nX(int off);
+void ldx_nX(int off);
 int ldx_x(Type *ty,int off);
 void tfr_dx();
 int gen_expr_x(Node *node,bool save_d);
@@ -515,6 +517,7 @@ typedef	enum {
 } IX_Type;
 
 extern IX_Type	IX_Dest;
+extern int IX_PTR_off;
 
 //
 // gen_jump.c
