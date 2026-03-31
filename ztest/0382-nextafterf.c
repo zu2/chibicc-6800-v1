@@ -3,8 +3,6 @@
 #include <math.h>
 #include <string.h>
 
-#include "my_printf.c"
-
 typedef struct { float a, b, expect; } testcase_t;
 const testcase_t testcases[] = {
     {0x0.0p+0, 0x0.0p+0, 0x0.0p+0},

@@ -2,8 +2,6 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include "my_printf.c"
-
 // Structure to hold test case data for each type and signed/unsigned
 typedef struct {
     int8_t val;

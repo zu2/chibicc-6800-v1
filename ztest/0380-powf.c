@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "my_printf.c"
-
 typedef struct {
     float base;
     float exponent;

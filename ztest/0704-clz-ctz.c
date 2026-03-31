@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "my_printf.c"
-
 // Returns 32 for input 0 (0 input: undefined behavior)
 int safe_clz(uint32_t x) {
     return x == 0 ? 32 : __builtin_clz(x);

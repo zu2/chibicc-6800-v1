@@ -2,8 +2,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "my_printf.c"
-
 static float atanf_taylor(float x)
 {
   float x2 = x * x;

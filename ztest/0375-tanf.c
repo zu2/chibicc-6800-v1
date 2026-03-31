@@ -2,7 +2,6 @@
 #include <math.h>
 #include <stdio.h>
 #include "common.h"
-#include "my_printf.c"
 
 // Struct for test case
 typedef struct {

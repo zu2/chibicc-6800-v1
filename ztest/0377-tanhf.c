@@ -5,14 +5,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "my_printf.c"
-
-#include <stdio.h>
-#include <math.h>
-#include <float.h>
-#include <stdint.h>
-#include <string.h>
-
 typedef struct {
     float input;
     float expected;

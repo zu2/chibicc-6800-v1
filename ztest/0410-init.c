@@ -2,20 +2,20 @@ int strcmp(char *a, char *b)
 {
   char c;
 
-  while (*a) {
-    if (c = (*a - *b)) {
-      return c;
-    }
+  while (*a && (*a == *b)) {
     a++; b++;
   }
-  return *a - *b;
+  return *(unsigned char *)a - *(unsigned char *)b;
 }
 
 int
 main(int argc, char **argv) {
-    int a[2][2] = {{1,2},{3,4}};
+    int a[][2] = {{1,2},{3,4}};
+    char b[9] = { 1,2,3,4,5,6,7,8, };
+
     const char *color[] =  { "Red", "Green", "Blue" };
     int *p = &a[0][0];
+    char *r = b;
     char **q = color;
 
     if (*p++ != 1)
@@ -27,12 +27,17 @@ main(int argc, char **argv) {
     if (*p++ != 4)
       return 4;
 
-    if (strcmp(*q++,"Red"))
+    if (r[0] != 1)
       return 11;
+    if (r[8] != 0)
+      return 19;
+
+    if (strcmp(*q++,"Red"))
+      return 21;
     if (strcmp(*q++,"Green"))
-      return 12;
+      return 22;
     if (strcmp(*q++,"Blue"))
-      return 13;
+      return 23;
 
     return 0;
 }
