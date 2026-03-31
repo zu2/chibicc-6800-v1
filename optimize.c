@@ -481,6 +481,7 @@ Node *optimize_expr(Node *node)
     int64_t val2;
     Node *new;
 
+    node = optimize_lr(node);
     if (is_integer_constant(node->lhs,&val)
     &&  is_integer_constant(node->rhs,&val2)) {
       return optimize_const_expr(node);
