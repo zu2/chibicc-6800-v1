@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <float.h>
 #include <math.h>
-#include "my_printf.c"
 
 #define TOLERANCE 1e-6f
 #define PI_F 3.1415927f

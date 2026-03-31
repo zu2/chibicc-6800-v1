@@ -1,8 +1,6 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "my_printf.c"
-
 #define M_PI_3 (M_PI / 3.0f)
 #define M_PI_6 (M_PI / 6.0f)
 

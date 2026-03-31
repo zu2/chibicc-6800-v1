@@ -3,8 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-
-#include "my_printf.c"
+#include <stdlib.h>
 
 typedef struct {
   float input;

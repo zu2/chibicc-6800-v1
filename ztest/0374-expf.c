@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "my_printf.c"
-
 // Struct for test case
 typedef struct {
   float input;

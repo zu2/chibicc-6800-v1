@@ -3,10 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(__CHIBICC_6800__)
-#include "my_printf.c"
-#endif
-
 #define PI 3.14159265358979323846f
 #define EPSILON 1e-6f // Acceptable error margin
 

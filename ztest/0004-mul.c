@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "my_printf.c"
-
 typedef struct {
     int16_t a;
     int16_t b;

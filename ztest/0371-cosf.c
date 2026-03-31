@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <float.h>
 #include <math.h>
-#include "my_printf.c"
 
 #define TOLERANCE 1e-6f
 

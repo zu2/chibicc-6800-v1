@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "my_printf.c"
-
 typedef union {
   float f;
   uint32_t u;

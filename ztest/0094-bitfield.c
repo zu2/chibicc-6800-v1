@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "my_printf.c"
 
 struct Bits {
   unsigned int a : 1;
@@ -132,6 +131,7 @@ int main(int argc, char **argv)
     return 44; // 8 bits
   }
   x4.a = 16;
+  printf("%d\n",x4.a);
   if (x4.a != 0) {
     return 45; // only lower 4 bits stored
   }

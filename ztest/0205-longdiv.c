@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "my_printf.c"
 
 long div(long a, long b)
 {

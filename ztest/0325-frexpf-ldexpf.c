@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "my_printf.c"
-
 #define EPS 1e-6f
 
 int float_eq(float a, float b)
