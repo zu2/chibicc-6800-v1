@@ -169,6 +169,9 @@ Node *optimize_const_expr(Node *node)
 {
     int64_t val;
 
+    if (node->kind == ND_NUM) {
+      return node;
+    }
     if (is_const_expr(node)) {
       val = eval(node);
       Node *new = new_node(ND_NUM, node->tok);
@@ -382,7 +385,7 @@ Node *optimize_expr(Node *node)
     if (is_compare(node->lhs)
     &&  is_integer(node->lhs->lhs->ty)
     &&  is_integer(node->lhs->rhs->ty)){
-      return negate_condition(optimize_l(node->lhs));
+      return negate_condition(optimize_lr(node->lhs));
     }
     if (is_integer_constant(node->lhs,&val)) {
       Node *new = new_num((val==0),node->tok);
