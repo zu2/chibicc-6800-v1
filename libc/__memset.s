@@ -32,18 +32,18 @@ _memset:
         bne     _memset_1
         tsta
         bne     _memset_1
-        ldx     0,x
-        ldab    5,x
+        ldab    5,x             ; get c
+        ldx     0,x             ; get s
         bra     _memset_final
 _memset_1:
-        addb    1,x
+        addb    1,x             ; tmp4 = s + (n & ~3)
         adca    0,x
         stab    @tmp4+1         ; save end address
         staa    @tmp4
 ;        
-	ldab	5,x		; c
+	ldab	5,x		; get c
 ;
-	ldx	0,x		; saved s
+	ldx	0,x		; get s
 ;
 _memset_loop:
 	stab	0,x
@@ -58,7 +58,7 @@ _memset_loop:
 	bne	_memset_loop
 ;
 _memset_final:
-        ldaa    @tmp1
+        ldaa    @tmp1           ; get (n & 3)
         anda    #$03
         beq     _memset_end
         stab    0,x             ; set one more byte
