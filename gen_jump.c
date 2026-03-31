@@ -130,6 +130,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     gen_jump_if_true(lhs, if_thru);
     gen_jump_if_false(rhs, if_false);
     println("%s:", if_thru);
+    IX_Dest = IX_None;
     return true;
   }
   if (node->kind == ND_LOGAND) {
@@ -292,6 +293,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     gen_jump_if_true(node->lhs, if_thru);
     gen_jump_if_false(node->rhs, if_false);
     println("%s:", if_thru);
+    IX_Dest = IX_None;
     return true;
   }
   if (node->kind == ND_LOGAND) {
@@ -654,6 +656,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     gen_jump_if_false(node->lhs, if_thru);
     gen_jump_if_true(node->rhs, if_true);
     println("%s:", if_thru);
+    IX_Dest = IX_None;
     return true;
   }
 
@@ -792,6 +795,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     gen_jump_if_false(node->lhs, if_thru);
     gen_jump_if_true(node->rhs, if_true);
     println("%s:", if_thru);
+    IX_Dest = IX_None;
     return true;
   }
 
