@@ -4849,31 +4849,39 @@ void gen_expr(Node *node) {
     return;
   case ND_MEMZERO:
     // `rep stosb` is equivalent to `memset(%rdi, %al, %rcx)`.
-    if (node->var->ty->name) {
-      println("; ND_MEMZERO %.*s size=%d, offset=%d,  %s %d",
-                 node->var->ty->name->len, node->var->ty->name->loc,
-                 node->var->ty->size, node->var->offset, __FILE__, __LINE__);
+    if (node->var->name) {
+      println("; ND_MEMZERO %s size=%d, offset=%d,  %s %s %d",
+                 node->var->name, node->var->ty->size, node->var->offset,
+                 __func__, __FILE__, __LINE__);
     }else{
-      println("; ND_MEMZERO (noname) size=%d, offset=%d,  %s %d",
-                 node->var->ty->size, node->var->offset, __FILE__, __LINE__);
+      println("; ND_MEMZERO %s (noname) size=%d, offset=%d,  %s %s %d",
+                 node->var->name, node->var->ty->size, node->var->offset,
+                 __func__, __FILE__, __LINE__);
     }
-    if (node->var->ty->size <= 4
+    if (node->var->ty->size <= 6
     && node->var->ty->size + node->var->offset < 256) {
       ldx_bp();
       println("\tclrb");
       for (int i=0; i<node->var->ty->size; i++){
         println("\tstab %d,x",node->var->offset+i);
       }
-    } else if (node->var->offset < 256) {
+    } else if (node->var->offset < 255) {
       ldx_bp();
-      println("\tldab #%d",node->var->ty->size);
       println("\tclra");
-      int c = count();
-      println("L_memzero_%d:", c);
-      println("\tstaa %d,x",node->var->offset);
-      println("\tinx");
-      println("\tdecb");
-      println("\tbne L_memzero_%d", c);
+      if (node->var->ty->size>=2) {
+        println("\tldab #%d",node->var->ty->size/2);
+        int c = count();
+        println("L_memzero_%d:", c);
+        println("\tstaa %d,x",node->var->offset);
+        println("\tstaa %d,x",node->var->offset+1);
+        println("\tinx");
+        println("\tinx");
+        println("\tdecb");
+        println("\tbne L_memzero_%d", c);
+      }
+      if (node->var->ty->size % 2) {
+        println("\tstaa %d,x",node->var->offset);
+      }
       IX_Dest = IX_None;
     } else {
       println("\tldab @bp+1");
@@ -4883,14 +4891,21 @@ void gen_expr(Node *node) {
         println("\tadca #>%d",node->var->offset);
       }
       tfr_dx();
-      println("\tldab #%d",node->var->ty->size);
       println("\tclra");
-      int c = count();
-      println("L_memzero_%d:", c);
-      println("\tstaa 0,x");
-      println("\tinx");
-      println("\tdecb");
-      println("\tbne L_memzero_%d", c);
+      if (node->var->ty->size>=2) {
+        println("\tldab #%d",node->var->ty->size/2);
+        int c = count();
+        println("L_memzero_%d:", c);
+        println("\tstaa 0,x");
+        println("\tstaa 1,x");
+        println("\tinx");
+        println("\tinx");
+        println("\tdecb");
+        println("\tbne L_memzero_%d", c);
+      }
+      if (node->var->ty->size % 2) {
+        println("\tstaa %d,x",node->var->offset);
+      }
       IX_Dest = IX_None;
     }
     return;
