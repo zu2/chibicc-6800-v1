@@ -1233,6 +1233,24 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
         ldx_bp_nX(node->lhs->lhs->var->offset);
         return val;
       }
+      // (ND_DEREF ty_int (+ TY_ARRAY(12) ...  n))
+      if (node->lhs->ty->kind == TY_ARRAY
+      &&  is_integer_constant(node->lhs->rhs,&val)
+      &&  (0<=val && val<256)
+      &&  test_addr_x(node->lhs->lhs)) {
+        if (test) return true;
+        off = gen_addr_x(node->lhs->lhs,false);
+        if (off+val <256) {
+          return  off + val;
+        }
+        // OOPS! too large array
+        push();
+        ldd_i(off+val);
+        println("\tjsr __adx");
+        pop();
+        IX_Dest = IX_None;
+        return 0;
+      }
     }
     if (0 && test_expr_x(node)) {
       if (test) return true;
