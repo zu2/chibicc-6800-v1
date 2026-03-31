@@ -915,6 +915,8 @@ static void run_linker(StringArray *inputs, char *output) {
     strarray_push(&arr, format("%s/dummyfloat.o", libpath));
   }
 
+  strarray_push(&arr, format("%s/clibs.a",libpath));
+
   for (int i = 0; i < inputs->len; i++) {
     if (strlen(inputs->data[i])>=3 && strncmp(inputs->data[i],"-l",2)==0) {
       if (strchr(inputs->data[i],'/'))

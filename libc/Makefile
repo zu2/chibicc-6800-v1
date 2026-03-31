@@ -20,7 +20,6 @@ OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o __mul8x8u.o __mul8x8
 	__struct.o \
 	__atoi.o __abs.o __rand.o \
 	__builtin_clz.o \
-	qsort.o \
 	__setjmp.o \
 	__memswap.o \
 	__func.o __jmp_d.o \
