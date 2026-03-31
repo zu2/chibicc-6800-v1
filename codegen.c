@@ -595,8 +595,6 @@ bool gen_shr(Type *ty, uint64_t val)
     return false;
   if (val==0)
     return true;
-  if (val<0)
-    return false;
   if (val>=ty->size*8)
     return false;
   switch(ty->size){
@@ -930,12 +928,12 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
                 if (test) return true;
                 println("\tldx _%s",var);
                 println("\tdex");
-                if (val==2) {
+                if (val==-2) {
                   println("\tdex");
                 }
                 println("\tstx _%s",var);
                 println("\tinx");
-                if (val==2) {
+                if (val==-2) {
                   println("\tinx");
                 }
                 IX_Dest = IX_None;
@@ -1279,41 +1277,11 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
   case ND_FUNCALL:
     return false;
     // TODO: Consider the correct address generation method
-    if (node->ret_buffer) {
-      if (test_expr_x(node)) {
-        if (test) return true;
-        off = gen_expr_x(node,false);
-        return off;
-      }
-      return false;
-    }
-    return false;
   case ND_ASSIGN:
   case ND_COND:
     return false;
-    if (node->ty->kind == TY_STRUCT || node->ty->kind == TY_UNION) {
-      if (test_expr_x(node)) {
-        if (test) {
-          return true;
-        }
-        off = gen_expr_x(node,false);
-        return off;
-      }
-      return false;
-    }
-    break;
   case ND_VLA_PTR:
     return false;
-    if (node->var->offset <= 252) {
-      if (test) {
-        return true;
-      }
-      ldx_bp();
-      return node->var->offset;
-    }
-    goto fallback;
-// (+ (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) a +0 ))
-//    (ND_CAST TY_PTR(10) 1))
   }
   if (test) return false;
   error_tok(node->tok, "not an lvalue at gen_addr_x, node->kind %d",node->kind);
@@ -2168,10 +2136,6 @@ static int push_args(Node *node)
       reg_passable = 0;
       arg->pass_by_stack = 1;
       stack += arg->ty->size;
-      break;
-      reg_passable = 0;
-      arg->pass_by_stack = 1;
-      stack += 2;
       break;
     default: // TY_BOOL,CHAR,SHORT,INT,LONG,FLOAT,ENUM,PTR,FUNC,TY_ARRAY,TY_VLA
       if (reg_passable) {
@@ -4942,7 +4906,6 @@ void gen_expr(Node *node) {
     return;
   }
   case ND_NOT: {
-    node = optimize_expr(node);
     gen_expr(node->lhs);
     if (is_compare_or_not(node->lhs)) {
       println("\tdecb");
@@ -4969,7 +4932,7 @@ void gen_expr(Node *node) {
       println("\tclra");
       println("\tcomb");
       println("\tcoma");
-      break;
+      return;
     case 2:
       println("\tcomb");
       println("\tcoma");
@@ -5962,7 +5925,7 @@ void gen_expr(Node *node) {
       push1();
       gen_expr(node->rhs);
       println("\ttba");
-      println("\tpulb");
+      pop1();
       println("\tbeq %s",skip);
       println("%s:",loop);
       println("\taslb");

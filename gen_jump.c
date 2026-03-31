@@ -182,7 +182,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     }
   }else if (is_global_var(rhs)) {
     gen_expr(lhs);
-    println("\tcmpb _%s", node->var->name);
+    println("\tcmpb _%s", rhs->var->name);
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
     int off = gen_addr_x(rhs,true);
@@ -673,7 +673,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   if (!(lty = is_byte(lhs))) {
     return false;
   }
-  if (!(rty = is_byte(rhs))) {
+  if (!(rty = is_byte(rhs)) && !(rty = is_u8num(rhs))) {
     return false;
   }
   if ((lty->is_unsigned != rty->is_unsigned)
@@ -703,7 +703,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     }
   }else if (is_global_var(rhs)) {
     gen_expr(lhs);
-    println("\tcmpb _%s", node->var->name);
+    println("\tcmpb _%s", rhs->var->name);
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
     int off = gen_addr_x(rhs,false);
