@@ -350,7 +350,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
     goto fallback;
   }
-
   if (!is_int16_or_ptr(lhs->ty)) {
     goto fallback;
   }
@@ -668,7 +667,10 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   }
 
   if (!is_compare(node)) {
-    return false;
+    gen_expr(node);
+    cmp_zero(node->ty);
+    println("\tjne %s", if_true);
+    return true;
   }
 
   Type *lty;
@@ -766,6 +768,8 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 //
 bool gen_jump_if_true(Node *node, char *if_true)
 {
+  int64_t val;
+
   node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
@@ -845,15 +849,47 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return true;
   }
 
-  if (lhs->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR) {
+  // If one side is ND_NUM, both sides are promoted to int,
+  // so this can't be optimized. TODO: Fix optimize.c
+  if (is_byte(node->lhs) && is_byte(node->rhs)) {
     if (gen_jump_if_true_8bit(node, if_true)) {
+      return true;
+    }
+  }
+  Type *lty;
+  lty = is_byte(node->lhs);
+  if ((lty=is_byte(node->lhs)) &&  lty->is_unsigned &&  is_u8num(node->rhs)) {
+    if (gen_jump_if_true_8bit(node, if_true)) {
+      return true;
+    }
+  }
+
+  // special long case
+  if (lhs->ty->kind == TY_LONG
+  && is_integer_constant(rhs,&val)
+  && val == 0) {
+    if (!test_addr_x(lhs)) {
+      goto fallback;
+    }
+    switch(node->kind) {
+    case ND_GE:
+      if (lhs->ty->is_unsigned) {
+        println("; ulong >= 0 is always false");
+        println("\tjmp %s",if_true);
+      }else{
+        int off = gen_addr_x(lhs,false);
+        println("\ttst %d,x",off);
+        println("\tjpl %s", if_true);
+      }
       return true;
     }
     goto fallback;
   }
 
-  if (lhs->ty->kind != TY_CHAR && lhs->ty->kind != TY_INT &&
-      lhs->ty->kind != TY_SHORT && node->ty->kind!=TY_ENUM) {
+  if (!is_int16_or_ptr(lhs->ty)) {
+    goto fallback;
+  }
+  if (!is_int16_or_ptr(rhs->ty)) {
     goto fallback;
   }
 
