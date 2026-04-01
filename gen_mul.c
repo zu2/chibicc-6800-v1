@@ -227,8 +227,8 @@ gen_mul16(Node *node)
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          println("\tsubb %d,x",off+1);
+          println("\tsbca %d,x",off);
           return true;
         }
         if (opt('O','s'))
