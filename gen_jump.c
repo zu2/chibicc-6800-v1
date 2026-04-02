@@ -358,31 +358,16 @@ bool gen_jump_if_false(Node *node, char *if_false)
   }
 
   // if (expr op 0)
-  if (rhs->kind == ND_NUM && rhs->val == 0) {
-    if ((lhs->kind == ND_VAR && lhs->var->ty->kind != TY_VLA) &&
-        ((lhs->var->is_local && lhs->ty->kind != TY_ARRAY) ||
-         (!lhs->var->is_local && lhs->ty->kind != TY_FUNC))) {
-      if (lhs->var->is_local && lhs->ty->kind != TY_ARRAY) {
-        if (test_addr_x(lhs)) {
-          int off = gen_addr_x(lhs, false);
-          sprintf(if_cond, "%d,x", off);
-        } else {
-          // It's strange to fail test_addr_x, but it may pass in debugging.
-          goto fallback;
-        }
-      } else if (!lhs->var->is_local && lhs->ty->kind != TY_FUNC) {
-        sprintf(if_cond, "_%s", lhs->var->name);
-      }
+  if (is_integer_constant(rhs,&val) && val==0) {
+    if (test_expr_x(lhs)) {
+      gen_expr_x(lhs,true);
+      println("\tcpx #0");
       switch (node->kind) {
       case ND_EQ:
-        println("\tldx %s", if_cond);
         println("\tjne %s", if_false);
-        IX_Dest = IX_None;
         return true;
       case ND_NE:
-        println("\tldx %s", if_cond);
         println("\tjeq %s", if_false);
-        IX_Dest = IX_None;
         return true;
       case ND_LT:
         if (lhs->ty->is_unsigned) {
@@ -390,22 +375,17 @@ bool gen_jump_if_false(Node *node, char *if_false)
           println("\tjmp %s", if_false);
           return true;
         }
-        println("\tldaa %s", if_cond);
         println("\tjpl %s", if_false);
         return true;
       case ND_GT:
         if (lhs->ty->is_unsigned) {
           println("; uint > 0 is true for any value other than zero.");
-          println("\tldx %s", if_cond);
           println("\tjeq %s", if_false);
-          IX_Dest = IX_None;
           return true;
         } else {
           println("; int>0 is !(int<0) && !(int==0)");
-          println("\tldx %s", if_cond);
           println("\tjmi %s", if_false);
           println("\tjeq %s", if_false);
-          IX_Dest = IX_None;
           return true;
         }
         break;
@@ -414,7 +394,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
           println("; uint >= 0 is always true");
           return true;
         } else {
-          println("\tldaa %s", if_cond);
           println("\tjmi %s", if_false);
           return true;
         }
@@ -422,15 +401,11 @@ bool gen_jump_if_false(Node *node, char *if_false)
       case ND_LE:
         if (lhs->ty->is_unsigned) {
           println("; uint<=0 only when it is exactly 0");
-          println("\tldx %s", if_cond);
           println("\tjne %s", if_false);
-          IX_Dest = IX_None;
           return true;
         } else {
-          println("\tldx %s", if_cond);
           println("\tjmi %s", if_false);
           println("\tjeq %s", if_false);
-          IX_Dest = IX_None;
           return true;
         }
         break;
@@ -553,6 +528,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     println("\tins");
     depth -= 2;
   }
+  println("; %s %s %d",__func__,__FILE__,__LINE__);
   switch (node->kind) {
   // aba/adca #0/jne	5bytes, 10cycle
   // tstb/jne/tsta/jne	6bytes, 6 or 12cycle
@@ -918,6 +894,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     println("\tins");
     depth -= 2;
   }
+  println("; %s %s %d",__func__,__FILE__,__LINE__);
   switch (node->kind) {
   case ND_EQ:
     println("\taba");
