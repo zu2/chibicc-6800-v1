@@ -135,23 +135,20 @@ static void remove_args(int n)
   }
   if (current_fn->params || current_fn->stack_size || current_fn->use_alloca) {
     if (n>=3 && depth==n) { // Removes all stack args.
-      if (IX_Dest != IX_BP) {
-        println("\tldx @bp");
-      }
+      ldx_bp();
       println("\ttxs");
-      IX_Dest = IX_BP;
       depth = 0;
       return;
     }
     if ((opt('O','s') && n*2 > depth+3) // Fewer bytes
     ||  (n*2 > depth+2)) {              // Reduce cycles?
-      println("\tldx @bp");
+      ldx_bp();
       for (int i=n; i<depth; i++) {
         println("\tdex");
+        IX_Dest = IX_None;
       }
       println("\ttxs");
       depth -= n;
-      IX_Dest = IX_None;
       return;
     }
   }
@@ -5272,7 +5269,7 @@ void gen_expr(Node *node) {
         }
         if (val==-1) {
           println("\tjsr __inc32");
-          IX_Dest = IX_None;
+//        IX_Dest = IX_None;
           return;
         }
         println("\tjsr __sub32i");
