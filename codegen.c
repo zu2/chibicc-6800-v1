@@ -437,7 +437,13 @@ Type *is_integer_constant(Node *node, int64_t *val)
     return node->ty;
   }
 
+  // check integral promotion
   if (node->kind == ND_CAST && node->ty->kind == TY_INT) {
+    switch (node->lhs->ty->kind) {
+    case TY_LONG:
+    case TY_FLOAT:
+      return NULL;
+    }
     node = node->lhs;
   }
   if (node->kind != ND_NUM)
