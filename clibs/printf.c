@@ -9,8 +9,9 @@
 
 static void putspace(int n)
 {
-  while (n-->0) {
+  while (n>0) {
     putchar(' ');
+    n--;
   }
 }
 
@@ -21,24 +22,25 @@ static void putstring(const uint8_t *s)
   }
 }
 
+static int justify_mem(const uint8_t *s, int len, int left_justify, int width)
+{
+  int sp = width - len;
+
+  if (!left_justify && sp>0) {
+    putspace(sp);
+  }
+  for (int i=0; i<len; i++) {
+    putchar(*s++);
+  }
+  if (left_justify && sp>0) {
+    putspace(sp);
+  }
+  return (sp>0? sp:0) + len;
+}
+
 static int justify(const uint8_t *s,int left_justify, int width)
 {
-  int len = strlen(s);
-  int n = 0;
-  int sp;
-
-  if ((sp = width-len) > 0) {
-    if (!left_justify) {
-      putspace(sp);
-    }
-    putstring(s);
-    if (left_justify) {
-      putspace(sp);
-    }
-    return width;
-  }
-  putstring(s);
-  return len;
+  return  justify_mem(s, strlen(s), left_justify, width);
 }
 
 // Check if float is NaN or Inf, print and return 1 if true
@@ -56,100 +58,69 @@ static uint8_t *check_nan(float val)
   return NULL;
 }
 
-// Convert float to string for %f (add sign if needed)
-static void float_to_str(float val, int precision, bool add_plus,
-                         uint8_t *buf)
+static uint8_t *format_float_core(uint8_t *p, float val, int precision)
 {
-  uint8_t *p = buf;
-
-  if (val < 0) {
-    *p++ = '-';
-    val = fabsf(val);
-  } else if (add_plus) {
-    *p++ = '+';
-  }
-
-  float round_add = 0.5f;
-  for (int i=0; i<precision; i++) {
-    round_add /= 10.0f;
-  }
-  val = val + round_add;
-
   float int_part;
   float frac_part = modff(val, &int_part);
 
   ultoa((uint32_t)int_part, (char *)p, 10);
-  p += strlen(p);
+  p += strlen((char *)p);
 
-  if (precision>0) {
+  if (precision > 0) {
     *p++ = '.';
-    for (int i=0; i<precision; i++) {
+    for (int i = 0; i < precision; i++) {
       frac_part = frac_part * 10.0f;
       int digit = (int)frac_part;
       *p++ = digit + '0';
-      frac_part = frac_part - (float)digit;
+      frac_part -= (float)digit;
     }
   }
+  return p;
+}
+
+static float get_round_add(int precision)
+{
+  float r = 0.5f;
+  for (int i = 0; i < precision; i++) r /= 10.0f;
+  return r;
+}
+
+static void float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
+{
+  uint8_t *p = buf;
+  if (signbit(val)) { *p++ = '-'; val = fabsf(val); }
+  else if (add_plus) { *p++ = '+'; }
+
+  val += get_round_add(precision);
+  p = format_float_core(p, val, precision);
   *p = '\0';
 }
 
-// Convert float to scientific notation string for %e (add sign if needed)
-static void float_to_exp_str(float val, int precision, bool add_plus,
-                             uint8_t *buf)
+static void float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf)
 {
- uint8_t *p = buf;
+  uint8_t *p = buf;
+  if (signbit(val)) { *p++ = '-'; val = fabsf(val); }
+  else if (add_plus) { *p++ = '+'; }
 
-  if (val < 0) {
-    *p++ = '-';
-    val = fabsf(val);
-  } else if (add_plus) {
-    *p++ = '+';
-  }
   int exp = 0;
-  while (val >= 10.0f) {
-    val = val / 10.0f;
-    exp++;
-  }
-  while (val < 1.0f && val != 0.0f) {
-    val = val * 10.0f;
-    exp--;
-  }
-  float round_add = 0.5f;
-  for (int i=0; i<precision; i++) {
-    round_add /= 10.0f;
-  }
-  val = val + round_add;
-  if (val >= 10.0f) {
-    val = val / 10.0f;
-    exp++;
-  }
+  while (val >= 10.0f) { val /= 10.0f; exp++; }
+  while (val < 1.0f && val != 0.0f) { val *= 10.0f; exp--; }
 
-  float int_part;
-  float frac_part = modff(val, &int_part);
-  ultoa((uint32_t)int_part, p, 10);
-  p += strlen(p);
-  if (precision>0) *p++ = '.';
+  val += get_round_add(precision);
+  if (val >= 10.0f) { val /= 10.0f; exp++; }
 
-  for (int i = 0; i < precision; i++) {
-    frac_part = frac_part * 10.0f;
-    int digit = (int)frac_part;
-    *p++ = '0' + digit;
-    frac_part -= digit;
-  }
+  p = format_float_core(p, val, precision);
+
   *p++ = 'e';
-  if (exp < 0) {
-    *p++ = '-';
-    exp = -exp;
-  } else {
-    *p++ = '+';
-  }
-  *p++ = (exp/10) + '0';  // -38 <= exp <= 38
-  *p++ = (exp%10) + '0';
+  if (exp < 0) { *p++ = '-'; exp = -exp; }
+  else { *p++ = '+'; }
+  *p++ = (exp / 10) + '0';
+  *p++ = (exp % 10) + '0';
   *p = '\0';
 }
 
 // Convert float to hex float string for %a (add sign if needed)
-static void float_to_hex_str(float val, bool add_plus, uint8_t *buf)
+static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf)
 {
   uint8_t tmp[32];
   uint8_t *p = buf;
@@ -275,16 +246,9 @@ int printf(const uint8_t *fmt, ...)
     // Handle format specifier
     switch (*fmt) {
     case 'c': {
-      int val = va_arg(args, int);
-      int sp = width-1;
-      if (sp>0 && !left_justify) {
-        putspace(sp);
-      }
-      putchar(val);
-      if (sp>0 && left_justify) {
-        putspace(sp);
-      }
-      total += (sp>0 ? sp:0) +1;
+      uint8_t  val = va_arg(args, int);
+
+      total += justify_mem(&val,1,left_justify, width);
       break;
     }
     case 'd': {
@@ -313,46 +277,31 @@ int printf(const uint8_t *fmt, ...)
       total += justify(buf, left_justify, width);
       break;
     }
-    case 'f': {
-      float val = (float)va_arg(args, float);
-      uint8_t *p;
-      if ((p = check_nan(val))!=NULL) {
-        total += justify(p,left_justify,width);
-        break;
-      }
-      if (precision < 0) {
-        precision = 6;
-      }else if (precision > 9) {
-        precision = 9;
-      }
-      float_to_str(val, precision, add_plus, buf);
-      total += justify(buf, left_justify, width);
-      break;
-    }
-    case 'e': {
-      float val = (float)va_arg(args, float);
-      uint8_t *p;
-      if ((p = check_nan(val))!=NULL) {
-        total += justify(p,left_justify,width);
-        break;
-      }
-      if (precision < 0) {
-        precision = 6;
-      }else if (precision > 9) {
-        precision = 9;
-      }
-      float_to_exp_str(val, precision, add_plus, buf);
-      total += justify(buf, left_justify, width);
-      break;
-    }
+    case 'f':
+    case 'e':
     case 'a': {
       float val = (float)va_arg(args, float);
       uint8_t *p;
-      if ((p = check_nan(val))!=NULL) {
-        total += justify(p,left_justify,width);
+      if ((p = check_nan(val)) != NULL) {
+        total += justify(p, left_justify, width);
         break;
       }
-      float_to_hex_str(val, add_plus, buf);
+      if (precision < 0){
+        precision = 6;
+      } else if (precision > 9){
+        precision = 9;
+      }
+      switch(*fmt) {
+      case 'f':
+        float_to_str(val, precision, add_plus, buf);
+        break;
+      case 'e':
+        float_to_exp_str(val, precision, add_plus, buf);
+        break;
+      case 'a':
+        float_to_hex_str(val, precision, add_plus, buf);
+        break;
+      }
       total += justify(buf, left_justify, width);
       break;
     }
@@ -365,17 +314,7 @@ int printf(const uint8_t *fmt, ...)
       if (precision>=0 && len>precision) {
         len = precision;
       }
-      int sp = width-len;
-      if (sp>0 && !left_justify) {
-        putspace(sp);
-      }
-      for (int i=0; i<len; i++) {
-        putchar(*p++);
-      }
-      if (sp>0 && left_justify) {
-        putspace(sp);
-      }
-      total += (sp>0? sp:0) + len;
+      total += justify_mem(p,len,left_justify,width);
       break;
     }
     case '%':
