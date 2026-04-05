@@ -68,23 +68,27 @@ static void float_to_str(float val, int precision, bool add_plus,
   } else if (add_plus) {
     *p++ = '+';
   }
+
+  float round_add = 0.5f;
+  for (int i=0; i<precision; i++) {
+    round_add /= 10.0f;
+  }
+  val = val + round_add;
+
   float int_part;
   float frac_part = modff(val, &int_part);
-//uint8_t tmp[64];
 
-  // NOTE: integer part must fit in uint32_t (max ~4.3e9).
-  // Values >= 1e10 will produce incorrect output.
-  ultoa((uint32_t)int_part, p, 10);
+  ultoa((uint32_t)int_part, (char *)p, 10);
   p += strlen(p);
-  if (precision>0) *p++ = '.';
 
-  uint32_t denominator = 1UL<<24;
-  uint32_t numerator = (uint32_t)(frac_part * (float)denominator);;
-  for (int i = 0; i < precision; i++) {
-    numerator = numerator * 10;
-    int digit = numerator / denominator;
-    *p++ = '0' + digit;
-    numerator -= digit * denominator;
+  if (precision>0) {
+    *p++ = '.';
+    for (int i=0; i<precision; i++) {
+      frac_part = frac_part * 10.0f;
+      int digit = (int)frac_part;
+      *p++ = digit + '0';
+      frac_part = frac_part - (float)digit;
+    }
   }
   *p = '\0';
 }
@@ -110,6 +114,16 @@ static void float_to_exp_str(float val, int precision, bool add_plus,
     val = val * 10.0f;
     exp--;
   }
+  float round_add = 0.5f;
+  for (int i=0; i<precision; i++) {
+    round_add /= 10.0f;
+  }
+  val = val + round_add;
+  if (val >= 10.0f) {
+    val = val / 10.0f;
+    exp++;
+  }
+
   float int_part;
   float frac_part = modff(val, &int_part);
   ultoa((uint32_t)int_part, p, 10);
@@ -129,7 +143,9 @@ static void float_to_exp_str(float val, int precision, bool add_plus,
   } else {
     *p++ = '+';
   }
-  itoa(exp, p, 10);
+  *p++ = (exp/10) + '0';  // -38 <= exp <= 38
+  *p++ = (exp%10) + '0';
+  *p = '\0';
 }
 
 // Convert float to hex float string for %a (add sign if needed)
@@ -260,8 +276,15 @@ int printf(const uint8_t *fmt, ...)
     switch (*fmt) {
     case 'c': {
       int val = va_arg(args, int);
+      int sp = width-1;
+      if (sp>0 && !left_justify) {
+        putspace(sp);
+      }
       putchar(val);
-      total++;
+      if (sp>0 && left_justify) {
+        putspace(sp);
+      }
+      total += (sp>0 ? sp:0) +1;
       break;
     }
     case 'd': {
@@ -309,12 +332,14 @@ int printf(const uint8_t *fmt, ...)
     case 'e': {
       float val = (float)va_arg(args, float);
       uint8_t *p;
-      if (p = check_nan(val)) {
+      if ((p = check_nan(val))!=NULL) {
         total += justify(p,left_justify,width);
         break;
       }
       if (precision < 0) {
         precision = 6;
+      }else if (precision > 9) {
+        precision = 9;
       }
       float_to_exp_str(val, precision, add_plus, buf);
       total += justify(buf, left_justify, width);
@@ -323,7 +348,7 @@ int printf(const uint8_t *fmt, ...)
     case 'a': {
       float val = (float)va_arg(args, float);
       uint8_t *p;
-      if (p = check_nan(val)) {
+      if ((p = check_nan(val))!=NULL) {
         total += justify(p,left_justify,width);
         break;
       }
@@ -332,21 +357,25 @@ int printf(const uint8_t *fmt, ...)
       break;
     }
     case 's': {
-      const uint8_t *p =
-          (const uint8_t *)va_arg(args, const uint8_t *);
+      const uint8_t *p = (const uint8_t *)va_arg(args, const uint8_t *);
       if (p == NULL) {
         p = (const uint8_t *)"(null)"; // NULL対策
       }
-      if (precision==0) {
-        putspace(width); total += width;
-      }else if (precision>0 && strlen(p)>precision) {
-        for (int i=0; i<precision; i++) {
-          putchar(*p++);
-        }
-        total += precision;
-      }else{
-        total += justify(p, left_justify, width);
+      int len = strlen(p);
+      if (precision>=0 && len>precision) {
+        len = precision;
       }
+      int sp = width-len;
+      if (sp>0 && !left_justify) {
+        putspace(sp);
+      }
+      for (int i=0; i<len; i++) {
+        putchar(*p++);
+      }
+      if (sp>0 && left_justify) {
+        putspace(sp);
+      }
+      total += (sp>0? sp:0) + len;
       break;
     }
     case '%':
