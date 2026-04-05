@@ -905,6 +905,17 @@
 =
 	ldx %1
 
+	jsr __load16
+	subb #<%1
+	sbca #>%1
+	aba
+	adca #0
+=
+	jsr __tfr_dx
+	ldx 0,x
+	cpx #%1
+
+
 #
 #	array access
 #
