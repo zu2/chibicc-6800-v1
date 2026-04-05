@@ -70,7 +70,7 @@ static void float_to_str(float val, int precision, bool add_plus,
   }
   float int_part;
   float frac_part = modff(val, &int_part);
-  uint8_t tmp[64];
+//uint8_t tmp[64];
 
   // NOTE: integer part must fit in uint32_t (max ~4.3e9).
   // Values >= 1e10 will produce incorrect output.
