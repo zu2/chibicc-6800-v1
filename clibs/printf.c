@@ -105,22 +105,18 @@ static uint8_t *format_float_core(uint8_t *p, float val, int precision)
   return p;
 }
 
+//
+// get_round_add:
+//  Adds 0.5 at the last decimal place for simple rounding.
+//  This is NOT a full round-half-to-even implementation.
+//  Expect small differences vs. standard printf at large floats.
+//
+
 static float get_round_add(int precision)
 {
   float r = 0.5f;
   for (int i = 0; i < precision; i++) r /= 10.0f;
   return r;
-}
-
-static void float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
-{
-  uint8_t *p = buf;
-  if (signbit(val)) { *p++ = '-'; val = fabsf(val); }
-  else if (add_plus) { *p++ = '+'; }
-
-  val += get_round_add(precision);
-  p = format_float_core(p, val, precision);
-  *p = '\0';
 }
 
 static void float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf)
@@ -145,6 +141,36 @@ static void float_to_exp_str(float val, int precision, bool add_plus, uint8_t *b
   *p++ = (exp % 10) + '0';
   *p = '\0';
 }
+
+//
+// NOTE: This implementation of %f assumes that integer part fits in uint32_t.
+// For values near FLT_MAX, %f falls back to %e-style scientific output.
+// Therefore, extremely large %f values (like 3.402823466e+38f) appear as
+// "3.402824e+38" instead of the full 38-digit integer.
+//
+// For exact printf-like rounding, a full Ryu/Dragon4-style algorithm is required.
+//
+static void float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
+{
+  uint8_t *p = buf;
+  float int_part, frac_part;
+
+  if (signbit(val)) { *p++ = '-'; val = fabsf(val); }
+  else if (add_plus) { *p++ = '+'; }
+
+  frac_part = modff(val,&int_part);
+  if (int_part <= 4294967296.0f) {
+    // Simple 0.5 add; not full round-half-to-even
+    val += get_round_add(precision);
+
+    p = format_float_core(p, val, precision);
+  }else{
+    float_to_exp_str(val, precision, add_plus, p);
+    return;
+  }
+  *p = '\0';
+}
+
 
 // Convert float to hex float string for %a (add sign if needed)
 static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf)
