@@ -44,6 +44,7 @@ static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_p
   &&  len > 0
   && (*s == '+' || *s == '-' || *s == ' ')) {
     putchar_p(*s);
+    sign_len = 1;
     s++;
   }
 
@@ -175,7 +176,6 @@ static void float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
 // Convert float to hex float string for %a (add sign if needed)
 static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf)
 {
-  uint8_t tmp[32];
   uint8_t *p = buf;
 
   if (signbit(val)) {
@@ -240,7 +240,7 @@ static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *b
 // printf-like function (float only, no double, + and - flags as bool)
 int vsnprintf_core(const uint8_t *fmt, va_list args)
 {
-  uint8_t buf[64];  // Main buffer for conversions
+  uint8_t buf[32];  // Main buffer for conversions
 
   while (*fmt) {
     if (*fmt != '%') {
@@ -307,9 +307,9 @@ end_flags:
       }else{
         if (add_plus) {
           buf[0] = '+';
-          ultoa((uint32_t)labs(val), (char *)(buf+1), 10);
+          ultoa((uint32_t)val, (char *)(buf+1), 10);
         }else{
-          ultoa((uint32_t)labs(val), (char *)(buf), 10);
+          ultoa((uint32_t)val, (char *)(buf), 10);
         }
       }
       justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
@@ -319,9 +319,9 @@ end_flags:
       uint32_t val = is_long? va_arg(args, uint32_t) : va_arg(args, uint16_t);
       if (add_plus) {
         buf[0] = '+';
-        ultoa((uint32_t)labs(val), (char *)(buf+1), 10);
+        ultoa(val, (char *)(buf+1), 10);
       }else{
-        ultoa((uint32_t)labs(val), (char *)(buf), 10);
+        ultoa(val, (char *)(buf), 10);
       }
       justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
       break;
@@ -332,9 +332,9 @@ end_flags:
 
       if (add_plus) {
         buf[0] = '+';
-        ultoa((uint32_t)labs(val), (char *)(buf+1), 16);
+        ultoa(val, (char *)(buf+1), 16);
       }else{
-        ultoa((uint32_t)labs(val), (char *)(buf), 16);
+        ultoa(val, (char *)(buf), 16);
       }
       if (*fmt == 'X') {
         char *p = buf;
