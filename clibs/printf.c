@@ -7,53 +7,80 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void putspace(int n)
+static  uint8_t *out_buf; // NULL: to stdout, other: to buffer
+static  int     out_size;
+static  int     out_count;
+static  void    (*putchar_p)(uint8_t c);
+
+static  void  putchar_to_buffer(uint8_t c)
 {
-  while (n>0) {
-    putchar(' ');
-    n--;
+  if (out_count < out_size -1) {
+    *out_buf++ = c;
   }
+  out_count++;
+}
+
+static  void  putchar_to_console(uint8_t c)
+{
+  putchar(c);
+  out_count++;
 }
 
 static void putstring(const uint8_t *s)
 {
   while (*s) {
-    putchar(*s++);
+    putchar_p(*s++);
   }
 }
 
-static int justify_mem(const uint8_t *s, int len, int left_justify, int width)
+static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_pad, int width)
 {
   int sp = width - len;
+  uint8_t pad_char = zero_pad? '0': ' ';
+  int sign_len = 0;
+
+  if (zero_pad
+  &&  !left_justify
+  &&  len > 0
+  && (*s == '+' || *s == '-' || *s == ' ')) {
+    putchar_p(*s);
+    s++;
+  }
 
   if (!left_justify && sp>0) {
-    putspace(sp);
+    for (int i=0; i<sp; i++) {
+      putchar_p(pad_char);
+    }
   }
-  for (int i=0; i<len; i++) {
-    putchar(*s++);
+  for (int i=sign_len; i<len; i++) {
+    putchar_p(*s);
+    s++;
   }
   if (left_justify && sp>0) {
-    putspace(sp);
+    for (int i=0; i<sp; i++) {
+      putchar_p(' ');
+    }
   }
-  return (sp>0? sp:0) + len;
-}
-
-static int justify(const uint8_t *s,int left_justify, int width)
-{
-  return  justify_mem(s, strlen(s), left_justify, width);
+  return (width > len ? width : len);
 }
 
 // Check if float is NaN or Inf, print and return 1 if true
-static uint8_t *check_nan(float val)
+static uint8_t *check_nan(float val,bool add_plus)
 {
   if (isnan(val)) {
-    return (uint8_t *)"NaN";
-  } else if (isinf(val)) {
-    if (val > 0) {
-      return (uint8_t *)"+Inf";
-    } else {
-      return (uint8_t *)"-Inf";
+    if (signbit(val)) {
+      return (uint8_t *)"-nan";
+    }else if (add_plus) {
+      return (uint8_t *)"+nan";
     }
+    return (uint8_t *)"nan";
+  } else if (isinf(val)) {
+    if (signbit(val)) {
+      return (uint8_t *)"-inf";
+    }else if (add_plus) {
+      return (uint8_t *)"+inf";
+    }
+    return (uint8_t *)"inf";
   }
   return NULL;
 }
@@ -145,67 +172,53 @@ static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *b
   *p++ = '0';
   *p++ = 'x';
   *p++ = '1';
-  *p++ = '.';
 
-  uint32_t mant = (*(long *)&frac) & 0x007fffff;
-  ultoa(mant,tmp,16);
-  int len = strlen(tmp);
-  for (int i=0; i<6-len; i++) {
-    *p++ = '0';
+  uint32_t mant = (*(uint32_t *)&frac) & 0x007fffff;
+  mant <<= 1;
+
+  if (precision < 0) {
+    if (mant != 0) {
+      *p++ = '.';
+      int len = 6;
+      uint32_t temp = mant;
+      while (len > 0 && (temp & 0xF) == 0) {
+        len--;
+        temp >>= 4;
+      }
+      for (int i = 0; i < len; i++) {
+        uint8_t d = (mant >> 20) & 0xF;
+        *p++ = d < 10 ? '0' + d : 'a' + d - 10;
+        mant <<= 4;
+      }
+    }
+  } else if (precision > 0) {
+    *p++ = '.';
+    for (int i = 0; i < precision; i++) {
+      uint8_t d = (mant >> 20) & 0xF;
+      *p++ = d < 10 ? '0' + d : 'a' + d - 10;
+      mant <<= 4;
+    }
   }
-  strcpy(p,tmp);
-  p += len;
 
   *p++ = 'p';
+
   if (exp < 0) {
     *p++ = '-';
     exp = -exp;
   } else {
     *p++ = '+';
   }
-  itoa(exp, p, 10);
+  itoa(exp, (char *)p, 10); 
 }
-
-// Output unsigned integer
-static int output_uint(uint32_t val, int radix, bool add_plus,
-                       bool left_justify, int width, bool uppercase,
-                       uint8_t *buf)
-{
-  uint8_t *p = buf;
-  if (add_plus) *p++ = '+';
-  ultoa(val, (char *)p, radix);
-  if (uppercase) {
-    while (*p) { *p = (uint8_t)toupper(*p); p++; }
-  }
-  return justify(buf, left_justify, width);
-}
-
-static int output_int(long val, bool add_plus,
-                      bool left_justify, int width,
-                      uint8_t *buf)
-{
-  if (val < 0) {
-    buf[0] = '-';
-    ultoa((uint32_t)labs(val), (char *)(buf + 1), 10);
-    return justify(buf, left_justify, width);
-  }
-  return output_uint((uint32_t)val, 10, add_plus,
-                     left_justify, width, false, buf);
-}
-
 
 // printf-like function (float only, no double, + and - flags as bool)
-int printf(const uint8_t *fmt, ...)
+int vsnprintf_core(const uint8_t *fmt, va_list args)
 {
-  va_list args;
-  va_start(args, fmt);
-  int total = 0;
   uint8_t buf[64];  // Main buffer for conversions
 
   while (*fmt) {
     if (*fmt != '%') {
-      putchar(*fmt);
-      total++;
+      putchar_p(*fmt);
       fmt++;
       continue;
     }
@@ -214,15 +227,23 @@ int printf(const uint8_t *fmt, ...)
     int precision = -1;
     bool left_justify = false;
     bool add_plus = false;
+    bool zero_pad = false;
     bool is_long = false;
+
     // Parse flags
-    while (*fmt == '-' || *fmt == '+') {
-      if (*fmt == '-') {
-        left_justify = true;
-      }else if (*fmt == '+') {
-        add_plus = true;
+    while (*fmt) {
+      switch(*fmt) {
+      case '-': left_justify = true;  break;
+      case '+': add_plus = true;      break;
+      case '0': zero_pad = true;      break;
+      default:
+        goto end_flags;
       }
       fmt++;
+    }
+end_flags:
+    if (left_justify) {
+      zero_pad = false;
     }
     // Parse width
     while (isdigit(*fmt)) {
@@ -246,35 +267,62 @@ int printf(const uint8_t *fmt, ...)
     // Handle format specifier
     switch (*fmt) {
     case 'c': {
-      uint8_t  val = va_arg(args, int);
+      uint8_t  val = (uint8_t)va_arg(args, int);
 
-      total += justify_mem(&val,1,left_justify, width);
+      justify_mem(&val,1,left_justify, zero_pad, width);
       break;
     }
     case 'd': {
-      long val = is_long? va_arg(args, long): va_arg(args, int);
-      total += output_int(val, add_plus, left_justify, width, buf);
+      long val = is_long? va_arg(args, int32_t): va_arg(args, int16_t);
+
+      if (val < 0) {
+        buf[0] = '-';
+        ultoa((uint32_t)labs(val), (char *)(buf+1), 10);
+      }else{
+        if (add_plus) {
+          buf[0] = '+';
+          ultoa((uint32_t)labs(val), (char *)(buf+1), 10);
+        }else{
+          ultoa((uint32_t)labs(val), (char *)(buf), 10);
+        }
+      }
+      justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
       break;
     }
     case 'u': {
-      uint32_t val = is_long? va_arg(args, uint32_t)
-                                 : va_arg(args, unsigned int);
-      total += output_uint(val, 10, false, left_justify, width, false, buf);
+      uint32_t val = is_long? va_arg(args, uint32_t) : va_arg(args, uint16_t);
+      if (add_plus) {
+        buf[0] = '+';
+        ultoa((uint32_t)labs(val), (char *)(buf+1), 10);
+      }else{
+        ultoa((uint32_t)labs(val), (char *)(buf), 10);
+      }
+      justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
       break;
     }
     case 'x':
     case 'X': {
-      uint32_t val = is_long? va_arg(args, uint32_t)
-                                 : va_arg(args, unsigned int);
-      total += output_uint(val, 16, add_plus, left_justify, width, *fmt == 'X', buf);
+      uint32_t val = is_long? va_arg(args, uint32_t) : va_arg(args, uint16_t);
+
+      if (add_plus) {
+        buf[0] = '+';
+        ultoa((uint32_t)labs(val), (char *)(buf+1), 16);
+      }else{
+        ultoa((uint32_t)labs(val), (char *)(buf), 16);
+      }
+      if (*fmt == 'X') {
+        char *p = buf;
+        while (*p) { *p = (uint8_t)toupper(*p); p++; }
+      }
+      justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
       break;
     }
     case 'p': {
       void *val = va_arg(args, void *);
       buf[0] = '0';
       buf[1] = 'x';
-      uitoa((unsigned int)val, buf+2, 16);
-      total += justify(buf, left_justify, width);
+      uitoa((uint16_t)val, buf+2, 16);
+      justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
       break;
     }
     case 'f':
@@ -282,11 +330,13 @@ int printf(const uint8_t *fmt, ...)
     case 'a': {
       float val = (float)va_arg(args, float);
       uint8_t *p;
-      if ((p = check_nan(val)) != NULL) {
-        total += justify(p, left_justify, width);
+      if ((p = check_nan(val,add_plus)) != NULL) {
+        justify_mem(p, strlen(p),left_justify, false, width);
         break;
       }
-      if (precision < 0){
+      if (*fmt == 'a') {
+        precision = -1;
+      }else if (precision < 0){
         precision = 6;
       } else if (precision > 9){
         precision = 9;
@@ -302,7 +352,7 @@ int printf(const uint8_t *fmt, ...)
         float_to_hex_str(val, precision, add_plus, buf);
         break;
       }
-      total += justify(buf, left_justify, width);
+      justify_mem(buf, strlen(buf), left_justify, zero_pad, width);
       break;
     }
     case 's': {
@@ -314,35 +364,67 @@ int printf(const uint8_t *fmt, ...)
       if (precision>=0 && len>precision) {
         len = precision;
       }
-      total += justify_mem(p,len,left_justify,width);
+      justify_mem(p, len, left_justify, zero_pad, width);
       break;
     }
     case '%':
-      putchar('%');
-      total++;
+      putchar_p('%');
       break;
     default:
-      putchar('%');
-      putchar(*fmt);
-      total += 2;
+      putchar_p('%');
+      putchar_p(*fmt);
       break;
     }
     fmt++;
   }
-  va_end(args);
-  return total;
+
+  return out_count;
 }
 
-#if defined(PRINTF_TEST)
-// Example main function
-int main(void)
+int printf(const char *fmt, ...)
 {
-  float f = 3.141592f;
-  int i = 123;
-  long l = 123456789L;
-  void *p = (void *)0x1234abcd;
-  printf("Float: %+-.3f, Int: %+5d, Long: %ld, HexLong: %lx, Ptr: %p, Exp: %e, "
-         "HexFloat: %a, Uint: %u, UpperHex: %X, Str: %s\n",
-         f, i, l, l, p, f, f, 456u, i, "Hello, world!");
-  return 0;
-#endif
+  out_count = 0;
+  putchar_p = putchar_to_console;
+
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf_core(fmt, args);
+  va_end(args);
+
+  return out_count;
+}
+
+int snprintf(char *str, size_t size, const char *fmt, ...)
+{
+  out_buf = str;
+  out_size = (int)size;
+  out_count = 0;
+  putchar_p = putchar_to_buffer;
+
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf_core(fmt, args);
+  va_end(args);
+
+  if (size > 0) {
+    str[(out_count < size) ? out_count : size - 1] = '\0';
+  }
+  return out_count;
+}
+
+int sprintf(char *str, const char *fmt, ...)
+{
+  out_buf = str;
+  out_size = 1024;  // TODO:
+  out_count = 0;
+  putchar_p = putchar_to_buffer;
+
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf_core(fmt, args);
+  va_end(args);
+
+  str[out_count] = '\0';
+
+  return out_count;
+}
