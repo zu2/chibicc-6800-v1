@@ -9,7 +9,7 @@ OBJ =	qsort.o printf.o
 	as6800 $<
 
 .c.o:
-	../chibicc -c $<
+	../chibicc -O2 -c $<
 
 clibs.a: $(OBJ)
 	rm -f clibs.a

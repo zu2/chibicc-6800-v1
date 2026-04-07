@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define my_signbit(x) ((*(unsigned char *)&x)&0x80)
+
 static  uint8_t *out_buf; // NULL: to stdout, other: to buffer
 static  int     out_size;
 static  int     out_count;
@@ -14,7 +16,7 @@ static  void    (*putchar_p)(uint8_t c);
 
 static  void  putchar_to_buffer(uint8_t c)
 {
-  if (out_count < out_size -1) {
+  if (out_count < out_size) {
     *out_buf++ = c;
   }
   out_count++;
@@ -26,13 +28,6 @@ static  void  putchar_to_console(uint8_t c)
   out_count++;
 }
 
-static void putstring(const uint8_t *s)
-{
-  while (*s) {
-    putchar_p(*s++);
-  }
-}
-
 static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_pad, int width)
 {
   int sp = width - len;
@@ -41,11 +36,15 @@ static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_p
 
   if (zero_pad
   &&  !left_justify
-  &&  len > 0
-  && (*s == '+' || *s == '-' || *s == ' ')) {
-    putchar_p(*s);
-    sign_len = 1;
-    s++;
+  &&  len > 0) {
+    switch(*s) {
+    case '+':
+    case '-':
+    case ' ':
+      putchar_p(*s);
+      sign_len = 1;
+      s++;
+    }
   }
 
   if (!left_justify && sp>0) {
@@ -69,14 +68,14 @@ static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_p
 static uint8_t *check_nan(float val,bool add_plus)
 {
   if (isnan(val)) {
-    if (signbit(val)) {
+    if (my_signbit(val)) {
       return (uint8_t *)"-nan";
     }else if (add_plus) {
       return (uint8_t *)"+nan";
     }
     return (uint8_t *)"nan";
   } else if (isinf(val)) {
-    if (signbit(val)) {
+    if (my_signbit(val)) {
       return (uint8_t *)"-inf";
     }else if (add_plus) {
       return (uint8_t *)"+inf";
@@ -123,7 +122,7 @@ static float get_round_add(int precision)
 static void float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf)
 {
   uint8_t *p = buf;
-  if (signbit(val)) { *p++ = '-'; val = fabsf(val); }
+  if (my_signbit(val)) { *p++ = '-'; val = fabsf(val); }
   else if (add_plus) { *p++ = '+'; }
 
   int exp = 0;
@@ -156,7 +155,7 @@ static void float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
   uint8_t *p = buf;
   float int_part, frac_part;
 
-  if (signbit(val)) { *p++ = '-'; val = fabsf(val); }
+  if (my_signbit(val)) { *p++ = '-'; val = fabsf(val); }
   else if (add_plus) { *p++ = '+'; }
 
   frac_part = modff(val,&int_part);
@@ -178,7 +177,7 @@ static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *b
 {
   uint8_t *p = buf;
 
-  if (signbit(val)) {
+  if (my_signbit(val)) {
     *p++ = '-';
     val = fabsf(val);
   } else if (add_plus) {
@@ -213,7 +212,7 @@ static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *b
       }
       for (int i = 0; i < len; i++) {
         uint8_t d = (mant >> 20) & 0xF;
-        *p++ = d < 10 ? '0' + d : 'a' + d - 10;
+        *p++ = d < 10 ? d+'0' : d+'a'-10;
         mant <<= 4;
       }
     }
@@ -221,7 +220,7 @@ static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *b
     *p++ = '.';
     for (int i = 0; i < precision; i++) {
       uint8_t d = (mant >> 20) & 0xF;
-      *p++ = d < 10 ? '0' + d : 'a' + d - 10;
+      *p++ = d < 10 ? d+'0' : d+'a'-10;
       mant <<= 4;
     }
   }
@@ -423,7 +422,7 @@ int printf(const char *fmt, ...)
 int snprintf(char *str, size_t size, const char *fmt, ...)
 {
   out_buf = str;
-  out_size = (int)size;
+  out_size = (int)size-1;
   out_count = 0;
   putchar_p = putchar_to_buffer;
 
@@ -441,7 +440,7 @@ int snprintf(char *str, size_t size, const char *fmt, ...)
 int sprintf(char *str, const char *fmt, ...)
 {
   out_buf = str;
-  out_size = 1024;  // TODO:
+  out_size = 1024-1;  // TODO:
   out_count = 0;
   putchar_p = putchar_to_buffer;
 
