@@ -169,6 +169,16 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   if (rhs->kind == ND_CAST && rhs->ty->kind == TY_INT) {
     rhs = rhs->lhs;
   }
+  if (lhs->kind == ND_CAST
+  &&  lhs->ty->kind == lhs->lhs->ty->kind
+  &&  lhs->ty->is_unsigned == lhs->lhs->ty->is_unsigned) {
+    lhs = lhs->lhs;
+  }
+  if (rhs->kind == ND_CAST
+  &&  rhs->ty->kind == rhs->lhs->ty->kind
+  &&  rhs->ty->is_unsigned == rhs->lhs->ty->is_unsigned) {
+    rhs = rhs->lhs;
+  }
   if (can_direct(rhs)) {
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
@@ -284,7 +294,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   }
 
   if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
-    int off = gen_expr_x(node,true);
+    int off = gen_expr_x(node,false);
     println("\tjeq %s", if_false);
     return true;
   }
@@ -332,10 +342,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
   // special long case
   if (lhs->ty->kind == TY_LONG
   && is_integer_constant(rhs,&val)
-  && val == 0) {
-    if (!test_addr_x(lhs)) {
-      goto fallback;
-    }
+  && val == 0
+  && test_addr_x(lhs)) {
     switch(node->kind) {
     case ND_LT:
       if (lhs->ty->is_unsigned) {
@@ -345,6 +353,15 @@ bool gen_jump_if_false(Node *node, char *if_false)
         int off = gen_addr_x(lhs,false);
         println("\ttst %d,x",off);
         println("\tjpl %s", if_false);
+      }
+      return true;
+    case ND_GE:
+      if (lhs->ty->is_unsigned) {
+        println("; ulong >= 0 is always true");
+      }else{
+        int off = gen_addr_x(lhs,false);
+        println("\ttst %d,x",off);
+        println("\tjmi %s", if_false);
       }
       return true;
     }
@@ -360,7 +377,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   // if (expr op 0)
   if (is_integer_constant(rhs,&val) && val==0) {
     if (test_expr_x(lhs)) {
-      gen_expr_x(lhs,true);
+      gen_expr_x(lhs,false); // Evaluate LHS anyway; no side-effect check yet.
       println("\tcpx #0");
       switch (node->kind) {
       case ND_EQ:
@@ -411,7 +428,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         break;
       }
     } else {
-      gen_expr(lhs);
+      gen_expr(lhs);  // Evaluate LHS anyway; no side-effect check yet.
       switch (node->kind) {
       case ND_EQ:
       case ND_NE:
@@ -453,49 +470,36 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
     // ↑ if (expr op 0) 
     // ↓ if (expr op const)
-  } else if (rhs->kind == ND_NUM
-         &&  (node->kind==ND_EQ || node->kind==ND_NE)
-         &&  lhs->kind == ND_VAR && test_addr_x(lhs)) {
-      int off = gen_addr_x(lhs, false);
-      sprintf(if_cond, "%d,x", off);
-      switch (node->kind) {
+  } else if (is_integer_constant(rhs,&val)
+         && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_expr_x(lhs))) {
+      int off = gen_expr_x(lhs,false);
+      println("\tcpx #%ld",val);
+      switch(node->kind) {
       case ND_EQ:
-        println("\tldx %s", if_cond);
-        switch(rhs->val){
-        case 0:
-          break;
-        case 1:
-          println("\tdex");
-          break;
-        case 0xffff:
-          println("\tinx");
-          break;
-        default:
-          println("\tcpx #%ld",rhs->val);
-          break;
-        }
         println("\tjne %s", if_false);
-        IX_Dest = IX_None;
         return true;
       case ND_NE:
-        println("\tldx %s", if_cond);
-        switch(rhs->val){
-        case 0:
-          break;
-        case 1:
-          println("\tdex");
-          break;
-        case 0xffff:
-          println("\tinx");
-          break;
-        default:
-          println("\tcpx #%ld",rhs->val);
-          break;
-        }
         println("\tjeq %s", if_false);
         return true;
       default: ;
-        goto fallback;  // It's strange to fail
+        assert(0);    // It's strange to fail
+      }
+  } else if (is_integer_constant(rhs,&val)
+         && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_addr_x(lhs))) {
+      int off = gen_addr_x(lhs,false);
+      ldx_nX(off);
+      println("\tcpx #%ld",val);
+      switch(node->kind) {
+      case ND_EQ:
+        println("\tjne %s", if_false);
+        return true;
+      case ND_NE:
+        println("\tjeq %s", if_false);
+        return true;
+      default: ;
+        assert(0);    // It's strange to fail
       }
     // ↑ rhs==const && EQ or NE
   } else if (can_direct(rhs)) {
@@ -528,7 +532,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
     println("\tins");
     depth -= 2;
   }
-  println("; %s %s %d",__func__,__FILE__,__LINE__);
   switch (node->kind) {
   // aba/adca #0/jne	5bytes, 10cycle
   // tstb/jne/tsta/jne	6bytes, 6 or 12cycle
@@ -808,7 +811,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   }
 
   if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
-    int off = gen_expr_x(node,true);
+    int off = gen_expr_x(node,false);
     println("\tjne %s", if_true);
     return true;
   }
@@ -843,10 +846,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
   // special long case
   if (lhs->ty->kind == TY_LONG
   && is_integer_constant(rhs,&val)
-  && val == 0) {
-    if (!test_addr_x(lhs)) {
-      goto fallback;
-    }
+  && val == 0
+  && test_addr_x(lhs)) {
     switch(node->kind) {
     case ND_GE:
       if (lhs->ty->is_unsigned) {
@@ -856,6 +857,15 @@ bool gen_jump_if_true(Node *node, char *if_true)
         int off = gen_addr_x(lhs,false);
         println("\ttst %d,x",off);
         println("\tjpl %s", if_true);
+      }
+      return true;
+    case ND_LT:
+      if (lhs->ty->is_unsigned) {
+        println("; ulong < 0 is always false");
+      }else{
+        int off = gen_addr_x(lhs,false);
+        println("\ttst %d,x",off);
+        println("\tjmi %s", if_true);
       }
       return true;
     }
@@ -870,7 +880,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   }
 
   if (can_direct(rhs)) {
-    gen_expr(lhs);
+    gen_expr(lhs);  // Evaluate LHS anyway; no side-effect check yet.
     if (rhs->kind == ND_NUM && rhs->val == 0) {
       if (node->kind != ND_EQ && node->kind != ND_NE) {
         println("\ttsta");
@@ -894,7 +904,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
     println("\tins");
     depth -= 2;
   }
-  println("; %s %s %d",__func__,__FILE__,__LINE__);
   switch (node->kind) {
   case ND_EQ:
     println("\taba");
