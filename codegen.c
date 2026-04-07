@@ -1247,10 +1247,12 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
           return  off + val;
         }
         // OOPS! too large array
-        push();
+        if (save_d)
+          push();
         ldd_i(off+val);
         println("\tjsr __adx");
-        pop();
+        if (save_d)
+          pop();
         IX_Dest = IX_None;
         return 0;
       }
