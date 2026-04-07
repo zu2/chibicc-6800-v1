@@ -3,6 +3,7 @@
 
 #ifndef _STDIO_H_
 #define _STDIO_H_
+#include <stddef.h>
 
 // File type (dummy struct definition)
 //typedef struct _FILE FILE;
@@ -30,6 +31,8 @@ int puts(const char *s);
 
 // Formatted output
 int printf(const char *format, ...);
+int sprintf(char *buf, const char *format, ...);
+int snprintf(char *str, size_t size, const char *fmt, ...);
 
 // File operations (implement as needed)
 //FILE *fopen(const char *filename, const char *mode);
