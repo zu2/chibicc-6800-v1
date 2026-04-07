@@ -1,18 +1,23 @@
 #include "common.h"
 
+int sum(int *p)
+{
+	unsigned char	s = 0;
+
+	for (int i=0; i<10; i++){
+		s += p[i];
+	}
+	return s;
+}
+
 int sub(int x)
 {
-	unsigned char	i;
-	unsigned char	sum = 0;
-	unsigned char	p[x];
+	unsigned int	p[x];
 
-	for (i=0; i<10; i++){
+	for (int i=0; i<10; i++){
 		p[i] = i;
 	}
-	for (i=0; i<10; i++){
-		sum += p[i];
-	}
-	return sum;
+  return sum(p);
 }
 
 int main(int argc, char **argv)
