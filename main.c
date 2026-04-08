@@ -40,6 +40,7 @@ MachineType opt_t = T_EMU6800;
 bool opt_fbuiltin_memcpy = true;
 bool opt_fbuiltin_memset = true;
 bool opt_fbuiltin_strcpy = true;
+bool opt_fbuiltin_signbit = true;
 
 bool opt(char op, char lv)
 {
@@ -241,6 +242,10 @@ static void parse_args(int argc, char **argv) {
     }
     if (!strcmp(argv[i], "-fno-builtin-strcpy")) {
       opt_fbuiltin_strcpy = false;
+      continue;
+    }
+    if (!strcmp(argv[i], "-fno-builtin-signbit")) {
+      opt_fbuiltin_signbit = false;
       continue;
     }
 

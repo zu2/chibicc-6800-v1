@@ -188,6 +188,32 @@
 =
 	tstb
 
+	clra
+	clrb
+	aba
+	adca #0
+=
+	clra
+	clrb
+
+	clra
+	ldab #1
+	aba
+	adca #0
+=
+	clra
+	ldab #1
+
+	clra
+	ldab %1
+	andb #%2
+	aba
+	adca #0
+=
+	clra
+	ldab %1
+	andb #%2
+
 
 	addb #<%1
 	adca #>%1

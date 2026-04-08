@@ -3114,6 +3114,9 @@ static void gen_funcall(Node *node)
   if (opt_fbuiltin_strcpy && builtin_strcpy(node)) {
     return;
   }
+  if (opt_fbuiltin_signbit && builtin_signbit(node)) {
+    return;
+  }
 
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "__builtin_va_start_addr")) {
