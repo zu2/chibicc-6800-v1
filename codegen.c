@@ -1371,6 +1371,7 @@ int gen_addr_array_sub(Node *node,bool test)
   &&  is_local_var(node->lhs->rhs)) {
     if (is_int16(node->lhs->rhs->ty)) {
       if (test) return true;
+      ldx_bp();
       println("\tldab @bp+1");
       println("\tldaa @bp");
       println("\taddb %d,x",node->lhs->rhs->var->offset+1);
