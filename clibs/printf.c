@@ -28,6 +28,14 @@ static  void  putchar_to_console(uint8_t c)
   out_count++;
 }
 
+static void putchar_rep(uint8_t c, uint8_t  n)
+{
+  while (n) {
+    putchar_p(c);
+    n--;
+  }
+}
+
 static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_pad, int width)
 {
   int sp = width - len;
@@ -48,18 +56,14 @@ static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_p
   }
 
   if (!left_justify && sp>0) {
-    for (int i=0; i<sp; i++) {
-      putchar_p(pad_char);
-    }
+    putchar_rep(pad_char,sp);
   }
   for (int i=sign_len; i<len; i++) {
     putchar_p(*s);
     s++;
   }
   if (left_justify && sp>0) {
-    for (int i=0; i<sp; i++) {
-      putchar_p(' ');
-    }
+    putchar_rep(' ',sp);
   }
   return (width > len ? width : len);
 }
@@ -314,26 +318,17 @@ end_flags:
       justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
       break;
     }
+    case 'x':
+    case 'X':
     case 'u': {
       uint32_t val = is_long? va_arg(args, uint32_t) : va_arg(args, uint16_t);
-      if (add_plus) {
-        buf[0] = '+';
-        ultoa(val, (char *)(buf+1), 10);
-      }else{
-        ultoa(val, (char *)(buf), 10);
-      }
-      justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
-      break;
-    }
-    case 'x':
-    case 'X': {
-      uint32_t val = is_long? va_arg(args, uint32_t) : va_arg(args, uint16_t);
+      int base = (*fmt=='u')? 10:16;
 
       if (add_plus) {
         buf[0] = '+';
-        ultoa(val, (char *)(buf+1), 16);
+        ultoa(val, (char *)(buf+1), base);
       }else{
-        ultoa(val, (char *)(buf), 16);
+        ultoa(val, (char *)(buf), base);
       }
       if (*fmt == 'X') {
         char *p = buf;
