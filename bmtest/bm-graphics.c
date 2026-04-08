@@ -39,9 +39,9 @@ void cls()
     asm("CLS09:");
     asm(" stab 0,x");
     asm(" inx");
-    asm(" cpx #$20ff");
+    asm(" cpx #$2100");
     asm(" bne CLS09");
-  } else if (base = 0x2100) {
+  } else if (base == 0x2100) {
     asm(" clrb");
     asm(" ldx #$2100");
     asm("CLS21:");
