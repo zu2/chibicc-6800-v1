@@ -1360,6 +1360,7 @@ bool test_addr_x(Node *node)
 
 int gen_addr_array_sub(Node *node,bool test)
 {
+  return false;
   int64_t val;
 
 // (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +16 ) (ND_VAR ty_int i +0 )))
@@ -1372,10 +1373,10 @@ int gen_addr_array_sub(Node *node,bool test)
     if (is_int16(node->lhs->rhs->ty)) {
       if (test) return true;
       ldx_bp();
-      println("\tldab @bp+1");
-      println("\tldaa @bp");
-      println("\taddb %d,x",node->lhs->rhs->var->offset+1);
-      println("\tadca %d,x",node->lhs->rhs->var->offset);
+      println("\tldab %d,x",node->lhs->rhs->var->offset+1);
+      println("\tldaa %d,x",node->lhs->rhs->var->offset);
+      println("\taddb @bp+1");
+      println("\tadca @bp");
       tfr_dx();
       IX_Dest = IX_None;
       return node->lhs->lhs->var->offset;
