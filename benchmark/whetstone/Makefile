@@ -8,10 +8,9 @@ OPT=-vv -O2 -DNOPTINTF -DPRINTOUT=1 -Dfloat_t=float -Ddouble_t=float -D__use_flo
 benchmark: all
 
 
-all: whetstone.c my_printf.c
+all: whetstone.c
 	chibicc ${OPT} -c whetstone.c
-	chibicc ${OPT} -c my_printf.c
-	chibicc ${OPT} -o whet.bin whetstone.o my_printf.o -lm
+	chibicc ${OPT} -o whet.bin whetstone.o -lm
 	emu6800 6800 whet.bin whet.map
 
 setup:	whetstone.c

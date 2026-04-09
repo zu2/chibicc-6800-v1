@@ -110,9 +110,9 @@
 #
 
 	ldx #%1
-	ldx 0,x
+	ldx %2,x
 =
-	ldx %1
+	ldx %1+%2
 
 #
 #
@@ -187,6 +187,32 @@
 	adca #0
 =
 	tstb
+
+	clra
+	clrb
+	aba
+	adca #0
+=
+	clra
+	clrb
+
+	clra
+	ldab #1
+	aba
+	adca #0
+=
+	clra
+	ldab #1
+
+	clra
+	ldab %1
+	andb #%2
+	aba
+	adca #0
+=
+	clra
+	ldab %1
+	andb #%2
 
 
 	addb #<%1
@@ -899,6 +925,22 @@
 =
 	clra
 	ldab %1,x
+
+	ldx %1
+	cpx #0
+=
+	ldx %1
+
+	jsr __load16
+	subb #<%1
+	sbca #>%1
+	aba
+	adca #0
+=
+	jsr __tfr_dx
+	ldx 0,x
+	cpx #%1
+
 
 #
 #	array access

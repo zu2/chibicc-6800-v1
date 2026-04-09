@@ -135,30 +135,52 @@ static void remove_args(int n)
   }
   if (current_fn->params || current_fn->stack_size || current_fn->use_alloca) {
     if (n>=3 && depth==n) { // Removes all stack args.
-      if (IX_Dest != IX_BP) {
-        println("\tldx @bp");
-      }
+      ldx_bp();
       println("\ttxs");
-      IX_Dest = IX_BP;
       depth = 0;
       return;
     }
     if ((opt('O','s') && n*2 > depth+3) // Fewer bytes
     ||  (n*2 > depth+2)) {              // Reduce cycles?
-      println("\tldx @bp");
+      ldx_bp();
       for (int i=n; i<depth; i++) {
         println("\tdex");
+        IX_Dest = IX_None;
       }
       println("\ttxs");
       depth -= n;
-      IX_Dest = IX_None;
       return;
     }
+  }
+  if (opt('O','s') && n>4) {         // Smaller, but too slow
+    println("\tjsr __ins_i");
+    if (n>255) {
+      assert(0);
+    }
+    println("\t.byte  %d",n);
+    depth-=n;
+    return;
+  }else if (n>20 ||                       // Both faster and smaller
+           (!opt('O','s') && n*4 > 34)) {  // Faster, but larger
+    println("; ins*%d",n);
+    println("\tstaa @tmp2");		// 4
+    println("\tsts @tmp1");		// 5
+    println("\tldaa @tmp1+1");	// 3
+    println("\tadda #<%d",n);// 2
+    println("\tstaa @tmp1+1"); 	// 4
+    println("\tldaa @tmp1");		// 3
+    println("\tadca #>%d",n);// 2
+    println("\tstaa @tmp1");		// 4
+    println("\tlds @tmp1");		// 4
+    println("\tldaa @tmp2");		// 3
+    depth-=n;
+    return;
   }
   ins(n);
 
   return;
 }
+
 static void des(int n)
 {
   depth -= n;
@@ -440,7 +462,13 @@ Type *is_integer_constant(Node *node, int64_t *val)
     return node->ty;
   }
 
+  // check integral promotion
   if (node->kind == ND_CAST && node->ty->kind == TY_INT) {
+    switch (node->lhs->ty->kind) {
+    case TY_LONG:
+    case TY_FLOAT:
+      return NULL;
+    }
     node = node->lhs;
   }
   if (node->kind != ND_NUM)
@@ -1244,10 +1272,12 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
           return  off + val;
         }
         // OOPS! too large array
-        push();
+        if (save_d)
+          push();
         ldd_i(off+val);
         println("\tjsr __adx");
-        pop();
+        if (save_d)
+          pop();
         IX_Dest = IX_None;
         return 0;
       }
@@ -1330,6 +1360,7 @@ bool test_addr_x(Node *node)
 
 int gen_addr_array_sub(Node *node,bool test)
 {
+  return false;
   int64_t val;
 
 // (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +16 ) (ND_VAR ty_int i +0 )))
@@ -1341,10 +1372,11 @@ int gen_addr_array_sub(Node *node,bool test)
   &&  is_local_var(node->lhs->rhs)) {
     if (is_int16(node->lhs->rhs->ty)) {
       if (test) return true;
-      println("\tldab @bp+1");
-      println("\tldaa @bp");
-      println("\taddb %d,x",node->lhs->rhs->var->offset+1);
-      println("\tadca %d,x",node->lhs->rhs->var->offset);
+      ldx_bp();
+      println("\tldab %d,x",node->lhs->rhs->var->offset+1);
+      println("\tldaa %d,x",node->lhs->rhs->var->offset);
+      println("\taddb @bp+1");
+      println("\tadca @bp");
       tfr_dx();
       IX_Dest = IX_None;
       return node->lhs->lhs->var->offset;
@@ -1363,6 +1395,7 @@ int gen_addr_array_sub(Node *node,bool test)
   &&  is_local_var(node->lhs->lhs->lhs)) {
     if (is_int16(node->lhs->lhs->lhs->ty)) {
       if (test) return true;
+      ldx_bp();
       println("\tldab %d,x",node->lhs->lhs->lhs->var->offset+1);
       println("\tldaa %d,x",node->lhs->lhs->lhs->var->offset);
       println("\taslb");
@@ -3109,6 +3142,9 @@ static void gen_funcall(Node *node)
   if (opt_fbuiltin_strcpy && builtin_strcpy(node)) {
     return;
   }
+  if (opt_fbuiltin_signbit && builtin_signbit(node)) {
+    return;
+  }
 
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "__builtin_va_start_addr")) {
@@ -3226,30 +3262,8 @@ static void gen_funcall(Node *node)
   IX_Dest = IX_None;
   
   // Removes pushed arguments before calling a function for speed
-  if (opt('O','s') && stack_args>4) {         // Smaller, but too slow
-    println("\tjsr __ins_i");
-    if (stack_args>255) {
-      assert(0);
-    }
-    println("\t.byte  %d",stack_args);
-    depth-=stack_args;
-  }else if (stack_args>20 ||                       // Both faster and smaller
-           (!opt('O','s') && stack_args*4 > 34)) {  // Faster, but larger
-    println("; ins*%d",stack_args);
-    println("\tstaa @tmp2");		// 4
-    println("\tsts @tmp1");		// 5
-    println("\tldaa @tmp1+1");	// 3
-    println("\tadda #<%d",stack_args);// 2
-    println("\tstaa @tmp1+1"); 	// 4
-    println("\tldaa @tmp1");		// 3
-    println("\tadca #>%d",stack_args);// 2
-    println("\tstaa @tmp1");		// 4
-    println("\tlds @tmp1");		// 4
-    println("\tldaa @tmp2");		// 3
-    depth-=stack_args;
-  }else{
-    remove_args(stack_args);
-  }
+  remove_args(stack_args);
+
   // If the return value is a type shorter than an int,
   // the upper bytes contain garbage, so we correct it.
 #if 0
@@ -4924,7 +4938,6 @@ void gen_expr(Node *node) {
       if (!is_compare_or_not(cond))
         cmp_zero(cond->ty);
       println("\tjeq %s",L_else);
-      println("; %s %s %d",__func__,__FILE__,__LINE__);
     }
     IX_Type  IX_Save = IX_Dest;
     int IX_Save_PTR_off = IX_PTR_off;
@@ -4990,7 +5003,6 @@ void gen_expr(Node *node) {
       need_bool = 1;
     }else{
       gen_expr(node->lhs);
-      println("; %s %s %d",__func__,__FILE__,__LINE__);
       if (is_compare_or_not(node->lhs)) {
         println("\tjeq %s",L_end);
       }else{
@@ -5272,7 +5284,7 @@ void gen_expr(Node *node) {
         }
         if (val==-1) {
           println("\tjsr __inc32");
-          IX_Dest = IX_None;
+//        IX_Dest = IX_None;
           return;
         }
         println("\tjsr __sub32i");
@@ -6130,7 +6142,6 @@ static void gen_stmt(Node *node)
       gen_expr(cond);
       if (!is_compare_or_not(cond))
         cmp_zero(cond->ty);
-      println("; %s %s %d",__func__,__FILE__,__LINE__);
       println("\tjeq %s",L_else);
     }
     gen_stmt(node->then);
@@ -6166,7 +6177,6 @@ static void gen_stmt(Node *node)
           gen_expr(cond);
           if (!is_compare_or_not(cond))
             cmp_zero(cond->ty);
-          println("; %s %s %d",__func__,__FILE__,__LINE__);
           println("\tjeq %s", if_false);
         }
       }

@@ -32,11 +32,18 @@ int	main(int argc, char **argv)
 	char	*p;
 
 	buf[0] = 1;
+	buf[4] = 1;
 	p = memset(buf,0,0);
 	if (p!=buf)
 		return 1;
 	if (buf[0]==0)
 		return 3;
+
+	p = memset(buf,0,5);
+	if (p!=buf)
+		return 5;
+	if (buf[4]!=0)
+		return 6;
 
 	setup_buf();
 	p = memset(buf,0,0xff);

@@ -591,6 +591,8 @@ extern char opt_g;
 extern bool opt_fbuiltin_memcpy;
 extern bool opt_fbuiltin_memset;
 extern bool opt_fbuiltin_strcpy;
+extern bool opt_fbuiltin_signbit;
 bool builtin_memcpy(Node *node);
 bool builtin_memset(Node *node);
 bool builtin_strcpy(Node *node);
+bool builtin_signbit(Node *node);

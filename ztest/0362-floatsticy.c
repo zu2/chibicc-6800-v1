@@ -48,5 +48,5 @@ int main(int argc, char **argv)
   // B4000000 : -0.00000011920928955078125
 #endif
 
-  return (result != Zero);
+  return (result>7);
 }

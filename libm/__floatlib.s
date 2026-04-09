@@ -32,7 +32,8 @@ _fabsf:
 ;
 _isinf:
 	jsr	__f32isNaNorInf
-	bne	__isinf_not_inf
+        bcs     __isinf_not_inf ; NaN: return 0
+	bne	__isinf_not_inf ; not Inf: return 0
 	ldaa	@long
 	bpl	____isinf_pInf
 	ldab	#$FF		; if -Inf, return -1
@@ -50,31 +51,31 @@ __isfinite_non:
 ;		parameter passed by @long
 ;
 _isnan:
-	jsr	__f32isNaNorInf
-	bcc	__isnan_not_nan
+	jsr	__f32isNaNorInf ; if NaN, C=1
+        rolb
+        clra
+        andb    #1
+        rts
+;
+;	AccAB = isfinite(@long)
+;		parameter passed by @long
+;               return (NaN or Inf)? 0: non-zero;
+;
+_isfinite:
+	jsr	__f32isNaNorInf ; NaN: C=1, Inf: Z=1
+	bls	__isfinite_non  ; C=1 or Z=1
 ____isinf_pInf:			; if +Inf, return 1
 __isfinite_yes:
 	clra
 	ldab	#1
 	rts
-
-;
-;	AccAB = isfinite(@long)
-;		parameter passed by @long
-;
-_isfinite:
-	jsr	__f32isNaNorInf
-	bcs	__isfinite_non
-	beq	__isfinite_non
-	bra	__isfinite_yes
 ;
 ;       AccAB = signbit(@long)
 ;		parameter passed by @long
+;               return (@long<0.0f)? non-zero: 0;
 ;
 _signbit:
         clra
         ldab    @long
-        aslb
-        rolb
-        andb    #1
+        andb    #$80
         rts
