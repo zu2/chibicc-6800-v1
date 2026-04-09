@@ -134,11 +134,13 @@ static void remove_args(int n)
     return;
   }
   if (current_fn->params || current_fn->stack_size || current_fn->use_alloca) {
-    if (n>=3 && depth==n) { // Removes all stack args.
-      ldx_bp();
-      println("\ttxs");
-      depth = 0;
-      return;
+    if (depth==n) { // Removes all stack args.
+      if (n>=3 || (n>=2 && opt('O','2'))) {
+        ldx_bp();
+        println("\ttxs");
+        depth = 0;
+        return;
+      }
     }
     if ((opt('O','s') && n*2 > depth+3) // Fewer bytes
     ||  (n*2 > depth+2)) {              // Reduce cycles?
@@ -1360,7 +1362,6 @@ bool test_addr_x(Node *node)
 
 int gen_addr_array_sub(Node *node,bool test)
 {
-  return false;
   int64_t val;
 
 // (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +16 ) (ND_VAR ty_int i +0 )))
