@@ -181,6 +181,9 @@ The IEEE754 float implementation has passed the Paranoia test for addition, subt
 - **`-O`, `-O1`, `-O2`**:  
   if `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization
 
+- **`-O3`**:
+  -O3 is an experimental feature. Use at your own risk, after reviewing the generated code.
+
 - **`-Os`**:  
   This option generates code aimed at minimizing the size of the object file. As a trade-off, the resulting code may run approximately 5%-25% slower.
 
@@ -237,6 +240,8 @@ In this implementation:
 - **3+ Arguments:** Less efficient due to additional `INS`.
 
 Register-based arguments are saved during the prologue and accessed as local variables within functions. Further optimizations in this area are possible.
+
+If stack restoration is fast with @bp, compiler use ldx @bp / txs. For many arguments, this gives shorter and faster code.
 
 ### Function Arguments Handling
 
