@@ -1046,12 +1046,12 @@
 
 	ldab %1,x
 	cmpb #%2
-	j%3 __L_7
+	j%3 %4
 	ldab %1,x
 =
 	ldab %1,x
 	cmpb #%2
-	j%3 __L_7
+	j%3 %4
 
 # expand macros
 
