@@ -299,6 +299,20 @@ gen_mul16(Node *node)
         println("\taslb");
         println("\trola");
         return true;
+      case 64:
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        return true;
       case 100:
         println("\tjsr __mul100");
         return true;
