@@ -1,7 +1,7 @@
 CC:=chibicc
 START:=0x1000
-OPT:=-tbm -O2 -C$(START)
-all: bm-graphics.o 9017 9019 9301 9302
+OPT:=-tbm -O3 -C$(START)
+all: bm-graphics.o 9017 9019 9301 9302 9303
 
 .c.o:
 	$(CC) $(OPT) -c $<
@@ -29,3 +29,9 @@ all: bm-graphics.o 9017 9019 9301 9302
 	dd if=9302.bin of=tmp.bin bs=1 skip=`printf "%d\n" $(START)`
 	objcopy -I binary -O srec --adjust-vma=$(START) tmp.bin 9302.mot
 	objcopy -I binary -O ihex --adjust-vma=$(START) tmp.bin 9302.hex
+
+9303:
+	chibicc $(OPT) -o 9303.bin 9303-life.c
+	dd if=9303.bin of=tmp.bin bs=1 skip=`printf "%d\n" $(START)`
+	objcopy -I binary -O srec --adjust-vma=$(START) tmp.bin 9303.mot
+	objcopy -I binary -O ihex --adjust-vma=$(START) tmp.bin 9303.hex
