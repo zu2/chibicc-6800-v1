@@ -1,5 +1,16 @@
 #include "chibicc.h"
 
+bool is_integral_promotion(Node *node)
+{
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_INT
+  && !node->ty->is_unsigned
+  &&  node->lhs->ty->kind == TY_CHAR) {
+    return true;
+  }
+  return false;
+}
+
 static char *type_str(Node *node)
 {
   if (!node || !node->ty) return "NULL";
@@ -202,6 +213,8 @@ Node *optimize_expr(Node *node)
   Node *new;
   int64_t val;
   double fval;
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
 
   if (!node)
     return node;
@@ -287,15 +300,28 @@ Node *optimize_expr(Node *node)
       || node->lhs->ty->kind == TY_LONG)) {
       node->lhs = node->lhs->lhs;
     }
-    // (ND_CAST TY_CHAR(2) (- (ND_CAST TY_INT(4) (expr ...) )))
+    // (ND_CAST TY_CHAR(2) (-/~ (ND_CAST TY_INT(4) (expr ...) )))
     if (node->ty->kind == TY_CHAR
-    &&  node->lhs->kind == ND_NEG
+    &&  (node->lhs->kind == ND_NEG || node->lhs->kind == ND_BITNOT)
     &&  node->lhs->lhs->kind == ND_CAST
     &&  node->lhs->lhs->ty->kind == TY_INT
     &&  node->lhs->lhs->lhs->ty->kind == TY_CHAR) {
-      Node *new = new_unary(ND_NEG, node->lhs->lhs->lhs, node->tok);
+      Node *new = new_unary(node->lhs->kind, node->lhs->lhs->lhs, node->tok);
       new->ty = node->ty;
       return new;
+    }
+    // int = char &|^ char;
+    if (is_integral_promotion(node)
+    &&  (lhs->kind == ND_BITAND
+      || lhs->kind == ND_BITOR
+      || lhs->kind == ND_BITXOR)
+    &&  is_integral_promotion(lhs->lhs)
+    &&  is_integral_promotion(lhs->rhs)) {
+      if (lhs->lhs->ty->is_unsigned == lhs->rhs->ty->is_unsigned) {
+        lhs->lhs = lhs->lhs->lhs;
+        lhs->rhs = lhs->rhs->lhs;
+        return node;
+      }
     }
     // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
     if (node->ty->kind == TY_CHAR
