@@ -77,6 +77,11 @@ int main(void)
   if (r!=0) {
     return 34;
   }
+  r = 10;
+  r %= 2;
+  if (r!=1) {
+    return 35;
+  }
 
   return 0;
 }
