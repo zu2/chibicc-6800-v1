@@ -3613,21 +3613,20 @@ static void opeq(Node *node)
       gen_addr(lhs);
       push();
       gen_expr(rhs);
-      push();
+      push1();
       println("\ttsx");
-      println("\tldx 2,x");
+      println("\tldx 1,x");
       println("\tldab 0,x");
-      println("\tclra");
       if (node->ty->is_unsigned) {
-        println("\tjsr __div16x16u");
+        println("\tjsr __div8x8u");
       }else{
-        println("\tjsr __div16x16s");
+        println("\tjsr __div8x8s");
       }
       IX_Dest = IX_None;
       if (node->ty->kind==TY_BOOL) {
-        cast(ty_int,ty_bool);
+        cast(ty_char,ty_bool);
       }
-      ins(2);
+      ins(1);
       break;
     case TY_SHORT:
     case TY_INT:
@@ -3742,6 +3741,9 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __rem16x16s");
       }
+      if (node->ty->kind==TY_BOOL) {
+        cast(ty_int,ty_bool);
+      }
       IX_Dest = IX_None;
       ins(2);
       break;
@@ -3817,7 +3819,6 @@ static void opeq(Node *node)
         int off = gen_addr_x(node->lhs,true);
         switch(node->kind) {
         case ND_ANDEQ:
-          println("\tclra");
           println("\tandb %d,x",off);
           break;
         case ND_OREQ:
@@ -4976,9 +4977,7 @@ void gen_expr(Node *node) {
     gen_expr(node->lhs);
     switch(node->ty->size){
     case 1:
-      println("\tclra");
       println("\tcomb");
-      println("\tcoma");
       return;
     case 2:
       println("\tcomb");

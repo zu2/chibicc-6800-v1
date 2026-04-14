@@ -3,7 +3,7 @@
 #
 all: libc.a
 
-OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o __mul8x8u.o __mul8x8s.o \
+OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o __mul8x8u.o __mul8x8s.o __div8x8.o __div8x8s.o \
 	__mul16x8.o __mul100.o \
 	__cmp8.o __cmp16.o __shift8.o __shift16.o \
 	__load.o __load32.o __pop32.o \
