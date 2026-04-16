@@ -3201,8 +3201,7 @@ static void gen_funcall(Node *node)
 
   if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
     println("\tjsr _%s",node->lhs->var->name);
-  }else if (test_expr_x(node->lhs)) { // TODO: gen_expr_x
-    println("; do gen_expr_x");
+  }else if (test_expr_x(node->lhs)) {
     int off = gen_expr_x(node->lhs,true);
     println("\tjsr %d,x",off);
   }else{
@@ -3425,47 +3424,54 @@ static void opeq(Node *node)
       println("\tstab 0,x");
       IX_Dest = IX_None;
       return;
-    case TY_CHAR:
-      if (test_addr_x(lhs)) {
-        int off = gen_addr_x(lhs,true);
-
-        if (is_integer_constant(rhs,&val)) {
-          if (node->retval_unused) {
-            switch(val) {
-            case 1:   // -= 1;
-              println("\tdec %d,x",off);
-              return;
-            case -1:  // -= -1;
-              println("\tinc %d,x",off);
-              return;
-            case 2:   // -= 2;
-              if (opt('O','s')) {
-                println("\tdec %d,x",off);
+    case TY_CHAR: {
+        if (test_addr_x(lhs)) {
+          if (is_integer_constant(rhs,&val)) {
+            int off = gen_addr_x(lhs,true);
+            if (node->retval_unused) {
+              switch(val) {
+              case 1:   // -= 1;
                 println("\tdec %d,x",off);
                 return;
+              case -1:  // -= -1;
+                println("\tinc %d,x",off);
+                return;
+              case 2:   // -= 2;
+                if (opt('O','s')) {
+                  println("\tdec %d,x",off);
+                  println("\tdec %d,x",off);
+                  return;
+                }
               }
             }
+            println("\tldab %d,x",off);
+            println("\tsubb #%ld",val);
+            println("\tstab %d,x",off);
+            return;
+          }else if (is_global_var(rhs) && rhs->ty->kind==TY_CHAR) {
+            int off = gen_addr_x(lhs,true);
+            println("\tldab %d,x",off);
+            println("\tsubb _%s",rhs->var->name);
+            println("\tstab %d,x",off);
+            return;
           }
-          println("\tldab %d,x",off);
-          println("\tsubb #%ld",val);
+          gen_expr(rhs);
+          println("\tnegb");
+          int off = gen_addr_x(lhs,true);
+          println("\taddb %d,x",off);
           println("\tstab %d,x",off);
           return;
         }
+        gen_addr(lhs);
+        push();
         gen_expr(rhs);
         println("\tnegb");
-        println("\taddb %d,x",off);
-        println("\tstab %d,x",off);
+        popx();
+        println("\taddb 0,x");
+        println("\tstab 0,x");
+        IX_Dest = IX_None;
         return;
-      }
-      gen_addr(lhs);
-      push();
-      gen_expr(rhs);
-      println("\tnegb");
-      popx();
-      println("\taddb 0,x");
-      println("\tstab 0,x");
-      IX_Dest = IX_None;
-      return;
+      } // TY_CHAR
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
