@@ -243,7 +243,7 @@ static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *b
 // printf-like function (float only, no double, + and - flags as bool)
 int vsnprintf_core(const uint8_t *fmt, va_list args)
 {
-  uint8_t buf[32];  // Main buffer for conversions
+  uint8_t buf[128];  // Main buffer for conversions
 
   while (*fmt) {
     if (*fmt != '%') {
