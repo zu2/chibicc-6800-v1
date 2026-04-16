@@ -1441,6 +1441,30 @@ static Node *create_lvar_init(Initializer *init, Type *ty, InitDesg *desg, Token
   return new_binary(ND_ASSIGN, lhs, init->expr, tok);
 }
 
+static int count_initialized_elements(Initializer *init, Type *ty) {
+  if (ty->kind != TY_ARRAY)
+    return 1;
+
+  if (init->is_bulk_init)
+    return ty->array_len;
+
+  int count = 0;
+  for (int i = 0; i < ty->array_len; i++) {
+    if (init->children[i]->expr == NULL)
+      break;
+    count++;
+  }
+  return count;
+}
+
+static bool is_array_fully_initialized(Initializer *init, Type *ty)
+{
+  if (ty->kind != TY_ARRAY)
+    return true;
+
+  return count_initialized_elements(init, ty) == ty->array_len;
+}
+
 // A variable definition with an initializer is a shorthand notation
 // for a variable definition followed by assignments. This function
 // generates assignment expressions for an initializer. For example,
@@ -1462,6 +1486,10 @@ static Node *lvar_initializer(Token **rest, Token *tok, Obj *var) {
   Node *lhs, *rhs = create_lvar_init(init, var->ty, &desg, tok);
   switch(var->ty->kind){
   case TY_ARRAY:
+    if (is_array_fully_initialized(init, var->ty)) {
+      return rhs;
+    }
+    /* FALLTHROUGH */
   case TY_STRUCT:
   case TY_UNION:
     lhs = new_node(ND_MEMZERO, tok);
