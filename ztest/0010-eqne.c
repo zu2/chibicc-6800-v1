@@ -34,5 +34,10 @@ int main(int argc, char **argv)
 	if (!(b!=0))
 	  return 13;
 
+  if (a+b==0)
+    return 21;
+  if (a*b!=0)
+    return 22;
+
 	return 0;
 }
