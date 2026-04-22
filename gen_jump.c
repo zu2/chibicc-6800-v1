@@ -424,8 +424,10 @@ bool gen_jump_if_false(Node *node, char *if_false)
           println("\tjne %s", if_false);
           return true;
         } else {
-          println("\tjmi %s", if_false);
-          println("\tjeq %s", if_false);
+          println("; int<=0 is !(int==0 || int<0)");
+          println("\tjeq %s", if_thru);
+          println("\tjpl %s", if_false);
+          println("%s:",if_thru);
           return true;
         }
         break;
@@ -465,8 +467,11 @@ bool gen_jump_if_false(Node *node, char *if_false)
         if (lhs->ty->is_unsigned) {
           println("; uint<=0 only when it is exactly 0");
           node->kind = ND_EQ;
-        } else {
-          println("\ttsta");
+        } else {  // int<=0  is !(int>=1)
+          println("\tsubb #<1");
+          println("\tsbca #>1");
+          println("\tjge %s",if_false);
+          return true;
         }
         break;
       }
