@@ -697,8 +697,10 @@ Node *optimize_expr(Node *node)
       case TY_INT:
         if (( node->ty->is_unsigned && node->rhs->val < UINT16_MAX)
         ||  (!node->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
-          node->rhs->val++;
-          node->kind = ND_LT;
+          if (node->rhs->val!=0) {
+            node->rhs->val++;
+            node->kind = ND_LT;
+          }
         }
         break;
       case TY_LONG:
@@ -725,8 +727,10 @@ Node *optimize_expr(Node *node)
       case TY_INT:
         if (( node->ty->is_unsigned && node->rhs->val < UINT16_MAX)
         ||  (!node->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
-          node->rhs->val++;
-          node->kind = ND_GE;
+          if (node->rhs->val!=0) {
+            node->rhs->val++;
+            node->kind = ND_GE;
+          }
         }
         break;
       case TY_LONG:
