@@ -946,6 +946,11 @@
 =
 	stx %1
 
+	stx %1
+	ldx %1
+=
+	stx %1
+
 	jsr __load16
 	subb #<%1
 	sbca #>%1
