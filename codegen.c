@@ -1269,6 +1269,11 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       &&  (0<=val && val<256)
       &&  test_addr_x(node->lhs->lhs)) {
         if (test) return true;
+        if (is_global_array(node->lhs->lhs)) {
+          println("\tldx #_%s+%ld",node->lhs->lhs->var->name,val);
+          IX_Dest = IX_None;
+          return 0;
+        }
         off = gen_addr_x(node->lhs->lhs,false);
         if (off+val <256) {
           return  off + val;
@@ -3822,6 +3827,25 @@ static void opeq(Node *node)
     case TY_BOOL:
     case TY_CHAR: 
       if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
+        if (is_global_var(node->lhs)) {
+          gen_expr(node->rhs);
+          switch(node->kind) {
+          case ND_ANDEQ:
+            println("\tandb _%s",node->lhs->var->name);
+            break;
+          case ND_OREQ:
+            println("\torab _%s",node->lhs->var->name);
+            break;
+          case ND_XOREQ:
+            println("\teorb _%s",node->lhs->var->name);
+            break;
+          default:
+            assert(0);
+          }
+          println("\tstab _%s",node->lhs->var->name);
+          IX_Dest = IX_None;
+          return;
+        }
         gen_expr(node->rhs);
         int off = gen_addr_x(node->lhs,true);
         switch(node->kind) {
@@ -4881,7 +4905,7 @@ void gen_expr(Node *node) {
                  node->var->name, node->var->ty->size, node->var->offset,
                  __func__, __FILE__, __LINE__);
     }
-    if (node->var->is_static) {
+    if (!node->var->is_local) {
       println("\tldx #_%s",node->var->name);
       println("\tclrb");
       int c = count();
@@ -4890,6 +4914,7 @@ void gen_expr(Node *node) {
       println("\tinx");
       println("\tcpx #_%s+%d",node->var->name,node->var->ty->size);
       println("\tbne L_memzero_%d", c);
+      IX_Dest = IX_None;
     }else if (node->var->ty->size <= 6
     && node->var->ty->size + node->var->offset < 256) {
       println("\tclrb");
