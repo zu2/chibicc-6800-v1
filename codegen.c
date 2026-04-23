@@ -2544,6 +2544,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
       return 1;
     if (is_int16(node->ty)
     &&  node->lhs->ty->kind == TY_CHAR
+    &&  node->lhs->ty->is_unsigned
     &&  gen_direct_sub(node->lhs, opb, opa, test,0)) {
       return 1;
     }
@@ -4880,9 +4881,17 @@ void gen_expr(Node *node) {
                  node->var->name, node->var->ty->size, node->var->offset,
                  __func__, __FILE__, __LINE__);
     }
-    if (node->var->ty->size <= 6
+    if (node->var->is_static) {
+      println("\tldx #_%s",node->var->name);
+      println("\tclrb");
+      int c = count();
+      println("L_memzero_%d:", c);
+      println("\tstab 0,x");
+      println("\tinx");
+      println("\tcpx #_%s+%d",node->var->name,node->var->ty->size);
+      println("\tbne L_memzero_%d", c);
+    }else if (node->var->ty->size <= 6
     && node->var->ty->size + node->var->offset < 256) {
-      ldx_bp();
       println("\tclrb");
       for (int i=0; i<node->var->ty->size; i++){
         println("\tstab %d,x",node->var->offset+i);
@@ -5705,13 +5714,21 @@ void gen_expr(Node *node) {
     &&  node->rhs->ty->kind == TY_INT
     &&  node->rhs->lhs->ty->kind == TY_CHAR
     &&  !node->rhs->lhs->ty->is_unsigned ) {
-      if (test_addr_x(node->lhs->lhs)
-      &&  test_addr_x(node->rhs->lhs)) {
+      if ((test_addr_x(node->lhs->lhs) || is_global_var(node->lhs->lhs))
+      &&  (test_addr_x(node->rhs->lhs) || is_global_var(node->rhs->lhs))) {
         println("\tclra");
-        off = gen_addr_x(node->lhs->lhs,true);
-        println("\tldab %d,x",off);
-        off = gen_addr_x(node->rhs->lhs,true);
-        println("\tsubb %d,x",off);
+        if (is_global_var(node->lhs->lhs)) {
+          println("\tldab _%s",node->lhs->lhs->var->name);
+        }else{
+          off = gen_addr_x(node->lhs->lhs,true);
+          println("\tldab %d,x",off);
+        }
+        if (is_global_var(node->rhs->lhs)) {
+          println("\tsubb _%s",node->rhs->lhs->var->name);
+        }else{
+          off = gen_addr_x(node->rhs->lhs,true);
+          println("\tsubb %d,x",off);
+        }
         char *label = new_label("L_%d");
         println("\tbge %s",label);
         println("\tdeca");
