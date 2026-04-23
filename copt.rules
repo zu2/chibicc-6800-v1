@@ -926,10 +926,25 @@
 	clra
 	ldab %1,x
 
+	inx
+	cpx #0
+=
+	inx
+
+	dex
+	cpx #0
+=
+	dex
+
 	ldx %1
 	cpx #0
 =
 	ldx %1
+
+	stx %1
+	cpx #0
+=
+	stx %1
 
 	jsr __load16
 	subb #<%1
