@@ -3516,6 +3516,31 @@ static void mark_live(Obj *var) {
   }
 }
 
+static void optimize_leaf(Obj *fn)
+{
+  Obj *new_locals = NULL;
+  Obj **tail = &new_locals;
+
+  for (Obj *var = fn->locals; var;) {
+    Obj *next = var->next;
+    if (var->is_local && !var->is_param) {
+      char *name = new_unique_name();
+      var->is_local = false;
+      var->is_static = true;
+      var->is_definition = true;
+      var->next = globals;
+      var->name = name;
+      globals = var;
+    }else{
+      *tail = var;
+      tail = &var->next;
+      var->next = NULL;
+    }
+    var = next;
+  }
+  fn->locals = new_locals;
+}
+
 static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 
   Obj *fn;
@@ -3562,6 +3587,9 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
   if ((rty->kind == TY_STRUCT || rty->kind == TY_UNION) && rty->size > 16)
     new_lvar("", pointer_to(rty));
 
+  for (Obj *p=locals; p; p=p->next) {
+    p->is_param = true;
+  }
   fn->params = locals;
 
 //  fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
@@ -3584,6 +3612,9 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
   fn->locals = locals;
   if (fn->use_alloca) {
     fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
+  }
+  if (opt('O','3') && !fn->use_alloca && !fn->use_funcall) {
+    optimize_leaf(fn);
   }
   leave_scope();
   resolve_goto_labels();
