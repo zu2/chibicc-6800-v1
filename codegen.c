@@ -3645,8 +3645,8 @@ static void opeq(Node *node)
           case 2:
             if (is_global_var(node->lhs)) {
               while(val>1) {
-                println("\tlsr #_%s",  node->lhs->var->name);
-                println("\tror #_%s+1",node->lhs->var->name);
+                println("\tlsr _%s",  node->lhs->var->name);
+                println("\tror _%s+1",node->lhs->var->name);
                 val /= 2;
               }
             }else{
