@@ -119,12 +119,22 @@ bool
 gen_mul16(Node *node)
 {
   int off;
-  bool addr_x;
+  bool addr_x = false; 
+  bool global = false; 
+  char ta[64], tb[64];
 
-  if ((addr_x = test_addr_x(node->lhs))) {
+  if (is_global_var(node->lhs)) {
+    global = true;
+    sprintf(tb,"_%s+1",node->lhs->var->name);
+    sprintf(ta,"_%s",  node->lhs->var->name);
+    println("\tldab %s",tb);
+    println("\tldaa %s",ta);
+  } else if ((addr_x = test_addr_x(node->lhs))) {
     off = gen_addr_x(node->lhs,false);
-    println("\tldab %d,x",off+1);
-    println("\tldaa %d,x",off);
+    sprintf(tb,"%d,x",off+1);
+    sprintf(ta,"%d,x",off);
+    println("\tldab %s",tb);
+    println("\tldaa %s",ta);
   }else{
     gen_expr(node->lhs);
   }
@@ -157,11 +167,11 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 3:
-        if (addr_x) {
+        if (global || addr_x) {
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          println("\taddb %s",tb);
+          println("\tadca %s",ta);
           return true;
         }
         println("\tstab @tmp1+1");
@@ -178,13 +188,13 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 5:
-        if (addr_x) {
+        if (global || addr_x) {
           println("\taslb");
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          println("\taddb %s",tb);
+          println("\tadca %s",ta);
           return true;
         }
         if (opt('O','s'))
@@ -199,11 +209,11 @@ gen_mul16(Node *node)
         println("\tadca @tmp1");
         return true;
       case 6:
-        if (addr_x) {
+        if (global || addr_x) {
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          println("\taddb %s",tb);
+          println("\tadca %s",ta);
           println("\taslb");
           println("\trola");
           return true;
@@ -220,15 +230,15 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 7:
-        if (addr_x) {
+        if (global || addr_x) {
           println("\taslb");
           println("\trola");
           println("\taslb");
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\tsubb %d,x",off+1);
-          println("\tsbca %d,x",off);
+          println("\tsubb %s",tb);
+          println("\tsbca %s",ta);
           return true;
         }
         if (opt('O','s'))
@@ -253,13 +263,13 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 10:
-        if (addr_x) {
+        if (global || addr_x) {
           println("\taslb");
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          println("\taddb %s",tb);
+          println("\tadca %s",ta);
           println("\taslb");
           println("\trola");
           return true;
