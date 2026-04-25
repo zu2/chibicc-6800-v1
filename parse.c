@@ -3609,10 +3609,10 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 #endif
 
   fn->body = compound_stmt(&tok, tok);
-  fn->locals = locals;
   if (fn->use_alloca) {
     fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
   }
+  fn->locals = locals;
   if (opt('O','3') && !fn->use_alloca && !fn->use_funcall) {
     optimize_leaf(fn);
   }
