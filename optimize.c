@@ -255,6 +255,8 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_ADDR:
     node->lhs = optimize_expr(node->lhs);
+    if (node->lhs->kind == ND_DEREF)
+      return node->lhs->lhs;
     return node;
   case ND_ASSIGN:
     node = optimize_lr(node);
