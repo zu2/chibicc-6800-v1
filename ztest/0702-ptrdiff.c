@@ -1,4 +1,5 @@
 #include "common.h"
+#include <stdlib.h>
 
 
 int main(int argc, char **argv)
@@ -8,13 +9,13 @@ int main(int argc, char **argv)
 	long	t,u;
 	float	v,w;
 
-	if (&p-&q!=1)
+	if (abs(&p-&q)!=1)
 	  return 1;
-	if (&r-&s!=1)
+	if (abs(&r-&s)!=1)
 	  return 2;
-	if (&t-&u!=1)
+	if (abs(&t-&u)!=1)
 	  return 3;
-	if (&v-&w!=1)
+	if (abs(&v-&w)!=1)
 	  return 4;
 
 	return 0;
