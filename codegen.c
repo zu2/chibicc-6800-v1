@@ -1010,17 +1010,49 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
         }
       }
     return false;
+  // (ND_ADDR (ND_VAR TY_FLOAT(6) f +0 ))
+  // (ND_ADDR (ND_DEREF ty_uchar (ND_CAST TY_PTR(10) 63060)))
   case ND_ADDR: {
+    if (node->lhs->kind == ND_DEREF) {
+      if (test) return test_expr_x(node->lhs->lhs);
+      return gen_expr_x(node->lhs->lhs,save_d);
+    }
+    if (is_global_var(lhs)) {
+      if (test) return true;
+      println("\tldx #_%s",lhs->var->name);
+      IX_Dest = IX_None;
+      return 0;
+    }
+    if (is_local_var(lhs)) {
+      if (test)
+        return (abs(lhs->var->offset)<=2);
+      ldx_bp();
+      switch(lhs->var->offset) {
+      case -2:  println("\tdex");
+      case -1:  println("\tdex");
+                IX_Dest = IX_None;
+                break;
+      case 2:   println("\tinx");
+      case 1:   println("\tinx");
+                IX_Dest = IX_None;
+                break;
+      // case 0: // do nothing
+      }
+
+      return 0;
+    }
+#if 0
     if (test_addr_x(lhs)) {
       if (test) return true;
       off = gen_addr_x(lhs,true);
       return off;
     }
+#endif
     return false;
   } // ND_ADDR;
 //case ND_ASSIGN:
   case ND_ASSIGN: {
-      println("; gen_expr_x ND_ASSIGN");
+      println("; %s ND_ASSIGN %s %d",__func__,__FILE__,__LINE__);
     }
     return false;
 //case ND_STMT_EXPR:
@@ -1932,10 +1964,16 @@ static void cast(Type *from, Type *to) {
 
   int t1 = getTypeId(from);
   int t2 = getTypeId(to);
+
   if (cast_table[t1][t2]){
     println("\t%s", cast_table[t1][t2]);
     if(strncmp("jsr",cast_table[t1][t2],3)==0)
-      IX_Dest = IX_None;
+      if (strcmp(cast_table[t1][t2]+4, "__u8to32")
+      &&  strcmp(cast_table[t1][t2]+4, "__s8to32")
+      &&  strcmp(cast_table[t1][t2]+4, "__u16to32")
+      &&  strcmp(cast_table[t1][t2]+4, "__s16to32")) {
+        IX_Dest = IX_None;
+      }
   }
 }
 
@@ -3308,8 +3346,8 @@ static void opeq(Node *node)
       IX_Dest = IX_None;
       gen_expr(rhs);
       println("\tjsr __addf32tos");
-      store(node->ty);
       IX_Dest = IX_None;
+      store(node->ty);
       return;
     case TY_LONG:
       gen_addr(lhs);
@@ -3318,8 +3356,8 @@ static void opeq(Node *node)
       println("\ttsx");
       println("\tldx 0,x");
       println("\tjsr __add32x");
-      store(node->ty);
       IX_Dest = IX_None;
+      store(node->ty);
       return;
     // Handle non-char/int RHS case? XXX
     case TY_BOOL:
@@ -3403,6 +3441,7 @@ static void opeq(Node *node)
       println("\tldx 4,x");
       load32x(0);
       println("\tjsr __subf32tos");
+      IX_Dest = IX_None;
       store(node->ty);
       return;
     case TY_LONG:
@@ -3413,8 +3452,8 @@ static void opeq(Node *node)
       println("\tjsr __push32x");
       gen_expr(rhs);
       println("\tjsr __sub32tos");
-      store(node->ty);
       IX_Dest = IX_None;
+      store(node->ty);
       return;
     case TY_BOOL:
       // Handle non-char/int RHS case?
@@ -3536,6 +3575,7 @@ static void opeq(Node *node)
       IX_Dest = IX_None;
       gen_expr(node->rhs);
       println("\tjsr __mulf32tos");
+      IX_Dest = IX_None;
       store(node->ty);
       return;
     case TY_LONG:
@@ -3545,6 +3585,7 @@ static void opeq(Node *node)
       IX_Dest = IX_None;
       gen_expr(node->rhs);
       println("\tjsr __mul32tos");
+      IX_Dest = IX_None;
       store(node->ty);
       return;
     case TY_BOOL:
@@ -3603,6 +3644,7 @@ static void opeq(Node *node)
       load32x(0);
       println("\tjsr __divf32tos");
       depth -= 4;
+      IX_Dest = IX_None;
       break;
     case TY_LONG:
       gen_addr(node->lhs);
@@ -4721,7 +4763,6 @@ void gen_expr(Node *node) {
 
     if (node->retval_unused && lhs->ty->size==2 && rhs->ty->size==2) {
       if (is_global_var(node->lhs)
-      &&  can_direct(node->lhs)
       &&  test_expr_x(node->rhs)) {
         gen_expr_x(node->rhs,false);
         println("\tstx _%s",node->lhs->var->name);
@@ -4917,6 +4958,7 @@ void gen_expr(Node *node) {
       IX_Dest = IX_None;
     }else if (node->var->ty->size <= 6
     && node->var->ty->size + node->var->offset < 256) {
+      ldx_bp();
       println("\tclrb");
       for (int i=0; i<node->var->ty->size; i++){
         println("\tstab %d,x",node->var->offset+i);
@@ -5197,6 +5239,7 @@ void gen_expr(Node *node) {
       sprintf(L_cmpf1, "L_%d_1_cmpf",c);
       sprintf(L_cmpf2, "L_%d_2_cmpf",c);
       println("\tjsr __cmpf32tos");	// @long cmp  TOS");
+      IX_Dest = IX_None;
       println("\tbcc %s",L_cmpf1);	// when carry=1, compare NaN
       if (node->kind == ND_NE) {
         println("\tldab #1");
