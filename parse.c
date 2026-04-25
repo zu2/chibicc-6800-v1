@@ -3613,7 +3613,7 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
     fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
   }
   fn->locals = locals;
-  if (opt('O','3') && !fn->use_alloca && !fn->use_funcall) {
+  if (opt('O','2') && !fn->use_alloca && !fn->use_funcall) {
     optimize_leaf(fn);
   }
   leave_scope();
