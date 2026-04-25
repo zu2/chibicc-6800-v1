@@ -45,13 +45,14 @@ __s8to32_1:
 	staa	@long
 	rts
 __s16to32:
-	ldx	#0
 	stab	@long+3
+	clrb
 	staa	@long+2
 	bpl	__s16to32_1
-	dex
+	decb
 __s16to32_1:
-	stx	@long
+	stab	@long+1
+	stab	@long
 	rts
 ;
 ;	if (@long == zero)
