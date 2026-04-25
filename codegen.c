@@ -133,7 +133,8 @@ static void remove_args(int n)
   if (n==0) {
     return;
   }
-  if (current_fn->params || current_fn->stack_size || current_fn->use_alloca) {
+  // function has @bp, and not use alloca()
+  if (current_fn->params || current_fn->stack_size && !current_fn->use_alloca) {
     if (depth==n) { // Removes all stack args.
       if (n>=3 || (n>=2 && opt('O','2'))) {
         ldx_bp();
@@ -2317,7 +2318,7 @@ static void builtin_alloca(void) {
     tfr_dx();	// tfr_dx uses @tmp1
   }else{
     ldx_bp();
-    println("\tstx @tmp1	; save __alloca_bottom");
+    println("\tstx @tmp1	; save __alloca_bottom address");
   }
   println("\tsts @tmp2	; save old SP");	// sp -= alloca size
   println("\tldab @tmp2+1");
@@ -2332,13 +2333,13 @@ static void builtin_alloca(void) {
   // The program moved the stack pointer to implement alloca,
   //     so the original stack data must be copied.
   // Push the data from __alloca_bottom to @tmp2 onto the new SP
-  println("\tldx 0,x");		// get old SP bottom
+  println("\tldx 0,x");		// get old alloca bottom
   println("L_%d:",c1);
+  println("\tdex");
   println("\tcpx @tmp2");
   println("\tbeq L_%d",c2);
   println("\tldab 0,x");
   println("\tpshb");
-  println("\tdex");
   println("\tbra L_%d",c1);
   println("L_%d:",c2);
 
@@ -2349,9 +2350,9 @@ static void builtin_alloca(void) {
   println("\tldaa 0,x");
   println("\tsubb @tmp4+1	; alloca size");
   println("\tsbca @tmp4");
-  println("\tstab 1,x");	// return alloca(size);
+  println("\tstab 1,x");  // update alloca_bottom
   println("\tstaa 0,x");
-  println(";");
+  println(";");	          // return alloca(size);
 }
 
 //
@@ -6520,7 +6521,6 @@ static void assign_lvar_offsets(Obj *prog) {
     for (Obj *var = fn->locals; var; var = var->next) { // locals & args
       if (var->offset>0)
         continue;
-
       if (var->offset == -1) {	// レジスタ引数
         fn->stack_size = top;
         var->offset = top;
