@@ -161,6 +161,10 @@ static bool is_function(Token *tok);
 static Token *function(Token *tok, Type *basety, VarAttr *attr);
 static Token *global_variable(Token *tok, Type *basety, VarAttr *attr);
 
+static bool block_has_funcall(Node *node);
+static bool block_has_funcall_list(Node *node);
+static void promote_locals_to_static(Obj *locals_before);
+
 static int align_down(int n, int align) {
   return n;
 //return align_to(n - align + 1, align);
@@ -1768,6 +1772,7 @@ static Node *stmt(Token **rest, Token *tok) {
     Node *node = new_node(ND_FOR, tok);
     tok = skip(tok->next, "(");
 
+    Obj *locals_before = locals;
     enter_scope();
 
     char *brk = brk_label;
@@ -1791,6 +1796,15 @@ static Node *stmt(Token **rest, Token *tok) {
     tok = skip(tok, ")");
 
     node->then = stmt(rest, tok);
+
+    if (opt('O','2')) {
+      if (current_fn
+      && !block_has_funcall(node)
+      && locals != locals_before) {
+        promote_locals_to_static(locals_before);
+        locals = locals_before;
+      }
+    }
 
     leave_scope();
     brk_label = brk;
@@ -1894,11 +1908,50 @@ static Node *stmt(Token **rest, Token *tok) {
   return expr_stmt(rest, tok);
 }
 
+
+static bool block_has_funcall_list(Node *node) {
+  for (Node *n = node; n; n = n->next)
+    if (block_has_funcall(n)) return true;
+  return false;
+}
+
+static bool block_has_funcall(Node *node) {
+  if (!node) return false;
+  if (node->kind == ND_FUNCALL) return true;
+  return block_has_funcall(node->lhs)
+      || block_has_funcall(node->rhs)
+      || block_has_funcall(node->cond)
+      || block_has_funcall(node->then)
+      || block_has_funcall(node->els)
+      || block_has_funcall(node->init)
+      || block_has_funcall(node->inc)
+      || block_has_funcall_list(node->body)
+      || block_has_funcall_list(node->args);
+}
+
+static void promote_locals_to_static(Obj *locals_before)
+{
+  for (Obj *var = locals; var != locals_before; ) {
+    char *name = new_unique_name();
+    Obj *next = var->next;
+    var->is_local = false;
+    var->is_static = true;
+    var->is_definition = true;
+    var->next = globals;
+    var->name = name;
+    globals = var;
+    var = next;
+  }
+}
+
+
 // compound-stmt = (typedef | declaration | stmt)* "}"
 static Node *compound_stmt(Token **rest, Token *tok) {
   Node *node = new_node(ND_BLOCK, tok);
   Node head = {};
   Node *cur = &head;
+
+  Obj *locals_before = locals;
 
   enter_scope();
 
@@ -1933,6 +1986,16 @@ static Node *compound_stmt(Token **rest, Token *tok) {
 
   node->body = head.next;
   *rest = tok->next;
+
+  if (opt('O','2')) {
+    if (current_fn
+    && !block_has_funcall_list(node->body)
+    && locals != locals_before) {
+      promote_locals_to_static(locals_before);
+      locals = locals_before;
+    }
+  }
+
   return node;
 }
 
