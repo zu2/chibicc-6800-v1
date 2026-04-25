@@ -1064,12 +1064,12 @@
 	ldaa %1
 	j%2 %3
 
-	ldab %1,x
+	ldab %1
 	cmpb #%2
 	j%3 %4
-	ldab %1,x
+	ldab %1
 =
-	ldab %1,x
+	ldab %1
 	cmpb #%2
 	j%3 %4
 
