@@ -161,6 +161,7 @@ static void remove_args(int n)
       assert(0);
     }
     println("\t.byte  %d",n);
+    IX_Dest = IX_None;
     depth-=n;
     return;
   }else if (n>20 ||                       // Both faster and smaller
@@ -2714,6 +2715,7 @@ static int gen_direct_long_and(int64_t v,char *opa, char *opb){
   if (opt('O','s')) {
     println("\tjsr __and32i");
     word32i(v);
+    IX_Dest = IX_None;
     return 1;
   }
   if (v1==0){
@@ -2758,6 +2760,7 @@ static int gen_direct_long_or(uint64_t v,char *opa, char *opb){
   if (opt('O','s')) {
     println("\tjsr __or32i");
     word32i(v);
+    IX_Dest = IX_None;
     return 1;
   }
   if (v1==0x000000FF) {
@@ -2814,6 +2817,7 @@ static int gen_direct_long_xor(uint64_t v,char *opa, char *opb){
   if (opt('O','s')) {
     println("\tjsr __xor32i");
     word32i(v);
+    IX_Dest = IX_None;
     return 1;
   }
   if (v1) {
@@ -5373,6 +5377,7 @@ void gen_expr(Node *node) {
         }
         println("\tjsr __sub32i");
         word32i(val);
+        IX_Dest = IX_None;
         return;
       }
       if (can_direct_long2(node)){
@@ -5444,6 +5449,7 @@ void gen_expr(Node *node) {
       if (is_long_constant(rhs,&val)) {
         println("\tjsr __and32i");
         word32i(val);
+        IX_Dest = IX_None;
         return;
       }
       if (can_direct_long(node->rhs)){
@@ -5464,6 +5470,7 @@ void gen_expr(Node *node) {
       if (is_long_constant(rhs,&val)) {
         println("\tjsr __or32i");
         word32i(val);
+        IX_Dest = IX_None;
         return;
       }
       if (can_direct_long(node->rhs)){
@@ -5484,6 +5491,7 @@ void gen_expr(Node *node) {
       if (is_long_constant(rhs,&val)) {
         println("\tjsr __xor32i");
         word32i(val);
+        IX_Dest = IX_None;
         return;
       }
       if (can_direct_long(node->rhs)){
