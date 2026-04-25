@@ -1,3 +1,5 @@
+#include "common.h"
+
 int sub(x)
 {
 	unsigned char	i;
@@ -13,7 +15,24 @@ int sub(x)
 	return sum;
 }
 
+int sub2(x)
+{
+  unsigned int **bp = 0x00;
+
+  unsigned char *p = alloca(x);
+  unsigned char *q = alloca(x);
+
+  return 0;
+}
+
 int main(int argc, char **argv)
 {
-	return sub(10)!=45;
+	if (sub(10)!=45)
+    return 1;
+
+  if (sub2(10)) {
+    return 2;
+  }
+
+  return 0;
 }
