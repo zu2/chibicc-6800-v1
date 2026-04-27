@@ -27,6 +27,7 @@ static bool opt_hash_hash_hash;
 static bool opt_static;
 static bool opt_shared;
 static bool opt_nostartfiles = 0;
+bool opt_nostatic_locals = 0;
 static char *opt_MF;
 static char *opt_MT;
 static char *opt_o;
@@ -94,7 +95,7 @@ static StringArray input_paths;
 static StringArray tmpfiles;
 
 static void usage(int status) {
-  fprintf(stderr, "chibicc [-v][-g][-O][-Os][-D name][-o <path>][-I dir][-tarch][-Zaddr][-Caddr][-nostartfiles]  <file> [-lxx]\n");
+  fprintf(stderr, "chibicc [-v][-g][-O[123]][-Os][-D name][-o <path>][-I dir][-tarch][-Zaddr][-Caddr][-nostartfiles][-nostatic-locals]  <file> [-lxx]\n");
   exit(status);
 }
 
@@ -495,6 +496,14 @@ static void parse_args(int argc, char **argv) {
 
     if (!strcmp(argv[i], "-nostartfiles")) {
       opt_nostartfiles = 1;
+      continue;
+    }
+    if (!strcmp(argv[i], "-nostatic-locals")) {
+      opt_nostatic_locals = 1;
+      continue;
+    }
+    if (!strcmp(argv[i], "-static-locals")) {
+      opt_nostatic_locals = 0;
       continue;
     }
 
