@@ -1987,7 +1987,7 @@ static Node *compound_stmt(Token **rest, Token *tok) {
   node->body = head.next;
   *rest = tok->next;
 
-  if (opt('O','2')) {
+  if (opt('O','2') && !opt_nostatic_locals) {
     if (current_fn
     && !block_has_funcall_list(node->body)
     && locals != locals_before) {
