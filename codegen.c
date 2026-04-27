@@ -6,6 +6,7 @@ int depth;
 static Obj *current_fn;
 IX_Type	IX_Dest = IX_None;
 int IX_PTR_off = -1;
+char *IX_EXT_var = "";
 
 static void gen_stmt(Node *node);
 
@@ -310,6 +311,43 @@ void ldx_bp_nX(int off)
   }
   ldx_bp();
   ldx_nX(off);
+}
+
+void ldx_EXT(Node *node)
+{
+  assert(node->kind == ND_VAR);
+  Obj *var = node->var;
+  assert(!var->is_local);
+
+  if (IX_Dest == IX_EXT && strcmp(var->name,IX_EXT_var)==0) {
+    return;
+  }
+  println("\tldx _%s",var->name);
+  IX_Dest = IX_EXT;
+  IX_EXT_var = var->name;
+}
+
+void stx_EXT(Node *node)
+{
+  assert(node->kind == ND_VAR);
+  Obj *var = node->var;
+  assert(!var->is_local);
+
+  println("\tstx _%s",var->name);
+  IX_Dest = IX_EXT;
+  IX_EXT_var = var->name;
+}
+
+void invalidate_EXT(Node *node)
+{
+  assert(node->kind == ND_VAR);
+  Obj *var = node->var;
+  assert(!var->is_local);
+
+  if (strcmp(var->name,IX_EXT_var)==0) {
+    IX_Dest = IX_None;
+    fprintf("; invalidate_EXT %s\n",var->name);
+  }
 }
 
 void tfr_dx()
@@ -892,8 +930,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     if (is_int16_or_ptr(node->ty)) {
       if (is_global_var(node)) {
         if (test) return true;
-        println("\tldx _%s",node->var->name);
-        IX_Dest = IX_None;
+        ldx_EXT(node);
         return 0;
       }
       if (is_local_var(node)) {
@@ -943,27 +980,27 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
               case 1:
               case 2:
                 if (test) return true;
-                println("\tldx _%s",var);
+                ldx_EXT(lhs);
                 println("\tinx");
                 if (val==2) {
                   println("\tinx");
                 }
-                println("\tstx _%s",var);
+                stx_EXT(lhs);
                 println("\tdex");
                 if (val==2) {
                   println("\tdex");
                 }
-                IX_Dest = IX_None;
+                IX_Dest = IX_None; 
                 return 0;
               case -1:
               case -2:
                 if (test) return true;
-                println("\tldx _%s",var);
+                ldx_EXT(lhs);
                 println("\tdex");
                 if (val==-2) {
                   println("\tdex");
                 }
-                println("\tstx _%s",var);
+                stx_EXT(lhs);
                 println("\tinx");
                 if (val==-2) {
                   println("\tinx");
@@ -1268,9 +1305,9 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     &&  val==1 ){
       if (test) return 1;
       if (is_global_var(node->lhs->lhs)) {
-        println("\tldx _%s",node->lhs->lhs->var->name);
+        ldx_EXT(node->lhs->lhs);
         println("\tinx");
-        println("\tstx _%s",node->lhs->lhs->var->name);
+        stx_EXT(node->lhs->lhs);
       }else{
         int off = gen_addr_x(node->lhs->lhs,false);
         char *label = new_label("L_%d");
@@ -1662,7 +1699,7 @@ void load_var(Node *node)
       }else{
         println("\tldx _%s+2",node->var->name);
         println("\tstx @long+2");
-        println("\tldx _%s",  node->var->name);
+        ldx_EXT(node);
         println("\tstx @long");
         IX_Dest = IX_None;
       }
@@ -1691,7 +1728,7 @@ static void store(Type *ty) {
     if (ty->size==0)
       return;
     println("; store struct/union from AB to *TOS, size %d in IX",ty->size);
-    println("\tldx  #%d",ty->size);
+    println("\tldx #%d",ty->size);
     println("\tjsr  __copy_struct");	// remove tos
     depth -= 2;
     IX_Dest = IX_None;
@@ -2445,6 +2482,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL) {
    	      if (is_store) {
             println("\t%s _%s",opb,node->var->name);
+            invalidate_EXT(node);
             return 1;
           }
           println("\t%s _%s",opb,node->var->name);
@@ -2461,6 +2499,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         println("\t%s _%s+1",opb,node->var->name);
         if (opa)
           println("\t%s _%s",opa,node->var->name);
+        invalidate_EXT(node);
         return 1;
       }
     }
@@ -2479,6 +2518,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         case TY_BOOL:
         case TY_CHAR:
           println("\t%s _%s",opb,node->lhs->var->name);
+          invalidate_EXT(node->lhs);
           return 1;
         case TY_SHORT:
         case TY_INT:
@@ -2486,6 +2526,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         case TY_PTR:
           println("\t%s _%s+1",opb,node->lhs->var->name);
           println("\t%s _%s",  opa,node->lhs->var->name);
+          invalidate_EXT(node->lhs);
           return 1;
         }
       }
@@ -3382,6 +3423,7 @@ static void opeq(Node *node)
         gen_expr(rhs);
         println("\taddb _%s",lhs->var->name);
         println("\tstab _%s",lhs->var->name);
+        invalidate_EXT(lhs);
         return;
       }
       if (test_addr_x(lhs)) {
@@ -3409,6 +3451,7 @@ static void opeq(Node *node)
         println("\tadca _%s",lhs->var->name);
         println("\tstab _%s+1",lhs->var->name);
         println("\tstaa _%s",lhs->var->name);
+        invalidate_EXT(lhs);
         return;
       }
       if (test_addr_x(lhs)) {
@@ -3702,6 +3745,7 @@ static void opeq(Node *node)
                 println("\tror _%s+1",node->lhs->var->name);
                 val /= 2;
               }
+              invalidate_EXT(node->lhs);
             }else{
               int off = gen_addr_x(node->lhs,false);
               while(val>1) {
@@ -3890,7 +3934,7 @@ static void opeq(Node *node)
             assert(0);
           }
           println("\tstab _%s",node->lhs->var->name);
-          IX_Dest = IX_None;
+          invalidate_EXT(node->lhs);
           return;
         }
         gen_expr(node->rhs);
@@ -4029,6 +4073,7 @@ static void opeq(Node *node)
     case TY_BOOL:
     case TY_CHAR: 
       if (is_global_var(lhs)) {
+        invalidate_EXT(lhs);
         if (is_integer_constant(rhs, &val)){
           if (node->retval_unused && val<=2) {
             if (node->kind == ND_SHLEQ) {
@@ -4265,6 +4310,7 @@ void gen_expr(Node *node) {
 
     if (is_global_var(node->lhs)) {
       char *var = node->lhs->var->name;
+      invalidate_EXT(node->lhs);
       switch (node->lhs->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
@@ -4440,6 +4486,7 @@ void gen_expr(Node *node) {
     int off;
 
     if (is_global_var(node->lhs)) {
+      invalidate_EXT(node->lhs);
       char *var = node->lhs->var->name;
       switch (node->lhs->ty->kind) {
       case TY_BOOL:
@@ -4806,7 +4853,7 @@ void gen_expr(Node *node) {
       if (is_global_var(node->lhs)
       &&  test_expr_x(node->rhs)) {
         gen_expr_x(node->rhs,false);
-        println("\tstx _%s",node->lhs->var->name);
+        stx_EXT(node->lhs);
         return;
       }
     }

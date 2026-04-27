@@ -481,6 +481,7 @@ void ldx_bp(void);
 void ldx_bp_nX(int off);
 void ldx_nX(int off);
 int ldx_x(Type *ty,int off);
+void ldx_EXT(Node *node);
 void tfr_dx();
 int gen_expr_x(Node *node,bool save_d);
 bool test_expr_x(Node *node);
@@ -515,6 +516,8 @@ typedef	enum {
   IX_BP,
   IX_VAR,
   IX_PTR,
+  IX_IMM,
+  IX_EXT,
 } IX_Type;
 
 extern IX_Type	IX_Dest;
@@ -585,6 +588,7 @@ extern StringArray include_paths;
 extern bool opt_fpic;
 extern bool opt_fcommon;
 extern bool opt_optimize;
+extern bool opt_nostatic_locals;
 extern char *base_file;
 extern char opt_O;
 extern char opt_g;
