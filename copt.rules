@@ -265,15 +265,6 @@
 	pshb
 	pshb
 
-	ldab %2,x
-	ldaa %1,x
-	jsr __u16to32
-=
-	ldx %1,x
-	stx @long+2
-	ldx #0
-	stx @long
-
 	ldab %4,x
 	stab @long+3
 	ldab %3,x
@@ -837,11 +828,11 @@
 	andb %2
 
 	clra
-	ldab %1,x
+	ldab %1
 	anda #0
 =
 	clra
-	ldab %1,x
+	ldab %1
 
 	ora #0
 	stab %1
@@ -900,11 +891,11 @@
 =
 	ldab %1
 
-	ldab %2,x
-	ldaa %1,x
+	ldab %2
+	ldaa %1
 	jsr __load8
 =
-	ldx %1,x
+	ldx %1
 	ldab 0,x
 
 	jsr __load16
@@ -920,11 +911,11 @@
 	jsr 0,x
 
 	clra
-	ldab %1,x
+	ldab %1
 	clra
 =
 	clra
-	ldab %1,x
+	ldab %1
 
 	inx
 	cpx #0
