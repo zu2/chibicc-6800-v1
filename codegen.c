@@ -4028,16 +4028,52 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
-      if (test_addr_x(node->lhs)) {
-        if (is_integer_constant(node->rhs, &val)){
-          int off = gen_addr_x(node->lhs,true);
+      if (is_global_var(lhs)) {
+        if (is_integer_constant(rhs, &val)){
+          if (node->retval_unused && val<=2) {
+            if (node->kind == ND_SHLEQ) {
+              for (int i=0; i<val; i++) {
+                println("\tasl _%s",lhs->var->name);
+              }
+              return;
+            }else if (lhs->ty->is_unsigned) {  // ND_SHREQ && unsigned
+              for (int i=0; i<val; i++) {
+                println("\tlsr _%s",lhs->var->name);
+              }
+              return;
+            }else{                                   // ND_SHREQ && signed
+              for (int i=0; i<val; i++) {
+                println("\tasr _%s",lhs->var->name);
+              }
+              return;
+            }
+          }
+          println("\tldab _%s",lhs->var->name);
+          if (val==0) {
+            return;
+          }
+          if (node->kind == ND_SHLEQ) {
+            if (gen_shl(lhs->ty,val)) {
+              println("\tstab _%s",lhs->var->name);
+              return;
+            }
+          }else if (gen_shr(lhs->ty,val)) {
+            println("\tstab _%s",lhs->var->name);
+            return;
+          }
+          println("\tclrb");
+          return;
+        }
+      }else if (test_addr_x(lhs)) {
+        if (is_integer_constant(rhs, &val)){
+          int off = gen_addr_x(lhs,true);
           if (node->retval_unused && val<=2) {
             if (node->kind == ND_SHLEQ) {
               for (int i=0; i<val; i++) {
                 println("\tasl %d,x",off);
               }
               return;
-            }else if (node->lhs->ty->is_unsigned) {  // ND_SHREQ && unsigned
+            }else if (lhs->ty->is_unsigned) {  // ND_SHREQ && unsigned
               for (int i=0; i<val; i++) {
                 println("\tlsr %d,x",off);
               }
@@ -4054,24 +4090,24 @@ static void opeq(Node *node)
             return;
           }
           if (node->kind == ND_SHLEQ) {
-            if (gen_shl(node->lhs->ty,val)) {
+            if (gen_shl(lhs->ty,val)) {
               println("\tstab %d,x",off);
               return;
             }
-          }else if (gen_shr(node->lhs->ty,val)) {
+          }else if (gen_shr(lhs->ty,val)) {
             println("\tstab %d,x",off);
             return;
           }
           println("\tclrb");
           return;
         }
-        gen_expr(node->rhs);
+        gen_expr(rhs);
         push1();
-        int off = gen_addr_x(node->lhs,true);
+        int off = gen_addr_x(lhs,true);
         println("\tldab %d,x",off);
         if (node->kind == ND_SHLEQ) {
           println("\tjsr __shl8");
-        }else if (node->lhs->ty->is_unsigned) {
+        }else if (lhs->ty->is_unsigned) {
           println("\tjsr __shr8u");
         }else{
           println("\tjsr __shr8s");
@@ -4081,9 +4117,9 @@ static void opeq(Node *node)
         ins(1);
         return;
       } // TY_BOOL, TY_CHAR
-      gen_addr(node->lhs); 
+      gen_addr(lhs); 
       push();
-      gen_expr(node->rhs);
+      gen_expr(rhs);
       push1();
       println("\ttsx");
       println("\tldx 1,x");
@@ -4091,7 +4127,7 @@ static void opeq(Node *node)
       println("\tclra");
       if (node->kind == ND_SHLEQ) {
         println("\tjsr __shl16");
-      }else if (node->lhs->ty->is_unsigned) {
+      }else if (lhs->ty->is_unsigned) {
         println("\tjsr __shr16u");
       }else{
         println("\tjsr __shr16s");
