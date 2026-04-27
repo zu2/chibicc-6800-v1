@@ -283,9 +283,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
   }
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
     if (is_global_var(node)) {
-      println("\tldx _%s", node->var->name);
+      ldx_EXT(node);
       println("\tjeq %s", if_false);
-      IX_Dest = IX_None;
       return true;
     }
     if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
@@ -425,7 +424,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
           return true;
         } else {
           println("; int<=0 is !(int==0 || int<0)");
-          println("\tjeq %s", if_thru);
+          println("\tbeq %s", if_thru);
           println("\tjpl %s", if_false);
           println("%s:",if_thru);
           return true;
@@ -805,9 +804,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
   }
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
     if (is_global_var(node)) {
-      println("\tldx _%s", node->var->name);
+      ldx_EXT(node);
       println("\tjne %s", if_true);
-      IX_Dest = IX_None;
       return true;
     }
     if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
