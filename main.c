@@ -420,7 +420,7 @@ static void parse_args(int argc, char **argv) {
     }
     if (!strncmp(argv[i], "-O", 2)) {
       if (argv[i][2]=='\0') {
-        opt_O = '1';
+        opt_O = '2';
       }else{
         opt_O = argv[i][2];
       }
