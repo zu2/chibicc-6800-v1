@@ -105,6 +105,18 @@
 	pshb
 	psha
 
+	clrb
+	clra
+	pshb
+	psha
+	clrb
+	clra
+=
+	clrb
+	clra
+	pshb
+	psha
+
 #
 #
 #
@@ -231,6 +243,18 @@
 =
 	ldab #<%1+%2
 	ldaa #>%1+%2
+
+	ldab #<%1
+	tba
+	stab %2,x
+	staa %3,x
+	ldab #<%1
+	tba
+=
+	ldab #<%1
+	tba
+	stab %2,x
+	staa %3,x
 
 
 	ldab #<%1
