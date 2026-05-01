@@ -5,6 +5,7 @@
 #define _STDLIB_H_
 
 #include <stddef.h> // for size_t
+#include <malloc.h>
 
 #define RAND_MAX 32767
 
