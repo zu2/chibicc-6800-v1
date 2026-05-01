@@ -885,7 +885,140 @@ bool gen_jump_if_true(Node *node, char *if_true)
     goto fallback;
   }
 
-  if (can_direct(rhs)) {
+ // if (expr op 0)
+  if (is_integer_constant(rhs,&val) && val==0) {
+    if (test_expr_x(lhs)) {
+      gen_expr_x(lhs,false); // Evaluate LHS anyway; no side-effect check yet.
+      println("\tcpx #0");
+      switch (node->kind) {
+      case ND_EQ:
+        println("\tjeq %s", if_true);
+        return true;
+      case ND_NE:
+        println("\tjne %s", if_true);
+        return true;
+      case ND_LT:
+        if (lhs->ty->is_unsigned) {
+          println("; uint < 0 is always false");
+          return true;
+        }
+        println("\tjmi %s", if_true);
+        return true;
+      case ND_GT:
+        if (lhs->ty->is_unsigned) {
+          println("; uint > 0 is true for any value other than zero.");
+          println("\tjne %s", if_true);
+          return true;
+        } else {
+          println("; int>0 is !(int<0) && !(int==0)");
+          println("\tjeq %s", if_thru);
+          println("\tjpl %s", if_true);
+          println("%s:",if_thru);
+          return true;
+        }
+        break;
+      case ND_GE:
+        if (lhs->ty->is_unsigned) {
+          println("; uint >= 0 is always true");
+          println("\tjmp %s",if_true);
+          return true;
+        } else {
+          println("\tjpl %s", if_true);
+          return true;
+        }
+        break;
+      case ND_LE:
+        if (lhs->ty->is_unsigned) {
+          println("; uint<=0 only when it is exactly 0");
+          println("\tjeq %s", if_true);
+          return true;
+        } else {
+          println("; int<=0 is !(int==0 || int<0)");
+          println("\tjmi %s", if_true);
+          println("\tjeq %s", if_true);
+          return true;
+        }
+        break;
+      }
+    } else {
+      gen_expr(lhs);  // Evaluate LHS anyway; no side-effect check yet.
+      switch (node->kind) {
+      case ND_EQ:
+      case ND_NE:
+        break;
+      case ND_LT:
+        if (lhs->ty->is_unsigned) {
+          println("; uint < 0 is always false");
+          return true;
+        }
+        // 'subb #0 / sbca #0' can be substituted with 'tsta'.
+        println("\ttsta");
+        break;
+      case ND_GT:
+        if (lhs->ty->is_unsigned) {
+          println("; uint > 0 is true for any value other than zero.");
+          node->kind = ND_NE;
+        } else {
+          println("\ttsta");
+        }
+        break;
+      case ND_GE:
+        if (lhs->ty->is_unsigned) {
+          println("; uint >= 0 is always true");
+          println("\tjmp %s",if_true);
+          return true;
+        } else {
+          println("\ttsta");
+        }
+        break;
+      case ND_LE:
+        if (lhs->ty->is_unsigned) {
+          println("; uint<=0 only when it is exactly 0");
+          node->kind = ND_EQ;
+        } else {  // int<=0  is !(int>=1)
+          println("\tsubb #<1");
+          println("\tsbca #>1");
+          println("\tjlt %s",if_true);
+          return true;
+        }
+        break;
+      }
+    }
+    // ↑ if (expr op 0) 
+    // ↓ if (expr op const)
+  } else if (is_integer_constant(rhs,&val)
+         && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_expr_x(lhs))) {
+      int off = gen_expr_x(lhs,false);
+      println("\tcpx #%ld",val);
+      switch(node->kind) {
+      case ND_EQ:
+        println("\tjeq %s", if_true);
+        return true;
+      case ND_NE:
+        println("\tjne %s", if_true);
+        return true;
+      default: ;
+        assert(0);    // It's strange to fail
+      }
+  } else if (is_integer_constant(rhs,&val)
+         && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_addr_x(lhs))) {
+      int off = gen_addr_x(lhs,false);
+      ldx_nX(off);
+      println("\tcpx #%ld",val);
+      switch(node->kind) {
+      case ND_EQ:
+        println("\tjeq %s", if_true);
+        return true;
+      case ND_NE:
+        println("\tjne %s", if_true);
+        return true;
+      default: ;
+        assert(0);    // It's strange to fail
+      }
+    // ↑ rhs==const && EQ or NE
+  } else if (can_direct(rhs)) {
     gen_expr(lhs);  // Evaluate LHS anyway; no side-effect check yet.
     if (rhs->kind == ND_NUM && rhs->val == 0) {
       if (node->kind != ND_EQ && node->kind != ND_NE) {
