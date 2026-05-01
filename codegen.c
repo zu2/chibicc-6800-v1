@@ -346,7 +346,6 @@ void invalidate_EXT(Node *node)
 
   if (strcmp(var->name,IX_EXT_var)==0) {
     IX_Dest = IX_None;
-    fprintf("; invalidate_EXT %s\n",var->name);
   }
 }
 
@@ -4343,8 +4342,9 @@ void gen_expr(Node *node) {
           if (opt('O','s')) {
             println("\tldx _%s",var);
             println("\tinx");
-            println("\tstx _%s",var);
-            IX_Dest = IX_None;
+//          println("\tstx _%s",var);
+//          IX_Dest = IX_None;
+            stx_EXT(node->lhs);
           }else{
             char *label = new_label("L_%d");
             println("\tinc _%s+1",var);
@@ -4356,8 +4356,9 @@ void gen_expr(Node *node) {
           println("\tldx _%s",var);
           println("\tinx");
           println("\tinx");
-          println("\tstx _%s",var);
-          IX_Dest = IX_None;
+//        println("\tstx _%s",var);
+//        IX_Dest = IX_None;
+          stx_EXT(node->lhs);
         }else if (val>0) {
           println("\tldab _%s+1",var);
           println("\tldaa _%s",var);
@@ -4370,16 +4371,18 @@ void gen_expr(Node *node) {
             println("\tsbca #>%d",val);
           }
         } else if (node->retval_unused && val==-1) {
-            println("\tldx _%s",var);
-            println("\tdex");
-            println("\tstx _%s",var);
-            IX_Dest = IX_None;
+          println("\tldx _%s",var);
+          println("\tdex");
+//        println("\tstx _%s",var);
+//        IX_Dest = IX_None;
+          stx_EXT(node->lhs);
         } else if (node->retval_unused && val==-2) {
-            println("\tldx _%s",var);
-            println("\tdex");
-            println("\tdex");
-            println("\tstx _%s",var);
-            IX_Dest = IX_None;
+          println("\tldx _%s",var);
+          println("\tdex");
+          println("\tdex");
+//        println("\tstx _%s",var);
+//        IX_Dest = IX_None;
+          stx_EXT(node->lhs);
         } else { // val<0
           val = abs(val);
           println("\tldab _%s+1",var);
@@ -4517,14 +4520,16 @@ void gen_expr(Node *node) {
         if (node->retval_unused && val==1 && opt('O','s')) {
           println("\tldx _%s",var);
           println("\tinx");
-          println("\tstx _%s",var);
-          IX_Dest = IX_None;
+//        println("\tstx _%s",var);
+//        IX_Dest = IX_None;
+          stx_EXT(node->lhs);
         }else if (node->retval_unused && val==2 && opt('O','s')) {
           println("\tldx _%s",var);
           println("\tinx");
           println("\tinx");
-          println("\tstx _%s",var);
-          IX_Dest = IX_None;
+//        println("\tstx _%s",var);
+//        IX_Dest = IX_None;
+          stx_EXT(node->lhs);
         }else if (val>0) {
           println("\tldab _%s+1",var);
           println("\tldaa _%s",var);
@@ -4533,16 +4538,18 @@ void gen_expr(Node *node) {
           println("\tstab _%s+1",var);
           println("\tstaa _%s",var);
         } else if (node->retval_unused && val==-1 && opt('O','s')) {
-            println("\tldx _%s",var);
-            println("\tdex");
-            println("\tstx _%s",var);
-            IX_Dest = IX_None;
+          println("\tldx _%s",var);
+          println("\tdex");
+//        println("\tstx _%s",var);
+//        IX_Dest = IX_None;
+          stx_EXT(node->lhs);
         } else if (node->retval_unused && val==-2 && opt('O','s')) {
-            println("\tldx _%s",var);
-            println("\tdex");
-            println("\tdex");
-            println("\tstx _%s",var);
-            IX_Dest = IX_None;
+          println("\tldx _%s",var);
+          println("\tdex");
+          println("\tdex");
+//        println("\tstx _%s",var);
+//        IX_Dest = IX_None;
+          stx_EXT(node->lhs);
         } else { // val<0
           val = abs(val);
           println("\tldab _%s+1",var);
