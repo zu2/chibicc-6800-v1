@@ -3462,6 +3462,17 @@ static void opeq(Node *node)
         println("\tstaa %d,x",off);
         return;
       }
+      if (is_integer_constant(rhs,&val)) {
+        gen_addr(lhs);
+        tfr_dx();
+        println("\tldab 1,x");
+        println("\tldaa 0,x");
+        println("\taddb #<%ld",val);
+        println("\tadca #>%ld",val);
+        println("\tstab 1,x");
+        println("\tstaa 0,x");
+        return;
+      }
       gen_addr(lhs);
       push();
       gen_expr(rhs);
@@ -3593,6 +3604,17 @@ static void opeq(Node *node)
         println("\tstab %d,x",off+1);
         println("\tstaa %d,x",off);
         IX_Dest = IX_None;
+        return;
+      }
+      if (is_integer_constant(rhs,&val)) {
+        gen_addr(lhs);
+        tfr_dx();
+        println("\tldab 1,x");
+        println("\tldaa 0,x");
+        println("\tsubb #<%ld",val);
+        println("\tsbca #>%ld",val);
+        println("\tstab 1,x");
+        println("\tstaa 0,x");
         return;
       }
       gen_addr(lhs);
