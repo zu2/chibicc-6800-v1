@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 	if (strcmp("Hello,","World")==0)
 	  return 1;
 
-	if (strcmp("Hello,","World")>0)
+	if (strcmp("Hello,","World")>=0)
 	  return 2;
 
 	if (strcmp("Hello,","Hello,"))
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 	if (strcmp("World","Hello,")==0)
 	  return 4;
 
-	if (strcmp("World","Hello,")<0)
+	if (strcmp("World","Hello,")<=0)
 	  return 5;
 
 
