@@ -49,12 +49,9 @@ _strcmp_eq:
 	clrb
 	clra
 	rts			; return 0
-_strcmp_ne:
-	bcs	_strcmp_lt
-	ldab	#1		; return 1
-	clra
-	rts
-_strcmp_lt:
-	ldab	#$FF		; return -1
+_strcmp_ne:			; if C==1 return -1 else return 1
+	ldab	#0
+	sbcb	#0		; if C==1 then AccB=$FF else AccB=$00
 	tba
+	orab	#1		; set AccB to $FF or $01
 	rts
