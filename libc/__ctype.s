@@ -43,10 +43,14 @@ _isdigit:			; return (c >= '0' && c <= '9')
 	rts
 ;
 _isalnum:			; isalpha(c) || isdigit(c)
+	pshb
 	bsr	_isdigit
+	pulb
 	bne	__ret
 _isalpha:			; isupper(c) || islower(c)
+	pshb
 	bsr	_islower
+	pulb
 	bne	__ret
 _isupper:			; (c >= 'A' && c <= 'Z')
 	eorb	#$20		; Change case: A-Z to a-z, and vice versa.
@@ -87,9 +91,13 @@ __ret00:
 	rts
 ;
 _ispunct:			; isprint(c) && !isspace(c) && !isalnum(c)
+	pshb
 	bsr	_isalnum
+	pulb
 	bne	__ret0
+	pshb
 	bsr	_isspace
+	pulb
 	bne	__ret0
 ;
 _isprint:			; (c >= 0x20 && c <= 0x7E)
