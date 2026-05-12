@@ -26,21 +26,23 @@ _strchr:
 	ldx	@tmp1
 	dex
 ;
-_strchr_loop:
+loop:
 	inx
-	cmpb	0,x
-	beq	_strchr_found
 	ldaa	0,x
-	bne	_strchr_loop
-	clrb
-;	clra                    ; here, AccA==0
-	rts
-_strchr_found:
+	beq	str_end
+	cba
+	bne	loop
+found:
 	stx	@tmp1
 	ldab	@tmp1+1
 	ldaa	@tmp1
 	rts
-;
+str_end:
+	cba
+	beq	found
+	clrb
+;	clra                    ; here, AccA==0
+	rts
 
 	
 	
