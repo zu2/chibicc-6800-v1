@@ -19,6 +19,9 @@ int isalpha(int c);
 // Return nonzero if c is a letter or digit
 int isalnum(int c);
 
+// Return nonzero if c is a ascii char (0x00..0x7f)
+int isascii(int c);
+
 // Return nonzero if c is a hexadecimal digit ('0'..'9', 'A'..'F', 'a'..'f')
 int isxdigit(int c);
 
@@ -27,6 +30,9 @@ int isspace(int c);
 
 // Return nonzero if c is a printable character
 int isprint(int c);
+
+// Return nonzero if c is a graph character (0x21..0x7e)
+int isgraph(int c);
 
 // Return nonzero if c is a punctuation character
 int ispunct(int c);

@@ -25,7 +25,13 @@ OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o __mul8x8u.o __mul8x8
 	__func.o __jmp_d.o \
 	__popx_stxbp.o __pulbp_rts.o \
 	__div16x8.o __div16by3.o \
-	__puts.o
+	__puts.o \
+	_isalnum.o _isascii.o _isblank.o _iscntrl.o \
+	_isdigit.o _isgraph.o _islower.o _isprint.o \
+	_ispunct.o _isspace.o _isupper.o _isxdigit.o \
+	_tolower.o _toupper.o
+
+# islower has isalpha
 
 .s.o:
 	as6800 $<
