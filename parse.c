@@ -1919,6 +1919,8 @@ static bool block_has_funcall_list(Node *node) {
 static bool block_has_funcall(Node *node) {
   if (!node) return false;
   if (node->kind == ND_FUNCALL) return true;
+  if (node->kind == ND_VLA_PTR) return true;
+  if (node->kind == ND_ASM)     return true;
   return block_has_funcall(node->lhs)
       || block_has_funcall(node->rhs)
       || block_has_funcall(node->cond)
@@ -1988,14 +1990,19 @@ static Node *compound_stmt(Token **rest, Token *tok) {
   node->body = head.next;
   *rest = tok->next;
 
+#if 1
   if (opt('O','2') && !opt_nostatic_locals) {
     if (current_fn
-    && !block_has_funcall_list(node->body)
-    && locals != locals_before) {
+    &&  !current_fn->use_alloca
+    &&  !current_fn->use_funcall
+    &&  !current_fn->use_asm
+    &&  !block_has_funcall_list(node->body)
+    &&  locals != locals_before) {
       promote_locals_to_static(locals_before);
       locals = locals_before;
     }
   }
+#endif
 
   return node;
 }
@@ -3677,9 +3684,17 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
     fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
   }
   fn->locals = locals;
-  if (opt('O','2') && !opt_nostatic_locals && !fn->use_alloca && !fn->use_funcall && !fn->use_asm) {
-    optimize_leaf(fn);
+
+  if (opt('O','2') && !opt_nostatic_locals) {
+    if (!fn->use_alloca
+    &&  !fn->use_funcall
+    &&  !fn->use_asm
+    &&  !block_has_funcall_list(fn->body)
+    &&  fn->locals) {
+      optimize_leaf(fn);
+    }
   }
+
   leave_scope();
   resolve_goto_labels();
   return tok;
