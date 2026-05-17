@@ -7,7 +7,7 @@ _toupper:			; islower(c)? c - ('a' - 'A'): c;
 	cmpb	#'a'
 	bcs	ret
 	cmpb	#'z'+1
-	bcs	ret
+	bcc	ret
 	subb	#'a'-'A'
 ret:	rts
 
