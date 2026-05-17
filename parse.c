@@ -1990,7 +1990,7 @@ static Node *compound_stmt(Token **rest, Token *tok) {
   node->body = head.next;
   *rest = tok->next;
 
-#if 1
+#if 0
   if (opt('O','2') && !opt_nostatic_locals) {
     if (current_fn
     &&  !current_fn->use_alloca
