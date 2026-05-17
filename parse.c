@@ -1854,6 +1854,7 @@ static Node *stmt(Token **rest, Token *tok) {
   if (equal(tok, "asm")) {
     Node *node = asm_stmt(&tok, tok);
     *rest = skip(tok,";");
+    current_fn->use_asm = true;
     return node;
   }
 
@@ -3676,7 +3677,7 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
     fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
   }
   fn->locals = locals;
-  if (opt('O','2') && !opt_nostatic_locals && !fn->use_alloca && !fn->use_funcall) {
+  if (opt('O','2') && !opt_nostatic_locals && !fn->use_alloca && !fn->use_funcall && !fn->use_asm) {
     optimize_leaf(fn);
   }
   leave_scope();
@@ -3773,13 +3774,13 @@ static void declare_builtin_functions(void) {
   ty4->params = NULL;
   new_gvar("__builtin_inff", ty4)->is_definition = false;
 
-  // float __builtin_inff(void)
+  // int __builtin_clz(unsigned long)
   Type *ty5 = func_type(ty_int);
   ty5->params = copy_type(ty_ulong);
   new_gvar("__builtin_clz", ty5)->is_definition = false;
 
-  // float __builtin_inff(void)
-  Type *ty6 = func_type(ty_int);
+  // int __builtin_ctz(unsigned long)
+  Type *ty6 = func_type(ty_long);
   ty6->params = copy_type(ty_ulong);
   new_gvar("__builtin_ctz", ty6)->is_definition = false;
 }

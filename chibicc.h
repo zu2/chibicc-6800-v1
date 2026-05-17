@@ -168,6 +168,7 @@ struct Obj {
   int return_count;
   bool use_alloca;
   bool use_funcall;
+  bool use_asm;
 
   // Static inline function
   bool is_live;
