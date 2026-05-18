@@ -12,15 +12,15 @@
 ;	    +4	radix
 ;
 ;	working area:
-;	__value	value
-;	__p	string pointer
-;	__f	first digit
-;	__sign	sign
+;	value	value
+;	p	string pointer
 ;
 	.data
-__value:.word	0
-__p:	.word	0
-__q:	.word	0
+value:	.word	0
+radix:	.byte	0
+p:	.word	0
+q:	.word	0
+len:	.byte	0
 	.export _itoa
 	.export __itoa
 	.export _uitoa
@@ -31,131 +31,133 @@ __q:	.word	0
 ;         Z=1: yes
 ;         Z=0: no
 ;
-__radix_check:
+radix_check:
 	ldab 5,x		; check radix low byte
+	stab radix		; save radix
 	cmpb #2
-	bcs __radix_check_ret
+	bcs radix_check_ret
 	cmpb #36
-	bhi __radix_check_ret
+	bhi radix_check_ret
 	tst 4,x			; check radix high byte
-__radix_check_ret:
+radix_check_ret:
         rts
 ;
 _itoa:
 __itoa:
-	stab __value+1		; save value
-	staa __value		;
+	stab value+1		; save value
+	staa value		;
         tsx
-        bsr __radix_check
-        bne __uitoa_ret_null
+        bsr radix_check
+        bne uitoa_ret_null
 ;
-	ldab 5,x		; check radix==10?
-	cmpb #10
-        bne __uitoa_null_check
+	cmpb #10		; check radix==10?
+        bne uitoa_null_check
         tsta
-        bpl __uitoa_null_check
+        bpl uitoa_null_check
 ;
         nega                    ; value = -value
-        neg __value+1
+        neg value+1
         sbca #0
-        staa __value
+        staa value
 ;
         ldx 2,x
-        beq __uitoa_ret_null
+        beq uitoa_ret_null
         ldab #'-'
         stab 0,x
         inx
-        bra __uitoa_main
+        bra uitoa_main
 ;
 _uitoa:
 __uitoa:
-	stab __value+1		; save value
-	staa __value		;
+	stab value+1		; save value
+	staa value		;
         tsx
-        bsr __radix_check
-        bne __uitoa_ret_null
-__uitoa_null_check:
+        bsr radix_check
+        bne uitoa_ret_null
+uitoa_null_check:
 	ldx 2,x
-	bne __uitoa_main
-__uitoa_ret_null:
+	bne uitoa_main
+uitoa_ret_null:
 	clrb
 	clra
 	rts
 ;
-__uitoa_main:
-	stx __p
+uitoa_main:
+	stx p
 ;
-	ldx __value
-	bne __uitoa_not_0
+	ldx value
+	bne uitoa_not_0
 ;
-	ldx __p
-	ldab #$30		; '0'
+	ldx p
+	ldab #'0'
 	stab 0,x
 	inx
 	clr 0,x
 ;
-__uitoa_ret_str:
+uitoa_ret_str:
 	tsx			; return str
 	ldab 3,x
 	ldaa 2,x
 	rts
 ;
-__uitoa_not_0:
-	ldx __p
-	stx __q			; most significant digit
-__uitoa_loop:
-	ldab __value+1
-	ldaa __value
-	tsx
-	pshb
-	psha
-	ldab 5,x		; radix
-	ldaa 4,x
-	jsr __div16x16		; AccAB = TOS % AccAB	@tmp2 = TOS / AccAB
-        com @tmp2+1
-        com @tmp2
-	ins
-	ins
+uitoa_not_0:
+	ldx p
+	stx q			; the most significant digit
+	clr len
+;				; Calculating each digit requires division.
+;				; AccB = value % radix, value /= radix
+	ldaa value+1
+uitoa_loop:
+	ldx #16
+	clrb
+div_loop:
+	asla
+	rol value
+	rolb
+	inca
+	subb radix
+	bcc div_skip
+	addb radix
+	deca
+div_skip:
+	dex
+	bne div_loop
 ;
-	cmpb #10		; (value % radix) < 10?
-	bcc __uitoa_hex
-	addb #$30		; +'0'
-	bra __uitoa_store
-;
-__uitoa_hex:
-	addb #$57		; +'a'-10
-__uitoa_store:
-	ldx __p
+	addb #'0'		; +'0'
+	cmpb #'0'+10		; (value % radix) < 10?
+	bcs uitoa_store
+	addb #'a'-'9'-1		; +'a'-('9'+1)
+uitoa_store:
+	ldx p
 	stab 0,x
 	inx
-	stx __p
-	ldx @tmp2		; value /= radix
-	stx __value
-	bne __uitoa_loop
+	stx p
+	inc len
+	staa value+1
+	ldx value
+	bne uitoa_loop		; loop until value==0
 ;
-	ldx __p
+	ldx p
 	clr 0,x
-	dex			; least significant digit
-	stx __p
+	dex
+	stx p
 ;
-;	reverse __p to __q
+;	Reverse the string from q to p, len bytes
 ;
-	ldx __q
-__uitoa_rev_loop:
-	ldab __q+1
-	ldaa __q
-	subb __p+1
-	sbca __p
-	bge __uitoa_ret_str
+	lsr len
+	beq uitoa_ret_str
+uitoa_rev_loop:
 	ldab 0,x
-	ldx __p
+	ldx q
 	ldaa 0,x
 	stab 0,x
-	dex
-	stx __p
-	ldx __q
-	staa 0,x
 	inx
-	stx __q
-	bra	__uitoa_rev_loop
+	stx q
+	ldx p
+	staa 0,x
+	dex
+	stx p
+	dec len
+	bne uitoa_rev_loop
+	bra uitoa_ret_str
 ;
