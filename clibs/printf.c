@@ -237,7 +237,7 @@ static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *b
   } else {
     *p++ = '+';
   }
-  itoa(exp, (char *)p, 10); 
+  uitoa((uint16_t)exp, (char *)p, 10); 
 }
 
 // printf-like function (float only, no double, + and - flags as bool)
