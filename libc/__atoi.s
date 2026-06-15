@@ -2,7 +2,7 @@
 ;	int atoi(const char char *s)
 ;	{
 ;	   int n = 0, sign = 1;
-;          while (*nptr == ' ' || *nptr == '\t') nptr++;
+;          while (ispace(*nptr)) nptr++;
 ;          if (*nptr == '-') { sign = -1; nptr++; }
 ;          else if (*nptr == '+') nptr++;
 ;          while (*nptr >= '0' && *nptr <= '9') {
@@ -22,31 +22,32 @@ _atoi:
 	staa	@tmp1
 	ldx	@tmp1
 	dex
-;
-__atoi_skip:
+space_skip:
 	inx
 	ldab	0,x
 	cmpb	#' '
-	beq	__atoi_skip
-	cmpb	#'\t'
-	beq	__atoi_skip
+	beq	space_skip
+	cmpb	#$09
+	bcs	space_skip_end
+	cmpb	#$0d+1			; '\r'+1
+	bcs	space_skip
 ;
-	subb	#'-'
-	stab	@tmp1			; if '-' sign=0, otherwise sign!=0
-	bne	__atoi_not_minus
-	inx
-__atoi_not_minus:
-	ldab	0,x
+space_skip_end:
+	tba
+	suba	#'-'
+	staa	@tmp1			; if '-' sign=0, otherwise sign!=0
+	beq	init
 	cmpb	#'+'
-	bne	__atoi_not_plus
+	bne	not_plus
+init:
 	inx
 	ldab	0,x
-__atoi_not_plus:
+not_plus:
 	clra
 	staa	@tmp2+1			; low  byte of n
 	staa	@tmp2			; high byte of n
-	bra	__atoi_loop_start
-__atoi_num_loop:
+	bra	loop_start
+num_loop:
 	stab	@tmp1+1			; save b
 	ldab	@tmp2+1	
 ;	ldaa	@tmp2			; AccA keeps @tmp2
@@ -64,17 +65,17 @@ __atoi_num_loop:
 	staa	@tmp2
 	inx
 	ldab	0,x
-__atoi_loop_start:
+loop_start:
 	cmpb	#'9'+1
-	bcc	__atoi_num_end
+	bcc	num_end
 	subb	#'0'
-	bcc	__atoi_num_loop
-__atoi_num_end:
+	bcc	num_loop
+num_end:
 	ldab	@tmp2+1
 	tst	@tmp1
-	bne	__atoi_num_plus
+	bne	num_plus
 	nega
 	negb
 	sbca	#0
-__atoi_num_plus:
+num_plus:
 	rts
