@@ -8,7 +8,7 @@
 ;
 _isspace:
 	tsta
-	bne	ret0
+	bne	ret00
 	cmpb	#' '
 	beq	ret
 	cmpb	#$09		; \t
@@ -18,7 +18,8 @@ _isspace:
 	rolb
 ret:
 	rts
+ret00:
+	clra
 ret0:
 	clrb
-	clra
 	rts
