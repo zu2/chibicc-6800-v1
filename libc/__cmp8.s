@@ -12,6 +12,9 @@
 	.export __ge8s
 	.export __ge8u
 	.code
+;
+;	if Z=0 then AccAB=1 else 0
+;
 __eq8:
 	bne	__false
         clra
@@ -23,7 +26,7 @@ __false2:
 	clrb
 	rts
 ;
-;	AccAB=0 then AccAB=0 else 1
+;	if Z=1 then AccAB=0 else 1
 ;
 __ne8:
 	beq	__false
@@ -41,14 +44,15 @@ __lt8s:
 	rts
 ;
 __lt8u:
-	ldaa	#0
-	tab
-	adcb	#0
+	ldaa	#0	; 2 2
+	tab		; 2 1
+	adcb	#0	; 2 2
 	rts
-;	bcs	__true
-;	clrb
-;	clra
+;	bcs	__true	; 4 2
+;	clrb		; 2 1
+;	clra		; 2 1
 ;	rts
+
 ;
 ;	a-b > 0 ?
 ;
@@ -74,7 +78,7 @@ __le8s:
 	rts
 ;
 __le8u:
-	bcs	__true
+	bls	__true
 	clrb
 	clra
 	rts
