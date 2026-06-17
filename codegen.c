@@ -1088,7 +1088,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 #endif
     return false;
   } // ND_ADDR;
-//case ND_ASSIGN:
   case ND_ASSIGN: {
       println("; %s ND_ASSIGN %s %d",__func__,__FILE__,__LINE__);
     }
@@ -5349,7 +5348,7 @@ void gen_expr(Node *node) {
     case ND_LT:
     case ND_LE:
     case ND_GT:
-    case ND_GE: {
+    case ND_GE: { // float relop float
       char L_cmpf1[32];
       char L_cmpf2[32];
       int c = count();
@@ -5624,7 +5623,7 @@ void gen_expr(Node *node) {
     case ND_LT:
     case ND_LE:
     case ND_GT:
-    case ND_GE:
+    case ND_GE: // long relop long
       if (node->rhs->kind == ND_NUM && node->rhs->ty->kind==TY_LONG) {
         gen_direct_pushl(node->rhs->val);
       }else if (test_addr_x(node->rhs)){
@@ -6079,7 +6078,7 @@ void gen_expr(Node *node) {
   case ND_LT:
   case ND_LE:
   case ND_GT:
-  case ND_GE:
+  case ND_GE: // int relop int
     if ((node->rhs->kind ==ND_NUM)
     &&  (node->rhs->ty->kind != TY_INT)
     &&  (node->lhs->ty->kind != node->rhs->ty->kind)
@@ -6087,7 +6086,8 @@ void gen_expr(Node *node) {
 //    println("; Type mismatch between lhs and rhs");
       error_tok(node->tok, "Type mismatch between lhs and rhs");
     }
-    if (node->ty->kind==TY_CHAR) { // char op char
+    if ((lhs->ty->kind==TY_CHAR || lhs->ty->kind==TY_BOOL)
+    &&  (rhs->ty->kind==TY_CHAR || rhs->ty->kind==TY_BOOL)) { // char relop char
       if (can_direct(node->rhs)){
         gen_expr(node->lhs);
         if(!gen_direct(node->rhs,"cmpb",NULL)) {
@@ -6100,20 +6100,39 @@ void gen_expr(Node *node) {
         println("\tpula");
         println("\tcba");
       }
-      if (node->kind == ND_EQ) {
+      switch(node->kind){
+      case ND_EQ:
         println("\tjsr __eq8");
-      } else if (node->kind == ND_NE) {
+        break;
+      case ND_NE:
         println("\tjsr __ne8");
-      } else if (node->kind == ND_LT) {
+        break;
+      case ND_LT:
         if (node->lhs->ty->is_unsigned)
           println("\tjsr __lt8u");
         else
           println("\tjsr __lt8s");
-      } else if (node->kind == ND_LE) {
+        break;
+      case ND_LE:
         if (node->lhs->ty->is_unsigned)
           println("\tjsr __le8u");
         else
           println("\tjsr __le8s");
+        break;
+      case ND_GT:
+        if (node->lhs->ty->is_unsigned)
+          println("\tjsr __gt8u");
+        else
+          println("\tjsr __gt8s");
+        break;
+      case ND_GE:
+        if (node->lhs->ty->is_unsigned)
+          println("\tjsr __ge8u");
+        else
+          println("\tjsr __ge8s");
+        break;
+      default:
+        assert(0);
       }
       return;
     }

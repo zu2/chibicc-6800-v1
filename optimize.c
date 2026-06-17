@@ -208,6 +208,37 @@ Node *optimize_args(Node *args)
   return new;
 }
 
+Node *optimize_bitop_integral_promotion(Node *node)
+{
+  if (node->ty->kind            == TY_INT
+  &&  !node->ty->is_unsigned
+  &&  is_integral_promotion(node->lhs)
+  &&  node->lhs->lhs->ty->is_unsigned) {
+    if (node->rhs->kind           == ND_NUM
+    &&  node->rhs->ty->kind       == TY_INT
+    &&  node->rhs->val            >= 0
+    &&  node->rhs->val            <= 255) {
+      Node *new = new_copy(node);
+      new->ty  = ty_uchar;
+      new->lhs = node->lhs->lhs;
+      new->rhs = node->rhs;
+      new->rhs->ty = ty_uchar;
+      new = new_cast(new,ty_int);
+      return optimize_const_expr(new);
+    }
+    if (is_integral_promotion(node->rhs)
+    &&  node->rhs->lhs->ty->is_unsigned) {
+      Node *new = new_copy(node);
+      new->ty  = ty_uchar;
+      new->lhs = node->lhs->lhs;
+      new->rhs = node->rhs->lhs;
+      new = new_cast(new,ty_int);
+      return optimize_const_expr(new);
+    }
+  }
+  return optimize_const_expr(node);
+}
+
 Node *optimize_expr(Node *node)
 {
   Node *new;
@@ -573,39 +604,7 @@ Node *optimize_expr(Node *node)
   case ND_BITOR:
   case ND_BITXOR:
     node = optimize_lr_swap(node);
-    if (node->ty->kind            == TY_INT
-    &&  !node->ty->is_unsigned
-    &&  node->lhs->kind           == ND_CAST
-    &&  node->lhs->ty->kind       == TY_INT
-    &&  !node->lhs->ty->is_unsigned
-    &&  node->lhs->lhs->ty->kind  == TY_CHAR
-    &&  node->lhs->lhs->ty->is_unsigned) {
-      if (node->rhs->kind           == ND_NUM
-      &&  node->rhs->ty->kind       == TY_INT
-      &&  node->rhs->val            >= 0
-      &&  node->rhs->val            <= 255) {
-        Node *new = new_copy(node);
-        new->ty  = ty_uchar;
-        new->lhs = node->lhs->lhs;
-        new->rhs = node->rhs;
-        new->rhs->ty = ty_uchar;
-        new = new_cast(new,ty_int);
-        return optimize_const_expr(new);
-      }
-      if (node->rhs->kind           == ND_CAST
-      &&  node->rhs->ty->kind       == TY_INT
-      &&  !node->rhs->ty->is_unsigned
-      &&  node->rhs->lhs->ty->kind  == TY_CHAR
-      &&  node->rhs->lhs->ty->is_unsigned) {
-        Node *new = new_copy(node);
-        new->ty  = ty_uchar;
-        new->lhs = node->lhs->lhs;
-        new->rhs = node->rhs->lhs;
-        new = new_cast(new,ty_int);
-        return optimize_const_expr(new);
-      }
-    }
-    return optimize_const_expr(node);
+    return (optimize_bitop_integral_promotion(node));
   case ND_EQ:
   case ND_NE:
   case ND_LT:
@@ -652,6 +651,15 @@ Node *optimize_expr(Node *node)
         }
       }
     }
+#if 1
+    if (is_integral_promotion(node->lhs)
+    &&  is_integral_promotion(node->rhs)
+    &&  node->lhs->ty->is_unsigned == node->rhs->ty->is_unsigned) {
+      node->lhs = node->lhs->lhs;
+      node->rhs = node->rhs->lhs;
+      return node;
+    }
+#endif
 #if 1
 // (== ty_int (ND_CAST TY_INT(4) (ND_DEREF ty_uchar (ND_VAR TY_PTR(10) str +4 ))) 45) 
     if ( (lty=is_byte(node->lhs))
