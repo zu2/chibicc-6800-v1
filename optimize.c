@@ -651,16 +651,13 @@ Node *optimize_expr(Node *node)
         }
       }
     }
-#if 1
     if (is_integral_promotion(node->lhs)
     &&  is_integral_promotion(node->rhs)
-    &&  node->lhs->ty->is_unsigned == node->rhs->ty->is_unsigned) {
+    &&  node->lhs->lhs->ty->is_unsigned == node->rhs->lhs->ty->is_unsigned) {
       node->lhs = node->lhs->lhs;
       node->rhs = node->rhs->lhs;
       return node;
     }
-#endif
-#if 1
 // (== ty_int (ND_CAST TY_INT(4) (ND_DEREF ty_uchar (ND_VAR TY_PTR(10) str +4 ))) 45) 
     if ( (lty=is_byte(node->lhs))
     &&   (rty=is_byte(node->rhs)) ) {
@@ -691,7 +688,6 @@ Node *optimize_expr(Node *node)
         }
       }
     }
-#endif
     if ( is_integer(node->ty)
     &&  node->kind==ND_LE
     && is_integer_constant(node->rhs,&val)) {
