@@ -210,6 +210,7 @@ Node *optimize_args(Node *args)
 
 Node *optimize_bitop_integral_promotion(Node *node)
 {
+  // uchar op 0-255
   if (node->ty->kind            == TY_INT
   &&  !node->ty->is_unsigned
   &&  is_integral_promotion(node->lhs)
@@ -226,15 +227,37 @@ Node *optimize_bitop_integral_promotion(Node *node)
       new = new_cast(new,ty_int);
       return optimize_const_expr(new);
     }
-    if (is_integral_promotion(node->rhs)
-    &&  node->rhs->lhs->ty->is_unsigned) {
+  }
+  // char op -128..127
+  if (node->ty->kind            == TY_INT
+  &&  !node->ty->is_unsigned
+  &&  is_integral_promotion(node->lhs)
+  &&  !node->lhs->lhs->ty->is_unsigned) {
+    if (node->rhs->kind           == ND_NUM
+    &&  node->rhs->ty->kind       == TY_INT
+    &&  node->rhs->val            >= -128
+    &&  node->rhs->val            <= 127) {
       Node *new = new_copy(node);
-      new->ty  = ty_uchar;
+      new->ty  = ty_char;
       new->lhs = node->lhs->lhs;
-      new->rhs = node->rhs->lhs;
+      new->rhs = node->rhs;
+      new->rhs->ty = ty_uchar;
       new = new_cast(new,ty_int);
       return optimize_const_expr(new);
     }
+  }
+  // char op char, uchar op uchar
+  if (node->ty->kind            == TY_INT
+  &&  !node->ty->is_unsigned
+  &&  is_integral_promotion(node->lhs)
+  &&  is_integral_promotion(node->rhs)
+  &&  node->lhs->lhs->ty->is_unsigned == node->rhs->lhs->ty->is_unsigned) {
+    Node *new = new_copy(node);
+    new->ty  = node->lhs->lhs->ty;
+    new->lhs = node->lhs->lhs;
+    new->rhs = node->rhs->lhs;
+    new = new_cast(new,ty_int);
+    return optimize_const_expr(new);
   }
   return optimize_const_expr(node);
 }
@@ -350,12 +373,13 @@ Node *optimize_expr(Node *node)
       || lhs->kind == ND_BITXOR)
     &&  is_integral_promotion(lhs->lhs)
     &&  is_integral_promotion(lhs->rhs)) {
-      if (lhs->lhs->ty->is_unsigned == lhs->rhs->ty->is_unsigned) {
+      if (lhs->lhs->lhs->ty->is_unsigned == lhs->rhs->lhs->ty->is_unsigned) {
         lhs->lhs = lhs->lhs->lhs;
         lhs->rhs = lhs->rhs->lhs;
         return node;
       }
     }
+    // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
     // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
