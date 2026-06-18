@@ -6090,7 +6090,7 @@ void gen_expr(Node *node) {
     &&  (rhs->ty->kind==TY_CHAR || rhs->ty->kind==TY_BOOL)) { // char relop char
       if (can_direct(node->rhs)){
         gen_expr(node->lhs);
-        if(!gen_direct(node->rhs,"cmpb",NULL)) {
+        if(!gen_direct(node->rhs,"subb",NULL)) {
           assert(0);
         }
       }else{
@@ -6098,7 +6098,7 @@ void gen_expr(Node *node) {
         push1();
         gen_expr(node->lhs);
         println("\tpula");
-        println("\tcba");
+        println("\tsba");
       }
       switch(node->kind){
       case ND_EQ:
