@@ -215,6 +215,38 @@ Node *optimize_bitop_integral_promotion(Node *node)
   ||  node->ty->is_unsigned) {
     return node;  // no
   }
+  // (~(int)m & (int)x → (int)(~m & x)
+  //  m: char or uchar
+  //  x: uchar
+  // (& TY_INT(4) (ND_CAST TY_INT(4) x) (~ TY_INT(4) (ND_CAST TY_INT(4) m)))
+  if (node->kind == ND_BITAND
+  &&  node->rhs->kind == ND_BITNOT
+  &&  is_integral_promotion(node->rhs->lhs)
+  &&  is_integral_promotion(node->lhs)
+  &&  node->lhs->lhs->ty->is_unsigned) {
+    Node *lhs = node->lhs->lhs;
+    Node *rhs = node->rhs->lhs->lhs;
+    Node *new = new_copy(node);
+    new->ty = ty_uchar;
+    new->lhs = lhs;
+    new->rhs = new_unary(ND_BITNOT,rhs,rhs->tok);
+    new->rhs->ty = ty_uchar;
+    return optimize_const_expr(new_cast(new,ty_int));
+  }
+  if (node->kind == ND_BITAND
+  &&  node->lhs->kind == ND_BITNOT
+  &&  is_integral_promotion(node->lhs->lhs)
+  &&  is_integral_promotion(node->rhs)
+  &&  node->rhs->lhs->ty->is_unsigned) {
+    Node *lhs = node->lhs->lhs->lhs;
+    Node *rhs = node->rhs->lhs;
+    Node *new = new_copy(node);
+    new->ty = ty_uchar;
+    new->lhs = new_unary(ND_BITNOT,lhs,lhs->tok);
+    new->lhs->ty = ty_uchar;
+    new->rhs = rhs;
+    return optimize_const_expr(new_cast(new,ty_int));
+  }
   // LHS check
   if (!is_integral_promotion(node->lhs)) {
     return node;
@@ -274,6 +306,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
     new->rhs = node->rhs->lhs;
     return optimize_const_expr(new);
   }
+
   return optimize_const_expr(node);
 }
 
@@ -364,12 +397,17 @@ Node *optimize_expr(Node *node)
     &&  is_boolean_result(node->lhs)){
       return node->lhs;
     }
+    if (node->lhs->kind == ND_CAST
+    &&  node->ty == node->lhs->ty) {
+      return node->lhs;
+    }
     if (node->ty->kind  == TY_CHAR
     &&  node->lhs->kind == ND_CAST
     &&  (node->lhs->ty->kind == TY_SHORT
       || node->lhs->ty->kind == TY_INT
       || node->lhs->ty->kind == TY_LONG)) {
       node->lhs = node->lhs->lhs;
+      return node;
     }
     // (ND_CAST TY_CHAR(2) (-/~ (ND_CAST TY_INT(4) (expr ...) )))
     if (node->ty->kind == TY_CHAR
@@ -663,7 +701,7 @@ Node *optimize_expr(Node *node)
   case ND_BITOR:
   case ND_BITXOR:
     node = optimize_lr_swap(node);
-    return (optimize_bitop_integral_promotion(node));
+    return optimize_bitop_integral_promotion(node);
   case ND_EQ:
   case ND_NE:
   case ND_LT:
@@ -906,11 +944,12 @@ Node *optimize_expr(Node *node)
       &&  node->lhs->kind == ND_CAST
       &&  node->lhs->ty->kind == TY_INT
       &&  node->lhs->lhs->ty->kind == TY_CHAR) {
-        Node *n1 = new_binary(ND_SHR,node->lhs->lhs,node->rhs,node->tok);
+        Node *n1 = new_copy(node);
+        n1->lhs = node->lhs->lhs;
+        n1->rhs = node->rhs;
         n1->ty = node->lhs->lhs->ty;
         Node *n2 = new_copy(node->lhs);
         n2->lhs = n1;
-        n2->ty = node->ty;
         return n2;
       }
     }
