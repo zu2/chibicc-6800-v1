@@ -210,11 +210,19 @@ Node *optimize_args(Node *args)
 
 Node *optimize_bitop_integral_promotion(Node *node)
 {
+  // node returns int?
+  if (node->ty->kind != TY_INT
+  ||  node->ty->is_unsigned) {
+    return node;  // no
+  }
+  // LHS check
+  if (!is_integral_promotion(node->lhs)) {
+    return node;
+  }
+    
   // uchar op 0-255
-  if (node->ty->kind            == TY_INT
-  &&  !node->ty->is_unsigned
-  &&  is_integral_promotion(node->lhs)
-  &&  node->lhs->lhs->ty->is_unsigned) {
+  //    (int)uchar op 0..255 -> (int)(uchar op 0..255)
+  if (node->lhs->lhs->ty->is_unsigned) {
     if (node->rhs->kind           == ND_NUM
     &&  node->rhs->ty->kind       == TY_INT
     &&  node->rhs->val            >= 0
@@ -229,10 +237,8 @@ Node *optimize_bitop_integral_promotion(Node *node)
     }
   }
   // char op -128..127
-  if (node->ty->kind            == TY_INT
-  &&  !node->ty->is_unsigned
-  &&  is_integral_promotion(node->lhs)
-  &&  !node->lhs->lhs->ty->is_unsigned) {
+  //    (int)char op -128..127 -> (int)(uchar op 0..255)
+  if (!node->lhs->lhs->ty->is_unsigned) {
     if (node->rhs->kind           == ND_NUM
     &&  node->rhs->ty->kind       == TY_INT
     &&  node->rhs->val            >= -128
@@ -247,13 +253,23 @@ Node *optimize_bitop_integral_promotion(Node *node)
     }
   }
   // char op char, uchar op uchar
-  if (node->ty->kind            == TY_INT
-  &&  !node->ty->is_unsigned
-  &&  is_integral_promotion(node->lhs)
-  &&  is_integral_promotion(node->rhs)
+  //    (int)lhs op (int)rhs -> (int)(lhs op rhs)
+  if (is_integral_promotion(node->rhs)
   &&  node->lhs->lhs->ty->is_unsigned == node->rhs->lhs->ty->is_unsigned) {
     Node *new = new_copy(node);
     new->ty  = node->lhs->lhs->ty;
+    new->lhs = node->lhs->lhs;
+    new->rhs = node->rhs->lhs;
+    new = new_cast(new,ty_int);
+    return optimize_const_expr(new);
+  }
+  // char & uchar
+  if (node->kind == ND_BITAND
+  &&  is_integral_promotion(node->rhs)
+  &&  node->lhs->lhs->ty->is_unsigned != node->rhs->lhs->ty->is_unsigned) {
+    Node *new = new_copy(node);
+    new->ty  = copy_type(node->lhs->lhs->ty);
+    new->ty->is_unsigned = true;
     new->lhs = node->lhs->lhs;
     new->rhs = node->rhs->lhs;
     new = new_cast(new,ty_int);
