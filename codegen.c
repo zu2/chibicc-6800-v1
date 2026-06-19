@@ -3992,7 +3992,7 @@ static void opeq(Node *node)
         println("\teorb 0,x");
         break;
       }
-      println("\tclra");
+//    println("\tclra");
       IX_Dest = IX_None;
       break;
     case TY_SHORT:
