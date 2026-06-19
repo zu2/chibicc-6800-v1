@@ -1818,6 +1818,7 @@ static void store_x(Type *ty,int off) {
     assert(ty->kind!=TY_LDOUBLE);
     return;
   }
+  println("; store_x ty->size %d",ty->size);
   switch (ty->size) {
   case 1:
     println("\tstab %d,x",off);
@@ -2195,8 +2196,8 @@ static void push_args2(Node *args,bool is_variadic)
     break;
   case TY_LONG: {
     if (!args->pass_by_stack){
-        gen_expr(args);
-	break;
+      gen_expr(args);
+      break;
     }
     int64_t val = args->val;
     switch(args->kind){
@@ -2721,6 +2722,7 @@ int gen_direct_lr(Node *node, char *opb, char *opa)
     int can_direct_lhs = can_direct(node->lhs);
     int can_direct_rhs = can_direct(node->rhs);
 
+#if 0
     if (can_direct_lhs && can_direct_rhs){
       if (node->rhs->kind == ND_CAST
       &&  is_int16(node->rhs->ty)
@@ -2732,6 +2734,7 @@ int gen_direct_lr(Node *node, char *opb, char *opa)
         assert(0);
       }
     }
+#endif
 
     if (can_direct_rhs){
       gen_expr(node->lhs);
@@ -4724,11 +4727,11 @@ void gen_expr(Node *node) {
         println("\tbeq %s",label);
         if (mem->bit_width<=8)  {
           if (mem->bit_width!=8) {
-            println("\torb #<$%04x",(~mask)&0xffff);
+            println("\torab #<$%04x",(~mask)&0xffff);
           }
-          println("\tora #$ff");
+          println("\toraa #$ff");
         }else{
-          println("\tora #>$%04x",(~mask)&0xffff);
+          println("\toraa #>$%04x",(~mask)&0xffff);
         }
         println("%s:",label);
       }
@@ -4940,7 +4943,7 @@ void gen_expr(Node *node) {
       return;
     }
     if (is_global_var(node->lhs)
-    &&  node->ty->size <= 2
+    &&  node->lhs->ty->size <= 2
     &&  can_direct(node->lhs)) {
       gen_expr(node->rhs);
       gen_direct(node->lhs,"stab","staa");
@@ -4949,7 +4952,7 @@ void gen_expr(Node *node) {
     if ((ty = is_integer_constant(node->rhs,&val))
     &&  ty->size <= 2
     &&  is_integer(node->ty)
-    &&  node->ty->size <= 2) {
+    &&  node->lhs->ty->size <= 2) {
       if (can_direct(node->lhs)) {
         gen_direct(node->rhs,"ldab","ldaa");
         gen_direct(node->lhs,"stab","staa");
@@ -4995,7 +4998,7 @@ void gen_expr(Node *node) {
       store_x(node->ty,0);
       return;
     }
-    if (node->rhs->ty->size == 1) {
+    if (node->lhs->ty->size == 1) {
       gen_expr(node->rhs);
       push1();
       gen_addr(node->lhs);
@@ -5003,7 +5006,7 @@ void gen_expr(Node *node) {
       pop1();
       println("\tstab 0,x");
       return;
-    }else if (node->rhs->ty->size == 2) {
+    }else if (node->lhs->ty->size == 2) {
       gen_expr(node->rhs);
       push();
       gen_addr(node->lhs);
@@ -6051,7 +6054,7 @@ void gen_expr(Node *node) {
     ins(2);
     return;
   case ND_BITOR:
-    if (gen_direct_lr(node,"orb","ora"))
+    if (gen_direct_lr(node,"orab","oraa"))
       return;
 
     gen_expr(node->lhs);
