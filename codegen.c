@@ -2403,6 +2403,9 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     switch (node->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:		// TODO: Avoid unnecessary type promotion
+      if (test) return 1;
+      println("\t%s #<%u", opb, (uint16_t)node->val);
+      return 1;
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
@@ -5824,7 +5827,7 @@ void gen_expr(Node *node) {
     return;
   } // ND_ADD
   case ND_SUB:
-    // (+ TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
+    // (- TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
     if (is_int8(node->ty)) {
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
@@ -6197,11 +6200,27 @@ void gen_expr(Node *node) {
     if (node->ty->kind == TY_CHAR) {
       char *skip = new_label("L_%d");
       char *loop = new_label("L_%d");
-      gen_expr(node->lhs);
-      push1();
-      gen_expr(node->rhs);
-      println("\ttba");
-      pop1();
+      if (can_direct(node->lhs)
+      &&  can_direct(node->rhs)) {
+        if(!gen_direct(node->rhs,"ldaa",NULL)) {
+          assert(0);
+        }
+        if(!gen_direct(node->lhs,"ldab",NULL)) {
+          assert(0);
+        }
+      }else if (can_direct(node->lhs)) {
+        gen_expr(node->rhs);
+        println("\ttba");
+        if(!gen_direct(node->lhs,"ldab",NULL)) {
+          assert(0);
+        }
+      }else{
+        gen_expr(node->lhs);
+        push1();
+        gen_expr(node->rhs);
+        println("\ttba");
+        pop1();
+      }
       println("\tbeq %s",skip);
       println("%s:",loop);
       println("\taslb");

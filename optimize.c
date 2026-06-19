@@ -272,7 +272,6 @@ Node *optimize_bitop_integral_promotion(Node *node)
     new->ty->is_unsigned = true;
     new->lhs = node->lhs->lhs;
     new->rhs = node->rhs->lhs;
-    new = new_cast(new,ty_int);
     return optimize_const_expr(new);
   }
   return optimize_const_expr(node);
@@ -396,18 +395,39 @@ Node *optimize_expr(Node *node)
       }
     }
     // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
-    // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
-    &&  node->lhs->lhs->kind == ND_CAST
-    &&  node->lhs->lhs->ty->kind == TY_INT
-    &&  node->lhs->lhs->lhs->ty->kind == TY_CHAR
-    &&  node->lhs->rhs->kind == ND_CAST
-    &&  node->lhs->rhs->ty->kind == TY_INT
-    &&  node->lhs->rhs->lhs->ty->kind == TY_CHAR) {
+    &&  is_integral_promotion(node->lhs)
+    &&  is_integral_promotion(node->rhs)) {
       Node *new = new_binary(node->lhs->kind,node->lhs->lhs->lhs,node->lhs->rhs->lhs,node->tok);
       new->ty = node->ty;
       return new;
+    }
+    // (ND_CAST TY_CHAR(2) (- ty_int 8 (ND_CAST TY_INT(4) (ND_VAR ty_uchar _L_35 global)))
+    if (node->ty->kind == TY_CHAR
+    &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
+    &&  node->lhs->lhs->kind == ND_NUM
+    &&  is_integral_promotion(node->lhs->rhs)) {
+      Node *new = new_copy(node->lhs);
+      new->ty = node->ty;
+      new->lhs = node->lhs->lhs;
+      new->lhs->ty = ty_char;
+      new->rhs = node->lhs->rhs->lhs;
+      node->lhs = new;
+      ast_node_dump(node);
+      return node;
+    }
+    if (node->ty->kind == TY_CHAR
+    &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
+    &&  is_integral_promotion(node->lhs->lhs)
+    &&  node->lhs->rhs->kind == ND_NUM) {
+      Node *new = new_copy(node->lhs);
+      new->ty = node->ty;
+      new->lhs = node->lhs->lhs->lhs;
+      new->rhs = node->lhs->rhs;
+      new->rhs->ty = ty_char;
+      node->lhs = new;
+      return node;
     }
     // (ND_CAST TY_CHAR(2) (<< TY_INT(4)
     if (node->ty->kind == TY_CHAR
@@ -855,7 +875,9 @@ Node *optimize_expr(Node *node)
   case ND_SHL:
   case ND_SHR: {
     int64_t val;
-    node = optimize_lr(node);
+    node->lhs = optimize_expr(node->lhs);
+    node->rhs = optimize_expr(new_cast(node->rhs,ty_char));
+
     if (is_integer_constant(node->rhs,&val)) {
       if (val==0) {
         return node->lhs;
@@ -867,6 +889,19 @@ Node *optimize_expr(Node *node)
         return new;
       }
     }
+#if 0
+    if (node->ty->kind == TY_INT
+    &&  node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_INT
+    &&  node->lhs->lhs->ty->kind == TY_CHAR) {
+      Node *n1 = new_binary(ND_SHR,node->lhs->lhs,node->rhs,node->tok);
+      n1->ty = node->lhs->lhs->ty;
+      Node *n2 = new_copy(node->lhs);
+      n2->lhs = n1;
+      n2->ty = node->ty;
+      return n2;
+    }
+#else
     if (node->kind == ND_SHR) {
       if (node->ty->kind == TY_INT
       &&  node->lhs->kind == ND_CAST
@@ -880,6 +915,7 @@ Node *optimize_expr(Node *node)
         return n2;
       }
     }
+#endif
     return optimize_const_expr(node);
   } // ND_SHL, ND_SHR
   case ND_POST_INCDEC:
