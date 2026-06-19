@@ -6197,21 +6197,17 @@ void gen_expr(Node *node) {
       println("\tclra");
       return;
     }
-    if (node->ty->kind == TY_CHAR) {
+    switch(node->ty->kind) {
+    case TY_BOOL:
+    case TY_CHAR:
       char *skip = new_label("L_%d");
       char *loop = new_label("L_%d");
       if (can_direct(node->lhs)
       &&  can_direct(node->rhs)) {
+        if(!gen_direct(node->lhs,"ldab",NULL)) {
+          assert(0);
+        }
         if(!gen_direct(node->rhs,"ldaa",NULL)) {
-          assert(0);
-        }
-        if(!gen_direct(node->lhs,"ldab",NULL)) {
-          assert(0);
-        }
-      }else if (can_direct(node->lhs)) {
-        gen_expr(node->rhs);
-        println("\ttba");
-        if(!gen_direct(node->lhs,"ldab",NULL)) {
           assert(0);
         }
       }else{
@@ -6267,39 +6263,39 @@ void gen_expr(Node *node) {
       println("\tclra");
       return;
     }
-    gen_expr(node->rhs);
-    push1();
-    gen_expr(node->lhs);
+    char *skip = new_label("L_%d");
+    char *loop = new_label("L_%d");
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
-      //  shr8: AccB >> TOS(8bit)
-      if (opt('O','2')) {
-        char *skip = new_label("L_%d");
-        char *loop = new_label("L_%d");
-        popa();
-        println("\ttsta");
-        println("\tbeq %s",skip);
-        println("%s:",loop);
-        if (node->lhs->ty->is_unsigned){
-          println("\tlsrb");
-        }else{
-          println("\tasrb");
+      if (can_direct(node->rhs)) {
+        gen_expr(node->lhs);
+        if(!gen_direct(node->rhs,"ldaa",NULL)) {
+          assert(0);
         }
-        println("\tdeca");
-        println("\tbne %s",loop);
-        println("%s:",skip);
-        return;
-      }
-      if (node->lhs->ty->is_unsigned){
-        println("\tjsr __shr8u");
       }else{
-        println("\tjsr __shr8s");
+        gen_expr(node->lhs);
+        push1();
+        gen_expr(node->rhs);
+        println("\ttba");
+        pop1();
       }
-      IX_Dest = IX_None;
-      ins(1);
+      println("\tbeq %s",skip);
+      println("%s:",loop);
+      if (node->lhs->ty->is_unsigned){
+        println("\tlsrb");
+      }else{
+        println("\tasrb");
+      }
+      println("\tdeca");
+      println("\tbne %s",loop);
+      println("%s:",skip);
       return;
-    default:
+    case TY_SHORT:
+    case TY_INT:
+      gen_expr(node->rhs);
+      push1();
+      gen_expr(node->lhs);
       //  shr16: AccAB >> TOS(8bit)
       if (opt('O','2')) {
         char *skip = new_label("L_%d");
@@ -6326,6 +6322,8 @@ void gen_expr(Node *node) {
       IX_Dest = IX_None;
       ins(1);
       return;
+    default:
+      assert(0);
     }
   } // ND_SHR
   default: ;

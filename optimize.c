@@ -414,7 +414,6 @@ Node *optimize_expr(Node *node)
       new->lhs->ty = ty_char;
       new->rhs = node->lhs->rhs->lhs;
       node->lhs = new;
-      ast_node_dump(node);
       return node;
     }
     if (node->ty->kind == TY_CHAR
