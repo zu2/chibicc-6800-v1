@@ -249,7 +249,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
   }
   // LHS check
   if (!is_integral_promotion(node->lhs)) {
-    return node;
+    return optimize_const_expr(node);
   }
     
   // uchar op 0-255
@@ -315,11 +315,17 @@ Node *optimize_expr(Node *node)
   Node *new;
   int64_t val;
   double fval;
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
 
   if (!node)
     return node;
+
+#if 0
+  println("; optimize_expr");
+  if (node->lhs)
+    node->lhs = optimize_const_expr(node->lhs);
+  if (node->rhs)
+    node->rhs = optimize_const_expr(node->rhs);
+#endif
 
   switch (node->kind) {
   case ND_NULL_EXPR:
@@ -421,25 +427,27 @@ Node *optimize_expr(Node *node)
     }
     // int = char &|^ char;
     if (is_integral_promotion(node)
-    &&  (lhs->kind == ND_BITAND
-      || lhs->kind == ND_BITOR
-      || lhs->kind == ND_BITXOR)
-    &&  is_integral_promotion(lhs->lhs)
-    &&  is_integral_promotion(lhs->rhs)) {
-      if (lhs->lhs->lhs->ty->is_unsigned == lhs->rhs->lhs->ty->is_unsigned) {
-        lhs->lhs = lhs->lhs->lhs;
-        lhs->rhs = lhs->rhs->lhs;
-        return node;
+    &&  (node->lhs->kind == ND_BITAND
+      || node->lhs->kind == ND_BITOR
+      || node->lhs->kind == ND_BITXOR)
+    &&  is_integral_promotion(node->lhs->lhs)
+    &&  is_integral_promotion(node->lhs->rhs)) {
+      if (node->lhs->lhs->lhs->ty->is_unsigned == node->lhs->rhs->lhs->ty->is_unsigned) {
+        node->lhs->lhs = node->lhs->lhs->lhs;
+        node->lhs->rhs = node->lhs->rhs->lhs;
+        return optimize_const_expr(node);
       }
     }
     // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
-    &&  is_integral_promotion(node->lhs)
-    &&  is_integral_promotion(node->rhs)) {
-      Node *new = new_binary(node->lhs->kind,node->lhs->lhs->lhs,node->lhs->rhs->lhs,node->tok);
+    &&  is_integral_promotion(node->lhs->lhs)
+    &&  is_integral_promotion(node->lhs->rhs)) {
+      Node *new = new_copy(node->lhs);
+      new->lhs = node->lhs->lhs->lhs;
+      new->rhs = node->lhs->rhs->lhs;
       new->ty = node->ty;
-      return new;
+      return optimize_const_expr(new);
     }
     // (ND_CAST TY_CHAR(2) (- ty_int 8 (ND_CAST TY_INT(4) (ND_VAR ty_uchar _L_35 global)))
     if (node->ty->kind == TY_CHAR
