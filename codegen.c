@@ -1818,7 +1818,6 @@ static void store_x(Type *ty,int off) {
     assert(ty->kind!=TY_LDOUBLE);
     return;
   }
-  println("; store_x ty->size %d",ty->size);
   switch (ty->size) {
   case 1:
     println("\tstab %d,x",off);
