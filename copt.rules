@@ -256,7 +256,6 @@
 	stab %2,x
 	staa %3,x
 
-
 	ldab #<%1
 	ldaa #>%1
 	jsr __load16
@@ -976,6 +975,18 @@
 	ldx 0,x
 	cpx #%1
 
+#	~%1 & AccB
+
+	pshb
+	ldab %1
+	comb
+	tsx
+	andb 0,x
+	ins
+=
+	comb
+	orab %1
+	comb
 
 #
 #	array access
@@ -1002,7 +1013,6 @@
 	ldx %1,x
 	pulb
 	stab %3,x
-
 
 # delete garbarge
 	pshb
