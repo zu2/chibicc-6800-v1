@@ -11,6 +11,25 @@ bool is_integral_promotion(Node *node)
   return false;
 }
 
+bool is_integral_promotion_or_byte(Node *node)
+{
+  if (is_integral_promotion(node)) {
+    return true;
+  }
+  if (node->ty->kind == TY_CHAR) {
+    return true;
+  }
+  return false;
+}
+
+Node *skip_integral_promotion(Node *node)
+{
+  if (is_integral_promotion(node)) {
+    return node->lhs;
+  }
+  return node;
+}
+
 static char *type_str(Node *node)
 {
   if (!node || !node->ty) return "NULL";
@@ -215,6 +234,18 @@ Node *optimize_bitop_integral_promotion(Node *node)
   ||  node->ty->is_unsigned) {
     return node;  // no
   }
+  switch(node->lhs->kind){
+  case ND_BITAND:
+  case ND_BITOR:
+  case ND_BITXOR:
+    node->lhs = optimize_bitop_integral_promotion(node->lhs);
+  }
+  switch(node->rhs->kind){
+  case ND_BITAND:
+  case ND_BITOR:
+  case ND_BITXOR:
+    node->rhs = optimize_bitop_integral_promotion(node->rhs);
+  }
   // (~(int)m & (int)x → (int)(~m & x)
   //  m: char or uchar
   //  x: uchar
@@ -248,20 +279,20 @@ Node *optimize_bitop_integral_promotion(Node *node)
     return optimize_const_expr(new_cast(new,ty_int));
   }
   // LHS check
-  if (!is_integral_promotion(node->lhs)) {
+  if (!is_integral_promotion_or_byte(node->lhs)) {
     return optimize_const_expr(node);
   }
     
   // uchar op 0-255
   //    (int)uchar op 0..255 -> (int)(uchar op 0..255)
-  if (node->lhs->lhs->ty->is_unsigned) {
+  if (skip_integral_promotion(node->lhs)->ty->is_unsigned) {
     if (node->rhs->kind           == ND_NUM
     &&  node->rhs->ty->kind       == TY_INT
     &&  node->rhs->val            >= 0
     &&  node->rhs->val            <= 255) {
       Node *new = new_copy(node);
       new->ty  = ty_uchar;
-      new->lhs = node->lhs->lhs;
+      new->lhs = skip_integral_promotion(node->lhs);
       new->rhs = node->rhs;
       new->rhs->ty = ty_uchar;
       new = new_cast(new,ty_int);
@@ -270,14 +301,14 @@ Node *optimize_bitop_integral_promotion(Node *node)
   }
   // char op -128..127
   //    (int)char op -128..127 -> (int)(uchar op 0..255)
-  if (!node->lhs->lhs->ty->is_unsigned) {
+  if (!skip_integral_promotion(node->lhs)->ty->is_unsigned) {
     if (node->rhs->kind           == ND_NUM
     &&  node->rhs->ty->kind       == TY_INT
     &&  node->rhs->val            >= -128
     &&  node->rhs->val            <= 127) {
       Node *new = new_copy(node);
       new->ty  = ty_char;
-      new->lhs = node->lhs->lhs;
+      new->lhs = skip_integral_promotion(node->lhs);
       new->rhs = node->rhs;
       new->rhs->ty = ty_uchar;
       new = new_cast(new,ty_int);
@@ -286,24 +317,27 @@ Node *optimize_bitop_integral_promotion(Node *node)
   }
   // char op char, uchar op uchar
   //    (int)lhs op (int)rhs -> (int)(lhs op rhs)
-  if (is_integral_promotion(node->rhs)
-  &&  node->lhs->lhs->ty->is_unsigned == node->rhs->lhs->ty->is_unsigned) {
+  if (is_integral_promotion_or_byte(node->rhs)
+  &&  (skip_integral_promotion(node->lhs)->ty->is_unsigned
+    == skip_integral_promotion(node->rhs)->ty->is_unsigned)) {
     Node *new = new_copy(node);
-    new->ty  = node->lhs->lhs->ty;
-    new->lhs = node->lhs->lhs;
-    new->rhs = node->rhs->lhs;
+    new->ty  = skip_integral_promotion(node->lhs)->ty;
+    new->lhs = skip_integral_promotion(node->lhs);
+    new->rhs = skip_integral_promotion(node->rhs);
     new = new_cast(new,ty_int);
     return optimize_const_expr(new);
   }
   // char & uchar
   if (node->kind == ND_BITAND
-  &&  is_integral_promotion(node->rhs)
-  &&  node->lhs->lhs->ty->is_unsigned != node->rhs->lhs->ty->is_unsigned) {
+  &&  is_integral_promotion_or_byte(node->rhs)
+  &&  (skip_integral_promotion(node->lhs)->ty->is_unsigned
+    != skip_integral_promotion(node->rhs)->ty->is_unsigned)) {
     Node *new = new_copy(node);
-    new->ty  = copy_type(node->lhs->lhs->ty);
+    new->ty  = copy_type(skip_integral_promotion(node->lhs)->ty);
     new->ty->is_unsigned = true;
-    new->lhs = node->lhs->lhs;
-    new->rhs = node->rhs->lhs;
+    new->lhs = skip_integral_promotion(node->lhs);
+    new->rhs = skip_integral_promotion(node->rhs);
+    new = new_cast(new,ty_int);
     return optimize_const_expr(new);
   }
 
@@ -380,6 +414,11 @@ Node *optimize_expr(Node *node)
       node->rhs = new_num(val&255,node->rhs->tok);
       node->rhs->ty = node->lhs->ty;
       node->ty = node->lhs->ty;
+      return node;
+    }
+    if (node->lhs->ty->kind == TY_CHAR
+    &&  is_integral_promotion(node->rhs)) {
+      node->rhs = node->rhs->lhs;
       return node;
     }
     return node;
@@ -563,7 +602,7 @@ Node *optimize_expr(Node *node)
     }
     return optimize_const_expr(node);
   case ND_BITNOT:
-    node =  optimize_l(node);
+    node = optimize_l(node);
     return optimize_const_expr(node);
   // Below is a binary operator
   case ND_LOGAND: {
@@ -934,34 +973,18 @@ Node *optimize_expr(Node *node)
         return new;
       }
     }
-#if 0
-    if (node->ty->kind == TY_INT
-    &&  node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_INT
-    &&  node->lhs->lhs->ty->kind == TY_CHAR) {
-      Node *n1 = new_binary(ND_SHR,node->lhs->lhs,node->rhs,node->tok);
+// (>> TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR ty_uchar _L_1 global)) (ND_CAST TY_CHAR(2) (ND_VAR ty_int _L_5 global)))
+    if (node->kind == ND_SHR
+    &&  node->ty->kind == TY_INT
+    &&  is_integral_promotion(node->lhs)) {
+      Node *n1 = new_copy(node);
+      n1->lhs = node->lhs->lhs;
+      n1->rhs = node->rhs;
       n1->ty = node->lhs->lhs->ty;
       Node *n2 = new_copy(node->lhs);
       n2->lhs = n1;
-      n2->ty = node->ty;
       return n2;
     }
-#else
-    if (node->kind == ND_SHR) {
-      if (node->ty->kind == TY_INT
-      &&  node->lhs->kind == ND_CAST
-      &&  node->lhs->ty->kind == TY_INT
-      &&  node->lhs->lhs->ty->kind == TY_CHAR) {
-        Node *n1 = new_copy(node);
-        n1->lhs = node->lhs->lhs;
-        n1->rhs = node->rhs;
-        n1->ty = node->lhs->lhs->ty;
-        Node *n2 = new_copy(node->lhs);
-        n2->lhs = n1;
-        return n2;
-      }
-    }
-#endif
     return optimize_const_expr(node);
   } // ND_SHL, ND_SHR
   case ND_POST_INCDEC:

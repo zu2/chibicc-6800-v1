@@ -6029,6 +6029,11 @@ void gen_expr(Node *node) {
     ins(2);
     return;
   case ND_BITAND:
+    if (node->ty->kind == TY_BOOL
+    ||  node->ty->kind == TY_CHAR) {
+      if (gen_direct_lr(node,"andb",NULL))
+        return;
+    }
     if (gen_direct_lr(node,"andb","anda")){
       return;
     }
@@ -6053,6 +6058,11 @@ void gen_expr(Node *node) {
     ins(2);
     return;
   case ND_BITOR:
+    if (node->ty->kind == TY_BOOL
+    ||  node->ty->kind == TY_CHAR) {
+      if (gen_direct_lr(node,"orab",NULL))
+        return;
+    }
     if (gen_direct_lr(node,"orab","oraa"))
       return;
 
@@ -6066,6 +6076,11 @@ void gen_expr(Node *node) {
     ins(2);
     return;
   case ND_BITXOR:
+    if (node->ty->kind == TY_BOOL
+    ||  node->ty->kind == TY_CHAR) {
+      if (gen_direct_lr(node,"eorb",NULL))
+        return;
+    }
     if (gen_direct_lr(node,"eorb","eora"))
       return;
 
