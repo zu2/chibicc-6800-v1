@@ -464,7 +464,7 @@ Node *optimize_expr(Node *node)
       new->ty = node->ty;
       return new;
     }
-    // int = char &|^ char;
+    // int = char &|^ char; int = uchar &|^ uchar;
     if (is_integral_promotion(node)
     &&  (node->lhs->kind == ND_BITAND
       || node->lhs->kind == ND_BITOR
@@ -477,6 +477,20 @@ Node *optimize_expr(Node *node)
         return optimize_const_expr(node);
       }
     }
+    // char = (char)((int)char &|^ (int)char);
+    // char = (char)((int)uchar &|^ (int)uchar);
+    if (node->ty->kind == TY_CHAR
+    &&  (node->lhs->kind == ND_BITAND
+      || node->lhs->kind == ND_BITOR
+      || node->lhs->kind == ND_BITXOR)
+    &&  is_integral_promotion(node->lhs->lhs)
+    &&  is_integral_promotion(node->lhs->rhs)) {
+      node->lhs->ty = node->lhs->lhs->lhs->ty;
+      node->lhs->lhs = node->lhs->lhs->lhs;
+      node->lhs->rhs = node->lhs->rhs->lhs;
+      return optimize_const_expr(node);
+    }
+
     // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
@@ -517,6 +531,9 @@ Node *optimize_expr(Node *node)
     if (node->ty->kind == TY_CHAR
     &&  node->lhs->kind == ND_SHL) {
       node->lhs->ty = node->ty;
+      if (is_integral_promotion(node->lhs->lhs)) {
+        node->lhs->lhs = node->lhs->lhs->lhs;
+      }
       return node->lhs;
     }
     if (node->lhs->kind == ND_COND) {
@@ -985,6 +1002,7 @@ Node *optimize_expr(Node *node)
       n2->lhs = n1;
       return n2;
     }
+// (<< TY_CHAR(2) (ND_CAST TY_INT(4) (ND_VAR ty_uchar _L_36 global)) (ND_CAST ty_char (- ty_char (ND_NUM ty_char 8) (ND_VAR ty_uchar _L_35 global))))
     return optimize_const_expr(node);
   } // ND_SHL, ND_SHR
   case ND_POST_INCDEC:
