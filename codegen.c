@@ -205,11 +205,7 @@ static void ldab_i(int n)
 
 void ldd_i(int n)
 {
-  if ((n & 0x00ff)==0) {
-    println("\tclrb");
-  } else {
-    println("\tldab #<%d",n);
-  }
+  ldab_i(n);
 
   if ((n & 0x0ff00)==0) {
     println("\tclra");
@@ -360,7 +356,7 @@ static void load32x(int off)
   if (off==0) {
     println("\tjsr __load32x");
   }else if (1<=off && off<=255) {
-    println("\tldab #<%d",off);
+    ldab_i(off);
     println("\tjsr __load32bx");
     IX_Dest = IX_None;
   }else{
@@ -378,7 +374,7 @@ static void store32x(int off)
   if (off == 0) {
     println("\tjsr __store32x");
   }else if (1<=off && off<=255) {
-    println("\tldab #<%d",off);
+    ldab_i(off);
     println("\tjsr __store32bx");
     IX_Dest = IX_None;
   }else{
@@ -387,24 +383,6 @@ static void store32x(int off)
     IX_Dest = IX_None;
   }
   return;
-}
-
-static char *helper_savex[] = {
-  "__eq8","__ne8", "__lt8s", "__lt8u", "__gt8s", "__gt8u",
-  "__le8s", "__le8u", "__ge8s", "__ge8u",
-  "__eq16","__ne16", "__lt16s", "__lt16u", "__gt16s", "__gt16u",
-  "__le16s", "__le16u", "__ge16s", "__ge16u",
-  NULL
-};
-
-void helper(char *s)
-{
- println("\tjsr %s",s);
- for (char **p=helper_savex; *p!=NULL; p++){
-   if(strcmp(s,*p)==0)
-     return;
- }
- IX_Dest = IX_None;
 }
 
 //
@@ -2069,7 +2047,7 @@ gen_direct_pushl_sub(int val)
       a = 0;
     }
   }else if (b==-1 || a!=-1){
-    println("\tldab #%d",val);
+    ldab_i(val);
     println("\tpshb");
     b = val;
   }else{
@@ -2167,7 +2145,7 @@ static void push_args2(Node *args,bool is_variadic)
 #endif
     int64_t val;
     if (is_integer_constant(args, &val)) {
-      println("\tldab #<%ld",val);
+      ldab_i(val);
     }else{
       gen_expr(args);
     }
@@ -2808,7 +2786,7 @@ static int gen_direct_long_or(uint64_t v,char *opa, char *opb){
     return 1;
   }
   if (v1==0x000000FF) {
-    println("\tldab #$FF");
+    ldab_i(0xff);
     println("\tstab @long+3");
     b_is_ff = 1;
   }else if (v1) {
@@ -2818,7 +2796,7 @@ static int gen_direct_long_or(uint64_t v,char *opa, char *opb){
   }
   if (v2 == 0x0000FF00){
     if (!b_is_ff) {
-      println("\tldab #$FF");
+      ldab_i(0xff);
       b_is_ff = 1;
     }
     println("\tstab @long+2");
@@ -2829,7 +2807,7 @@ static int gen_direct_long_or(uint64_t v,char *opa, char *opb){
   }
   if (v3 == 0x00FF0000){
     if (!b_is_ff) {
-      println("\tldab #$FF");
+      ldab_i(0xff);
       b_is_ff = 1;
     }
     println("\tstab @long+1");
@@ -2840,7 +2818,7 @@ static int gen_direct_long_or(uint64_t v,char *opa, char *opb){
   }
   if (v4 == 0xFF000000){
     if (!b_is_ff) {
-      println("\tldab #$FF");
+      ldab_i(0xff);
       b_is_ff = 1;
     }
     println("\tstab @long");
@@ -3140,7 +3118,7 @@ int gen_direct_long2(Node *node,char *opb, char *opa)
   if (L==1)
     println("\tldab %d,x",loff+3);
   else
-    println("\tldab #%d",(int)(lv & 0x000000FF));
+    ldab_i((int)(lv & 0x000000FF));
   if (R==1)
     println("\t%s %d,x",opb,roff+3);
   else
@@ -4310,7 +4288,7 @@ void gen_expr(Node *node) {
       if(node->val==0){
         println("\tclrb");
       }else{
-        println("\tldab #<%u", (uint16_t)node->val);
+        ldab_i((uint16_t)node->val);
       }
       return;
     case TY_INT:
@@ -4908,11 +4886,11 @@ void gen_expr(Node *node) {
             val = !!val;
           }
           if (can_direct(lhs)) {
-            println("\tldab #%ld",val);
+            ldab_i(val);
             gen_direct(node->lhs,"stab","staa");
             return;
           }else if (test_addr_x(lhs)) {
-            println("\tldab #%ld",val);
+            ldab_i(val);
             int off = gen_addr_x(node->lhs,true);
             println("\tstab %d,x",off);
             return;
@@ -5088,7 +5066,7 @@ void gen_expr(Node *node) {
       ldx_bp();
       println("\tclra");
       if (node->var->ty->size>=2) {
-        println("\tldab #%d",node->var->ty->size/2);
+        ldab_i(node->var->ty->size/2);
         int c = count();
         println("L_memzero_%d:", c);
         println("\tstaa %d,x",node->var->offset);
@@ -5112,7 +5090,7 @@ void gen_expr(Node *node) {
       tfr_dx();
       println("\tclra");
       if (node->var->ty->size>=2) {
-        println("\tldab #%d",node->var->ty->size/2);
+        ldab_i(node->var->ty->size/2);
         int c = count();
         println("L_memzero_%d:", c);
         println("\tstaa 0,x");
@@ -5171,7 +5149,7 @@ void gen_expr(Node *node) {
     println("\tbra L_end_%d", c);
     println("L_false_%d:", c);
     println("\tclra");
-    println("\tldab #1");
+    ldab_i(1);
     println("L_end_%d:", c);
     return;
   }
@@ -5228,7 +5206,7 @@ void gen_expr(Node *node) {
     }
     if (need_bool) {
       println("\tclra");
-      println("\tldab #1");
+      ldab_i(1);
       println("\tbra %s",L_end);
       println("%s:",L_false);
       println("\tclra");
@@ -5275,7 +5253,7 @@ void gen_expr(Node *node) {
       println("\tbra %s",L_end);
       println("%s:",L_true);
       println("\tclra");
-      println("\tldab #1");
+      ldab_i(1);
     }
     println("%s:", L_end);
     IX_Dest = IX_None;
@@ -5363,7 +5341,7 @@ void gen_expr(Node *node) {
       IX_Dest = IX_None;
       println("\tbcc %s",L_cmpf1);	// when carry=1, compare NaN
       if (node->kind == ND_NE) {
-        println("\tldab #1");
+        ldab_i(1);
       }else{
         println("\tclrb");
       }
@@ -5675,7 +5653,7 @@ void gen_expr(Node *node) {
           return;
         if (node->kind == ND_SHR && gen_direct_shr_long(node,val))
           return;
-        println("\tldab #%ld",val);
+        ldab_i(val);
       }else{
         gen_expr(node->rhs);
         push1();
@@ -6883,11 +6861,10 @@ static void emit_text(Obj *prog) {
     }else if (opt('O','s')) {
       println("\tsts @bp");
       if (fn->stack_size-1<=255) {
-        println("\tldab #%u",fn->stack_size-1);
+        ldab_i(fn->stack_size-1);
         println("\tjsr __sub_bp_b");
       }else{
-        println("\tldab #<%u",fn->stack_size-1);
-        println("\tldaa #>%u",fn->stack_size-1);
+        ldd_i(fn->stack_size-1);
         println("\tjsr __sub_bp_d");
       } 
       println("\ttxs");
@@ -6983,7 +6960,7 @@ no_params_locals:
         println("\tpshb");
       }
       if (opt('O','s') && fn->stack_size+reg_param_size-1 < 256) {
-        println("\tldab #%u",fn->stack_size+reg_param_size-1);
+        ldab_i(fn->stack_size+reg_param_size-1);
         println("\tjsr __add_bp_b");
       }else{
         println("\tldab @bp+1");					// 3 2 // 18 12
