@@ -113,32 +113,6 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   Node *rhs = node->rhs;
   int64_t val;
 
-  if (isVAR(node)) {
-    if (!is_byte(node)) {
-      return false;
-    }
-    load_var(node);
-    //  This tstb is unnecessary in the current codegen.c:load_var(),
-    //  but not using it may cause risky behavior in the future.
-    //  println("\tstb");
-    println("\tjeq %s", if_false);
-    return true;
-  }
-
-  if (node->kind == ND_LOGOR) {
-    char *if_thru = new_label("L_thru_%d");
-    gen_jump_if_true(lhs, if_thru);
-    gen_jump_if_false(rhs, if_false);
-    println("%s:", if_thru);
-    IX_Dest = IX_None;
-    return true;
-  }
-  if (node->kind == ND_LOGAND) {
-    gen_jump_if_false(lhs, if_false);
-    gen_jump_if_false(rhs, if_false);
-    return true;
-  }
-
   if (node->kind == ND_BITAND && check_in_char(rhs)) {
     gen_expr(lhs);
     println("\tandb #$%02lx", rhs->val);
@@ -618,32 +592,6 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   int64_t val;
-
-  if (isVAR(node)) {
-    if (!is_byte(node)) {
-      return false;
-    }
-    load_var(node);
-    //  This tstb is unnecessary in the current codegen.c:load_var(),
-    //  but not using it may cause risky behavior in the future.
-    //  println("\tstb");
-    println("\tjne %s", if_true);
-    return true;
-  }
-
-  if (node->kind == ND_LOGOR) {
-    gen_jump_if_true(lhs, if_true);
-    gen_jump_if_true(rhs, if_true);
-    return true;
-  }
-  if (node->kind == ND_LOGAND) {
-    char *if_thru = new_label("L_thru_%d");
-    gen_jump_if_false(lhs, if_thru);
-    gen_jump_if_true(rhs, if_true);
-    println("%s:", if_thru);
-    IX_Dest = IX_None;
-    return true;
-  }
 
   if (node->kind == ND_BITAND && check_in_char(rhs)) {
     gen_expr(lhs);
