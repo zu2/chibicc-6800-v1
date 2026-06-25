@@ -1015,6 +1015,7 @@
 	stab %3,x
 
 # delete garbarge
+
 	pshb
 	ldx @bp
 	ldx %1,x
@@ -1077,30 +1078,30 @@
 	tstb
 
 	ldab %1
-	j%2 %3
+	j%2 L%3
 	ldab %1
 =
 	ldab %1
-	j%2 %3
+	j%2 L%3
 
 	ldab %2
 	ldaa %1
-	j%2 %3
+	j%2 L%3
 	ldab %2
 	ldaa %1
 =
 	ldab %2
 	ldaa %1
-	j%2 %3
+	j%2 L%3
 
 	ldab %1
 	cmpb #%2
-	j%3 %4
+	j%3 L%4
 	ldab %1
 =
 	ldab %1
 	cmpb #%2
-	j%3 %4
+	j%3 L%4
 
 # expand macros
 
