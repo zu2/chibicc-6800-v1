@@ -1079,15 +1079,15 @@ int main(int argc, char **argv) {
       char *tmp3 = create_tmpfile();
       run_copt(tmp1,tmp3,copt_rules);
       tmp1 = tmp3;
-    }
-    if (opt('O','3') && can_copt()) {
-      char *tmp3 = create_tmpfile();
-      run_copt(tmp1,tmp3,copt_O2_rules);
-      run_copt(tmp3,tmp1,copt_O3_rules);
-    }else if (opt('O','2') && can_copt()) {
-      char *tmp3 = create_tmpfile();
-      run_copt(tmp1,tmp3,copt_O2_rules);
-      tmp1 = tmp3;
+      if (opt('O','3') && can_copt()) {
+        char *tmp3 = create_tmpfile();
+        run_copt(tmp1,tmp3,copt_O2_rules);
+        run_copt(tmp3,tmp1,copt_O3_rules);
+      }else if (opt('O','2') && can_copt()) {
+        char *tmp3 = create_tmpfile();
+        run_copt(tmp1,tmp3,copt_O2_rules);
+        tmp1 = tmp3;
+      }
     }
     char *tmp2 = create_tmpfile();
     assemble(tmp1, tmp2);
