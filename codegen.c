@@ -4180,7 +4180,7 @@ static void opeq(Node *node)
       }
       println("\tstab 0,x");
       IX_Dest = IX_None;
-      ins(1);
+      ins(3);
       return;
     case TY_SHORT:
     case TY_INT:
