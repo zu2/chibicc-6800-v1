@@ -1072,6 +1072,10 @@
 =
 	tstb
 
+	subb #<0
+=
+	tstb
+
 	ldab %1
 	j%2 %3
 	ldab %1
