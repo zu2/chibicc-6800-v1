@@ -888,7 +888,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       return 0;
     case TY_BOOL:
     case TY_CHAR:
-      return false;
     case TY_SHORT:
     case TY_INT:
     case TY_PTR:
@@ -897,9 +896,8 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       println("\tldx #%d",(unsigned int)((node->val & 0x0ffff)));
       IX_Dest = IX_None;
       return 0;
-    default: 
-      break;
     }
+    return false;
   } // ND_NUM
   case ND_NEG:
     return false;
@@ -1057,13 +1055,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 
       return 0;
     }
-#if 0
-    if (test_addr_x(lhs)) {
-      if (test) return true;
-      off = gen_addr_x(lhs,true);
-      return off;
-    }
-#endif
     return false;
   } // ND_ADDR;
   case ND_ASSIGN: {
@@ -1210,7 +1201,13 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return false;
 #endif
   default:
-    return false;
+  }
+fallback:
+  if (test_addr_x(node)) {
+    if (test) return true;
+    off = gen_addr_x(node,true);
+    off = ldx_x(node->ty,off);
+    return off;
   }
   if (test) {
     return false;
@@ -4042,8 +4039,10 @@ static void opeq(Node *node)
     case TY_LONG:
       if (is_global_var(node->lhs)) {
         gen_expr(node->rhs);
+        push1();
         println("\tldx #_%s",node->lhs->var->name);
         load32x(0);
+        pop1();
         if (node->kind == ND_SHLEQ) {
           println("\tjsr __shl32");
         }else if (node->lhs->ty->is_unsigned) {
@@ -4055,16 +4054,15 @@ static void opeq(Node *node)
         println("\tldx #_%s",node->lhs->var->name);
         store_x(node->ty,0);
         return;
-      }else{
-        gen_addr(node->lhs);
-        push();
-        gen_expr(node->rhs);
-        push1();
-        println("\ttsx");
-        println("\tldx 1,x");
-        load32x(0);
-        pop1();
       }
+      gen_addr(node->lhs);
+      push();
+      gen_expr(node->rhs);
+      push1();
+      println("\ttsx");
+      println("\tldx 1,x");
+      load32x(0);
+      pop1();
       if (node->kind == ND_SHLEQ) {
         println("\tjsr __shl32");
       }else if (node->lhs->ty->is_unsigned) {
