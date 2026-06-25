@@ -459,6 +459,9 @@ void ast_node_dump(Node *node);
 //
 // optimize.c
 //
+bool is_integral_promotion(Node *node);
+bool is_integral_promotion_or_byte(Node *node);
+Node *skip_integral_promotion(Node *node);
 Node *optimize_expr(Node *node);
 Node *optimize_condition(Node *node);
 Obj *optimize(Obj *prog);
@@ -492,7 +495,9 @@ bool is_compare(Node *node);
 bool is_compare_or_not(Node *node);
 bool is_boolean_result(Node *node);
 bool gen_direct(Node *rhs,char *opb, char *opa);
+bool gen_direct_char(Node *rhs,char *opb, char *opa);
 bool can_direct(Node *rhs);
+bool can_direct_char(Node *rhs);
 void gen_expr(Node *node);
 int gen_addr_x(Node *node,bool save_d);
 int count(void);
