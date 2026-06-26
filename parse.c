@@ -1720,7 +1720,7 @@ static Node *stmt(Token **rest, Token *tok) {
     current_switch = node;
 
     char *brk = brk_label;
-    brk_label = node->brk_label = new_unique_name();
+    brk_label = node->brk_label = new_label("L_%d");
 
     node->then = stmt(rest, tok);
 
@@ -1747,7 +1747,7 @@ static Node *stmt(Token **rest, Token *tok) {
     }
 
     tok = skip(tok, ":");
-    node->label = new_unique_name();
+    node->label = new_label("L_%d");
     node->lhs = stmt(rest, tok);
     node->begin = begin;
     node->end = end;
@@ -1762,7 +1762,7 @@ static Node *stmt(Token **rest, Token *tok) {
 
     Node *node = new_node(ND_CASE, tok);
     tok = skip(tok->next, ":");
-    node->label = new_unique_name();
+    node->label = new_label("L_%d");
     node->lhs = stmt(rest, tok);
     current_switch->default_case = node;
     return node;
@@ -1777,8 +1777,8 @@ static Node *stmt(Token **rest, Token *tok) {
 
     char *brk = brk_label;
     char *cont = cont_label;
-    brk_label = node->brk_label = new_unique_name();
-    cont_label = node->cont_label = new_unique_name();
+    brk_label = node->brk_label = new_label("L_%d");
+    cont_label = node->cont_label = new_label("L_%d");
 
     if (is_typename(tok)) {
       Type *basety = declspec(&tok, tok, NULL);
@@ -1820,8 +1820,8 @@ static Node *stmt(Token **rest, Token *tok) {
 
     char *brk = brk_label;
     char *cont = cont_label;
-    brk_label = node->brk_label = new_unique_name();
-    cont_label = node->cont_label = new_unique_name();
+    brk_label = node->brk_label = new_label("L_%d");
+    cont_label = node->cont_label = new_label("L_%d");
 
     node->then = stmt(rest, tok);
 
@@ -1835,8 +1835,8 @@ static Node *stmt(Token **rest, Token *tok) {
 
     char *brk = brk_label;
     char *cont = cont_label;
-    brk_label = node->brk_label = new_unique_name();
-    cont_label = node->cont_label = new_unique_name();
+    brk_label = node->brk_label = new_label("L_%d");
+    cont_label = node->cont_label = new_label("L_%d");
 
     node->then = stmt(&tok, tok->next);
 
@@ -1896,7 +1896,7 @@ static Node *stmt(Token **rest, Token *tok) {
   if (tok->kind == TK_IDENT && equal(tok->next, ":")) {
     Node *node = new_node(ND_LABEL, tok);
     node->label = strndup(tok->loc, tok->len);
-    node->unique_label = new_unique_name();
+    node->unique_label = new_label("L_%d");
     node->lhs = stmt(rest, tok->next->next);
     node->goto_next = labels;
     labels = node;
@@ -2325,8 +2325,8 @@ static Node *to_assign(Node *binary) {
                 tok);
 
     Node *loop = new_node(ND_DO, tok);
-    loop->brk_label = new_unique_name();
-    loop->cont_label = new_unique_name();
+    loop->brk_label = new_label("L_%d");
+    loop->cont_label = new_label("L_%d");
 
     Node *body = new_binary(ND_ASSIGN,
                             new_var_node(new, tok),
