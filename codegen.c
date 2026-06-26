@@ -37,6 +37,11 @@ char *new_label(char *fmt)
   return buf;
 }
 
+char *new_jump_label(void)
+{
+  return new_label("L_%d");
+}
+
 typedef struct label_link {
   char *label;
   struct label_link *next;
@@ -738,7 +743,7 @@ bool gen_shr(Type *ty, uint64_t val)
       case 12:  // 18cyc,  9bytes
       case 13:  // 20cyc,  10bytes
       {
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         println("\ttab");
         println("\tbpl %s",label);
         println("\tdeca");
@@ -995,7 +1000,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
                 case 1:
                   if (test) return true;
                   off = gen_addr_x(node->lhs,false);
-                  label = new_label("L_%d");
+                  label = new_jump_label();
                   println("\tinc %d+1,x",off);
                   println("\tbne %s",label);
                   println("\tinc %d,x",off);
@@ -1007,7 +1012,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
                 case -1:
                   if (test) return true;
                   off = gen_addr_x(node->lhs,false);
-                  label = new_label("L_%d");
+                  label = new_jump_label();
                   println("\ttst %d+1,x",off);
                   println("\tbne %s",label);
                   println("\tdec %d,x",off);
@@ -1283,7 +1288,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
         stx_EXT(node->lhs->lhs);
       }else{
         int off = gen_addr_x(node->lhs->lhs,false);
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         println("\tinc %d,x",off+1);
         println("\tbne %s",label);
         println("\tinc %d,x",off);
@@ -2339,20 +2344,20 @@ static void builtin_alloca(void) {
   println("\tstab @tmp3+1");
   println("\tstaa @tmp3");
   println("\tlds @tmp3	; get new SP");
-  int c1 = count();
-  int c2 = count();
+  char *loop = new_jump_label();
+  char *skip = new_jump_label();
   // The program moved the stack pointer to implement alloca,
   //     so the original stack data must be copied.
   // Push the data from __alloca_bottom to @tmp2 onto the new SP
   println("\tldx 0,x");		// get old alloca bottom
-  println("L_%d:",c1);
+  println("%s:",loop);
   println("\tdex");
   println("\tcpx @tmp2");
-  println("\tbeq L_%d",c2);
+  println("\tbeq %s",skip);
   println("\tldab 0,x");
   println("\tpshb");
-  println("\tbra L_%d",c1);
-  println("L_%d:",c2);
+  println("\tbra %s",loop);
+  println("%s:",skip);
 
   println("; Move alloca_bottom pointer.");
   println("\tldx @tmp1");
@@ -2935,11 +2940,11 @@ int gen_direct_shr_long(Node *node,int64_t val)
   case 8:
     println("\tclra");
     if (!lhs->ty->is_unsigned) {
-      int c = count();
+      char *skip = new_jump_label();
       println("\ttst @long");
-      println("\tbpl L_%d",c);
+      println("\tbpl %s",skip);
       println("\tdeca");
-      println("L_%d:",c);
+      println("%s:",skip);
     }
   }
   switch (val) {
@@ -4348,7 +4353,7 @@ void gen_expr(Node *node) {
 //          IX_Dest = IX_None;
             stx_EXT(node->lhs);
           }else{
-            char *label = new_label("L_%d");
+            char *label = new_jump_label();
             println("\tinc _%s+1",var);
             println("\tbne %s",label);
             println("\tinc _%s",var);
@@ -4441,7 +4446,7 @@ void gen_expr(Node *node) {
     case TY_ENUM:
     case TY_PTR:
       if (node->retval_unused && val==1) {
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         println("\tinc %d,x",off+1);
         println("\tbne %s",label);
         println("\tinc %d,x",off);
@@ -4458,7 +4463,7 @@ void gen_expr(Node *node) {
           println("\tsbca #>%d",val);
         }
       }else if (node->retval_unused && val==-1) {
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         println("\ttst %d,x",off+1);  // 7 2
         println("\tbne %s",label);    // 4 2
         println("\tdec %d,x",off);    // 7 2
@@ -4614,7 +4619,7 @@ void gen_expr(Node *node) {
     case TY_ENUM:
     case TY_PTR:
       if (node->retval_unused && val==1) {
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         println("\tinc %d,x",off+1);
         println("\tbne %s",label);
         println("\tinc %d,x",off);
@@ -4693,7 +4698,7 @@ void gen_expr(Node *node) {
       unsigned int mask = (unsigned int)(1L << mem->bit_width) - 1;
       and_i(mask & 0xffff);
       if (!mem->ty->is_unsigned && mem->bit_width!=16) {
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         if (mem->bit_width<=8)  {
           println("\tbitb #<$%04x",(int)(1L << (mem->bit_width-1)));
         }else{
@@ -4731,7 +4736,7 @@ void gen_expr(Node *node) {
       &&  lhs->rhs->ty->array_len<=256
       &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         gen_expr(lhs->lhs);
         println("\tldx #_%s",lhs->rhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
@@ -4753,7 +4758,7 @@ void gen_expr(Node *node) {
       &&  lhs->lhs->ty->array_len<=256
       &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         gen_expr(lhs->rhs);
         println("\tldx #_%s",lhs->lhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
@@ -4782,7 +4787,7 @@ void gen_expr(Node *node) {
         println("\tstx _%s",node->lhs->lhs->var->name);
       }else{
         int off = gen_addr_x(node->lhs->lhs,false);
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         println("\tinc %d,x",off+1);
         println("\tbne %s",label);
         println("\tinc %d,x",off);
@@ -5330,11 +5335,8 @@ void gen_expr(Node *node) {
     case ND_LE:
     case ND_GT:
     case ND_GE: { // float relop float
-      char L_cmpf1[32];
-      char L_cmpf2[32];
-      int c = count();
-      sprintf(L_cmpf1, "L_%d_1_cmpf",c);
-      sprintf(L_cmpf2, "L_%d_2_cmpf",c);
+      char *L_cmpf1 = new_jump_label();
+      char *L_cmpf2 = new_jump_label();
       println("\tjsr __cmpf32tos");	// @long cmp  TOS");
       IX_Dest = IX_None;
       println("\tbcc %s",L_cmpf1);	// when carry=1, compare NaN
@@ -5404,7 +5406,7 @@ void gen_expr(Node *node) {
           return;
         }
         if (opt('O','2')) {
-          char *skip = new_label("L_%d");
+          char *skip = new_jump_label();
           switch(val) {
           case 1:
             println("\tldx @long+2");
@@ -5725,14 +5727,14 @@ void gen_expr(Node *node) {
         println("\tldab %d,x",off);
         off = gen_addr_x(node->rhs->lhs,true);
         println("\taddb %d,x",off);
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         println("\tbge %s",label);
         println("\tdeca");
         println("%s:",label);
         IX_Dest = IX_None;
         return;
       }
-      char *label = new_label("L_%d");
+      char *label = new_jump_label();
       gen_expr(node->lhs->lhs);
       push1();
       gen_expr(node->rhs->lhs);
@@ -5754,7 +5756,7 @@ void gen_expr(Node *node) {
     &&  test_addr_x(node->rhs->lhs)) {
       gen_expr(node->lhs);
       off = gen_addr_x(node->rhs->lhs,true);
-      char *label = new_label("L_%d");
+      char *label = new_jump_label();
       println("\ttst %d,x",off);
       println("\tbpl %s",label);
       println("\tdeca");
@@ -5898,7 +5900,7 @@ void gen_expr(Node *node) {
           off = gen_addr_x(node->rhs->lhs,true);
           println("\tsubb %d,x",off);
         }
-        char *label = new_label("L_%d");
+        char *label = new_jump_label();
         println("\tbge %s",label);
         println("\tdeca");
         println("%s:",label);
@@ -6193,8 +6195,8 @@ void gen_expr(Node *node) {
     switch(node->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
-      char *skip = new_label("L_%d");
-      char *loop = new_label("L_%d");
+      char *skip = new_jump_label();
+      char *loop = new_jump_label();
       if (can_direct(node->lhs)
       &&  can_direct(node->rhs)) {
         if(!gen_direct(node->lhs,"ldab",NULL)) {
@@ -6223,8 +6225,8 @@ void gen_expr(Node *node) {
     gen_expr(node->lhs);
 //  shl16: AccAB << TOS(8bit)
     if (opt('O','2')) {
-      char *skip = new_label("L_%d");
-      char *loop = new_label("L_%d");
+      char *skip = new_jump_label();
+      char *loop = new_jump_label();
       println("\ttsx");
       println("\ttst 0,x");
       println("\tbeq %s",skip);
@@ -6256,8 +6258,8 @@ void gen_expr(Node *node) {
       println("\tclra");
       return;
     }
-    char *skip = new_label("L_%d");
-    char *loop = new_label("L_%d");
+    char *skip = new_jump_label();
+    char *loop = new_jump_label();
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
@@ -6291,8 +6293,8 @@ void gen_expr(Node *node) {
       gen_expr(node->lhs);
       //  shr16: AccAB >> TOS(8bit)
       if (opt('O','2')) {
-        char *skip = new_label("L_%d");
-        char *loop = new_label("L_%d");
+        char *skip = new_jump_label();
+        char *loop = new_jump_label();
         println("\ttsx");
         println("\ttst 0,x");
         println("\tbeq %s",skip);

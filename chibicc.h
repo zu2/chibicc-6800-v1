@@ -502,6 +502,7 @@ void gen_expr(Node *node);
 int gen_addr_x(Node *node,bool save_d);
 int count(void);
 char *new_label(char *fmt);
+char *new_jump_label();
 void push(void);
 void push1(void);
 void pop(void);
