@@ -85,6 +85,18 @@ Type *is_u8num(Node *node)
   return NULL;
 }
 
+char *is_addr_constant(Node *node)
+{
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_PTR
+  &&  node->lhs->kind == ND_VAR
+  &&  node->lhs->ty->kind == TY_ARRAY
+  &&  !node->lhs->var->is_local) {
+    return node->lhs->var->name;
+  }
+  return NULL;
+}
+
 static int isNUM(Node *node) { return node->kind == ND_NUM; }
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
 static int isVARorNUM(Node *node) { return isVAR(node) || isNUM(node); }
@@ -232,6 +244,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+  char *addr;
   char *if_thru = new_label("L_thru_%d");
   char if_cond[32];
 
@@ -465,6 +478,21 @@ bool gen_jump_if_false(Node *node, char *if_false)
       }
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_expr_x(lhs))) {
+      int off = gen_expr_x(lhs,false);
+      println("\tcpx #%ld",val);
+      switch(node->kind) {
+      case ND_EQ:
+        println("\tjne %s", if_false);
+        return true;
+      case ND_NE:
+        println("\tjeq %s", if_false);
+        return true;
+      default: ;
+        assert(0);    // It's strange to fail
+      }
+  } else if (is_integer_constant(rhs,&val)
+         && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_addr_x(lhs))) {
       int off = gen_addr_x(lhs,false);
       ldx_nX(off);
@@ -480,6 +508,21 @@ bool gen_jump_if_false(Node *node, char *if_false)
         assert(0);    // It's strange to fail
       }
     // ↑ rhs==const && EQ or NE
+  } else if ((addr=is_addr_constant(rhs))    // rhs == addr const
+         && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_expr_x(lhs))) {
+      int off = gen_expr_x(lhs,false);
+      println("\tcpx #_%s",addr);
+      switch(node->kind) {
+      case ND_EQ:
+        println("\tjne %s", if_false);
+        return true;
+      case ND_NE:
+        println("\tjeq %s", if_false);
+        return true;
+      default: ;
+        assert(0);    // It's strange to fail
+      }
   } else if (can_direct(rhs)) {
     gen_expr(lhs);
     if (!gen_direct(rhs, "subb", "sbca")) {
@@ -688,6 +731,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
+  char *addr;
   char if_false[32];
   char if_thru[32];
   int c = count();
@@ -947,6 +991,21 @@ bool gen_jump_if_true(Node *node, char *if_true)
         assert(0);    // It's strange to fail
       }
     // ↑ rhs==const && EQ or NE
+  } else if ((addr=is_addr_constant(rhs))    // rhs == addr const
+         && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_expr_x(lhs))) {
+      int off = gen_expr_x(lhs,false);
+      println("\tcpx #_%s",addr);
+      switch(node->kind) {
+      case ND_EQ:
+        println("\tjeq %s", if_true);
+        return true;
+      case ND_NE:
+        println("\tjne %s", if_true);
+        return true;
+      default: ;
+        assert(0);    // It's strange to fail
+      }
   } else if (can_direct(rhs)) {
     gen_expr(lhs);  // Evaluate LHS anyway; no side-effect check yet.
     if (rhs->kind == ND_NUM && rhs->val == 0) {
