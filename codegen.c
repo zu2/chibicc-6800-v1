@@ -6180,6 +6180,24 @@ void gen_expr(Node *node) {
         println("\ttba");
         pop1();
       }
+      if (opt('O','3')) {
+        char *jump  = new_jump_label();
+        //println("\tbeq %s",skip);
+        println("\tsuba #8");
+        println("\tbcc %s",loop);
+        println("\tnega");
+        println("\tstaa %s+1",jump);
+        println("\tldx #%s",loop);
+        println("%s:",jump);
+        println("\tjmp 0,x");
+        println("%s:",loop);
+        for (int i=0; i<8; i++) {
+          println("\taslb");
+        }
+        println("%s:",skip);
+        IX_Dest = IX_None;
+        return;
+      }
       println("\tbeq %s",skip);
       println("%s:",loop);
       println("\taslb");
@@ -6242,6 +6260,28 @@ void gen_expr(Node *node) {
         gen_expr(node->rhs);
         println("\ttba");
         pop1();
+      }
+      if (opt('O','3')) {
+        char *jump  = new_jump_label();
+        //println("\tbeq %s",skip);
+        println("\tsuba #8");
+        println("\tbcc %s",loop);
+        println("\tnega");
+        println("\tstaa %s+1",jump);
+        println("\tldx #%s",loop);
+        println("%s:",jump);
+        println("\tjmp 0,x");
+        println("%s:",loop);
+        for (int i=0; i<8; i++) {
+          if (node->lhs->ty->is_unsigned){
+            println("\tlsrb");
+          }else{
+            println("\tasrb");
+          }
+        }
+        println("%s:",skip);
+        IX_Dest = IX_None;
+        return;
       }
       println("\tbeq %s",skip);
       println("%s:",loop);
