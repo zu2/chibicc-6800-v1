@@ -5120,10 +5120,7 @@ void gen_expr(Node *node) {
     cond = optimize_condition(node->cond);
 
     if (!gen_jump_if_false(cond,L_else)){
-      gen_expr(cond);
-      if (!is_compare_or_not(cond))
-        cmp_zero(cond->ty);
-      println("\tjeq %s",L_else);
+      assert(0);
     }
     IX_Type  IX_Save = IX_Dest;
     int IX_Save_PTR_off = IX_PTR_off;
@@ -5180,41 +5177,21 @@ void gen_expr(Node *node) {
     int need_bool = 0;
     char L_false[32];
     char L_end[32];
-    sprintf(L_false,"L_false_%d",c);
+    sprintf(L_false,"L_and_%d",c);
     sprintf(L_end,  "L_end_%d",c);
 
-    if (gen_jump_if_false(node->lhs,L_false)){
-      need_bool = 1;
-    }else{
-      gen_expr(node->lhs);
-      if (is_compare_or_not(node->lhs)) {
-        println("\tjeq %s",L_end);
-      }else{
-        cmp_zero(node->lhs->ty);
-        need_bool = 1;
-        println("\tjeq %s",L_false);
-      }
+    if (!gen_jump_if_false(node->lhs,L_false)){
+      assert(0);
     }
-    if (gen_jump_if_false(node->rhs,L_false)){
-      need_bool = 1;
-    }else{
-      gen_expr(node->rhs);
-      if (is_compare_or_not(node->rhs)) {
-        println("\tbra %s",L_end);
-      }else{
-        cmp_zero(node->rhs->ty);
-        println("\tbeq %s",L_false);
-        need_bool = 1;
-      }
+    if (!gen_jump_if_false(node->rhs,L_false)){
+      assert(0);
     }
-    if (need_bool) {
-      println("\tclra");
-      ldab_i(1);
-      println("\tbra %s",L_end);
-      println("%s:",L_false);
-      println("\tclra");
-      println("\tclrb");
-    }
+    println("\tclra");
+    ldab_i(1);
+    println("\tbra %s",L_end);
+    println("%s:",L_false);
+    println("\tclra");
+    ldab_i(0);
     println("L_end_%d:", c);
     IX_Dest = IX_None;
     return;
@@ -5223,41 +5200,21 @@ void gen_expr(Node *node) {
     int c = count();
     int need_bool = 0;
     char L_true[32], L_end[32];
-    sprintf(L_true,"L_true_%d",c);
+    sprintf(L_true,"L_or_%d",c);
     sprintf(L_end, "L_end_%d" ,c);
 
-    if (gen_jump_if_true(node->lhs,L_true)) {
-      need_bool = 1;
-    }else{
-      gen_expr(node->lhs);
-      if (is_compare_or_not(node->lhs)) {
-        println("\tjne %s",L_end);
-      }else{
-        cmp_zero(node->lhs->ty);
-        println("\tjne %s",L_true);
-        need_bool = 1;
-      }
+    if (!gen_jump_if_true(node->lhs,L_true)) {
+      assert(0);
     }
-    if (gen_jump_if_true(node->rhs,L_true)) {
-      need_bool = 1;
-    }else{
-      gen_expr(node->rhs);
-      if (is_compare_or_not(node->rhs)){
-        println("\tbra %s",L_end);
-      }else{
-        cmp_zero(node->rhs->ty);
-        need_bool = 1;
-        println("\tbne %s",L_true);
-      }
+    if (!gen_jump_if_true(node->rhs,L_true)) {
+      assert(0);
     }
-    if (need_bool) {
-      println("\tclra");
-      println("\tclrb");
-      println("\tbra %s",L_end);
-      println("%s:",L_true);
-      println("\tclra");
-      ldab_i(1);
-    }
+    println("\tclra");
+    ldab_i(0);
+    println("\tbra %s",L_end);
+    println("%s:",L_true);
+    println("\tclra");
+    ldab_i(1);
     println("%s:", L_end);
     IX_Dest = IX_None;
     return;
