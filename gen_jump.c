@@ -97,6 +97,26 @@ char *is_addr_constant(Node *node)
   return NULL;
 }
 
+bool is_global_var_with_cast(Node *node)
+{
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_PTR
+  &&  node->lhs->ty->kind == TY_PTR) {
+    return is_global_var(node->lhs);
+  }
+  return is_global_var(node);
+}
+
+Node *skip_redundant_ptr_cast(Node *node)
+{
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_PTR
+  &&  node->lhs->ty->kind == TY_PTR) {
+    return node->lhs;
+  }
+  return node;
+}
+
 static int isNUM(Node *node) { return node->kind == ND_NUM; }
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
 static int isVARorNUM(Node *node) { return isVAR(node) || isNUM(node); }
@@ -266,8 +286,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
   }
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
-    if (is_global_var(node)) {
-      ldx_EXT(node);
+    if (is_global_var_with_cast(node)) {
+      ldx_EXT(skip_redundant_ptr_cast(node));
       println("\tjeq %s", if_false);
       return true;
     }
@@ -461,7 +481,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
       }
     }
     // ↑ if (expr op 0) 
-    // ↓ if (expr op const)
+    // ↓ if (expr op const/var)
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
@@ -508,7 +528,22 @@ bool gen_jump_if_false(Node *node, char *if_false)
       default: ;
         assert(0);    // It's strange to fail
       }
-    // ↑ rhs==const && EQ or NE
+  } else if (is_global_var_with_cast(rhs)
+         && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_expr_x(lhs))) {
+      int off = gen_expr_x(lhs,false);
+      cpx_EXT(skip_redundant_ptr_cast(rhs));
+      switch(node->kind) {
+      case ND_EQ:
+        println("\tjne %s", if_false);
+        return true;
+      case ND_NE:
+        println("\tjeq %s", if_false);
+        return true;
+      default: ;
+        assert(0);    // It's strange to fail
+      }
+    // ↑ rhs==const/var && EQ or NE
   } else if ((addr=is_addr_constant(rhs))    // rhs == addr const
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
@@ -777,7 +812,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
     }
   }
   if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
-    if (is_global_var(node)) {
+    if (is_global_var_with_cast(node)) {
+      ldx_EXT(skip_redundant_ptr_cast(node));
       ldx_EXT(node);
       println("\tjne %s", if_true);
       return true;
@@ -981,6 +1017,21 @@ bool gen_jump_if_true(Node *node, char *if_true)
       int off = gen_addr_x(lhs,false);
       ldx_nX(off);
       println("\tcpx #%ld",val);
+      switch(node->kind) {
+      case ND_EQ:
+        println("\tjeq %s", if_true);
+        return true;
+      case ND_NE:
+        println("\tjne %s", if_true);
+        return true;
+      default: ;
+        assert(0);    // It's strange to fail
+      }
+  } else if (is_global_var_with_cast(rhs)
+         && (node->kind==ND_EQ || node->kind==ND_NE)
+         && (test_expr_x(lhs))) {
+      int off = gen_expr_x(lhs,false);
+      cpx_EXT(skip_redundant_ptr_cast(rhs));
       switch(node->kind) {
       case ND_EQ:
         println("\tjeq %s", if_true);

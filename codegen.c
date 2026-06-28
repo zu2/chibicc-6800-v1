@@ -329,6 +329,15 @@ void ldx_EXT(Node *node)
   IX_EXT_var = var->name;
 }
 
+void cpx_EXT(Node *node)
+{
+  assert(node->kind == ND_VAR);
+  Obj *var = node->var;
+  assert(!var->is_local);
+
+  println("\tcpx _%s",var->name);
+}
+
 void stx_EXT(Node *node)
 {
   assert(node->kind == ND_VAR);
@@ -424,18 +433,18 @@ bool is_local_array(Node *node)
 //
 bool is_global_var(Node *node)
 {
-   if (node->kind != ND_VAR)
-     return 0;
-   if (node->var->ty->kind == TY_VLA)
-     return 0;
-   if (node->var->is_local)
-     return 0;
-   if (node->ty->kind == TY_FUNC)
-     return 0;
-   if (node->ty->kind == TY_ARRAY)
-     return 0;
+  if (node->kind != ND_VAR)
+    return 0;
+  if (node->var->ty->kind == TY_VLA)
+    return 0;
+  if (node->var->is_local)
+    return 0;
+  if (node->ty->kind == TY_FUNC)
+    return 0;
+  if (node->ty->kind == TY_ARRAY)
+    return 0;
 
-   return 1;
+  return 1;
 }
 
 //

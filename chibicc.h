@@ -486,6 +486,8 @@ void ldx_bp_nX(int off);
 void ldx_nX(int off);
 int ldx_x(Type *ty,int off);
 void ldx_EXT(Node *node);
+void cpx_EXT(Node *node);
+void stx_EXT(Node *node);
 void tfr_dx();
 int gen_expr_x(Node *node,bool save_d);
 bool test_expr_x(Node *node);
