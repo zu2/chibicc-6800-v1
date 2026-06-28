@@ -536,6 +536,30 @@ Node *optimize_expr(Node *node)
       }
       return node->lhs;
     }
+    // (ND_CAST TY_CHAR(2) (|&^ TY_INT(4) (int) (int)))
+    if (node->ty->kind == TY_CHAR) {
+      switch(node->lhs->kind) {
+      case ND_BITAND:
+      case ND_BITOR:
+      case ND_BITXOR:
+        if (is_integral_promotion_or_byte(node->lhs->lhs)) {
+          node->lhs->lhs = skip_integral_promotion(node->lhs->lhs);
+        }
+        if (is_integral_promotion_or_byte(node->lhs->rhs)) {
+          node->lhs->rhs = skip_integral_promotion(node->lhs->rhs);
+        }
+        if (!is_integral_promotion_or_byte(node->lhs->lhs)) {
+          Node *new = new_cast(node->lhs->lhs,ty_char);
+          node->lhs->lhs = new;
+        }
+        if (!is_integral_promotion_or_byte(node->lhs->rhs)) {
+          Node *new = new_cast(node->lhs->rhs,ty_char);
+          node->lhs->rhs = new;
+        }
+        node->lhs->ty = node->ty;
+        return optimize_expr(node->lhs);
+      }
+    }
     if (node->lhs->kind == ND_COND) {
       node->lhs->ty = node->ty;
       node->lhs = optimize_expr(node->lhs);
