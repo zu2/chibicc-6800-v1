@@ -299,8 +299,9 @@ bool gen_jump_if_false(Node *node, char *if_false)
   }
 
   if (node->kind == ND_BITAND && is_int8(node->ty)) {
-    gen_jump_if_false_8bit(node,if_false);
-    return true;
+    if (gen_jump_if_false_8bit(node,if_false)) {
+      return true;
+    }
   }
 
   if (!is_compare(node)) {
