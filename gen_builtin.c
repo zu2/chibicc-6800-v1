@@ -141,49 +141,25 @@ bool builtin_strcpy(Node *node)
         println("\tldab #%d",off);
         println("\tjsr __abx");
       }
-      size_t *space = malloc(size*sizeof(size_t));
-      for (int i=0; i<size; i++) {
-        space[i] = size;
-        for (int j=size-1; j>i; j--) {
-          if (var->init_data[i] == var->init_data[j]) {
-            space[i] = j-i;
+      // IX:dest
+      bool done[256] = {false};
+      for (int i = 0; i < size; i++) {
+        unsigned char c = (unsigned char)var->init_data[i];
+        if (!done[c]) {
+          done[c] = true;
+
+          if (c==0) {
+            println("\tclr %u,x",i+off);
+            break;
           }
-        }
-      }
-      size_t spacing_A=size, spacing_B=size;
-      int AccA=0, AccB=0;
-      for (size_t i=0; i<size; i++) {
-        if (var->init_data[i]==0) {
-          println("\tclr %ld,x",i+off);
-          break;
-        }
-        spacing_A--; spacing_B--;
-        if (var->init_data[i]==AccA) {
-          println("\tstaa %ld,x",i+off);
-          spacing_A = space[i];
-        }else if (var->init_data[i]==AccB) {
-          println("\tstab %ld,x",i+off);
-          spacing_B = space[i];
-        }else if (spacing_A>spacing_B) {
-          if (isprint(var->init_data[i]) &&  var->init_data[i]!='\\'){
-            println("\tldaa #$%02x   ; '%c'",
-              var->init_data[i],var->init_data[i]);
-          }else{
-            println("\tldaa #$%02x",var->init_data[i]);
+          if (isprint(c) && c != '\\')
+            println("\tldaa #$%02x   ; '%c'", c, c);
+          else
+            println("\tldaa #$%02x", c);
+          for (int j = i; j < size - 1; j++) {
+            if ((unsigned char)var->init_data[j] == c)
+              println("\tstaa %u,x", j + off);
           }
-          println("\tstaa %ld,x",i+off);
-          AccA = var->init_data[i];
-          spacing_A = space[i];
-        }else{
-          if (isprint(var->init_data[i]) &&  var->init_data[i]!='\\'){
-            println("\tldab #$%02x   ; '%c'",
-              var->init_data[i],var->init_data[i]);
-          }else{
-            println("\tldab #$%02x",var->init_data[i]);
-          }
-          println("\tstab %ld,x",i+off);
-          AccB = var->init_data[i];
-          spacing_B = space[i];
         }
       }
       return true;
