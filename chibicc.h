@@ -510,6 +510,7 @@ void pop1(void);
 void popa(void);
 void popx(void);
 void ins(int n);
+void ldab_i(int n);
 void ldd_i(int n);
 void load_var(Node *node);
 void cmp_zero(Type *ty);

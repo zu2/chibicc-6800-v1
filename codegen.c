@@ -199,7 +199,7 @@ static void des(int n)
   }
 }
 
-static void ldab_i(int n)
+void ldab_i(int n)
 {
   if ((n & 0x00ff)==0) {
     println("\tclrb");
