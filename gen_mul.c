@@ -42,9 +42,9 @@ gen_mul8u(Node *node)
           return true;
         }
       }
-      if (can_direct(node->rhs)) {
+      if (can_direct_char(node->rhs)) {
         gen_expr(lhs);
-        gen_direct(rhs,"ldaa",NULL);
+        gen_direct_char(rhs,"ldaa",NULL);
       }else if (test_addr_x(rhs)) {
         gen_expr(lhs);
         int off = gen_addr_x(rhs,false);
@@ -83,9 +83,9 @@ gen_mul8s(Node *node)
   &&  rhs->ty->kind == TY_CHAR) {
     if (!lhs->ty->is_unsigned
     &&  !rhs->ty->is_unsigned) {
-      if (can_direct(node->rhs)) {
+      if (can_direct_char(node->rhs)) {
         gen_expr(lhs);
-        gen_direct(rhs,"ldaa",NULL);
+        gen_direct_char(rhs,"ldaa",NULL);
       }else if (test_addr_x(rhs)) {
         gen_expr(lhs);
         int off = gen_addr_x(rhs,false);
