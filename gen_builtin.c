@@ -14,16 +14,23 @@ bool builtin_memset(Node *node)
       if (num==0) {
         return true;
       }
-      int odd = (num & 1);
+      ldab_i((uint16_t)val);
+      int odd = (num & 3);
+      for(int i=0; i<odd; i++) {
+        println("\tstab %u",(uint16_t)dst+i);
+      }
+      num &= ~3;
+      if (num==0) {
+        return true;
+      }
       char *loop = new_label("L_%d");
-      println("\tldab #%d",(uint16_t)val);
-      println("\tldx #%d",(uint16_t)dst);
+      println("\tldx #%d",(uint16_t)dst+odd);
       println("%s:",loop);
-      for (int i=odd; i<2; i++) {
+      for (int i=0; i<4; i++) {
         println("\tstab 0,x");
         println("\tinx");
       }
-      println("\tcpx #%d",(uint16_t)(dst+num));
+      println("\tcpx #%d",(uint16_t)(dst+num+odd));
       println("\tbne %s",loop);
       IX_Dest = IX_None;
       if (!node->retval_unused) {
@@ -48,6 +55,12 @@ bool builtin_memcpy(Node *node)
       println("; ND_FUNCALL: builtin_memcpy(0x%04x,0x%04x,%u)",
                                 (uint16_t)dst,(uint16_t)src,(uint16_t)num);
       if (num==0) {
+        return true;
+      }
+      if (dst==src) {
+        if (!node->retval_unused) {
+          ldd_i(dst);
+        }
         return true;
       }
       int odd = (num & 1);
@@ -138,7 +151,7 @@ bool builtin_strcpy(Node *node)
           ||  (opt('O','2') && size<=32)){
       println("; ND_FUNCALL: builtin_strcpy(..., _%s)",var->name);
       if (size+off>=256) {
-        println("\tldab #%d",off);
+        ldab_i(off);
         println("\tjsr __abx");
       }
       // IX:dest
