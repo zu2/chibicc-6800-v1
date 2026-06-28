@@ -5680,7 +5680,7 @@ void gen_expr(Node *node) {
     if (is_int8(node->ty)) {
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
-        if(gen_direct(node->rhs,"addb",NULL))
+        if(gen_direct_char(node->rhs,"addb",NULL))
           return;
         assert(0);
       }
@@ -5811,7 +5811,7 @@ void gen_expr(Node *node) {
     if (is_int8(node->ty)) {
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
-        if(gen_direct(node->rhs,"subb",NULL))
+        if(gen_direct_char(node->rhs,"subb",NULL))
           return;
         assert(0);
       }
@@ -6086,16 +6086,16 @@ void gen_expr(Node *node) {
     }
     if ((lhs->ty->kind==TY_CHAR || lhs->ty->kind==TY_BOOL)
     &&  (rhs->ty->kind==TY_CHAR || rhs->ty->kind==TY_BOOL)) { // char relop char
-      if (can_direct(node->rhs)){
+      if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
-        if(!gen_direct(node->rhs,"subb",NULL)) {
+        if(!gen_direct_char(node->rhs,"subb",NULL)) {
           assert(0);
         }
       }else{
-        gen_expr(node->rhs);
-        push1();
         gen_expr(node->lhs);
-        println("\tpula");
+        push1();
+        gen_expr(node->rhs);
+        popa();
         println("\tsba");
       }
       switch(node->kind){
@@ -6197,12 +6197,12 @@ void gen_expr(Node *node) {
     case TY_CHAR:
       char *skip = new_jump_label();
       char *loop = new_jump_label();
-      if (can_direct(node->lhs)
-      &&  can_direct(node->rhs)) {
-        if(!gen_direct(node->lhs,"ldab",NULL)) {
+      if (can_direct_char(node->lhs)
+      &&  can_direct_char(node->rhs)) {
+        if(!gen_direct_char(node->lhs,"ldab",NULL)) {
           assert(0);
         }
-        if(!gen_direct(node->rhs,"ldaa",NULL)) {
+        if(!gen_direct_char(node->rhs,"ldaa",NULL)) {
           assert(0);
         }
       }else{
@@ -6263,9 +6263,9 @@ void gen_expr(Node *node) {
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
-      if (can_direct(node->rhs)) {
+      if (can_direct_char(node->rhs)) {
         gen_expr(node->lhs);
-        if(!gen_direct(node->rhs,"ldaa",NULL)) {
+        if(!gen_direct_char(node->rhs,"ldaa",NULL)) {
           assert(0);
         }
       }else{
