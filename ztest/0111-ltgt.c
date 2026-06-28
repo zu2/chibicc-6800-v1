@@ -28,12 +28,20 @@ int main(int argc, char **argv)
     return 2;
   if (!slt(0,1))
     return 3;
+  if (slt(127,-128))
+    return 4;
+  if (!slt(-128,127))
+    return 5;
   if (ult(0,0))
     return 6;
   if (ult(1,0))
     return 7;
   if (!ult(0,1))
     return 8;
+  if (ult(255,0))
+    return 9;
+  if (!ult(0,255))
+    return 10;
 
   if (sgt(0,0))
     return 11;
@@ -41,12 +49,20 @@ int main(int argc, char **argv)
     return 12;
   if (!sgt(1,0))
     return 13;
+  if (sgt(-128,127))
+    return 14;
+  if (!sgt(127,-128))
+    return 15;
   if (ugt(0,0))
     return 16;
   if (ugt(0,1))
     return 17;
   if (!ugt(1,0))
     return 18;
+  if (ugt(0,255))
+    return 19;
+  if (!ugt(255,0))
+    return 20;
 
   if (b<a)
     return 21;
