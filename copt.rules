@@ -975,6 +975,14 @@
 	ldx 0,x
 	cpx #%1
 
+	jsr __load16
+	aba
+	adca #0
+=
+	jsr __tfr_dx
+	ldx 0,x
+
+
 #	~%1 & AccB
 
 	pshb
