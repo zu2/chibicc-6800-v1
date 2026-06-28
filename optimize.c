@@ -442,6 +442,16 @@ Node *optimize_expr(Node *node)
     &&  is_boolean_result(node->lhs)){
       return node->lhs;
     }
+    if (node->ty->kind == TY_CHAR
+    ||  node->ty->kind == TY_BOOL) {
+      switch(node->lhs->kind) {
+      case ND_LOGAND:
+      case ND_LOGOR:
+      case ND_NOT:
+        node->lhs->ty = node->ty;
+        return optimize_expr(node->lhs);
+      }
+    }
     if (node->lhs->kind == ND_CAST
     &&  node->ty == node->lhs->ty) {
       return node->lhs;

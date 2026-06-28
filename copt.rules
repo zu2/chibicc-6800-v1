@@ -226,6 +226,30 @@
 	ldab %1
 	andb #%2
 
+	ldab %1
+	jeq %2
+	clrb
+	bra %3
+%2:
+	ldab #<1
+%3:
+=
+	ldab %1
+	negb		; AccB = NOT B
+	ldab #1
+	sbcb #0
+
+	tstb
+	jeq %2
+	clrb
+	bra %3
+%2:
+	ldab #<1
+%3:
+=
+	negb		; AccB = NOT B
+	ldab #1
+	sbcb #0
 
 	addb #<%1
 	adca #>%1

@@ -140,7 +140,8 @@ static void remove_args(int n)
     return;
   }
   // function has @bp, and not use alloca()
-  if (current_fn->params || current_fn->stack_size && !current_fn->use_alloca) {
+  if (current_fn->params
+  || (current_fn->stack_size && !current_fn->use_alloca)) {
     if (depth==n) { // Removes all stack args.
       if (n>=3 || (n>=2 && opt('O','2'))) {
         ldx_bp();
@@ -5135,22 +5136,23 @@ void gen_expr(Node *node) {
     return;
   }
   case ND_NOT: {
-    gen_expr(node->lhs);
-    if (is_compare_or_not(node->lhs)) {
-      println("\tdecb");
-      println("\tnegb");
-      return;
-    }
-    cmp_zero(node->lhs->ty);
     int c = count();
-    println("\tbeq L_false_%d", c);
-    println("\tclra");
-    println("\tclrb");
-    println("\tbra L_end_%d", c);
-    println("L_false_%d:", c);
-    println("\tclra");
+    char L_not[30];
+    char L_end[30];
+    sprintf(L_not, "L_not_%d",c);
+    sprintf(L_end, "L_end_%d",c);
+
+    if (!gen_jump_if_false(node->lhs,L_not)){
+      assert(0);
+    }
+    ldab_i(0);
+    println("\tbra %s",L_end);
+    println("%s:", L_not);
     ldab_i(1);
-    println("L_end_%d:", c);
+    println("%s:", L_end);
+    if (node->ty->kind != TY_CHAR && node->ty->kind != TY_BOOL){
+      println("\tclra");
+    }
     return;
   }
   case ND_BITNOT:
@@ -5174,7 +5176,6 @@ void gen_expr(Node *node) {
     assert(0);
   case ND_LOGAND: {
     int c = count();
-    int need_bool = 0;
     char L_false[32];
     char L_end[32];
     sprintf(L_false,"L_and_%d",c);
@@ -5186,19 +5187,19 @@ void gen_expr(Node *node) {
     if (!gen_jump_if_false(node->rhs,L_false)){
       assert(0);
     }
-    println("\tclra");
     ldab_i(1);
     println("\tbra %s",L_end);
     println("%s:",L_false);
-    println("\tclra");
     ldab_i(0);
     println("L_end_%d:", c);
+    if (node->ty->kind != TY_CHAR && node->ty->kind != TY_BOOL){
+      println("\tclra");
+    }
     IX_Dest = IX_None;
     return;
   }
   case ND_LOGOR: {
     int c = count();
-    int need_bool = 0;
     char L_true[32], L_end[32];
     sprintf(L_true,"L_or_%d",c);
     sprintf(L_end, "L_end_%d" ,c);
@@ -5209,13 +5210,14 @@ void gen_expr(Node *node) {
     if (!gen_jump_if_true(node->rhs,L_true)) {
       assert(0);
     }
-    println("\tclra");
     ldab_i(0);
     println("\tbra %s",L_end);
     println("%s:",L_true);
-    println("\tclra");
     ldab_i(1);
     println("%s:", L_end);
+    if (node->ty->kind != TY_CHAR && node->ty->kind != TY_BOOL){
+      println("\tclra");
+    }
     IX_Dest = IX_None;
     return;
   }
