@@ -559,13 +559,22 @@ Node *optimize_expr(Node *node)
           node->lhs->rhs = skip_integral_promotion(node->lhs->rhs);
         }
         if (!is_integral_promotion_or_byte(node->lhs->lhs)) {
-          Node *new = new_cast(node->lhs->lhs,ty_char);
-          node->lhs->lhs = new;
+          node->lhs->lhs = new_cast(node->lhs->lhs,ty_char);
         }
         if (!is_integral_promotion_or_byte(node->lhs->rhs)) {
-          Node *new = new_cast(node->lhs->rhs,ty_char);
-          node->lhs->rhs = new;
+          node->lhs->rhs = new_cast(node->lhs->rhs,ty_char);
         }
+        node->lhs->ty = node->ty;
+        return optimize_expr(node->lhs);
+      }
+    }
+    if (node->ty->size < node->lhs->ty->size) {
+      switch(node->lhs->kind) {
+      case ND_BITAND:
+      case ND_BITOR:
+      case ND_BITXOR:
+        node->lhs->lhs = new_cast(node->lhs->lhs,node->ty);
+        node->lhs->rhs = new_cast(node->lhs->rhs,node->ty);
         node->lhs->ty = node->ty;
         return optimize_expr(node->lhs);
       }

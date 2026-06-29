@@ -1,4 +1,8 @@
 #
+#	peep hole optimize for -O1,-O2,-O3,-Os
+#
+
+#
 #	jmp & bra
 #
 
@@ -491,21 +495,73 @@
 	ldx %1
 	jsr __%2x
 
-	ldx %1
-	jsr __xor32x
-	ldx %1
+	ldx #%1
+	jsr __and32x
+	ldx #%1
 =
-	ldx %1
+	ldx #%1
+	jsr __and32x
+
+	ldx #%1
+	jsr __and32x
+	jsr __store32x
+	ldx #%1
+=
+	ldx #%1
+	jsr __and32x_store32x
+
+	ldx #%1
+	jsr __and32x_store32x
+	jsr __load32x
+=
+	ldx #%1
+	jsr __and32x_store32x
+	ldx #%1
+
+	ldx #%1
+	jsr __or32x
+	ldx #%1
+=
+	ldx #%1
+	jsr __or32x
+
+	ldx #%1
+	jsr __or32x
+	jsr __store32x
+	ldx #%1
+=
+	ldx #%1
+	jsr __or32x_store32x
+
+	ldx #%1
+	jsr __or32x_store32x
+	jsr __load32x
+=
+	ldx #%1
+	jsr __or32x_store32x
+	ldx #%1
+
+	ldx #%1
+	jsr __xor32x
+	ldx #%1
+=
+	ldx #%1
 	jsr __xor32x
 
-	ldx %1
+	ldx #%1
 	jsr __xor32x
 	jsr __store32x
-	ldx %1
+	ldx #%1
 =
-	ldx %1
-	jsr __xor32x
-	jsr __store32x
+	ldx #%1
+	jsr __xor32x_store32x
+
+	ldx #%1
+	jsr __xor32x_store32x
+	jsr __load32x
+=
+	ldx #%1
+	jsr __xor32x_store32x
 
 #
 #	branch condition

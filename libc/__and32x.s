@@ -5,6 +5,7 @@
         .export __and32bx
         .export __and32bx
 	.export __and32x
+	.export __and32x_store32x
 
 	.code
 ;
@@ -38,3 +39,7 @@ __and32x:
 	andb	@long
 	stab	@long
         rts
+;
+__and32x_store32x:
+	bsr	__and32x
+	jmp	__store32x

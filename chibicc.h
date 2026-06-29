@@ -532,6 +532,7 @@ typedef	enum {
 
 extern IX_Type	IX_Dest;
 extern int IX_PTR_off;
+extern int IX_IMM_value;
 
 //
 // gen_jump.c

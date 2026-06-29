@@ -2,6 +2,8 @@
 ;	long basic library add32
 ;
 	.export __add32i
+	.export __add32bx
+	.export __add32dx
 	.export __add32x
 	.export __add32tos
 
@@ -19,6 +21,10 @@ __add32i:		; add 32bit immediate
 ;
 ;	__add32x	@long += (0-3,x)
 ;
+__add32bx:
+	clra
+__add32dx:
+	jsr __adx
 __add32x:
 	ldab 3,x
 	addb @long+3

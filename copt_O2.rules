@@ -77,6 +77,7 @@
 	ldx %1,x
 	stx @long
 
+	XXX
 	jsr __store32x
 =
 	ldab @long+3
@@ -141,6 +142,58 @@ DEC32_%M:
 	adcb #%eval(%1 256 /)
 	stab @long
 
+	jsr __and32i
+	.word %1
+	.word %2
+=
+	ldab @long+3
+	andb #%eval(%2 256 %%)
+	stab @long+3
+	ldab @long+2
+	andb #%eval(%2 256 /)
+	stab @long+2
+	ldab @long+1
+	andb #%eval(%1 256 %%)
+	stab @long+1
+	ldab @long
+	andb #%eval(%1 256 /)
+	stab @long
+
+	jsr __xor32x
+=
+	ldab @long+3
+	eorb 3,x
+	stab @long+3
+	ldab @long+2
+	eorb 2,x
+	stab @long+2
+	ldab @long+1
+	eorb 1,x
+	stab @long+1
+	ldab @long
+	eorb 0,x
+	stab @long+0
+
+	jsr __xor32x_store32x
+=
+	ldab @long+3
+	eorb 3,x
+	stab 3,x
+	stab @long+3
+	ldab @long+2
+	eorb 2,x
+	stab 2,x
+	stab @long+2
+	ldab @long+1
+	eorb 1,x
+	stab 1,x
+	stab @long+1
+	ldab @long
+	eorb 0,x
+	stab 0,x
+	stab @long+0
+
+
 #
 # shift operation optimize
 #
@@ -182,6 +235,15 @@ DEC32_%M:
 =
 	clra
 
+	ldaa %0
+	anda #0
+=
+	clra
+
+	ldaa %0
+	anda #255
+=
+	ldaa %0
 
 #
 # special pattern

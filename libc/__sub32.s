@@ -2,6 +2,8 @@
 ;	long basic library sub32
 ;
         .export __sub32i
+	.export __sub32bx
+	.export __sub32dx
 	.export __sub32x
 	.export __sub32tos
 
@@ -20,6 +22,10 @@ __sub32i:		; sub 32bit immediate
 ;
 ;	__sub32x	@long -= (0-3,x)
 ;
+__sub32bx:
+	clra
+__sub32dx:
+	jsr __adx
 __sub32x:
 	ldab @long+3
 	subb 3,x

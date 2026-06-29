@@ -5,6 +5,7 @@
 	.export __or32bx
 	.export __or32dx
 	.export __or32x
+	.export __or32x_store32x
 
 	.code
 ;
@@ -36,3 +37,7 @@ __or32x:
 	orab	@long
 	stab	@long
         rts
+;
+__or32x_store32x:
+	bsr	__or32x
+	jmp	__store32x

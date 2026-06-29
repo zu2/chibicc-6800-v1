@@ -5,6 +5,7 @@
 	.export __xor32bx
 	.export __xor32dx
 	.export __xor32x
+	.export __xor32x_store32x
 
 	.code
 ;
@@ -26,13 +27,17 @@ __xor32x:
 	ldab    3,x
 	eorb	@long+3
 	stab	@long+3
-	ldab    2,x
-	eorb	@long+2
-	stab	@long+2
-	ldab    1,x
-	eorb	@long+1
-	stab	@long+1
-	ldab    0,x
-	eorb	@long
-	stab	@long
+	ldaa    2,x
+	eora	@long+2
+	staa	@long+2
+	ldaa    1,x
+	eora	@long+1
+	staa	@long+1
+	ldaa    0,x
+	eora	@long
+	staa	@long
         rts
+;
+__xor32x_store32x:
+	bsr	__xor32x
+	jmp	__store32x
