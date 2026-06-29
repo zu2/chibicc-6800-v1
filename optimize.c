@@ -570,10 +570,12 @@ Node *optimize_expr(Node *node)
         return optimize_expr(node->lhs);
       }
     }
-    if (node->lhs->kind == ND_COND) {
+    if (node->ty->kind == TY_CHAR
+    &&  node->lhs->kind == ND_COND) {
       node->lhs->ty = node->ty;
-      node->lhs = optimize_expr(node->lhs);
-      return node;
+      node->lhs->then = optimize_expr(new_cast(node->lhs->then,node->ty));
+      node->lhs->els  = optimize_expr(new_cast(node->lhs->els ,node->ty));
+      return node->lhs;
     }
     if (is_integer(node->ty)
     &&  node->lhs->kind==ND_NUM
