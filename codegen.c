@@ -4750,14 +4750,8 @@ void gen_expr(Node *node) {
         gen_expr(lhs->lhs);
         println("\tldx #_%s",lhs->rhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
-        println("\tclra ;");
         println("%s:",offset);
         println("\tldab 0,x");
-        if (!node->ty->is_unsigned) {
-          println("\tbpl %s",label);
-          println("\tdeca");
-          println("%s:",label);
-        }
         IX_Dest = IX_None;
         return;
       }
@@ -4772,14 +4766,8 @@ void gen_expr(Node *node) {
         gen_expr(lhs->rhs);
         println("\tldx #_%s",lhs->lhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
-        println("\tclra ;");
         println("%s:",offset);
         println("\tldab 0,x");
-        if (!node->ty->is_unsigned) {
-          println("\tbpl %s",label);
-          println("\tdeca");
-          println("%s:",label);
-        }
         IX_Dest = IX_None;
         return;
       }
