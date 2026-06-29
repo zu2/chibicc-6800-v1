@@ -1,6 +1,6 @@
 #CC=gcc
 #CC=clang
-CFLAGS=-std=c2x -g -fno-common -Wall -Wno-switch -g3 -pedantic
+CFLAGS=-std=c2x -g -fno-common -Wall -Wno-switch -g3 -pedantic # --coverage
 
 SRCS=$(wildcard *.c)
 OBJS=$(SRCS:.c=.o)
@@ -55,29 +55,25 @@ install: all
 	install -c copt.rules  /opt/chibicc/lib
 	install -c copt_O2.rules  /opt/chibicc/lib
 	install -c copt_O3.rules  /opt/chibicc/lib
-	
-
-# Stage 1
 
 chibicc: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 $(OBJS): chibicc.h
 
-test/%.bin: chibicc test/%.c
-	(cd test; ../chibicc -vvv -Ddouble=float -Iinclude -I.. -I. -o $@ $*.c  ../benchmark/pi/my_printf.c -xc common  )
 
-test: $(TESTS)
-	(cd test; for i in $^; do echo $$i; emu6800 6800 ../test/$$i.bin ../test/$$i.map || exit 1; echo; done
-	test/driver.sh ./chibicc
+test: install
+	(cd ztest/ ; ./runall)
+#	(cd wtests/ ; ./runtests)
+#	(cd rtest/; ./runall)
 
-test-all: test
 
 # Misc.
 
 clean:
 	rm -rf chibicc tmp* $(TESTS) test/*.s test/*.exe stage2
 	find * -type f '(' -name '*~' -o -name '*.o' ')' -exec rm {} ';'
+	rm -f *.gcov *.gcda *.gcno
 	(cd libc ; make clean)
 	(cd libm ; make clean)
 	(cd ztest ; make clean)
