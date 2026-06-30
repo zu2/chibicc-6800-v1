@@ -4,11 +4,11 @@ This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https:
 
 This project was created as a tool for studying compilers for the MC6800, and while it includes extra code and comments that may not be essential, they reflect the learning process and experimentation involved in developing the compiler.
 
-There are many aspects of the object code generation method and speed that cannot be understood without actually creating it. There may be unnecessary parts added for testing code generation.
+A lot of things about object code generation and performance only became clear once I actually implemented it. Some parts of the code may be there just for testing.
 
-However, it is a compiler that works reasonably well. I hope it will be helpful for you to create another fork.
+However, it works reasonably well on the MC6800. I hope it may still be of some use.
 
-Dhrystone & Whetstone works now. 
+Dhrystone and Whetstone benchmarks now run successfully on the MC6800.
 
 - https://github.com/z88dk/z88dk/tree/master/support/benchmarks/dhrystone21
 - https://github.com/z88dk/z88dk/tree/master/support/benchmarks/whetstone
@@ -18,11 +18,11 @@ Dhrystone & Whetstone works now.
 - **Data types:** `int` and pointers are 16-bit; `long` and `float` are 32-bit. `double` and `long long` (64-bit or more) are unsupported.
 - **Structs/unions:** Passing/returning by value and bit fields are implemented.
 - **Function parameters:** Only the first parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
-- **Return values:** Struct/union return values pass their address as an implicit first argument in a register. all other normal arguments are passed on the stack.
+- **Return values:** Struct/union return values pass their address as an implicit first argument in a register. All other normal arguments are passed on the stack.
 
 The compiler passes basic tests, but there are still some issues remaining.
 
-IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
+IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C.
 
 It can handle subnormal, NaN and Inf values. It passes basic testing but is not well tested for precision.
 
@@ -114,9 +114,9 @@ This will compile the source file and execute the resulting binary using the emu
 ## Integer Operations
 
 - **Dhrystone benchmark:** 234 seconds at 1MHz on MC6800, equivalent to approximately 0.05 DMIPS.
-  - Improve: 183.56 seconds, 0.062 DMIPS (2025/09/17).
-  - Improve: 179.84 seconds, 0.063 DMIPS (2025/11/13).
-  - Improve: 160.84 seconds, 0.070 DMIPS (2026/01/10).
+  - Update: 183.56 seconds, 0.062 DMIPS (2025/09/17).
+  - Update: 179.84 seconds, 0.063 DMIPS (2025/11/13).
+  - Update: 160.84 seconds, 0.070 DMIPS (2026/01/10).
 
 If running on 2MHz MC68B00: 0.1407 DMIPS, comparable to HITECH C CPM V309-15 (0.1278 DMIPS).
 MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
@@ -125,14 +125,14 @@ MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
 
 ## Floating-Point Operations
 - **Mandelbrot ASCII renderer (`asciiartf`):** 266 seconds at **1MHz on MC6800**.
-  - Improve: 198.8 seconds (2025/08/09)
-  - Improve: 182.0 seconds (2025/11/12)
+  - Update: 198.8 seconds (2025/08/09)
+  - Update: 182.0 seconds (2025/11/12)
 - **Source code:** [`ztest/9018-asciiartf.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9018-asciiartf.c)  
 
 - **Whetstone benchmark:** 449.5355 seconds at **1MHz on MC6800**, equivalent to approximately 2.2245 KWIPS, .0022245 MWIPS
-  - Improve: 2.7544 KWIPS, 0.027544 MWIPS (2025/06/12)
-  - Improve: 358.0215 seconds, 2.793 KWIPS, .002793 MWIPS (2025/08/09)
-  - Improve: 317.2384 seconds, 3.152 KWIPS, .003152 MWIPS (2025/11/13)
+  - Update: 2.7544 KWIPS, 0.027544 MWIPS (2025/06/12)
+  - Update: 358.0215 seconds, 2.793 KWIPS, .002793 MWIPS (2025/08/09)
+  - Update: 317.2384 seconds, 3.152 KWIPS, .003152 MWIPS (2025/11/13)
 
 - **Source code:** [z88dk/support/benchmarks/whetstone at master · z88dk/z88dk](https://github.com/z88dk/z88dk/tree/master/support/benchmarks/whetstone)
 
@@ -179,7 +179,7 @@ The IEEE754 float implementation has passed the Paranoia test for addition, subt
   No optimization is performed at this level.
 
 - **`-O`, `-O1`, `-O2`**:  
-  if `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization
+  If `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization
 
 - **`-O3`**:
   -O3 is an experimental feature. Use at your own risk, after reviewing the generated code.
@@ -222,7 +222,7 @@ When the function returns, the old frame pointer is used to restore the stack pr
 //        argment passed by register AB or @long (if any)
 //        old @bp
 //        return address
-//        argment passed by stack
+//        argments passed by stack
 ```
 
 ## Function Arguments Handling
@@ -231,7 +231,7 @@ In this implementation:
 
 1. Function arguments are discarded by the caller (unlike CC68/Fuzix CC where this happens in the callee).
 2. The caller performs stack adjustment using `INS`, which increases code size due to frequent calls.
-3. The first argument of the function is passed in a register. If the first argument is 8-bit, it is passed in AccB. If it is 16-bit, it is passed in AccAB. If it is long/float, it is passed with 4byte @long area in zero page.
+3. The first argument of the function is passed in a register. If the first argument is 8-bit, it is passed in AccB. If it is 16-bit, it is passed in AccAB. If it is long/float, it is passed with 4-byte @long area in zero page.
 
 ### Tradeoffs:
 
@@ -249,7 +249,7 @@ Adjusting the stack in the called function can make the return process trickier.
 
 ## float/long in zero page
 
-long/float are handled as 4byte variables (@long) on the zero page.
+long/float are handled as 4-byte variables (@long) on the zero page.
 
 This is different from the CC68 and Fuzix CC methods. They are handled using AccA/B and as 2-byte values on the zero page.
 
