@@ -42,10 +42,10 @@ int main(int argc, char **argv)
 	if ((unsigned long)f != 2147483648UL)
 		return	41;
 	f = 4294967295.0;     // 4294967295.0 is rounded to 4294967296.0 in float.
-	if ((unsigned long)f != 0L)    // 4294967296.0 → 0UL
+	if ((unsigned long)f != 4294967295UL)    // 4294967296.0 → UB
 		return	48;
 	f = 4294967296.0;
-	if ((unsigned long)f != 4294967296UL)   // Undefined Behavior
+	if ((unsigned long)f != 4294967295UL)   // Undefined Behavior
 		return	49;
 
 	f = 1.0;

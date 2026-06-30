@@ -251,7 +251,7 @@ int main(int argc, char **argv)
 
   if (ucheck2(0xFFFFFF00,0xFFFFFF00))
     return 141;
-  if (ucheck2(0xFFFFFFFF,0x00000000)) // 4294967296.0 -> 0
+  if (ucheck2(0xFFFFFFFF,0xFFFFFFFF)) // 4294967296.0 -> UB / 04294967295
     return 142;
 
     

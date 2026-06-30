@@ -366,9 +366,11 @@ __f32tou32:
 	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
 	jcs	__u32zero
 __f32tou32_1:
-;	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
-;	bcs	__f32tou32_2
-;	jmp	__u32ffffffff	; return 4,294,967,295
+; Undefined behavior when the value is out of the integer range. C17 §6.3.1.4
+; This implementation, 0xffffffff was chosen intentionally for consistency.
+	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
+	bcs	__f32tou32_2
+	jmp	__u32ffffffff	; return 4,294,967,295
 __f32tou32_2:
 	ldaa	1,x		; recover hidden bit
 	oraa	#$80
