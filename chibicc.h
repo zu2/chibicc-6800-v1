@@ -166,6 +166,7 @@ struct Obj {
   int stack_size;
   int function_no;
   int return_count;
+  bool use_bp;
   bool use_alloca;
   bool use_funcall;
   bool use_asm;

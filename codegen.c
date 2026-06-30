@@ -6860,12 +6860,18 @@ static void emit_text(Obj *prog) {
       IX_Dest = IX_None;
       continue;
     }
-    if (!fn->params && !fn->stack_size && !fn->use_alloca) {
-      println("; function has no params & locals");
+    fn->use_bp = false;
+    if (!fn->params
+    &&  !fn->stack_size
+    &&  !fn->use_alloca
+    &&  (fn->ty->return_ty->kind != TY_STRUCT)
+    &&  (fn->ty->return_ty->kind != TY_UNION)) {
+      println("; function has no params & locals, not use @bp");
       IX_Dest = IX_None;
       depth = 0;
       goto no_params_locals;
     }
+    fn->use_bp = true;
 
     // only one argument pass via Acc A,B, @long
     // save passed-by-register arguments to the stack
@@ -6990,9 +6996,9 @@ no_params_locals:
       println("; fn->ty->return_ty->size = %d", fn->ty->return_ty->size);
       println("; function %s use alloca/vla %d",fn->name,fn->use_alloca);
     }
-    if (!fn->params && !fn->stack_size && !fn->use_alloca) {
+    if (!fn->use_bp) {
       if (opt('g','2')) {
-        println("; function has no params & locals");
+        println("; function not use @bp");
       }
       IX_Dest = IX_None;
       goto no_params_locals2;

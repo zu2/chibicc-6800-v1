@@ -1799,6 +1799,8 @@ static Node *stmt(Token **rest, Token *tok) {
 
     if (opt('O','2') && !opt_nostatic_locals) {
       if (current_fn
+      &&  (current_fn->ty->return_ty->kind != TY_STRUCT)
+      &&  (current_fn->ty->return_ty->kind != TY_UNION)
       && !block_has_funcall(node)
       && locals != locals_before) {
         promote_locals_to_static(locals_before);
@@ -1995,6 +1997,8 @@ static Node *compound_stmt(Token **rest, Token *tok) {
     &&  !current_fn->use_alloca
     &&  !current_fn->use_funcall
     &&  !current_fn->use_asm
+    &&  (current_fn->ty->return_ty->kind != TY_STRUCT)
+    &&  (current_fn->ty->return_ty->kind != TY_UNION)
     &&  !block_has_funcall_list(node->body)
     &&  locals != locals_before) {
       promote_locals_to_static(locals_before);
@@ -3689,6 +3693,8 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
     if (!fn->use_alloca
     &&  !fn->use_funcall
     &&  !fn->use_asm
+    &&  (fn->ty->return_ty->kind != TY_STRUCT)
+    &&  (fn->ty->return_ty->kind != TY_UNION)
     &&  !block_has_funcall_list(fn->body)
     &&  fn->locals) {
       optimize_leaf(fn);
