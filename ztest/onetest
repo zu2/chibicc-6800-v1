@@ -16,6 +16,18 @@ while true; do
     OPT_g=$1
     shift
     ;;
+  -nostatic-locals)
+    OPT="$OPT -nostatic-locals"
+    shift
+    ;;
+  --)
+    shift
+    break
+    ;;
+  -*)
+    echo "Unknown option: $1" >&2
+    exit 1
+    ;;
   *)
     break
     ;;
