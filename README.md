@@ -1,5 +1,7 @@
 # chibicc-6800-v1: A small C Compiler for MC6800
 
+## Overview
+
 This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/), modified to create a C compiler for the Motorola MC6800 architecture.
 
 This project was created as a tool for studying compilers for the MC6800, and while it includes extra code and comments that may not be essential, they reflect the learning process and experimentation involved in developing the compiler.
@@ -188,7 +190,7 @@ The IEEE754 float implementation has passed the Paranoia test for addition, subt
   This option generates code aimed at minimizing the size of the object file. As a trade-off, the resulting code may run approximately 5%-25% slower.
 
 ---
-# Memo
+# Design Notes
 
 ## Stack frame
 
