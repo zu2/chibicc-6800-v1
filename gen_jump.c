@@ -119,19 +119,6 @@ Node *skip_redundant_ptr_cast(Node *node)
 
 static int isNUM(Node *node) { return node->kind == ND_NUM; }
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
-static int isVARorNUM(Node *node) { return isVAR(node) || isNUM(node); }
-
-static bool check_in_char(Node *node)
-{
-  int64_t val;
-
-  if (is_integer_constant(node, &val)) {
-    if ((val & ~0xff) == 0) {
-      return true;
-    }
-  }
-  return false;
-}
 
 //
 // Compare two 8 signed/unsigned integers.
@@ -145,9 +132,11 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   Node *rhs = node->rhs;
   int64_t val;
 
-  if (node->kind == ND_BITAND && check_in_char(rhs)) {
+  if (node->kind == ND_BITAND
+  &&  is_integer_constant(node, &val)
+  &&  (val & ~0xFF)==0) {
     gen_expr(lhs);
-    println("\tandb #$%02lx", rhs->val);
+    println("\tandb #$%02lx", val);
     println("\tjeq %s", if_false);
     return true;
   }
@@ -660,9 +649,11 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   Node *rhs = node->rhs;
   int64_t val;
 
-  if (node->kind == ND_BITAND && check_in_char(rhs)) {
+  if (node->kind == ND_BITAND
+  &&  is_integer_constant(node, &val)
+  &&  (val & ~0xFF)==0) {
     gen_expr(lhs);
-    println("\tandb #$%02lx", rhs->val);
+    println("\tandb #$%02lx", val);
     println("\tjne %s", if_true);
     return true;
   }

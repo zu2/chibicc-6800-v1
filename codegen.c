@@ -3200,28 +3200,6 @@ int can_direct_long2(Node *node)
   return 1;
 }
 
-static int isVARorNUM(Node *node)
-{
-  return (node->kind==ND_VAR || node->kind==ND_NUM);
-}
-
-static int check_in_char(Node *node)
-{
-
-  if (node->kind==ND_NUM) {
-    if (node->ty->is_unsigned) {
-      if (node->val > 255) {
-        return 0;
-      }
-    }else{ // signed
-      if (node->val<128 || node->val > 127) {
-        return 0;
-      }
-    }
-  }
-  return 1;
-}
-
 static void gen_funcall(Node *node)
 {
   if (node->lhs->kind == ND_VAR
