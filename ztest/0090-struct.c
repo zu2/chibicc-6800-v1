@@ -22,12 +22,29 @@ struct complex {
   int i;
 };
 
-struct complex sub()
+struct large_complex {
+  int a[10];
+  int r;
+  int i;
+  int b[10];
+};
+
+struct complex sub(int a, int b)
 {
   struct complex com_1;
 
-  com_1.r = 1234;
-  com_1.i = 5678;
+  com_1.r = a;
+  com_1.i = b;
+
+  return com_1;
+}
+
+struct large_complex large_sub(int a, int b)
+{
+  struct large_complex com_1;
+
+  com_1.r = a;
+  com_1.i = b;
 
   return com_1;
 }
@@ -105,9 +122,10 @@ main(int argc, char **argv)
   struct complex r0;
   struct S r1,r2;
   struct S r3;
+  struct large_complex r4;
   int ret;
 
-  r0 = sub();
+  r0 = sub(1234,5678);
 
   if (r0.r != 1234) {
     return 1;
@@ -142,6 +160,15 @@ main(int argc, char **argv)
   }
   if (test_recursive(3,3)) {
     return 33;
+  }
+
+  r4 = large_sub(1234,5678);
+
+  if (r4.r != 1234) {
+    return 1;
+  }
+  if (r4.i != 5678) {
+    return 2;
   }
 
   return 0;
