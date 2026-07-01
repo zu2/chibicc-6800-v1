@@ -3656,11 +3656,12 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
   enter_scope();
   create_param_lvars(ty->params);
 
-  // A buffer for a struct/union return value is passed
+  // A buffer for a struct/union return value is always passed
   // as the hidden first parameter.
-  Type *rty = ty->return_ty;
-  if ((rty->kind == TY_STRUCT || rty->kind == TY_UNION) && rty->size > 16)
-    new_lvar("", pointer_to(rty));
+  // see. https://github.com/zu2/chibicc-6800-v1/issues/57
+  // Type *rty = ty->return_ty;
+  // if (rty->kind == TY_STRUCT || rty->kind == TY_UNION)
+  //   new_lvar("", pointer_to(rty));
 
   for (Obj *p=locals; p; p=p->next) {
     p->is_param = true;
