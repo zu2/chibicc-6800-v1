@@ -2297,29 +2297,43 @@ static void copy_struct_mem(void) {
   Type *ty = current_fn->ty->return_ty;
 //Obj *var = current_fn->params;
 
-  // TODO: memcpy
-  println("; copy_struct_mem %s %d",__FILE__,__LINE__);
-  println("\tstab @tmp2+1");
-  println("\tstaa @tmp2");
-  println("\tldab @bp+1");
-  println("\tldaa @bp");
-  println("\taddb #<%d",current_fn->stack_size);
-  println("\tadca #>%d",current_fn->stack_size);
-  println("\tstab @tmp3+1");
-  println("\tstaa @tmp3");
-  println("\tldx @tmp3");
-  println("\tldx 0,x");
-  println("\tstx @tmp3");
-//assume max struct size<256
-  for (int i = 0; i < ty->size; i++) {
-    println("\tldx @tmp2");
-    println("\tldab %d,x",i);
+// TODO: memcpy
+//       copy_struct2:
+//         AccAB:size
+//         IX:   dest
+//         TOS:  src
+  push();
+  if (current_fn->stack_size<255) {
+    ldx_bp();
+    ldx_nX(current_fn->stack_size);
+  }else{
+    println("\tldab @bp+1");
+    println("\tldaa @bp");
+    println("\taddb #<%d",current_fn->stack_size);
+    println("\tadca #>%d",current_fn->stack_size);
+    println("\tstab @tmp3+1");
+    println("\tstaa @tmp3");
     println("\tldx @tmp3");
-    println("\tstab %d,x",i);
+    println("\tldx 0,x");
   }
-  println("\tldab @tmp3+1");
-  println("\tldaa @tmp3");
+  ldd_i(ty->size);
+  println("\tjsr __copy_struct2");
+  //ins(2); // copy_struct2 already pops argument.
   IX_Dest = IX_None;
+  // reload dest addr
+  if (current_fn->stack_size<255) {
+    ldx_bp();
+    println("\tldab %d+1,x",current_fn->stack_size);
+    println("\tldaa %d,x",  current_fn->stack_size);
+  }else{
+    println("\tldab @bp+1");
+    println("\tldaa @bp");
+    println("\taddb #<%d",current_fn->stack_size);
+    println("\tadca #>%d",current_fn->stack_size);
+    tfr_dx();
+    println("\tldab 1,x");
+    println("\tldaa 0,x");
+  }
 }
 
 static void builtin_alloca(void) {

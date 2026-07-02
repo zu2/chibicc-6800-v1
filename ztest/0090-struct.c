@@ -125,12 +125,12 @@ main(int argc, char **argv)
   struct large_complex r4;
   int ret;
 
-  r0 = sub(1234,5678);
+  r0 = sub(0x1234,0x5678);
 
-  if (r0.r != 1234) {
+  if (r0.r != 0x1234) {
     return 1;
   }
-  if (r0.i != 5678) {
+  if (r0.i != 0x5678) {
     return 2;
   }
 
@@ -162,12 +162,12 @@ main(int argc, char **argv)
     return 33;
   }
 
-  r4 = large_sub(1234,5678);
+  r4 = large_sub(0x1234,0x5678);
 
-  if (r4.r != 1234) {
+  if (r4.r != 0x1234) {
     return 1;
   }
-  if (r4.i != 5678) {
+  if (r4.i != 0x5678) {
     return 2;
   }
 
