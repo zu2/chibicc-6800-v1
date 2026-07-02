@@ -18,7 +18,8 @@ Dhrystone and Whetstone benchmarks now run successfully on the MC6800.
 # Topics
 
 - **Data types:** `int` and pointers are 16-bit; `long` and `float` are 32-bit. `double` and `long long` (64-bit or more) are unsupported.
-- **Structs/unions:** Passing/returning by value and bit fields are implemented.
+- **Structs/unions:** Passing/returning by value are implemented. This increases code size; use pointers instead.
+- **Bit fields:** Implemented, but generally discouraged due to inefficiency.
 - **Function parameters:** Only the first parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
 - **Return values:** Struct/union return values pass their address as an implicit first argument in a register. All other normal arguments are passed on the stack.
 
