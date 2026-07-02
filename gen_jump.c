@@ -14,6 +14,7 @@ bool is_compare(Node *node)
   return false;
 }
 
+#if 0
 bool is_compare_or_not(Node *node)
 {
   switch (node->kind) {
@@ -28,6 +29,7 @@ bool is_compare_or_not(Node *node)
   }
   return false;
 }
+#endif
 
 bool is_boolean_result(Node *node)
 {
