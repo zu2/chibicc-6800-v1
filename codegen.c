@@ -1798,15 +1798,17 @@ static void store_x(Type *ty,int off) {
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
-    println("; store struct/union from *TOS to IX+off, size %d",ty->size);
-    println("\tpshb");
-    println("\tpsha");
+    println("; store struct/union from *TOS to IX, size %d",ty->size);
+    push();
+    push();
     if (off!=0) {
       ldd_i(off);
       println("\tjsr __adx");
     }
     ldd_i(ty->size);
-    println("\tjsr  __copy_struct2");
+    println("\tjsr  __copy_struct2 ; store_X");
+    depth -= 2; // copy_struct2 remove *TOS
+    pop();
     IX_Dest = IX_None;
     return;
   case TY_DOUBLE:
@@ -2325,7 +2327,7 @@ static void copy_struct_mem(void) {
     ldx_nX(0);
   }
   ldd_i(ty->size);
-  println("\tjsr __copy_struct2");
+  println("\tjsr __copy_struct2 ; copy_struct_mem");
   //ins(2); // copy_struct2 already pops argument.
   IX_Dest = IX_None;
   // reload dest addr
@@ -6535,11 +6537,33 @@ static void gen_stmt(Node *node)
     return;
   } // ND_DO
   case ND_SWITCH: {
-    bool has_case_ranges = 0;
+    bool has_case_ranges = false;
+    bool need_integral_promotion = false;
+
+    if (node->cond->ty->size == 1) {
+      for (Node *n = node->case_next; n; n = n->case_next) {
+        if (node->cond->ty->is_unsigned) {
+          if ((n->begin<0 || n->begin>255)
+          ||  (n->end  <0 || n->end  >255)) {
+            need_integral_promotion = true;
+            break;
+          }
+        }else{
+          if ((n->begin<-128 || n->begin>127)
+          ||  (n->end  <-128 || n->end  >127)) {
+            need_integral_promotion = true;
+            break;
+          }
+        }
+      }
+    }
+    if (need_integral_promotion) {
+      node->cond = new_cast(node->cond,ty_int);
+    }
 
     for (Node *n = node->case_next; n; n = n->case_next) {
       if (n->begin != n->end) {
-        has_case_ranges = 1;
+        has_case_ranges = true;
         break;
       }
     }
