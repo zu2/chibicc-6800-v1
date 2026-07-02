@@ -3648,10 +3648,10 @@ static void opeq(Node *node)
     assert(0);
   }
   case ND_MULEQ: {
-    gen_addr(lhs);
-    push();
     switch(node->ty->kind) {
     case TY_FLOAT:
+      gen_addr(lhs);
+      push();
       println("\ttsx");
       println("\tldx 0,x");
       println("\tjsr __push32x");
@@ -3664,6 +3664,8 @@ static void opeq(Node *node)
       store(node->ty);
       return;
     case TY_LONG:
+      gen_addr(lhs);
+      push();
       println("\ttsx");
       println("\tldx 0,x");
       println("\tjsr __push32x");
@@ -3677,10 +3679,30 @@ static void opeq(Node *node)
       return;
     case TY_BOOL:
     case TY_CHAR: 
+      if (is_local_var(lhs)||is_global_var(lhs)) {
+        gen_expr(rhs);
+        push();
+        gen_expr(lhs);
+        println("\tjsr __mul16x16");
+        ins(2);
+        IX_Dest = IX_None;
+        if (node->ty->kind==TY_BOOL) {
+          cast(ty_int,ty_bool);
+        }
+        ldx_bp();
+        if (is_local_var(lhs)) {
+          store_x(node->lhs->ty,lhs->var->offset);
+        }else{
+          println("\tstab _%s",lhs->var->name);
+        }
+        return;
+      }
+      gen_addr(lhs);
+      push();
       println("\ttsx");
       println("\tldx 0,x");
       println("\tldab 0,x");
-      println("\tclra");
+      cast(lhs->ty,ty_int);
       IX_Dest = IX_None;
       push();
       gen_expr(rhs);
@@ -3691,28 +3713,40 @@ static void opeq(Node *node)
       if (node->ty->kind==TY_BOOL) {
         cast(ty_int,ty_bool);
       }
-      store(node->ty);
+      store(node->lhs->ty);
       return;
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
+      if (is_local_var(lhs)||is_global_var(lhs)) {
+        gen_expr(rhs);
+        push();
+        gen_expr(lhs);
+        println("\tjsr __mul16x16");
+        ins(2);
+        IX_Dest = IX_None;
+        if (is_local_var(lhs)) {
+          ldx_bp();
+          store_x(node->lhs->ty,lhs->var->offset);
+        }else{
+          println("\tstab _%s+1",lhs->var->name);
+          println("\tstaa _%s"  ,lhs->var->name);
+        }
+        return;
+      }
+      gen_addr(lhs);
+      push();
       println("\ttsx");
       println("\tldx 0,x");
       println("\tldab 1,x");
       println("\tldaa 0,x");
       IX_Dest = IX_None;
-      if (node->lhs->ty ==  node->ty
-        &&  gen_mul16(node)) {
-        store(node->ty);
-        return;
-      }
       push();
       gen_expr(node->rhs);
-      cast(rhs->ty,ty_int);
       println("\tjsr __mul16x16");
       IX_Dest = IX_None;
       ins(2);
-      store(node->ty);
+      store(node->lhs->ty);
       return;
     default:
       assert(0);
@@ -3801,16 +3835,16 @@ static void opeq(Node *node)
         switch(val){
         case 2:
           if (is_global_var(node->lhs)) {
-            println("\tldab #_%s+1",node->lhs->var->name);
-            println("\tldaa #_%s",  node->lhs->var->name);
+            println("\tldab _%s+1", node->lhs->var->name);
+            println("\tldaa _%s",   node->lhs->var->name);
             println("\tasra");
             println("\trola");
             println("\tadcb #0");
             println("\tadca #0");
             println("\tasra");
             println("\trorb");
-            println("\tstab #_%s+1",node->lhs->var->name);
-            println("\tstaa #_%s",  node->lhs->var->name);
+            println("\tstab _%s+1",node->lhs->var->name);
+            println("\tstaa _%s",  node->lhs->var->name);
             return;
           }else if (test_addr_x(node->lhs)) {
             int off = gen_addr_x(node->lhs,false);
