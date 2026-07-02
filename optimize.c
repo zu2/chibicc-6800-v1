@@ -674,9 +674,12 @@ Node *optimize_expr(Node *node)
         node = new_num(0,node->tok);
         node->ty = ty_int;
         return node;
-      }else{
-        node = node->rhs;
+      }else if (is_integer_constant(node->rhs,&val)) {
+        node = new_num((val!=0),node->tok);
+        node->ty = ty_int;
         return node;
+      }else{
+        return node->rhs;
       }
     }
     return optimize_const_expr(node);
@@ -684,13 +687,16 @@ Node *optimize_expr(Node *node)
   case ND_LOGOR:
     node = optimize_lr(node);
     if (is_integer_constant(node->lhs,&val)) {
-      if (val==0) {
-        node = node->rhs;
-        return node;
-      }else{
+      if (val!=0) {
         node = new_num(1,node->tok);
         node->ty = ty_int;
         return node;
+      }else if (is_integer_constant(node->rhs,&val)) {
+        node = new_num((val!=0),node->tok);
+        node->ty = ty_int;
+        return node;
+      }else{
+        return node->rhs;
       }
     }
     return optimize_const_expr(node);
