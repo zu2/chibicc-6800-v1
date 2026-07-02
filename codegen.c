@@ -1860,7 +1860,10 @@ void cmp_zero(Type *ty) {
   case TY_LDOUBLE:
     error("; cmp_zero ty: %d DOUBLE/LDOUBLE",ty->kind);
   }
-  error("; cmp_zero ty: %d",ty->kind);
+  println("\taba");
+  println("\tadca #0");
+  return;
+  //error("; cmp_zero ty: %d",ty->kind);
 }
 
 enum { I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, F80 };
