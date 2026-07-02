@@ -220,7 +220,15 @@ static void ast_dump(Node *node)
     printout("(ND_SWITCH ");
     ast_dump(node->cond);
     printout(" ");
-    ast_dump(node->then);
+    printout("(");
+    for (Node *n = node->case_next; n; n = n->case_next) {
+      if (n->begin == n->end) {
+        printout("(%ld %s) ",n->begin,n->label);
+      }else{
+        printout("(%ld..%ld %s) ",n->begin,n->end,n->label);
+      }
+    }
+    printout(") ");
     printout(")");
     return;
   case ND_CASE:
