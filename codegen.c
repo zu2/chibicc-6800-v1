@@ -1800,7 +1800,6 @@ static void store_x(Type *ty,int off) {
   case TY_UNION:
     println("; store struct/union from *TOS to IX, size %d",ty->size);
     push();
-    push();
     if (off!=0) {
       ldd_i(off);
       println("\tjsr __adx");
@@ -1808,7 +1807,6 @@ static void store_x(Type *ty,int off) {
     ldd_i(ty->size);
     println("\tjsr  __copy_struct2 ; store_X");
     depth -= 2; // copy_struct2 remove *TOS
-    pop();
     IX_Dest = IX_None;
     return;
   case TY_DOUBLE:
@@ -2331,6 +2329,7 @@ static void copy_struct_mem(void) {
   }
   ldd_i(ty->size);
   println("\tjsr __copy_struct2 ; copy_struct_mem");
+  depth -= 2; // copy_struct2 remove *TOS
   //ins(2); // copy_struct2 already pops argument.
   IX_Dest = IX_None;
   // reload dest addr
@@ -4881,6 +4880,38 @@ void gen_expr(Node *node) {
     Node *lhs = node->lhs;
     Node *rhs = node->rhs;
 
+    if (node->lhs->ty->kind == TY_STRUCT || node->lhs->ty->kind == TY_UNION) {
+      if (test_addr_x(node->lhs)) {
+        gen_addr(node->rhs);
+        if (!node->retval_unused) {
+          push();
+        }
+        int off = gen_addr_x(node->lhs,true);
+        store_x(node->ty, off);
+        if (!node->retval_unused) {
+          pop();
+        }
+        return;
+      }
+      if (node->retval_unused) {
+        gen_addr(node->lhs);
+        push();
+        gen_expr(node->rhs);
+        store(node->ty);
+        return;
+      }
+      gen_expr(node->rhs);
+      push();
+      gen_addr(node->lhs);
+      push();
+      println("\ttsx");
+      println("\tldab 3,x");
+      println("\tldaa 2,x");
+      store(node->ty);
+      pop();
+      return;
+
+    }
     // bit-field
     if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
       gen_addr(node->lhs);
