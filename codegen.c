@@ -281,6 +281,18 @@ void negd()
   println("\tsbca #0");
 }
 
+void abx()
+{
+  println("\tjsr __abx");
+  IX_Dest = IX_None;
+}
+
+void adx()
+{
+  println("\tjsr __adx");
+  IX_Dest = IX_None;
+}
+
 void ldx_bp()
 {
   if (IX_Dest != IX_BP){
@@ -2307,14 +2319,10 @@ static void copy_struct_mem(void) {
     ldx_bp();
     ldx_nX(current_fn->stack_size);
   }else{
-    println("\tldab @bp+1");
-    println("\tldaa @bp");
-    println("\taddb #<%d",current_fn->stack_size);
-    println("\tadca #>%d",current_fn->stack_size);
-    println("\tstab @tmp3+1");
-    println("\tstaa @tmp3");
-    println("\tldx @tmp3");
-    println("\tldx 0,x");
+    ldd_i(current_fn->stack_size);
+    ldx_bp();
+    adx();
+    ldx_nX(0);
   }
   ldd_i(ty->size);
   println("\tjsr __copy_struct2");
@@ -2326,11 +2334,9 @@ static void copy_struct_mem(void) {
     println("\tldab %d+1,x",current_fn->stack_size);
     println("\tldaa %d,x",  current_fn->stack_size);
   }else{
-    println("\tldab @bp+1");
-    println("\tldaa @bp");
-    println("\taddb #<%d",current_fn->stack_size);
-    println("\tadca #>%d",current_fn->stack_size);
-    tfr_dx();
+    ldd_i(current_fn->stack_size);
+    ldx_bp();
+    adx();
     println("\tldab 1,x");
     println("\tldaa 0,x");
   }
