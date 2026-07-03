@@ -308,7 +308,8 @@ static void ast_dump(Node *node)
     }
     return;
   case ND_CAST:
-    printout("(ND_CAST %s ",type_str(node->ty));
+    printout("(ND_CAST %s:%s ",type_str(node->ty),
+      node->ty->is_unsigned?"u":"s");
     ast_dump(node->lhs);
     printout(")");
     return;
