@@ -328,34 +328,34 @@ static void ast_dump(Node *node)
     ast_dump_binary(node,"ND_PRE_INCDEC");
     return;
   case ND_ADDEQ:
-    ast_dump_binary(node,"+=");
+    ast_dump_binary_ty(node,"+=");
     return;
   case ND_SUBEQ:
-    ast_dump_binary(node,"-=");
+    ast_dump_binary_ty(node,"-=");
     return;
   case ND_MULEQ:
-    ast_dump_binary(node,"*=");
+    ast_dump_binary_ty(node,"*=");
     return;
   case ND_DIVEQ:
-    ast_dump_binary(node,"/=");
+    ast_dump_binary_ty(node,"/=");
     return;
   case ND_MODEQ:
-    ast_dump_binary(node,"%=");
+    ast_dump_binary_ty(node,"%=");
     return;
   case ND_ANDEQ:
-    ast_dump_binary(node,"&=");
+    ast_dump_binary_ty(node,"&=");
     return;
   case ND_OREQ:
-    ast_dump_binary(node,"|=");
+    ast_dump_binary_ty(node,"|=");
     return;
   case ND_XOREQ:
-    ast_dump_binary(node,"^=");
+    ast_dump_binary_ty(node,"^=");
     return;
   case ND_SHLEQ:
-    ast_dump_binary(node,"<<=");
+    ast_dump_binary_ty(node,"<<=");
     return;
   case ND_SHREQ:
-    ast_dump_binary(node,">>=");
+    ast_dump_binary_ty(node,">>=");
     return;
   case ND_BULKINIT:
     printout("(ND_BULKINIT %s ",node->var->name);

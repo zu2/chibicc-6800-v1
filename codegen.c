@@ -3439,7 +3439,6 @@ static void opeq(Node *node)
       return;
     // Handle non-char/int RHS case? XXX
     case TY_BOOL:
-      ast_node_dump(node);
       gen_addr(lhs);
       push();
       gen_expr(rhs);
@@ -6009,10 +6008,16 @@ void gen_expr(Node *node) {
       }
     }
     gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
+    if (node->rhs->ty->kind == TY_BOOL
+    ||  node->rhs->ty->kind == TY_CHAR) {
+      cast(node->rhs->ty, node->ty->is_unsigned? ty_uint: ty_int);
+    }
     push();
     gen_expr(node->lhs);
-//  cast(node->lhs->ty, node->ty);
+    if (node->rhs->ty->kind == TY_BOOL
+    ||  node->rhs->ty->kind == TY_CHAR) {
+      cast(node->lhs->ty, node->ty->is_unsigned? ty_uint: ty_int);
+    }
     if (node->ty->is_unsigned) {
       println("\tjsr __div16x16u");
     }else{

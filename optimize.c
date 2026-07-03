@@ -1086,24 +1086,12 @@ Node *optimize_expr(Node *node)
       case ND_XOREQ:  new->kind = ND_BITXOR; break;
       default:  assert(0);
       }
-      if (node->lhs->ty->kind == TY_BOOL
-      ||  node->lhs->ty->kind == TY_CHAR) {
-        switch(node->kind) {
-//      case ND_ADDEQ:
-//      case ND_SUBEQ:
-        case ND_MULEQ:
-        case ND_DIVEQ:
-        case ND_MODEQ:
-          new->lhs = new_cast(node->lhs,ty_int);
-          new->rhs = new_cast(node->rhs,ty_int);
-          new->ty = ty_int;
-          new = new_cast(new,node->lhs->ty);
-        }
-      }
+      add_type(new);
       Node *new2 = new_copy(new);
       new2->kind = ND_ASSIGN;
       new2->lhs = node->lhs;
       new2->rhs = new;
+      add_type(new2);
       return optimize_expr(new2);
     }
     return optimize_const_expr(node);

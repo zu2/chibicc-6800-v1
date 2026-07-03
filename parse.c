@@ -2371,18 +2371,48 @@ static Node *to_assign(Node *binary) {
   return new_binary(ND_COMMA, expr1, expr2, tok);
 }
 
+static bool opeq_ok(Type *lty,Type *rty)
+{
+  if (!lty || !rty) {
+    return false;
+  }
+  switch(lty->kind) {
+  case TY_CHAR:
+  case TY_SHORT:
+  case TY_INT:
+  case TY_ENUM:
+  case TY_LONG:
+  case TY_PTR:
+    switch(rty->kind) {
+    case TY_CHAR:
+    case TY_SHORT:
+    case TY_INT:
+    case TY_LONG:
+      return true;
+    }
+  }
+  return false;
+}
+
 // assign    = conditional (assign-op assign)?
 // assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^="
 //           | "<<=" | ">>="
 static Node *assign(Token **rest, Token *tok) {
   Node *node = conditional(&tok, tok);
 
-  if (equal(tok, "="))
-    return new_binary(ND_ASSIGN, node, assign(rest, tok->next), tok);
+  if (equal(tok, "=")) {
+    Node *rhs = assign(rest, tok->next);
+    return new_binary(ND_ASSIGN, node, rhs, tok);
+  }
 
   if (equal(tok, "+=")) {
-    add_type(node);
     Node *rhs = assign(rest, tok->next);
+    add_type(node);
+    add_type(rhs);
+    if (!opeq_ok(node->ty,rhs->ty)
+    &&   node->ty->kind != TY_CHAR) {
+      return to_assign(new_add(node, rhs, tok));
+    }
     if (node->ty->kind == TY_PTR
     &&  node->ty->base
     &&  node->ty->base->size != 1) {
@@ -2392,8 +2422,13 @@ static Node *assign(Token **rest, Token *tok) {
   }
 
   if (equal(tok, "-=")) {
-    add_type(node);
     Node *rhs = assign(rest, tok->next);
+    add_type(node);
+    add_type(rhs);
+    if (!opeq_ok(node->ty,rhs->ty)
+    &&   node->ty->kind != TY_CHAR) {
+      return to_assign(new_sub(node, rhs, tok));
+    }
     if (node->ty->kind == TY_PTR
     &&  node->ty->base
     &&  node->ty->base->size != 1) {
@@ -2402,29 +2437,83 @@ static Node *assign(Token **rest, Token *tok) {
     return new_binary(ND_SUBEQ, node, rhs, tok);
   }
 
-  if (equal(tok, "*="))
-    return new_binary(ND_MULEQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "*=")) {
+    Node *rhs = assign(rest, tok->next);
+    add_type(node);
+    add_type(rhs);
+    if (opeq_ok(node->ty,rhs->ty)) {
+      return new_binary(ND_MULEQ, node, rhs, tok);
+    }
+    return to_assign(new_binary(ND_MUL, node, rhs, tok));
+  }
 
-  if (equal(tok, "/="))
-    return new_binary(ND_DIVEQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "/=")) {
+    Node *rhs = assign(rest, tok->next);
+    add_type(node);
+    add_type(rhs);
+    if (opeq_ok(node->ty,rhs->ty)) {
+      return new_binary(ND_DIVEQ, node, rhs, tok);
+    }
+    return to_assign(new_binary(ND_DIV, node, rhs, tok));
+  }
 
-  if (equal(tok, "%="))
-    return new_binary(ND_MODEQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "%=")) {
+    Node *rhs = assign(rest, tok->next);
+    add_type(node);
+    add_type(rhs);
+    if (opeq_ok(node->ty,rhs->ty)) {
+      return new_binary(ND_MODEQ, node, rhs, tok);
+    }
+    return to_assign(new_binary(ND_MOD, node, assign(rest, tok->next), tok));
+  }
 
-  if (equal(tok, "&="))
-    return new_binary(ND_ANDEQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "&=")) {
+    Node *rhs = assign(rest, tok->next);
+    add_type(node);
+    add_type(rhs);
+    if (opeq_ok(node->ty,rhs->ty)
+    ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
+    ||  rhs->kind==ND_NUM) {
+      return new_binary(ND_ANDEQ, node, rhs, tok);
+    }
+    return to_assign(new_binary(ND_BITAND, node, rhs, tok));
+  }
 
-  if (equal(tok, "|="))
-    return new_binary(ND_OREQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "|=")) {
+    Node *rhs = assign(rest, tok->next);
+    add_type(node);
+    add_type(rhs);
+    if (opeq_ok(node->ty,rhs->ty)
+    ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
+    ||  (node->ty->kind == TY_CHAR && rhs->kind==ND_NUM)) {
+      return new_binary(ND_OREQ, node, rhs, tok);
+    }
+    return to_assign(new_binary(ND_BITOR, node, rhs, tok));
+  }
 
-  if (equal(tok, "^="))
-    return new_binary(ND_XOREQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "^=")) {
+    Node *rhs = assign(rest, tok->next);
+    add_type(node);
+    add_type(rhs);
+    if (opeq_ok(node->ty,rhs->ty)
+    ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
+    ||  (node->ty->kind == TY_CHAR && rhs->kind==ND_NUM)) {
+      return new_binary(ND_XOREQ, node, rhs, tok);
+    }
+    return to_assign(new_binary(ND_BITXOR, node, rhs, tok));
+  }
 
-  if (equal(tok, "<<="))
-    return new_binary(ND_SHLEQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, "<<=")) {
+    add_type(node);
+    Node *rhs = assign(rest, tok->next);
+    return new_binary(ND_SHLEQ, node, rhs, tok);
+  }
 
-  if (equal(tok, ">>="))
-    return new_binary(ND_SHREQ, node, assign(rest, tok->next), tok);
+  if (equal(tok, ">>=")) {
+    add_type(node);
+    Node *rhs = assign(rest, tok->next);
+    return new_binary(ND_SHREQ, node, rhs, tok);
+  }
 
   *rest = tok;
   return node;
