@@ -480,6 +480,8 @@ __attribute__((format(printf, 1, 2)))
 void printout(char *fmt, ...);
 bool is_local_var(Node *node);
 bool is_global_var(Node *node);
+bool is_local_array_with_constant(Node *node);
+bool is_global_array_with_constant(Node *node);
 bool test_addr_x(Node *node);
 void negd(void);
 void ldx_bp(void);
