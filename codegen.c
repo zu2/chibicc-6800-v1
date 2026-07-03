@@ -6074,6 +6074,14 @@ void gen_expr(Node *node) {
     ||  node->ty->kind == TY_CHAR) {
       if (gen_direct_lr(node,"orab",NULL))
         return;
+      gen_expr(node->lhs);
+      push1();
+      gen_expr(node->rhs);
+      println("\ttsx");
+      println("\torab 1,x");
+      IX_Dest = IX_None;
+      ins(1);
+      return;
     }
     if (gen_direct_lr(node,"orab","oraa"))
       return;

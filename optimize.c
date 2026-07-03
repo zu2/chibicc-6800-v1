@@ -30,6 +30,26 @@ Node *skip_integral_promotion(Node *node)
   return node;
 }
 
+bool is_uint_promotion(Node *node)
+{
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_INT
+  &&  node->ty->is_unsigned
+  &&  node->lhs->ty->kind == TY_CHAR
+  &&  node->lhs->ty->is_unsigned) {
+    return true;
+  }
+  return false;
+}
+
+Node *skip_uint_promotion(Node *node)
+{
+  if (is_uint_promotion(node)) {
+    return node->lhs;
+  }
+  return node;
+}
+
 static char *type_str(Node *node)
 {
   if (!node || !node->ty) return "NULL";
@@ -501,14 +521,25 @@ Node *optimize_expr(Node *node)
       return optimize_const_expr(node);
     }
 
+    // (ND_CAST TY_CHAR(2) (- ty_uint 6 (ND_CAST TY_INT(4) (ND_VAR ty_uchar _L_2 global))))
     // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
     &&  is_integral_promotion(node->lhs->lhs)
     &&  is_integral_promotion(node->lhs->rhs)) {
       Node *new = new_copy(node->lhs);
-      new->lhs = node->lhs->lhs->lhs;
-      new->rhs = node->lhs->rhs->lhs;
+      new->lhs = skip_integral_promotion(node->lhs->lhs);
+      new->rhs = skip_integral_promotion(node->lhs->rhs);
+      new->ty = node->ty;
+      return optimize_const_expr(new);
+    }
+    if (node->ty->kind == TY_CHAR
+    &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
+    &&  is_uint_promotion(node->lhs->lhs)
+    &&  is_uint_promotion(node->lhs->rhs)) {
+      Node *new = new_copy(node->lhs);
+      new->lhs = skip_uint_promotion(node->lhs->lhs);
+      new->rhs = skip_uint_promotion(node->lhs->rhs);
       new->ty = node->ty;
       return optimize_const_expr(new);
     }
@@ -516,7 +547,8 @@ Node *optimize_expr(Node *node)
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
     &&  node->lhs->lhs->kind == ND_NUM
-    &&  is_integral_promotion(node->lhs->rhs)) {
+    &&  (is_integral_promotion(node->lhs->rhs)
+       ||is_uint_promotion(node->lhs->rhs)) ) {
       Node *new = new_copy(node->lhs);
       new->ty = node->ty;
       new->lhs = node->lhs->lhs;
