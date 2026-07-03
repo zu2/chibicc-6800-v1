@@ -1061,6 +1061,8 @@ Node *optimize_expr(Node *node)
     return optimize_lr(node);
   case ND_ADDEQ:
   case ND_SUBEQ:
+    node = optimize_lr(node);
+    return optimize_const_expr(node);
   case ND_MULEQ:
   case ND_DIVEQ:
   case ND_MODEQ:
@@ -1068,6 +1070,42 @@ Node *optimize_expr(Node *node)
   case ND_OREQ:
   case ND_XOREQ:
     node = optimize_lr(node);
+    if (is_local_var(node->lhs)
+    ||  is_global_var(node->lhs)
+    ||  is_local_array_with_constant(node->lhs)
+    ||  is_global_array_with_constant(node->lhs)) {
+      Node *new = new_copy(node);
+      switch(node->kind) {
+//    case ND_ADDEQ:  new->kind = ND_ADD; break;
+//    case ND_SUBEQ:  new->kind = ND_SUB; break;
+      case ND_MULEQ:  new->kind = ND_MUL; break;
+      case ND_DIVEQ:  new->kind = ND_DIV; break;
+      case ND_MODEQ:  new->kind = ND_MOD; break;
+      case ND_ANDEQ:  new->kind = ND_BITAND; break;
+      case ND_OREQ:   new->kind = ND_BITOR;  break;
+      case ND_XOREQ:  new->kind = ND_BITXOR; break;
+      default:  assert(0);
+      }
+      if (node->lhs->ty->kind == TY_BOOL
+      ||  node->lhs->ty->kind == TY_CHAR) {
+        switch(node->kind) {
+//      case ND_ADDEQ:
+//      case ND_SUBEQ:
+        case ND_MULEQ:
+        case ND_DIVEQ:
+        case ND_MODEQ:
+          new->lhs = new_cast(node->lhs,ty_int);
+          new->rhs = new_cast(node->rhs,ty_int);
+          new->ty = ty_int;
+          new = new_cast(new,node->lhs->ty);
+        }
+      }
+      Node *new2 = new_copy(new);
+      new2->kind = ND_ASSIGN;
+      new2->lhs = node->lhs;
+      new2->rhs = new;
+      return optimize_expr(new2);
+    }
     return optimize_const_expr(node);
   case ND_SHLEQ:
   case ND_SHREQ: {

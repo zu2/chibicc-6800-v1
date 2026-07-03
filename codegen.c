@@ -448,6 +448,25 @@ bool is_local_array(Node *node)
 }
 
 //
+// node is local array with constant subscript
+//
+// (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) g global) 0))
+//
+bool is_local_array_with_constant(Node *node)
+{
+  int64_t val;
+
+  if (node->kind  == ND_DEREF
+  &&  node->lhs->kind == ND_ADD
+  &&  is_local_array(node->lhs->lhs)
+  &&  is_integer_constant(node->lhs->rhs,&val)) {
+     return 1;
+  }
+
+  return 0;
+}
+
+//
 // node is global variable?
 //
 bool is_global_var(Node *node)
@@ -488,21 +507,20 @@ bool is_global_array(Node *node)
 //
 // node is global variable or global array with constant subscript
 //
-bool is_global_var_or_array(Node *node)
+// (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) g global) 0))
+//
+bool is_global_array_with_constant(Node *node)
 {
-   if (node->kind != ND_VAR)
-     return 0;
-   if (node->var->ty->kind == TY_VLA)
-     return 0;
-   if (node->var->is_local)
-     return 0;
-   if (node->ty->kind == TY_FUNC)
-     return 0;
-   if (node->ty->kind == TY_ARRAY) {  // TODO:XXX
-     return 0;
-   }
+  int64_t val;
 
-   return 1;
+  if (node->kind  == ND_DEREF
+  &&  node->lhs->kind == ND_ADD
+  &&  is_global_array(node->lhs->lhs)
+  &&  is_integer_constant(node->lhs->rhs,&val)) {
+    return 1;
+  }
+
+  return 0;
 }
 
 Type *is_integer_constant(Node *node, int64_t *val)
@@ -3421,6 +3439,7 @@ static void opeq(Node *node)
       return;
     // Handle non-char/int RHS case? XXX
     case TY_BOOL:
+      ast_node_dump(node);
       gen_addr(lhs);
       push();
       gen_expr(rhs);
@@ -3679,24 +3698,6 @@ static void opeq(Node *node)
       return;
     case TY_BOOL:
     case TY_CHAR: 
-      if (is_local_var(lhs)||is_global_var(lhs)) {
-        gen_expr(rhs);
-        push();
-        gen_expr(lhs);
-        println("\tjsr __mul16x16");
-        ins(2);
-        IX_Dest = IX_None;
-        if (node->ty->kind==TY_BOOL) {
-          cast(ty_int,ty_bool);
-        }
-        ldx_bp();
-        if (is_local_var(lhs)) {
-          store_x(node->lhs->ty,lhs->var->offset);
-        }else{
-          println("\tstab _%s",lhs->var->name);
-        }
-        return;
-      }
       gen_addr(lhs);
       push();
       println("\ttsx");
@@ -3718,22 +3719,6 @@ static void opeq(Node *node)
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
-      if (is_local_var(lhs)||is_global_var(lhs)) {
-        gen_expr(rhs);
-        push();
-        gen_expr(lhs);
-        println("\tjsr __mul16x16");
-        ins(2);
-        IX_Dest = IX_None;
-        if (is_local_var(lhs)) {
-          ldx_bp();
-          store_x(node->lhs->ty,lhs->var->offset);
-        }else{
-          println("\tstab _%s+1",lhs->var->name);
-          println("\tstaa _%s"  ,lhs->var->name);
-        }
-        return;
-      }
       gen_addr(lhs);
       push();
       println("\ttsx");
