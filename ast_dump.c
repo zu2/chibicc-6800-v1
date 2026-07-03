@@ -288,11 +288,6 @@ static void ast_dump(Node *node)
   case ND_NUM:
     switch(node->ty->kind){
     case TY_BOOL:
-      if (node->val)
-        printout("true");
-      else
-        printout("false");
-      break;
     case TY_CHAR:
     case TY_SHORT:
     case TY_LONG:
