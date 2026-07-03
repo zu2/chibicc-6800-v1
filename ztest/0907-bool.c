@@ -83,5 +83,31 @@ int main(void)
     return 35;
   }
 
+  r = 1;
+  r += 65535L;
+  if (r!=1) {
+    return 41;
+  }
+  r = 1;
+  r -= -65535L;
+  if (r!=1) {
+    return 42;
+  }
+  r = 1;
+  r *= 2L;
+  if (r!=1) {
+    return 43;
+  }
+  r = 10;
+  r /= 2L;
+  if (r!=0) {
+    return 44;
+  }
+  r = 10;
+  r %= 2L;
+  if (r!=1) {
+    return 45;
+  }
+
   return 0;
 }
