@@ -5465,35 +5465,6 @@ void gen_expr(Node *node) {
           IX_Dest = IX_None;
           return;
         }
-        if (opt('O','2')) {
-          char *skip = new_jump_label();
-          switch(val) {
-          case 1:
-            println("\tldx @long+2");
-            println("\tinx");
-            println("\tstx @long+2");
-            println("\tbne %s",skip);
-            println("\tldx @long");
-            println("\tinx");
-            println("\tstx @long");
-            println("\t%s:",skip);
-            IX_Dest = IX_None;
-            return;
-          case 0xffff:
-          case -1:
-            println("\tldx @long+2");
-            println("\tbne %s",skip);
-            println("\tldx @long");
-            println("\tdex");
-            println("\tstx @long");
-            println("\tldx @long+2");
-            println("\t%s:",skip);
-            println("\tdex");
-            println("\tstx @long+2");
-            IX_Dest = IX_None;
-            return;
-          }
-        }
         println("\tjsr __add32i");
         word32i(val);
         IX_Dest = IX_None;
