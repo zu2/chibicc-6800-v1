@@ -6072,13 +6072,20 @@ void gen_expr(Node *node) {
   case ND_BITOR:
     if (node->ty->kind == TY_BOOL
     ||  node->ty->kind == TY_CHAR) {
-      if (gen_direct_lr(node,"orab",NULL))
+      if (gen_direct_lr(node,"orab",NULL)) {
         return;
+      }
+    }
+    if (gen_direct_lr(node,"orab","oraa")) {
+      return;
+    }
+    if (node->ty->kind == TY_BOOL
+    ||  node->ty->kind == TY_CHAR) {
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
       println("\ttsx");
-      println("\torab 1,x");
+      println("\torab 0,x");
       IX_Dest = IX_None;
       ins(1);
       return;
