@@ -1191,6 +1191,48 @@
 	cmpb #%2
 	j%3 L%4
 
+	tsx
+	andb 1,x
+	anda 0,x
+	ins
+	ins
+	pshb
+	psha
+=
+	tsx
+	andb 1,x
+	anda 0,x
+	stab 1,x
+	staa 0,x
+
+	tsx
+	orab 1,x
+	oraa 0,x
+	ins
+	ins
+	pshb
+	psha
+=
+	tsx
+	orab 1,x
+	oraa 0,x
+	stab 1,x
+	staa 0,x
+
+	tsx
+	eorb 1,x
+	eora 0,x
+	ins
+	ins
+	pshb
+	psha
+=
+	tsx
+	eorb 1,x
+	eora 0,x
+	stab 1,x
+	staa 0,x
+
 # expand macros
 
 	inx1
