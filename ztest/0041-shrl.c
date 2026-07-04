@@ -51,11 +51,11 @@ int main(int argc, char **argv)
 
 	uc <<= 2;
 	if (uc!=4)
-	  return 13;
+	  return 15;
 
 	uc >>= 2;
-	if (sc!=1)
-	  return 14;
+	if (uc!=1)
+	  return 16;
 
 	si <<= 14;
 	if (si!=16384)
