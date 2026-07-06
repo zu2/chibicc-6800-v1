@@ -1,11 +1,16 @@
 #include "chibicc.h"
 
+bool is_char_or_bool(Type *ty)
+{
+  return (ty->kind==TY_CHAR || ty->kind==TY_BOOL);
+}
+
 bool is_integral_promotion(Node *node)
 {
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_INT
   && !node->ty->is_unsigned
-  &&  node->lhs->ty->kind == TY_CHAR) {
+  &&  is_char_or_bool(node->lhs->ty)) {
     return true;
   }
   return false;
@@ -16,7 +21,7 @@ bool is_integral_promotion_or_byte(Node *node)
   if (is_integral_promotion(node)) {
     return true;
   }
-  if (node->ty->kind == TY_CHAR) {
+  if (is_char_or_bool(node->ty)) {
     return true;
   }
   return false;
@@ -34,10 +39,14 @@ bool is_uint_promotion(Node *node)
 {
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_INT
-  &&  node->ty->is_unsigned
-  &&  node->lhs->ty->kind == TY_CHAR
-  &&  node->lhs->ty->is_unsigned) {
-    return true;
+  &&  node->ty->is_unsigned) {
+    if (node->lhs->ty->kind == TY_CHAR
+    &&  node->lhs->ty->is_unsigned) {
+      return true;
+    }
+    if (node->lhs->ty->kind == TY_BOOL) {
+      return true;
+    }
   }
   return false;
 }
@@ -48,6 +57,38 @@ Node *skip_uint_promotion(Node *node)
     return node->lhs;
   }
   return node;
+}
+
+bool is_u8num(Node *node)
+{
+  int64_t val;
+
+  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
+    if (val >= 0  && val <= 255) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool is_s8num(Node *node)
+{
+  int64_t val;
+
+  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
+    if (val >= -128  && val <= 127) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool is_8num(Node *node, Type *ty)
+{
+  if (!is_char_or_bool(ty)) {
+    return false;
+  }
+  return ty->is_unsigned? is_u8num(node): is_s8num(node);
 }
 
 static char *type_str(Node *node)
@@ -372,14 +413,6 @@ Node *optimize_expr(Node *node)
 
   if (!node)
     return node;
-
-#if 0
-  println("; optimize_expr");
-  if (node->lhs)
-    node->lhs = optimize_const_expr(node->lhs);
-  if (node->rhs)
-    node->rhs = optimize_const_expr(node->rhs);
-#endif
 
   switch (node->kind) {
   case ND_NULL_EXPR:
@@ -900,37 +933,11 @@ Node *optimize_expr(Node *node)
     &&  node->lhs->lhs->ty->is_unsigned == node->rhs->lhs->ty->is_unsigned) {
       node->lhs = node->lhs->lhs;
       node->rhs = node->rhs->lhs;
-      return node;
     }
-// (== ty_int (ND_CAST TY_INT(4) (ND_DEREF ty_uchar (ND_VAR TY_PTR(10) str +4 ))) 45) 
-    if ( (lty=is_byte(node->lhs))
-    &&   (rty=is_byte(node->rhs)) ) {
-      Node *lhs = node->lhs;
-      Node *rhs = node->rhs;
-      if (lhs->kind == ND_CAST) {
-        lhs = lhs->lhs;
-      }
-      if (rhs->kind == ND_CAST) {
-        rhs = rhs->lhs;
-      }
-      if (rhs->kind == ND_NUM
-      &&  is_integer_constant(rhs,&val)) { // Is the right-hand side within the range?
-        if (lty->is_unsigned) {
-          if (val >= 0 && val <= 255) {
-            rhs->ty = ty_uchar;
-            node->lhs = lhs;
-            node->rhs = rhs;
-            node->ty = ty_uchar;
-          }
-        }else{
-          if (val >= -128 && val <= 127) {
-            rhs->ty = ty_char;
-            node->lhs = lhs;
-            node->rhs = rhs;
-            node->ty = ty_char;
-          }
-        }
-      }
+    if (is_integral_promotion(node->lhs)
+    &&  is_8num(node->rhs,node->lhs->lhs->ty)) {
+      node->rhs->ty = node->lhs->lhs->ty;
+      node->lhs = node->lhs->lhs;
     }
     if ( is_integer(node->ty)
     &&  node->kind==ND_LE
@@ -1052,9 +1059,9 @@ Node *optimize_expr(Node *node)
         node->kind = ND_LT;
         break;
       }
-      return node;
+      return optimize_const_expr(node);
     }
-    return node;
+    return optimize_const_expr(node);
   } // relative op
   case ND_SHL:
   case ND_SHR: {

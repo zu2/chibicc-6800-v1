@@ -71,21 +71,6 @@ Type *is_byte(Node *node)
   return NULL;
 }
 
-Type *is_u8num(Node *node)
-{
-  int64_t val;
-
-  if (node->kind == ND_CAST && node->ty->kind == TY_INT &&
-      !node->ty->is_unsigned) { // integral promotion ?
-    node = node->lhs;
-  }
-  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
-    if (val >= 0  && val <= 255) {
-      return node->ty;
-    }
-  }
-  return NULL;
-}
 
 char *is_addr_constant(Node *node)
 {
@@ -150,35 +135,10 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     return true;
   }
 
-  Type *lty;
-  Type *rty;
-  if (!(lty = is_byte(lhs))) {
-    return false;
-  }
-  if (!(rty = is_byte(rhs)) && !(rty = is_u8num(rhs))) {
-    return false;
-  }
-  if ((lty->is_unsigned != rty->is_unsigned)
-  &&  !(lty->is_unsigned && is_u8num(rhs))) {
+  if ( !is_char_or_bool(lhs->ty) || !is_char_or_bool(rhs->ty) ){
     return false;
   }
 
-  if (lhs->kind == ND_CAST && lhs->ty->kind == TY_INT) {
-    lhs = lhs->lhs;
-  }
-  if (rhs->kind == ND_CAST && rhs->ty->kind == TY_INT) {
-    rhs = rhs->lhs;
-  }
-  if (lhs->kind == ND_CAST
-  &&  lhs->ty->kind == lhs->lhs->ty->kind
-  &&  lhs->ty->is_unsigned == lhs->lhs->ty->is_unsigned) {
-    lhs = lhs->lhs;
-  }
-  if (rhs->kind == ND_CAST
-  &&  rhs->ty->kind == rhs->lhs->ty->kind
-  &&  rhs->ty->is_unsigned == rhs->lhs->ty->is_unsigned) {
-    rhs = rhs->lhs;
-  }
   if (can_direct_char(rhs)) {
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
@@ -259,6 +219,14 @@ bool gen_jump_if_false(Node *node, char *if_false)
   char *if_thru = new_label("L_thru_%d");
   char if_cond[32];
 
+  if (is_integer_constant(node,&val)) {
+    ast_node_dump(node);
+    if (val==0) {
+      println("\tjmp %s",if_false);
+    }
+    return true;
+  }
+      
   if (node->kind == ND_NOT) {
     return gen_jump_if_true(lhs, if_false);
   }
@@ -667,25 +635,10 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     return true;
   }
 
-  Type *lty;
-  Type *rty;
-  if (!(lty = is_byte(lhs))) {
-    return false;
-  }
-  if (!(rty = is_byte(rhs)) && !(rty = is_u8num(rhs))) {
-    return false;
-  }
-  if ((lty->is_unsigned != rty->is_unsigned)
-  &&  !(lty->is_unsigned && is_u8num(rhs))) {
+  if ( !is_char_or_bool(lhs->ty) || !is_char_or_bool(rhs->ty) ){
     return false;
   }
 
-  if (lhs->kind == ND_CAST && lhs->ty->kind == TY_INT) {
-    lhs = lhs->lhs;
-  }
-  if (rhs->kind == ND_CAST && rhs->ty->kind == TY_INT) {
-    rhs = rhs->lhs;
-  } 
   if (can_direct_char(rhs)) {
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
@@ -767,6 +720,12 @@ bool gen_jump_if_true(Node *node, char *if_true)
   sprintf(if_false, "L_false_%d", c);
   sprintf(if_thru, "L_thru_%d", c);
 
+  if (is_integer_constant(node,&val)) {
+    if (val) {
+      println("\tjmp %s",if_true);
+    }
+    return true;
+  }
   if (node->kind == ND_NOT) {
     return (gen_jump_if_false(lhs, if_true));
   }

@@ -460,9 +460,14 @@ void ast_node_dump(Node *node);
 //
 // optimize.c
 //
+bool is_char_or_bool(Type *ty);
 bool is_integral_promotion(Node *node);
 bool is_integral_promotion_or_byte(Node *node);
 Node *skip_integral_promotion(Node *node);
+bool is_u8num(Node *node);
+bool is_s8num(Node *node);
+bool is_8num(Node *node, Type *ty);
+
 Node *optimize_expr(Node *node);
 Node *optimize_condition(Node *node);
 Obj *optimize(Obj *prog);

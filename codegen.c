@@ -6463,9 +6463,11 @@ static void gen_stmt(Node *node)
   switch (node->kind) {
   case ND_IF: {
     Node *cond = node->cond;
+    int64_t val;
     int c = count();
     char L_else[32];
     char L_end[32];
+
     if (node->els){
       sprintf(L_else,"L_else_%d",c);
       sprintf(L_end, "L_end_%d"  ,c);
@@ -6476,10 +6478,6 @@ static void gen_stmt(Node *node)
     cond = optimize_condition(cond);
     if (!gen_jump_if_false(cond,L_else)){
       assert(0);
-//    gen_expr(cond);
-//    if (!is_compare_or_not(cond))
-//      cmp_zero(cond->ty);
-//    println("\tjeq %s",L_else);
     }
     gen_stmt(node->then);
     if (node->els){
