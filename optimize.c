@@ -1,16 +1,11 @@
 #include "chibicc.h"
 
-bool is_char_or_bool(Type *ty)
-{
-  return (ty->kind==TY_CHAR || ty->kind==TY_BOOL);
-}
-
 bool is_integral_promotion(Node *node)
 {
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_INT
   && !node->ty->is_unsigned
-  &&  is_char_or_bool(node->lhs->ty)) {
+  &&  is_int8(node->lhs->ty)) {
     return true;
   }
   return false;
@@ -21,7 +16,7 @@ bool is_integral_promotion_or_byte(Node *node)
   if (is_integral_promotion(node)) {
     return true;
   }
-  if (is_char_or_bool(node->ty)) {
+  if (is_int8(node->ty)) {
     return true;
   }
   return false;
@@ -85,7 +80,7 @@ bool is_s8num(Node *node)
 
 bool is_8num(Node *node, Type *ty)
 {
-  if (!is_char_or_bool(ty)) {
+  if (!is_int8(ty)) {
     return false;
   }
   return ty->is_unsigned? is_u8num(node): is_s8num(node);
