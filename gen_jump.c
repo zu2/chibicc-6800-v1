@@ -135,7 +135,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     return true;
   }
 
-  if ( !is_char_or_bool(lhs->ty) || !is_char_or_bool(rhs->ty) ){
+  if ( !is_int8(lhs->ty) || !is_int8(rhs->ty) ){
     return false;
   }
 
@@ -635,7 +635,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     return true;
   }
 
-  if ( !is_char_or_bool(lhs->ty) || !is_char_or_bool(rhs->ty) ){
+  if ( !is_int8(lhs->ty) || !is_int8(rhs->ty) ){
     return false;
   }
 
