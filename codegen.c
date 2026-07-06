@@ -988,7 +988,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return false;
   }; // ND_MEMBER:
   case ND_DEREF: {
-    if (test_expr_x(lhs)) {
+    if (test_expr_x(node->lhs)) {
       if (test) return true;
       off = gen_expr_x(lhs,true);
       off = ldx_x(node->ty,off);
@@ -1389,19 +1389,12 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
         return 0;
       }
     }
-    if (0 && test_expr_x(node)) {
+    if (test_expr_x(node->lhs)) {
       if (test) return true;
-      off = gen_expr_x(node,false);
+      off = gen_expr_x(node->lhs,false);
       return off;
     }
-    if (!test_expr_x(node->lhs)) {
-      return 0;
-    }
-    if (test) {
-      return true;
-    }
-    off = gen_expr_x(node->lhs,false);
-    return off;
+    return false;
   case ND_COMMA:
     return false;
   case ND_MEMBER:
@@ -1635,13 +1628,7 @@ bool can_load_x(Type *ty)
 int ldx_x(Type *ty,int off)
 {
   if (can_load_x(ty)) {
-    println("\tldx %d,x",off);
-    if (IX_Dest == IX_BP) {
-      IX_Dest = IX_PTR;
-      IX_PTR_off = off;
-      return 0;
-    }
-    IX_Dest = IX_None;
+    ldx_nX(off);
     return 0;
   }
   return off;
