@@ -2037,6 +2037,19 @@ int64_t eval(Node *node) {
   return eval2(node, NULL);
 }
 
+static int64_t fit_to_type(int64_t val, Type *ty)
+{
+  if (!ty || !is_integer(ty))
+    return val;
+
+  switch (ty->size) {
+  case 1: return ty->is_unsigned ? (uint8_t)val  : (int8_t)val;
+  case 2: return ty->is_unsigned ? (uint16_t)val : (int16_t)val;
+  case 4: return ty->is_unsigned ? (int64_t)(uint32_t)val : (int64_t)(int32_t)val;
+  default: assert(0);
+  }
+}
+
 // Evaluate a given node as a constant expression.
 //
 // A constant expression is either just a number or ptr+n where ptr
@@ -2051,47 +2064,47 @@ int64_t eval2(Node *node, char ***label) {
 
   switch (node->kind) {
   case ND_ADD:
-    return eval2(node->lhs, label) + eval(node->rhs);
+    return fit_to_type(eval2(node->lhs, label) + eval(node->rhs),node->ty);
   case ND_SUB:
-    return eval2(node->lhs, label) - eval(node->rhs);
+    return fit_to_type(eval2(node->lhs, label) - eval(node->rhs),node->ty);
   case ND_MUL:
-    return eval(node->lhs) * eval(node->rhs);
+    return fit_to_type(eval(node->lhs) * eval(node->rhs),node->ty);
   case ND_DIV: {
     int64_t lval = eval(node->lhs);
     int64_t rval = eval(node->rhs);
     if (!rval)
       error_tok(node->rhs->tok, "division by zero during constant evaluation");
     if (node->ty->is_unsigned)
-      return (uint64_t)lval / rval;
+      return fit_to_type((uint64_t)lval / rval,node->ty);
     if (lval == INT64_MIN && rval == -1)
       return INT64_MIN;
-    return lval / rval;
+    return fit_to_type(lval / rval,node->ty);
   }
   case ND_NEG:
-    return -eval(node->lhs);
+    return fit_to_type(-eval(node->lhs),node->ty);
   case ND_MOD: {
     int64_t lval = eval(node->lhs);
     int64_t rval = eval(node->rhs);
     if (!rval)
       error_tok(node->rhs->tok, "remainder by zero during constant evaluation");
     if (node->ty->is_unsigned)
-      return (uint64_t)lval % rval;
+      return fit_to_type((uint64_t)lval % rval,node->ty);
     if (lval == INT64_MIN && rval == -1)
       return 0;
-    return lval % rval;
+    return fit_to_type(lval % rval,node->ty);
   }
   case ND_BITAND:
-    return eval(node->lhs) & eval(node->rhs);
+    return fit_to_type(eval(node->lhs) & eval(node->rhs),node->ty);
   case ND_BITOR:
-    return eval(node->lhs) | eval(node->rhs);
+    return fit_to_type(eval(node->lhs) | eval(node->rhs),node->ty);
   case ND_BITXOR:
-    return eval(node->lhs) ^ eval(node->rhs);
+    return fit_to_type(eval(node->lhs) ^ eval(node->rhs),node->ty);
   case ND_SHL:
-    return eval(node->lhs) << eval(node->rhs);
+    return fit_to_type(eval(node->lhs) << eval(node->rhs),node->ty);
   case ND_SHR:
     if (node->ty->is_unsigned && node->ty->size == 8)
-      return (uint64_t)eval(node->lhs) >> eval(node->rhs);
-    return eval(node->lhs) >> eval(node->rhs);
+      return fit_to_type((uint64_t)eval(node->lhs) >> eval(node->rhs),node->ty);
+    return fit_to_type(eval(node->lhs) >> eval(node->rhs),node->ty);
   case ND_EQ:
     return eval(node->lhs) == eval(node->rhs);
   case ND_NE:
@@ -2119,21 +2132,13 @@ int64_t eval2(Node *node, char ***label) {
   case ND_NOT:
     return !eval(node->lhs);
   case ND_BITNOT:
-    return ~eval(node->lhs);
+    return fit_to_type(~eval(node->lhs),node->ty);
   case ND_LOGAND:
     return eval(node->lhs) && eval(node->rhs);
   case ND_LOGOR:
     return eval(node->lhs) || eval(node->rhs);
   case ND_CAST: {
-    int64_t val = eval2(node->lhs, label);
-    if (is_integer(node->ty)) {
-      switch (node->ty->size) {
-      case 1: return node->ty->is_unsigned ? (uint8_t)val : (int8_t)val;
-      case 2: return node->ty->is_unsigned ? (uint16_t)val : (int16_t)val;
-      case 4: return node->ty->is_unsigned ? (uint32_t)val : (int32_t)val;
-      }
-    }
-    return val;
+    return fit_to_type(eval2(node->lhs, label),node->ty);
   }
   case ND_ADDR:
     return eval_rval(node->lhs, label);
@@ -2154,7 +2159,7 @@ int64_t eval2(Node *node, char ***label) {
     *label = &node->var->name;
     return 0;
   case ND_NUM:
-    return node->val;
+    return fit_to_type(node->val,node->ty);
   }
 
   error_tok(node->tok, "not a compile-time constant");
