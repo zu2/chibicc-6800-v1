@@ -108,8 +108,9 @@ __shru32x16:
 	staa @long+3
 	ldaa @long
 	staa @long+2
-	clr @long+1
-	clr @long+0
+	clra
+	staa @long+1
+	staa @long+0
 	subb #16
 	rts
 __shru32x8:
@@ -119,14 +120,13 @@ __shru32x8:
 	staa @long+2
 	ldaa @long
 	staa @long+1
-	clr @long
+	clra
+	staa @long
 	subb #8
 	rts
 ;
 shrs32ret:
-	clra
-	asl @long
-	sbca #0
+	ldaa #$ff
 	staa @long+3
 	staa @long+2
 	staa @long+1
