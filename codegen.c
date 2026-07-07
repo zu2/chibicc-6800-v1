@@ -988,6 +988,36 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return false;
   }; // ND_MEMBER:
   case ND_DEREF: {
+  //(ND_DEREF TY_PTR(10) (+ TY_PTR(10) (ND_VAR TY_PTR(10) p +0 ) 4))
+    if (node->lhs->kind == ND_ADD       // XXX
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  node->lhs->lhs->kind == ND_VAR
+    &&  node->lhs->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->rhs,&val)) {
+      Node *vp = node->lhs->lhs;
+      if (is_local_var(vp)
+      &&  (0 <= vp->var->offset && vp->var->offset<256)
+      &&  (0 <= val && val<256)) {
+        if (test) return true;
+        ast_node_dump(node);
+        println("; ND_DEREF localvar vp->var->offset %d",vp->var->offset);
+        println("; ND_DEREF val %d",val);
+        ldx_bp();
+        ldx_nX(vp->var->offset);
+        off = ldx_x(node->lhs->ty,val);
+        return off;
+      }
+      if (is_global_var(vp)
+      &&  (0 <= val && val<256)) {
+        if (test) return true;
+        ast_node_dump(node);
+        println("; ND_DEREF global vp->var->name %d",vp->var->name);
+        println("; ND_DEREF val %d",val);
+        println("\tldx _%s",vp->var->name);
+        off = ldx_x(node->lhs->ty,val);
+        return off;
+      }
+    }
     if (test_expr_x(node->lhs)) {
       if (test) return true;
       off = gen_expr_x(lhs,true);
@@ -1153,8 +1183,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 // case ND_LOGOR:
 // case ND_FUNCALL:
 // case ND_LABEL_VAL:
-#if 1
-  // rethink. check ARRAY or Pointer
   case ND_ADD:
     if (lhs->kind      == ND_CAST
     &&  lhs->ty->kind  == TY_PTR
@@ -1255,7 +1283,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       }
     }
     return false;
-#endif
   default:
   }
 fallback:
@@ -1388,6 +1415,17 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
         IX_Dest = IX_None;
         return 0;
       }
+    }
+    // *p[1] = 22;
+    // (ND_DEREF ty_ushort
+    //   (ND_DEREF TY_PTR(10) (+ TY_PTR(10) (ND_VAR TY_PTR(10) p +0 ) 2)))
+    if (node->lhs->kind == ND_DEREF
+    &&  node->lhs->ty
+    &&  is_int16_or_ptr(node->lhs->ty)
+    &&  test_expr_x(node->lhs)) {
+      if (test) return true;
+      off = gen_expr_x(node,false);
+      return off;
     }
     if (test_expr_x(node->lhs)) {
       if (test) return true;
@@ -7136,7 +7174,7 @@ void codegen(Obj *prog, FILE *out) {
   output_file = out;
 
   println("\t.setcpu 6800");
-
+  println(";\toption flag -O%c -g%c",opt_O,opt_g);
   File **files = get_input_files();
   for (int i = 0; files[i]; i++)
     println(";\t.file %d \"%s\" %s %s", files[i]->file_no, files[i]->name,__DATE__,__TIME__);
