@@ -15,6 +15,27 @@
 	ldx @tmp1
 	ldab 0,x
 
+	stab %1+1
+	staa %1
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+=
+	stab %1+1
+	staa %1
+	ldx %1
+
+	stab %2,x
+	staa %1,x
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
+=
+	stab %2,x
+	staa %1,x
+	ldx %1,x
+
+
 #
 # 32bit operation
 #
