@@ -615,8 +615,22 @@ bool gen_shl(Type *ty, uint64_t val)
     return false;
   if (val==0)
     return true;            // do nothing
-  if (val>=ty->size*8)      // TODO: bit field
-    return false;
+  if (val>=ty->size*8){     // TODO: bit field
+    switch(ty->size) {
+    case 1: println("\tclrb");
+            return true;
+    case 2: println("\tclrb");
+            println("\tclra");
+            return true;
+    case 4: println("\tclrb");
+            println("\tstab @long+3");
+            println("\tstab @long+2");
+            println("\tstab @long+1");
+            println("\tstab @long");
+            return true;
+    default:assert(0);
+    }
+  }
   switch(ty->size){
   case 1:
     switch(val) {
@@ -694,8 +708,46 @@ bool gen_shr(Type *ty, uint64_t val)
     return false;
   if (val==0)
     return true;
-  if (val>=ty->size*8)
-    return false;
+  if (val>=ty->size*8) {
+    if (ty->is_unsigned) {
+      switch(ty->size) {
+      case 1: println("\tclrb");
+              return true;
+      case 2: println("\tclrb");
+              println("\tclra");
+              return true;
+      case 4: println("\tclrb");
+              println("\tstab @long+3");
+              println("\tstab @long+2");
+              println("\tstab @long+1");
+              println("\tstab @long");
+              return true;
+      default:assert(0);
+      }
+    }else{ // signed
+      switch(ty->size) {
+      case 1: println("\taslb");
+              println("\tldab #0");
+              println("\tsbcb #0");
+              return true;
+      case 2: println("\tclrb");
+              println("\tasla");
+              println("\tsbcb #0");
+              println("\ttba");
+              return true;
+      case 4: println("\tclrb");
+              println("\tasl @long");
+              println("\tsbcb #0");
+              println("\tstab @long+3");
+              println("\tstab @long+2");
+              println("\tstab @long+1");
+              println("\tstab @long");
+              return true;
+      default:assert(0);
+      }
+    }
+    return true;
+  }
   switch(ty->size){
   case 1:
     for (int i=0; i<val; i++) {
@@ -999,9 +1051,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       &&  (0 <= vp->var->offset && vp->var->offset<256)
       &&  (0 <= val && val<256)) {
         if (test) return true;
-        ast_node_dump(node);
-        println("; ND_DEREF localvar vp->var->offset %d",vp->var->offset);
-        println("; ND_DEREF val %d",val);
         ldx_bp();
         ldx_nX(vp->var->offset);
         off = ldx_x(node->lhs->ty,val);
@@ -1010,9 +1059,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       if (is_global_var(vp)
       &&  (0 <= val && val<256)) {
         if (test) return true;
-        ast_node_dump(node);
-        println("; ND_DEREF global vp->var->name %d",vp->var->name);
-        println("; ND_DEREF val %d",val);
         println("\tldx _%s",vp->var->name);
         off = ldx_x(node->lhs->ty,val);
         return off;
@@ -1424,7 +1470,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     &&  is_int16_or_ptr(node->lhs->ty)
     &&  test_expr_x(node->lhs)) {
       if (test) return true;
-      off = gen_expr_x(node,false);
+      off = gen_expr_x(node->lhs,false);
       return off;
     }
     if (test_expr_x(node->lhs)) {
@@ -4183,7 +4229,7 @@ static void opeq(Node *node)
             println("\tstab _%s",lhs->var->name);
             return;
           }
-          println("\tclrb");
+          println("\tclrb ; UB");
           return;
         }
       }else if (test_addr_x(lhs)) {
