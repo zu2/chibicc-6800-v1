@@ -245,19 +245,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
       return true;
     }
   }
-  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
-    if (is_global_var_with_cast(node)) {
-      ldx_EXT(skip_redundant_ptr_cast(node));
-      println("\tjeq %s", if_false);
-      return true;
-    }
-    if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
-      int off = gen_addr_x(node, false);
-      ldx_nX(off);
-      println("\tjeq %s", if_false);
-      return true;
-    }
-  }
 
   if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
     int off = gen_expr_x(node,false);
@@ -761,20 +748,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
     }
     if (test_addr_x(node)) {
       int off = gen_addr_x(node,false);
-      ldx_nX(off);
-      println("\tjne %s", if_true);
-      return true;
-    }
-  }
-  if (isVAR(node) && is_integer_or_ptr(node->ty) && node->ty->size == 2) {
-    if (is_global_var_with_cast(node)) {
-      ldx_EXT(skip_redundant_ptr_cast(node));
-      ldx_EXT(node);
-      println("\tjne %s", if_true);
-      return true;
-    }
-    if (is_local_var(node) && node->var->offset <= 255 && test_addr_x(node)) {
-      int off = gen_addr_x(node, false);
       ldx_nX(off);
       println("\tjne %s", if_true);
       return true;
