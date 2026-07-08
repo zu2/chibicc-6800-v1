@@ -120,12 +120,14 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   int64_t val;
 
   if (node->kind == ND_BITAND
-  &&  is_integer_constant(node, &val)
-  &&  (val & ~0xFF)==0) {
-    gen_expr(lhs);
-    println("\tandb #$%02lx", val);
-    println("\tjeq %s", if_false);
-    return true;
+  &&  is_integer_constant(node->rhs, &val)) {
+    if ((val & ~0xFF)==0
+    ||  (is_int8(node->lhs->ty) && node->lhs->ty->is_unsigned)) {
+      gen_expr(lhs);
+      println("\tandb #$%02lx", val);
+      println("\tjeq %s", if_false);
+      return true;
+    }
   }
 
   if (!is_compare(node)) {
@@ -220,7 +222,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
   char if_cond[32];
 
   if (is_integer_constant(node,&val)) {
-    ast_node_dump(node);
     if (val==0) {
       println("\tjmp %s",if_false);
     }
@@ -620,12 +621,14 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   int64_t val;
 
   if (node->kind == ND_BITAND
-  &&  is_integer_constant(node, &val)
-  &&  (val & ~0xFF)==0) {
-    gen_expr(lhs);
-    println("\tandb #$%02lx", val);
-    println("\tjne %s", if_true);
-    return true;
+  &&  is_integer_constant(node->rhs, &val)) {
+    if ((val & ~0xFF)==0
+    ||  (is_int8(node->lhs->ty) && node->lhs->ty->is_unsigned)) {
+      gen_expr(lhs);
+      println("\tandb #$%02lx", val);
+      println("\tjne %s", if_true);
+      return true;
+    }
   }
 
   if (!is_compare(node)) {
