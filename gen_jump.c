@@ -52,9 +52,8 @@ Type *is_byte(Node *node)
 {
   int64_t val;
 
-  if (node->kind == ND_CAST && node->ty->kind == TY_INT &&
-      !node->ty->is_unsigned) { // integral promotion ?
-    node = node->lhs;
+  if (is_integral_promotion(node)) {
+    node = skip_integral_promotion(node);
   }
   if (is_int8(node->ty)) {
     return node->ty;
@@ -232,7 +231,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     return gen_jump_if_true(lhs, if_false);
   }
 
-  if (is_integer_or_ptr(node->ty) && node->ty->size == 2) {
+  if (is_int16_or_ptr(node->ty)) {
     if (test_expr_x(node)) {
       gen_expr_x(node,false);
       println("\tjeq %s", if_false);
@@ -244,12 +243,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
       println("\tjeq %s", if_false);
       return true;
     }
-  }
-
-  if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
-    int off = gen_expr_x(node,false);
-    println("\tjeq %s", if_false);
-    return true;
   }
 
   if (node->kind == ND_LOGOR) {
@@ -725,7 +718,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return true;
   }
 
-  if (is_integer_or_ptr(node->ty) && node->ty->size == 2) {
+  if (is_int16_or_ptr(node->ty)) {
     if (test_expr_x(node)) {
       gen_expr_x(node,false);
       println("\tjne %s", if_true);
@@ -737,12 +730,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
       println("\tjne %s", if_true);
       return true;
     }
-  }
-
-  if (is_int16_or_ptr(node->ty) && test_expr_x(node)) {
-    int off = gen_expr_x(node,false);
-    println("\tjne %s", if_true);
-    return true;
   }
 
   if (node->kind == ND_BITAND && is_int8(node->ty)) {
