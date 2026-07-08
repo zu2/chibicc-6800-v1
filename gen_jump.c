@@ -446,21 +446,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
       }
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
-         && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs,false);
-      println("\tcpx #%ld",val);
-      switch(node->kind) {
-      case ND_EQ:
-        println("\tjne %s", if_false);
-        return true;
-      case ND_NE:
-        println("\tjeq %s", if_false);
-        return true;
-      default: ;
-        assert(0);    // It's strange to fail
-      }
-  } else if (is_integer_constant(rhs,&val)
-         && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_addr_x(lhs))) {
       int off = gen_addr_x(lhs,false);
       ldx_nX(off);
