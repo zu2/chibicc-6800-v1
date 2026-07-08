@@ -4381,7 +4381,8 @@ static void opeq(Node *node)
 }
 
 // Generate code for a given node.
-void gen_expr(Node *node) {
+void gen_expr(Node *node)
+{
   node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
@@ -4917,13 +4918,29 @@ void gen_expr(Node *node) {
     &&  (is_int8(node->ty) || is_int16_or_ptr(node->ty))
     &&  test_addr_x(node->lhs->lhs)
     &&  node->lhs->lhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->lhs->rhs,&val)
-    &&  val==1 ){
-      if (is_global_var(node->lhs->lhs)) {
+    &&  is_integer_constant(node->lhs->rhs,&val)) {
+      if (is_global_var(node->lhs->lhs) && abs(val)<=2) {
         ldx_EXT(node->lhs->lhs);
-        println("\tinx");
+        if (is_int8(node->ty)) {
+          println("\tldab 0,x");
+        }else if (is_int16(node->ty)) {
+          println("\tldab 1,x");
+          println("\tldaa 0,x");
+        }else{
+          assert(0);  // what?
+        }
+        switch(val){
+        case -2: println("\tdex");
+        case -1: println("\tdex");
+                 break;
+        case  2: println("\tinx");
+        case  1: println("\tinx");
+                 break;
+        default: assert(0);
+        }
         stx_EXT(node->lhs->lhs);
-      }else{
+        return;
+      }else if (val==1){
         int off = gen_addr_x(node->lhs->lhs,false);
         char *label = new_jump_label();
         println("\tinc %d,x",off+1);
@@ -4931,20 +4948,19 @@ void gen_expr(Node *node) {
         println("\tinc %d,x",off);
         println("%s:",label);
         println("\tldx %d,x",off);
+        println("\tdex");
+        if (is_int8(node->ty)) {
+          println("\tldab 0,x");
+        }else if (is_int16(node->ty)) {
+          println("\tldab 1,x");
+          println("\tldaa 0,x");
+        }else{
+          assert(0);  // what?
+        }
+        IX_Dest = IX_None;
+        return;
       }
-      println("\tdex");
-      if (is_int8(node->ty)) {
-        println("\tldab 0,x");
-      }else if (is_int16(node->ty)) {
-        println("\tldab 1,x");
-        println("\tldaa 0,x");
-      }else{
-        assert(0);  // what?
-      }
-      IX_Dest = IX_None;
-      return;
     }
-    // TODO: global var deref
     if (can_direct(node)) {
       gen_direct(node,"ldab","ldaa");
       return;
