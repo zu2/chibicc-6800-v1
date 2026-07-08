@@ -278,13 +278,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
       return true;
     }
   }
-  Type *lty;
-  lty = is_byte(lhs);
-  if ((lty=is_byte(lhs)) &&  lty->is_unsigned &&  is_u8num(rhs)) {
-    if (gen_jump_if_false_8bit(node, if_false)) {
-      return true;
-    }
-  }
 
   // special long case
   if (lhs->ty->kind == TY_LONG
@@ -747,13 +740,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
   // If one side is ND_NUM, both sides are promoted to int,
   // so this can't be optimized. TODO: Fix optimize.c
   if (is_byte(lhs) && is_byte(rhs)) {
-    if (gen_jump_if_true_8bit(node, if_true)) {
-      return true;
-    }
-  }
-  Type *lty;
-  lty = is_byte(lhs);
-  if ((lty=is_byte(lhs)) &&  lty->is_unsigned &&  is_u8num(rhs)) {
     if (gen_jump_if_true_8bit(node, if_true)) {
       return true;
     }
