@@ -4669,11 +4669,11 @@ void gen_expr(Node *node)
       case TY_INT:
       case TY_ENUM:
       case TY_PTR:
-        if (node->retval_unused && val==1 && opt('O','s')) {
+        if (node->retval_unused && val==1) {
           ldx_EXT(node->lhs);
           println("\tinx");
           stx_EXT(node->lhs);
-        }else if (node->retval_unused && val==2 && opt('O','s')) {
+        }else if (node->retval_unused && val==2) {
           ldx_EXT(node->lhs);
           println("\tinx");
           println("\tinx");
@@ -4685,11 +4685,11 @@ void gen_expr(Node *node)
           println("\tadca #>%d",val);
           println("\tstab _%s+1",var);
           println("\tstaa _%s",var);
-        } else if (node->retval_unused && val==-1 && opt('O','s')) {
+        } else if (node->retval_unused && val==-1) {
           ldx_EXT(node->lhs);
           println("\tdex");
           stx_EXT(node->lhs);
-        } else if (node->retval_unused && val==-2 && opt('O','s')) {
+        } else if (node->retval_unused && val==-2) {
           ldx_EXT(node->lhs);
           println("\tdex");
           println("\tdex");
@@ -4967,6 +4967,35 @@ void gen_expr(Node *node)
           assert(0);  // what?
         }
         IX_Dest = IX_None;
+        return;
+      }
+    }
+    // (ND_DEREF ty_uchar (ND_PRE_INCDEC (ND_VAR TY_PTR(10) src +8 ) 1)))
+    if (node->lhs->kind == ND_PRE_INCDEC
+    &&  (is_int8(node->ty) || is_int16_or_ptr(node->ty))
+    &&  test_addr_x(node->lhs->lhs)
+    &&  node->lhs->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->rhs,&val)) {
+      if (is_global_var(node->lhs->lhs) && abs(val)<=2) {
+        ldx_EXT(node->lhs->lhs);
+        switch(val){
+        case -2: println("\tdex");
+        case -1: println("\tdex");
+                 break;
+        case  2: println("\tinx");
+        case  1: println("\tinx");
+                 break;
+        default: assert(0);
+        }
+        stx_EXT(node->lhs->lhs);
+        if (is_int8(node->ty)) {
+          println("\tldab 0,x");
+        }else if (is_int16(node->ty)) {
+          println("\tldab 1,x");
+          println("\tldaa 0,x");
+        }else{
+          assert(0);  // what?
+        }
         return;
       }
     }

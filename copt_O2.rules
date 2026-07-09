@@ -35,6 +35,35 @@
 	staa %1,x
 	ldx %1,x
 
+#
+# PRE_INCDEC
+#
+
+	ldab %1+1
+	ldaa %1
+	addb #<2
+	adca #>2
+	stab %1+1
+	staa %1
+	ldx %1
+=
+	ldx %1
+	inx
+	inx
+	stx %1
+
+	ldab %1+1
+	ldaa %1
+	subb #<2
+	sbca #>2
+	stab %1+1
+	staa %1
+	ldx %1
+=
+	ldx %1
+	dex
+	dex
+	stx %1
 
 #
 # 32bit operation
