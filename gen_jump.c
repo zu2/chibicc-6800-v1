@@ -123,7 +123,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     if ((val & ~0xFF)==0
     ||  (is_int8(node->lhs->ty) && node->lhs->ty->is_unsigned)) {
       gen_expr(lhs);
-      println("\tandb #$%02lx", val);
+      println("\tandb #<%ld", val);
       println("\tjeq %s", if_false);
       return true;
     }
@@ -499,7 +499,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     depth -= 2;
   }
   switch (node->kind) {
-  // aba/adca #0/jne	5bytes, 10cycle
+  // aba/adca #0/jne	5bytes, 8cycle
   // tstb/jne/tsta/jne	6bytes, 6 or 12cycle
   // aba/jne/jcs	5bytes, 6 or 10cycle
   // jxx may be converted to bxx/jmp, fewer jxx instructions are preferable.
@@ -583,7 +583,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     if ((val & ~0xFF)==0
     ||  (is_int8(node->lhs->ty) && node->lhs->ty->is_unsigned)) {
       gen_expr(lhs);
-      println("\tandb #$%02lx", val);
+      println("\tandb #<%ld", val);
       println("\tjne %s", if_true);
       return true;
     }
@@ -675,11 +675,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   char *addr;
-  char if_false[32];
-  char if_thru[32];
-  int c = count();
-  sprintf(if_false, "L_false_%d", c);
-  sprintf(if_thru, "L_thru_%d", c);
+  char *if_thru = new_label("L_thru_%d");
 
   if (is_integer_constant(node,&val)) {
     if (val) {
@@ -698,19 +694,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
     goto fallback;
   }
 
-  if (node->kind == ND_LOGOR) {
-    gen_jump_if_true(lhs, if_true);
-    gen_jump_if_true(rhs, if_true);
-    return true;
-  }
-  if (node->kind == ND_LOGAND) {
-    gen_jump_if_false(lhs, if_thru);
-    gen_jump_if_true(rhs, if_true);
-    println("%s:", if_thru);
-    IX_Dest = IX_None;
-    return true;
-  }
-
   if (is_int16_or_ptr(node->ty)) {
     if (test_expr_x(node)) {
       gen_expr_x(node,false);
@@ -723,6 +706,19 @@ bool gen_jump_if_true(Node *node, char *if_true)
       println("\tjne %s", if_true);
       return true;
     }
+  }
+
+  if (node->kind == ND_LOGOR) {
+    gen_jump_if_true(lhs, if_true);
+    gen_jump_if_true(rhs, if_true);
+    return true;
+  }
+  if (node->kind == ND_LOGAND) {
+    gen_jump_if_false(lhs, if_thru);
+    gen_jump_if_true(rhs, if_true);
+    println("%s:", if_thru);
+    IX_Dest = IX_None;
+    return true;
   }
 
   if (node->kind == ND_BITAND && is_int8(node->ty)) {
