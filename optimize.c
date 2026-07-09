@@ -86,46 +86,6 @@ bool is_8num(Node *node, Type *ty)
   return ty->is_unsigned? is_u8num(node): is_s8num(node);
 }
 
-static char *type_str(Node *node)
-{
-  if (!node || !node->ty) return "NULL";
-
-  if (node->ty == ty_void) return "ty_void";
-  if (node->ty == ty_bool) return "ty_bool";
-  if (node->ty == ty_char) return "ty_char";
-  if (node->ty == ty_short) return "ty_short";
-  if (node->ty == ty_int) return "ty_int";
-  if (node->ty == ty_long) return "ty_long";
-  if (node->ty == ty_uchar) return "ty_uchar";
-  if (node->ty == ty_ushort) return "ty_ushort";
-  if (node->ty == ty_uint) return "ty_uint";
-  if (node->ty == ty_ulong) return "ty_ulong";
-  if (node->ty == ty_float) return "ty_float";
-  if (node->ty == ty_double) return "ty_double";
-  if (node->ty == ty_ldouble) return "ty_ldouble";
-
-  switch(node->ty->kind){
-  case TY_VOID:	return "TY_VOID(0)";
-  case TY_BOOL: return "TY_BOOL(1)";
-  case TY_CHAR: return "TY_CHAR(2)";
-  case TY_SHORT:return "TY_SHORT(3)";
-  case TY_INT:  return "TY_INT(4)";
-  case TY_LONG: return "TY_LONG(5)";
-  case TY_FLOAT:return "TY_FLOAT(6)";
-  case TY_DOUBLE:return "TY_DOUBLE(7)";
-  case TY_LDOUBLE:return "TY_LDOUBLE(8)";
-  case TY_ENUM: return "TY_ENUM(9)";
-  case TY_PTR:  return "TY_PTR(10)";
-  case TY_FUNC: return "TY_FUNC(11)";
-  case TY_ARRAY:return "TY_ARRAY(12)";
-  case TY_VLA:  return "TY_VLA(13)";
-  case TY_STRUCT:return "TY_STRUCT(14)";
-  case TY_UNION:return "TY_UNION(15)";
-  }
-
-  assert(0);
-}
-
 Node *negate_condition(Node *node)
 {
   switch(node->kind){
