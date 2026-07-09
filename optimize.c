@@ -151,6 +151,7 @@ static int node_cost(Node *node)
 {
   int sign = !node->ty->is_unsigned;
 
+
   if (node->kind==ND_NUM) {
     return 2;
   }else if (node->kind == ND_CAST
@@ -169,6 +170,8 @@ static int node_cost(Node *node)
       + ((node->ty->kind == TY_ARRAY)? 200:0);
   }else if (node->kind==ND_CAST) {
     return node_cost(node->lhs)+10+sign;
+  }else if (node->kind==ND_DEREF) {
+    return node_cost(node->lhs)+500+sign;
   }else if (node->kind==ND_FUNCALL) {
     return 1000;
   }
@@ -278,6 +281,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
     new->lhs = lhs;
     new->rhs = new_unary(ND_BITNOT,rhs,rhs->tok);
     new->rhs->ty = ty_uchar;
+    new = optimize_lr_swap(new);
     return optimize_const_expr(new_cast(new,ty_int));
   }
   if (node->kind == ND_BITAND
@@ -292,6 +296,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
     new->lhs = new_unary(ND_BITNOT,lhs,lhs->tok);
     new->lhs->ty = ty_uchar;
     new->rhs = rhs;
+    new = optimize_lr_swap(new);
     return optimize_const_expr(new_cast(new,ty_int));
   }
   // LHS check
