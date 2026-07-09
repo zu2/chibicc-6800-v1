@@ -545,6 +545,7 @@ extern int IX_IMM_value;
 //
 // gen_jump.c
 //
+char *is_addr_constant(Node *node);
 bool gen_jump_if_false(Node *node,char *if_false);
 bool gen_jump_if_true(Node *node,char *if_true);
 Type *is_byte(Node *node);

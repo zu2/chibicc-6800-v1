@@ -70,15 +70,31 @@ Type *is_byte(Node *node)
   return NULL;
 }
 
-
+// (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
+// (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 0)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
+// (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 char *is_addr_constant(Node *node)
 {
+  int64_t val;
+
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_PTR
   &&  node->lhs->kind == ND_VAR
   &&  node->lhs->ty->kind == TY_ARRAY
   &&  !node->lhs->var->is_local) {
     return node->lhs->var->name;
+  }
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_PTR
+  &&  node->lhs->kind == ND_ADD
+  &&  node->lhs->ty->kind == TY_ARRAY
+  &&  node->lhs->lhs->kind == ND_VAR
+  &&  node->lhs->lhs->ty->kind == TY_ARRAY
+  &&  !node->lhs->lhs->var->is_local
+  &&  is_integer_constant(node->lhs->rhs,&val)) {
+    char *p = calloc(1,strlen(node->lhs->lhs->var->name)+32);
+    sprintf(p,"%s+%ld",node->lhs->lhs->var->name,val);
+    return p;
   }
   return NULL;
 }
@@ -218,7 +234,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
   Node *rhs = node->rhs;
   char *addr;
   char *if_thru = new_label("L_thru_%d");
-  char if_cond[32];
 
   if (is_integer_constant(node,&val)) {
     if (val==0) {

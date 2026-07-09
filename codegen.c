@@ -976,7 +976,14 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
   Node *rhs = node->rhs;
   int off;
   int64_t val;
+  char *addr;
 
+  if ((addr=is_addr_constant(node))) {
+    if (test) return true;
+    println("\tldx #_%s",addr);
+    IX_Dest = IX_None;
+    return 0;
+  }
   switch(node->kind) {
   case ND_NULL_EXPR:
     return false;
@@ -1186,7 +1193,9 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return false;
   } // ND_ADDR;
   case ND_ASSIGN: {
-      println("; %s ND_ASSIGN %s %d",__func__,__FILE__,__LINE__);
+      if (opt('g','3')) {
+        println("; %s ND_ASSIGN %s %d",__func__,__FILE__,__LINE__);
+      }
     }
     return false;
 //case ND_STMT_EXPR:
@@ -1455,10 +1464,9 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
         if (save_d)
           push();
         ldd_i(off+val);
-        println("\tjsr __adx");
+        adx();
         if (save_d)
           pop();
-        IX_Dest = IX_None;
         return 0;
       }
     }
@@ -1499,8 +1507,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     if (save_d)
       push();
     ldd_i(off);
-    println("\tjsr __adx");
-    IX_Dest = IX_None;
+    adx();
     if (off == 0) {
       return off;
     }
@@ -1891,7 +1898,7 @@ static void store_x(Type *ty,int off) {
     push();
     if (off!=0) {
       ldd_i(off);
-      println("\tjsr __adx");
+      adx();
     }
     ldd_i(ty->size);
     println("\tjsr  __copy_struct2 ; store_X");
@@ -4888,6 +4895,7 @@ void gen_expr(Node *node)
       &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
         char *label = new_jump_label();
+        lhs->lhs = optimize_expr(new_cast(skip_integral_promotion(lhs->lhs),ty_uchar));
         gen_expr(lhs->lhs);
         println("\tldx #_%s",lhs->rhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
@@ -4904,6 +4912,7 @@ void gen_expr(Node *node)
       &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
         char *label = new_jump_label();
+        lhs->rhs = optimize_expr(new_cast(skip_integral_promotion(lhs->rhs),ty_uchar));
         gen_expr(lhs->rhs);
         println("\tldx #_%s",lhs->lhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
