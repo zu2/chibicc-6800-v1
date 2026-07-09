@@ -707,6 +707,7 @@ Node *optimize_expr(Node *node)
   // rewrite the relational operator.
   // In the case of float, rewriting is not possible because there is NaN.
   case ND_NOT:
+    node->lhs = skip_integral_promotion(node->lhs);
     if (is_compare(node->lhs)
     &&  is_integer(node->lhs->lhs->ty)
     &&  is_integer(node->lhs->rhs->ty)){
@@ -729,6 +730,8 @@ Node *optimize_expr(Node *node)
   // Below is a binary operator
   case ND_LOGAND: {
     node = optimize_lr(node);
+    node->lhs = skip_integral_promotion(node->lhs);
+    node->rhs = skip_integral_promotion(node->rhs);
     if (is_integer_constant(node->lhs,&val)) {
       if (val==0) {
         node = new_num(0,node->tok);
@@ -746,6 +749,8 @@ Node *optimize_expr(Node *node)
   }
   case ND_LOGOR:
     node = optimize_lr(node);
+    node->lhs = skip_integral_promotion(node->lhs);
+    node->rhs = skip_integral_promotion(node->rhs);
     if (is_integer_constant(node->lhs,&val)) {
       if (val!=0) {
         node = new_num(1,node->tok);
