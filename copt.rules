@@ -752,6 +752,45 @@
 	ldab %1,x
 	clra
 
+# shift op
+
+	ldab %1,x
+	ldaa %0,x
+	lsra
+	rorb
+	stab %1,x
+	staa %0,x
+=
+	lsr %0,x
+	ror %1,x
+	ldab %1,x
+	ldaa %0,x
+
+	ldab %1,x
+	ldaa %0,x
+	asra
+	rorb
+	stab %1,x
+	staa %0,x
+=
+	asr %0,x
+	ror %1,x
+	ldab %1,x
+	ldaa %0,x
+
+	ldab %1,x
+	ldaa %0,x
+	arlb
+	rola
+	stab %1,x
+	staa %0,x
+=
+	asl %1,x
+	rol %0,x
+	ldab %1,x
+	ldaa %0,x
+
+
 	ins
 	ins
 	ins
