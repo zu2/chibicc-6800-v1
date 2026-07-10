@@ -1231,6 +1231,25 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       }
     }
     return false;
+//  (>>= ty_ushort (ND_VAR ty_ushort t +4 ) (ND_NUM TY_CHAR(2) 1))
+  case ND_SHREQ:
+    if (is_int16_or_ptr(node->ty)
+    &&  test_addr_x(node->lhs)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  val==1) {
+      if (test) return true;
+      int off = gen_addr_x(node->lhs,false);
+      if (node->lhs->ty->is_unsigned) {
+        println("\tlsr %d,x",off);
+        println("\tror %d,x",off+1);
+      }else{
+        println("\tasr %d,x",off);
+        println("\tror %d,x",off+1);
+      }
+      ldx_nX(off);
+      return 0;
+    }
+    return false;
 //case ND_STMT_EXPR:
 //case ND_COMMA:
   case ND_CAST: {
