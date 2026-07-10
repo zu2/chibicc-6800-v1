@@ -323,10 +323,14 @@ static void ast_dump(Node *node)
 //48   ND_CAS,       // Atomic compare-and-swap
 //49   ND_EXCH,      // Atomic exchange
   case ND_POST_INCDEC:
-    ast_dump_binary(node,"ND_POST_INCDEC");
+    printout("(ND_POST_INCDEC %s ",type_str(node->ty));
+    ast_dump(node->lhs);
+    printout(")");
     return;
   case ND_PRE_INCDEC:
-    ast_dump_binary(node,"ND_PRE_INCDEC");
+    printout("(ND_PRE_INCDEC %s ",type_str(node->ty));
+    ast_dump(node->lhs);
+    printout(")");
     return;
   case ND_ADDEQ:
     ast_dump_binary_ty(node,"+=");
