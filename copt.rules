@@ -1204,6 +1204,10 @@
 =
 	tstb
 
+#
+# remove redundant lda
+#
+
 	ldab %1
 	j%2 L%3
 	ldab %1
@@ -1229,6 +1233,16 @@
 	ldab %1
 	cmpb #%2
 	j%3 L%4
+
+	stab %1
+	cmpb %2
+	j%3 L%4
+	ldab %1
+=
+	stab %1
+	cmpb %2
+	j%3 L%4
+
 
 	tsx
 	andb 1,x

@@ -65,6 +65,44 @@
 	dex
 	stx %1
 
+	ldx %1
+	inx
+	inx
+	stx %1
+	dex
+	dex
+	ldab 1,x
+	ldaa 0,x
+=
+	ldx %1
+	ldab 1,x
+	ldaa 0,x
+	inx
+	inx
+	stx %1
+
+
+#
+# ND_POST_INCDEC
+#
+
+	ldx %1
+	inx
+	inx
+	stx %1
+	dex
+	dex
+	ldab 1,x
+	ldaa 0,x
+=
+	ldx %1
+	ldab 1,x
+	ldaa 0,x
+	inx
+	inx
+	stx %1
+
+
 #
 # 32bit operation
 #
