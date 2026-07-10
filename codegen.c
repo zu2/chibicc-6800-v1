@@ -1080,84 +1080,117 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     return 0;
   } // ND_DEREF
   case ND_POST_INCDEC:
-    if (is_int16(node->ty)) {
-        if (lhs->kind==ND_VAR) {
-          if (is_global_var(lhs)) {
-            char *var = lhs->var->name;
-            int64_t val;
-            if (is_integer_constant(node->rhs,&val)) {
-              switch(val) {
-              case 1:
-              case 2:
-                if (test) return true;
-                ldx_EXT(lhs);
-                println("\tinx");
-                if (val==2) {
-                  println("\tinx");
-                }
-                stx_EXT(lhs);
-                println("\tdex");
-                if (val==2) {
-                  println("\tdex");
-                }
-                IX_Dest = IX_None; 
-                return 0;
-              case -1:
-              case -2:
-                if (test) return true;
-                ldx_EXT(lhs);
-                println("\tdex");
-                if (val==-2) {
-                  println("\tdex");
-                }
-                stx_EXT(lhs);
-                println("\tinx");
-                if (val==-2) {
-                  println("\tinx");
-                }
-                IX_Dest = IX_None;
-                return 0;
-              }
+    if (is_int16_or_ptr(node->ty)
+    &&  lhs->kind==ND_VAR) {
+      if (is_global_var(lhs)) {
+        char *var = lhs->var->name;
+        int64_t val;
+        if (is_integer_constant(rhs,&val)) {
+          switch(val) {
+          case 1:
+          case 2:
+            if (test) return true;
+            ldx_EXT(lhs);
+            println("\tinx");
+            if (val==2) {
+              println("\tinx");
             }
+            stx_EXT(lhs);
+            println("\tdex");
+            if (val==2) {
+              println("\tdex");
+            }
+            IX_Dest = IX_None; 
+            return 0;
+          case -1:
+          case -2:
+            if (test) return true;
+            ldx_EXT(lhs);
+            println("\tdex");
+            if (val==-2) {
+              println("\tdex");
+            }
+            stx_EXT(lhs);
+            println("\tinx");
+            if (val==-2) {
+              println("\tinx");
+            }
+            IX_Dest = IX_None;
+            return 0;
           }
-          if (is_local_var(lhs)) {
-            if (test_addr_x(node->lhs)){
-              int64_t val;
-              if (is_integer_constant(node->rhs,&val)) {
-                int off;
-                char *label;
-                switch(val) {
-                case 1:
-                  if (test) return true;
-                  off = gen_addr_x(node->lhs,false);
-                  label = new_jump_label();
-                  println("\tinc %d+1,x",off);
-                  println("\tbne %s",label);
-                  println("\tinc %d,x",off);
-                  println("%s:",label);
-                  println("\tldx %d,x",off);
-                  println("\tdex");
-                  IX_Dest = IX_None;
-                  return 0;
-                case -1:
-                  if (test) return true;
-                  off = gen_addr_x(node->lhs,false);
-                  label = new_jump_label();
-                  println("\ttst %d+1,x",off);
-                  println("\tbne %s",label);
-                  println("\tdec %d,x",off);
-                  println("%s:",label);
-                  println("\tdec %d+1,x",off);
-                  println("\tldx %d,x",off);
-                  println("\tinx");
-                  IX_Dest = IX_None;
-                  return 0;
-                }
-              }
+        }
+      }
+      if (is_local_var(lhs)) {
+        if (test_addr_x(lhs)){
+          int64_t val;
+          if (is_integer_constant(rhs,&val)) {
+            int off;
+            char *label;
+            switch(val) {
+            case 1:
+              if (test) return true;
+              off = gen_addr_x(lhs,false);
+              label = new_jump_label();
+              println("\tinc %d+1,x",off);
+              println("\tbne %s",label);
+              println("\tinc %d,x",off);
+              println("%s:",label);
+              println("\tldx %d,x",off);
+              println("\tdex");
+              IX_Dest = IX_None;
+              return 0;
+            case -1:
+              if (test) return true;
+              off = gen_addr_x(lhs,false);
+              label = new_jump_label();
+              println("\ttst %d+1,x",off);
+              println("\tbne %s",label);
+              println("\tdec %d,x",off);
+              println("%s:",label);
+              println("\tdec %d+1,x",off);
+              println("\tldx %d,x",off);
+              println("\tinx");
+              IX_Dest = IX_None;
+              return 0;
             }
           }
         }
       }
+    }
+    return false;
+  // (ND_PRE_INCDEC (ND_VAR TY_PTR(10) _L_44 global) 2)
+  case ND_PRE_INCDEC:
+    if (is_int16_or_ptr(node->ty)
+    &&  lhs->kind==ND_VAR) {
+      if (is_global_var(lhs)) {
+        char *var = lhs->var->name;
+        int64_t val;
+        if (is_integer_constant(rhs,&val)) {
+          switch(val) {
+          case 1:
+          case 2:
+            if (test) return true;
+            ldx_EXT(lhs);
+            println("\tinx");
+            if (val==2) {
+              println("\tinx");
+            }
+            stx_EXT(lhs);
+            return 0;
+          case -1:
+          case -2:
+            if (test) return true;
+            ldx_EXT(lhs);
+            println("\tdex");
+            if (val==-2) {
+              println("\tdex");
+            }
+            stx_EXT(lhs);
+            return 0;
+          }
+        }
+      }
+    }
     return false;
   // (ND_ADDR (ND_VAR TY_FLOAT(6) f +0 ))
   // (ND_ADDR (ND_DEREF ty_uchar (ND_CAST TY_PTR(10) 63060)))
