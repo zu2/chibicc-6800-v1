@@ -1028,6 +1028,22 @@ Node *optimize_expr(Node *node)
       }
       return optimize_const_expr(node);
     }
+    if (node->kind == ND_LE || node->kind == ND_GT) {
+      if (node->rhs->kind != ND_NUM
+      &&  test_addr_x(node->lhs)) {
+        switch(node->kind) {
+        case ND_LE:
+          node = swap_lr(node);
+          node->kind = ND_GE;
+          break;
+        case ND_GT:
+          node = swap_lr(node);
+          node->kind = ND_LT;
+          break;
+        }
+        return optimize_const_expr(node);
+      }
+    }
     return optimize_const_expr(node);
   } // relative op
   case ND_SHL:
