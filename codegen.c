@@ -1231,6 +1231,19 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       }
     }
     return false;
+  case ND_SHLEQ:
+    if (is_int16_or_ptr(node->ty)
+    &&  test_addr_x(node->lhs)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  val==1) {
+      if (test) return true;
+      int off = gen_addr_x(node->lhs,false);
+      println("\tasl %d,x",off+1);
+      println("\trol %d,x",off);
+      ldx_nX(off);
+      return 0;
+    }
+    return false;
 //  (>>= ty_ushort (ND_VAR ty_ushort t +4 ) (ND_NUM TY_CHAR(2) 1))
   case ND_SHREQ:
     if (is_int16_or_ptr(node->ty)
@@ -2688,10 +2701,10 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
           return 1;
         }
       }
-    } // ND_VAR
+    } // ND_DEREF → ND_VAR
       break;
-    case ND_CAST:
-      if (!is_integer(node->ty) || node->ty->kind==TY_LONG)
+    case ND_CAST: {
+      if (!is_integer_or_ptr(node->ty) || node->ty->kind==TY_LONG)
         return 0;
       if (node->lhs->ty->kind  == TY_PTR
       &&  node->lhs->lhs->kind == ND_NUM
@@ -2711,6 +2724,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
           return 1;
         }
       }
+    } // ND_DEREF → ND_CAST
       break;
     case ND_ADD: {
       // global array[const]
@@ -2778,9 +2792,9 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
           return 1;
         }
       }
-    } // ND_ADD
+    } // ND_DEREF → ND_ADD
     break;
-    } // ND_DEREF → switch ND_ADD:
+    } // ND_DEREF
     return 0;
   case ND_CAST:
     if (is_empty_cast(node->lhs->ty, node->ty)
@@ -2809,6 +2823,24 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         println("\tadca #>%d",node->lhs->var->offset);
       }
       return 1;
+    }
+    char *addr;
+    if ((addr=is_addr_constant(node))!=NULL) {
+      if (test) return 1;
+      switch(node->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        println("\t%s #_%s",opb,addr);
+        return 1;
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+      case TY_PTR:
+        println("\t%s #<_%s", opb,addr);
+        println("\t%s #>_%s", opa,addr);
+        return 1;
+      }
+      return 0;
     }
     return 0;
   default:
