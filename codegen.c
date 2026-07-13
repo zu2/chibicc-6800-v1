@@ -5732,6 +5732,25 @@ void gen_expr(Node *node)
       IX_Dest = IX_None;
       return;
     case ND_MUL:
+      if (node->lhs->kind     == ND_CAST
+      &&  node->lhs->ty->kind == TY_LONG
+      &&  is_int16(node->lhs->lhs->ty)
+      &&  node->rhs->kind     == ND_CAST
+      &&  node->rhs->ty->kind == TY_LONG
+      &&  is_int16(node->rhs->lhs->ty)
+      &&  node->lhs->lhs->ty->is_unsigned == node->rhs->lhs->ty->is_unsigned){
+        gen_expr(lhs->lhs);
+        push();
+        gen_expr(rhs->lhs);
+        if (node->lhs->lhs->ty->is_unsigned) {
+          println("\tjsr __mul16x16u_32");
+        }else{
+          println("\tjsr __mul16x16s_32");
+        }
+        ins(2);
+        IX_Dest = IX_None;
+        return;
+      }
       switch (node->lhs->kind) {
       case ND_NUM:
         gen_direct_pushl(node->lhs->val);
