@@ -1,7 +1,7 @@
 #include "chibicc.h"
 
 
-static char *type_str(Type *ty)
+char *type_str(Type *ty)
 {
   if (!ty) return "NULL";
 
@@ -22,10 +22,26 @@ static char *type_str(Type *ty)
   switch(ty->kind){
   case TY_VOID:	return "TY_VOID(0)";
   case TY_BOOL: return "TY_BOOL(1)";
-  case TY_CHAR: return "TY_CHAR(2)";
-  case TY_SHORT:return "TY_SHORT(3)";
-  case TY_INT:  return "TY_INT(4)";
-  case TY_LONG: return "TY_LONG(5)";
+  case TY_CHAR: if (ty->is_unsigned) {
+                  return "TY_CHAR(2):u";
+                }else{
+                  return "TY_CHAR(2):s";
+                }
+  case TY_SHORT:if (ty->is_unsigned) {
+                  return "TY_SHORT(3):u";
+                }else{
+                  return "TY_SHORT(3):s";
+                }
+  case TY_INT:  if (ty->is_unsigned) {
+                  return "TY_INT(4):u";
+                }else{
+                  return "TY_INT(4):s";
+                }
+  case TY_LONG: if (ty->is_unsigned) {
+                  return "TY_LONG(5):u";
+                }else{
+                  return "TY_LONG(5):s";
+                }
   case TY_FLOAT:return "TY_FLOAT(6)";
   case TY_DOUBLE:return "TY_DOUBLE(7)";
   case TY_LDOUBLE:return "TY_LDOUBLE(8)";
@@ -308,8 +324,7 @@ static void ast_dump(Node *node)
     }
     return;
   case ND_CAST:
-    printout("(ND_CAST %s:%s ",type_str(node->ty),
-      node->ty->is_unsigned?"u":"s");
+    printout("(ND_CAST %s ",type_str(node->ty));
     ast_dump(node->lhs);
     printout(")");
     return;
