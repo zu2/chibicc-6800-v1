@@ -162,7 +162,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
       if (val == 0) {
         println("\ttstb");
       }else{
-        println("\tcmpb #%ld", rhs->val);
+        println("\tcmpb #%ld", val);
       }
     } else {
       gen_expr(lhs);
@@ -623,7 +623,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
           println("\ttstb");
         }
       }else{
-        println("\tcmpb #%ld", rhs->val);
+        println("\tcmpb #%ld", val);
       }
     } else {
       gen_expr(lhs);
