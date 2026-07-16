@@ -2036,78 +2036,88 @@ static int getTypeId(Type *ty) {
 }
 
 // The table for type casts
+// signed char to:
 static char i8i16[]  = "clra\n\tasrb\n\trolb\n\tsbca #0";
 static char i8u16[]  = "clra\n\tasrb\n\trolb\n\tsbca #0";
 static char i8i32[]  = "jsr __s8to32";
 static char i8u32[]  = "jsr __s8to32";
+static char i8i64[]  = ";jsr __s8to64";
+static char i8u64[]  = ";jsr __s8to64";
+static char i8f32[]  = "clra\n\tasrb\n\trolb\n\tsbca #0\n\tjsr __i16tof32";
+static char i8f64[]  = ";jsr __u8tof64";
+// unsigned char to:
 static char u8i16[]  = "clra";
 static char u8u16[]  = "clra";
 static char u8i32[]  = "jsr __u8to32";
 static char u8u32[]  = "jsr __u8to32";
+static char u8i64[]  = ";jsr __u8to64";
+static char u8u64[]  = ";jsr __u8to64";
+static char u8f32[]  = "clra\n\tjsr __u16tof32";
+static char u8f64[]  = ";jsr __u8tof64";
+// signed int to:
 static char i16i32[] = "jsr __s16to32";
 static char i16u32[] = "jsr __s16to32";
+static char i16i64[] = ";jsr __i16i64 " __FILE__;
+static char i16f32[] = "jsr __i16tof32";
+static char i16f64[] = "; jsr __i16f64 " __FILE__;
+// unsigned int to:
 static char u16i32[] = "jsr __u16to32";
 static char u16i64[] = ";jsr __u16i64 " __FILE__;
 //static char u16u32[] = "jsr __u16to32";
 static char u16f32[] = "jsr __u16tof32";
 static char u16f64[] = ";jsr __u16tof32" __FILE__;
-
-static char i16i64[] = ";jsr __i16i64 " __FILE__;
-static char i16f32[] = "jsr __i16tof32";
-static char i16f64[] = "; jsr __i16f64 " __FILE__;
-
+// signed long to:
 static char i32i8[] = "ldab @long+3";
 static char i32u8[] = "ldab @long+3";
 static char i32i16[] = "ldab @long+3\n\tldaa @long+2";
 static char i32u16[] = "ldab @long+3\n\tldaa @long+2";
 static char i32f32[] = "jsr __i32tof32";
-static char i32i64[] = "movsxd %eax, %rax";
-static char i32f64[] = "cvtsi2sdl %eax, %xmm0";
-
+static char i32i64[] = "; movsxd %eax, %rax";
+static char i32f64[] = "; cvtsi2sdl %eax, %xmm0";
+// unsigned long to:
 static char u32f32[] = "jsr __u32tof32";
-static char u32i64[] = "mov %eax, %eax";
-static char u32f64[] = "mov %eax, %eax; cvtsi2sdq %rax, %xmm0";
-
-static char i64i32[] = "; i64i32 " __FILE__;
-static char i64u32[] = "; i64u32 " __FILE__;
-static char i64f32[] = "cvtsi2ssq %rax, %xmm0";
-static char i64f64[] = "cvtsi2sdq %rax, %xmm0";
-
-static char u64f32[] = "cvtsi2ssq %rax, %xmm0";
-static char u64f64[] =
-  "test %rax,%rax; js 1f; pxor %xmm0,%xmm0; cvtsi2sd %rax,%xmm0; jmp 2f; "
-  "1: mov %rax,%rdi; and $1,%eax; pxor %xmm0,%xmm0; shr %rdi; "
-  "or %rax,%rdi; cvtsi2sd %rdi,%xmm0; addsd %xmm0,%xmm0; 2:";
-
+static char u32i64[] = "; mov %eax, %eax";
+static char u32f64[] = "; mov %eax, %eax; cvtsi2sdq %rax, %xmm0";
+// float to:
 static char f32i8[] = "jsr __f32toi8";
 static char f32u8[] = "jsr __f32tou8";
 static char f32i16[] = "jsr __f32toi16";
 static char f32u16[] = "jsr __f32tou16";
 static char f32i32[] = "jsr __f32toi32";
 static char f32u32[] = "jsr __f32tou32";
-static char f32i64[] = "cvttss2siq %xmm0, %rax";
-static char f32u64[] = "cvttss2siq %xmm0, %rax";
-static char f32f64[] = "cvtss2sd %xmm0, %xmm0";
-
-static char f64i8[] = "cvttsd2sil %xmm0, %eax; movsbl %al, %eax";
-static char f64u8[] = "cvttsd2sil %xmm0, %eax; movzbl %al, %eax";
-static char f64i16[] = "cvttsd2sil %xmm0, %eax; movswl %ax, %eax";
-static char f64u16[] = "cvttsd2sil %xmm0, %eax; movzwl %ax, %eax";
-static char f64i32[] = "cvttsd2sil %xmm0, %eax";
-static char f64u32[] = "cvttsd2siq %xmm0, %rax";
-static char f64i64[] = "cvttsd2siq %xmm0, %rax";
-static char f64u64[] = "cvttsd2siq %xmm0, %rax";
-static char f64f32[] = "cvtsd2ss %xmm0, %xmm0";
+static char f32i64[] = "; cvttss2siq %xmm0, %rax";
+static char f32u64[] = "; cvttss2siq %xmm0, %rax";
+static char f32f64[] = "; cvtss2sd %xmm0, %xmm0";
+// long long not supported.
+static char i64i32[] = "; i64i32 " __FILE__;
+static char i64u32[] = "; i64u32 " __FILE__;
+static char i64f32[] = "; cvtsi2ssq %rax, %xmm0";
+static char i64f64[] = "; cvtsi2sdq %rax, %xmm0";
+static char u64f32[] = "; cvtsi2ssq %rax, %xmm0";
+static char u64f64[] =
+  "; test %rax,%rax; js 1f; pxor %xmm0,%xmm0; cvtsi2sd %rax,%xmm0; jmp 2f; "
+  "1: mov %rax,%rdi; and $1,%eax; pxor %xmm0,%xmm0; shr %rdi; "
+  "or %rax,%rdi; cvtsi2sd %rdi,%xmm0; addsd %xmm0,%xmm0; 2:";
+// double not supported
+static char f64i8[] = "; cvttsd2sil %xmm0, %eax; movsbl %al, %eax";
+static char f64u8[] = "; cvttsd2sil %xmm0, %eax; movzbl %al, %eax";
+static char f64i16[] = "; cvttsd2sil %xmm0, %eax; movswl %ax, %eax";
+static char f64u16[] = "; cvttsd2sil %xmm0, %eax; movzwl %ax, %eax";
+static char f64i32[] = "; cvttsd2sil %xmm0, %eax";
+static char f64u32[] = "; cvttsd2siq %xmm0, %rax";
+static char f64i64[] = "; cvttsd2siq %xmm0, %rax";
+static char f64u64[] = "; cvttsd2siq %xmm0, %rax";
+static char f64f32[] = "; cvtsd2ss %xmm0, %xmm0";
 
 // ex. i32i16: i32->i16
 static char *cast_table[][11] = {
   // i8   i16     i32     i64     u8     u16     u32     u64     f32     f64     f80
-  {NULL,  i8i16,   i8i32,  i16i64, NULL,  i8u16,   i8u32,  i16i64, i16f32, i16f64, NULL}, // i8
+  {NULL,  i8i16,   i8i32,  i16i64, NULL,  i8u16,   i8u32,  i8i64, i8f32, i8f64, NULL}, // i8
   {NULL,  NULL,   i16i32, i16i64, NULL,  NULL,   i16u32, i16i64, i16f32, i16f64, NULL}, // i16
   {i32i8, i32i16, NULL,   i32i64, i32u8, i32u16, NULL,   i32i64, i32f32, i32f64, NULL}, // i32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   i64f32, i64f64, NULL}, // i64
 
-  {NULL,  u8i16,   u8i32,  i16i64, NULL,  u8u16,   u8u32,  i16i64, i16f32, i16f64, NULL}, // u8
+  {NULL,  u8i16,   u8i32,  i16i64, NULL,  u8u16,   u8u32,  u8i64, u8f32, u8f64, NULL}, // u8
   {NULL,  NULL,   u16i32, i16i64, NULL,  NULL,   u16i32, u16i64, u16f32, u16f64, NULL}, // u16
   {i32i8, i32i16, NULL,   u32i64, i32u8, i32u16, NULL,   u32i64, u32f32, u32f64, NULL}, // u32
   {i32i8, i32i16, i64i32, NULL,   i32u8, i32u16, i64u32, NULL,   u64f32, u64f64, NULL}, // u64
