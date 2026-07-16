@@ -2552,13 +2552,13 @@ static Node *assign(Token **rest, Token *tok) {
   if (equal(tok, "<<=")) {
     add_type(node);
     Node *rhs = assign(rest, tok->next);
-    return new_binary(ND_SHLEQ, node, new_cast(rhs,ty_char), tok);
+    return new_binary(ND_SHLEQ, node, rhs, tok);
   }
 
   if (equal(tok, ">>=")) {
     add_type(node);
     Node *rhs = assign(rest, tok->next);
-    return new_binary(ND_SHREQ, node, new_cast(rhs,ty_char), tok);
+    return new_binary(ND_SHREQ, node, rhs, tok);
   }
 
   *rest = tok;

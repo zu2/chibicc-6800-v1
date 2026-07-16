@@ -65,6 +65,14 @@ bool is_numeric(Type *ty) {
   return is_integer(ty) || is_flonum(ty);
 }
 
+bool is_scalar(Type *ty) {
+  return is_numeric(ty) || ty->kind == TY_PTR;
+}
+
+bool is_null_ptr_const(Node *node) {
+  return node->kind == ND_NUM && is_integer(node->ty) && node->val == 0;
+}
+
 // add from slimcc
 bool is_array(Type *ty) {
   return ty->kind == TY_ARRAY || ty->kind == TY_VLA;
@@ -335,9 +343,16 @@ void add_type(Node *node) {
   case ND_MUL:
   case ND_DIV:
   case ND_MOD:
+    usual_arith_conv(&node->lhs, &node->rhs);
+    node->ty = node->lhs->ty;
+    return;
   case ND_BITAND:
   case ND_BITOR:
   case ND_BITXOR:
+    if (!is_integer(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_integer(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
     usual_arith_conv(&node->lhs, &node->rhs);
     node->ty = node->lhs->ty;
     return;
@@ -382,10 +397,10 @@ void add_type(Node *node) {
   case ND_MODEQ:
     if (node->lhs->ty->kind == TY_ARRAY)
       error_tok(node->lhs->tok, "not an lvalue");
-    if (!is_numeric(node->lhs->ty)
-    ||  !is_numeric(node->rhs->ty)) {
-      error_tok(node->lhs->tok, "invalid operands");
-    }
+    if (!is_integer(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_integer(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
 #if 0
     if (is_integer(node->rhs->ty)) {
       int_promotion(&node->rhs);
@@ -405,10 +420,10 @@ void add_type(Node *node) {
   case ND_XOREQ:
     if (node->lhs->ty->kind == TY_ARRAY)
       error_tok(node->lhs->tok, "not an lvalue");
-    if (!is_integer(node->lhs->ty)
-    ||  !is_integer(node->rhs->ty)) {
-      error_tok(node->lhs->tok, "invalid operands");
-    }
+    if (!is_integer(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_integer(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
 #if 1
     node->rhs = new_cast(node->rhs,
                         get_common_type(node->lhs->ty,node->rhs->ty));
@@ -424,29 +439,69 @@ void add_type(Node *node) {
   case ND_SHREQ:
     if (node->lhs->ty->kind == TY_ARRAY)
       error_tok(node->lhs->tok, "not an lvalue");
-    if (!is_integer(node->lhs->ty)
-    ||  !is_integer(node->rhs->ty)) {
-      error_tok(node->lhs->tok, "invalid operands");
-    }
+    if (!is_integer(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_integer(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
     node->rhs = new_cast(node->rhs, ty_uchar);
     node->ty = node->lhs->ty;
     return;
   case ND_EQ:
   case ND_NE:
+    if (is_numeric(node->lhs->ty) && is_numeric(node->rhs->ty)) {
+      usual_arith_conv(&node->lhs, &node->rhs);
+      node->ty = ty_int;
+      return;
+    }
+    if ((node->lhs->ty->kind == TY_PTR || node->lhs->ty->kind == TY_ARRAY)
+    &&  (node->rhs->ty->kind == TY_PTR || node->rhs->ty->kind == TY_ARRAY)) {
+      node->ty = ty_int;
+      return;
+    }
+    // allow p == (void *)0;
+    if (node->lhs->ty->kind == TY_PTR && is_null_ptr_const(node->rhs)) {
+      node->ty = ty_int;
+      return;
+    }
+    if (node->rhs->ty->kind == TY_PTR && is_null_ptr_const(node->lhs)) {
+      node->ty = ty_int;
+      return;
+    }
+    if (!is_numeric(node->lhs->ty)
+    && node->lhs->ty->kind != TY_PTR
+    && !is_null_ptr_const(node->lhs)) {
+      error_tok(node->lhs->tok, "invalid operand (expected pointer or 0) lhs");
+    }
+    if (!is_numeric(node->rhs->ty)
+    && node->rhs->ty->kind != TY_PTR
+    && !is_null_ptr_const(node->rhs)) {
+      error_tok(node->rhs->tok, "invalid operand (expected pointer or 0) rhs");
+    }
+    node->ty = ty_int;
+    return;
   case ND_LT:
   case ND_LE:
   case ND_GT:
   case ND_GE:
     usual_arith_conv(&node->lhs, &node->rhs);
-    node->ty = ty_int;	// TODO: bool?
+    node->ty = ty_int;
     return;
   case ND_FUNCALL:
     node->ty = node->func_ty->return_ty;
     return;
   case ND_NOT:
+    if (!is_scalar(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    node->ty = ty_int;
+    return;
   case ND_LOGOR:
   case ND_LOGAND:
-    node->ty = ty_int;	// TODO: bool?
+    if (!is_scalar(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_scalar(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
+    node->ty = ty_int;
+    return;
     return;
   case ND_BITNOT:
     if (!is_integer(node->lhs->ty))
@@ -492,9 +547,9 @@ void add_type(Node *node) {
   }
   case ND_DEREF:
     if (!node->lhs->ty->base)
-      error_tok(node->tok, "invalid pointer dereference");
+      error_tok(node->lhs->tok, "invalid pointer dereference");
     if (node->lhs->ty->base->kind == TY_VOID)
-      error_tok(node->tok, "dereferencing a void pointer");
+      error_tok(node->lhs->tok, "dereferencing a void pointer");
 
     node->ty = node->lhs->ty->base;
     return;
