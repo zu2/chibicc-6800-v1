@@ -310,7 +310,11 @@ static void ast_dump(Node *node)
       printout("(ND_NUM %s %ld)", type_str(node->ty),node->val);
       break;
     case TY_INT:
-      printout("%ld", node->val);
+      if (node->ty->is_unsigned) {
+        printout("(ND_NUM %s %ld)", type_str(node->ty),node->val);
+      }else{
+        printout("%ld", node->val);
+      }
       break;
     case TY_FLOAT:
       printout("%Le", node->fval);
@@ -318,6 +322,9 @@ static void ast_dump(Node *node)
     case TY_PTR:
       printout("(ND_NUM TY_PTR %04lx)",node->val);
       break;
+    case TY_VOID:
+      fprintf(stdout,"ND_NUM TY_VOID? %d\n",node->ty->kind);
+      assert(0);
     default:
       fprintf(stdout,"ND_NUM %d\n",node->ty->kind);
       assert(0);
