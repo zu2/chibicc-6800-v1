@@ -267,7 +267,7 @@ static void int_promotion(Node **node) {
   }
 }
 
-static Type *get_common_type(Type *ty1, Type *ty2) {
+Type *get_common_type(Type *ty1, Type *ty2) {
   if (ty1->base)
     return pointer_to(ty1->base);
 
@@ -303,7 +303,7 @@ static Type *get_common_type(Type *ty1, Type *ty2) {
 // be promoted to match with the other.
 //
 // This operation is called the "usual arithmetic conversion".
-static void usual_arith_conv(Node **lhs, Node **rhs) {
+void usual_arith_conv(Node **lhs, Node **rhs) {
   Type *ty = get_common_type((*lhs)->ty, (*rhs)->ty);
   *lhs = new_cast(*lhs, ty);
   *rhs = new_cast(*rhs, ty);
@@ -367,21 +367,39 @@ void add_type(Node *node) {
     }else if (!is_numeric(node->lhs->ty) || !is_numeric(node->rhs->ty)) {
       error_tok(node->lhs->tok, "invalid operands");
     }
-    node->rhs = new_cast(node->rhs, node->lhs->ty);
+#if 0
+    if (is_integer(node->rhs->ty)) {
+      int_promotion(&node->rhs);
+    }
+#else
+    node->rhs = new_cast(node->rhs,
+                        get_common_type(node->lhs->ty,node->rhs->ty));
+#endif
     node->ty = node->lhs->ty;
     return;
   case ND_MULEQ:
   case ND_DIVEQ:
+  case ND_MODEQ:
     if (node->lhs->ty->kind == TY_ARRAY)
       error_tok(node->lhs->tok, "not an lvalue");
     if (!is_numeric(node->lhs->ty)
     ||  !is_numeric(node->rhs->ty)) {
       error_tok(node->lhs->tok, "invalid operands");
     }
-    node->rhs = new_cast(node->rhs, node->lhs->ty);
+#if 0
+    if (is_integer(node->rhs->ty)) {
+      int_promotion(&node->rhs);
+    }
+#else
+    node->rhs = new_cast(node->rhs,
+                        get_common_type(node->lhs->ty,node->rhs->ty));
+#endif
+#if 1
     node->ty = node->lhs->ty;
+#else
+    node->ty = get_common_type(node->lhs->ty,node->rhs->ty);
+#endif
     return;
-  case ND_MODEQ:
   case ND_ANDEQ:
   case ND_OREQ:
   case ND_XOREQ:
@@ -391,8 +409,16 @@ void add_type(Node *node) {
     ||  !is_integer(node->rhs->ty)) {
       error_tok(node->lhs->tok, "invalid operands");
     }
-    node->rhs = new_cast(node->rhs, node->lhs->ty);
+#if 1
+    node->rhs = new_cast(node->rhs,
+                        get_common_type(node->lhs->ty,node->rhs->ty));
     node->ty = node->lhs->ty;
+#else
+    if (is_integer(node->rhs->ty)) {
+      int_promotion(&node->rhs);
+    }
+    node->ty = get_common_type(node->lhs->ty,node->rhs->ty);
+#endif
     return;
   case ND_SHLEQ:
   case ND_SHREQ:

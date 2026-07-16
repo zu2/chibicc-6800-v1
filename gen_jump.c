@@ -52,9 +52,8 @@ Type *is_byte(Node *node)
 {
   int64_t val;
 
-  if (is_integral_promotion(node)) {
-    node = skip_integral_promotion(node);
-  }
+  node = skip_integral_promotion(node);
+
   if (is_int8(node->ty)) {
     return node->ty;
   }
@@ -73,6 +72,7 @@ Type *is_byte(Node *node)
 // (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 0)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
+// (ND_DEREF ty_uchar (ND_CAST TY_PTR(10) (ND_NUM ty_uint 61120)))
 char *is_addr_constant(Node *node)
 {
   int64_t val;
@@ -82,7 +82,9 @@ char *is_addr_constant(Node *node)
   &&  node->lhs->kind == ND_VAR
   &&  node->lhs->ty->kind == TY_ARRAY
   &&  !node->lhs->var->is_local) {
-    return node->lhs->var->name;
+    char *p = calloc(1,strlen(node->lhs->var->name)+2);
+    sprintf(p,"_%s",node->lhs->var->name);
+    return p;
   }
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_PTR
@@ -93,8 +95,17 @@ char *is_addr_constant(Node *node)
   &&  !node->lhs->lhs->var->is_local
   &&  is_integer_constant(node->lhs->rhs,&val)) {
     char *p = calloc(1,strlen(node->lhs->lhs->var->name)+32);
-    sprintf(p,"%s+%ld",node->lhs->lhs->var->name,val);
+    sprintf(p,"_%s+%ld",node->lhs->lhs->var->name,val);
     return p;
+  }
+  if (node->kind == ND_DEREF
+  &&  node->lhs->kind == ND_CAST
+  &&  node->lhs->ty->kind == TY_PTR) {
+    if (is_integer_constant(node->lhs->lhs,&val)) {
+      char *p = calloc(1,32);
+      sprintf(p,"%ld",val);
+      return p;
+    }
   }
   return NULL;
 }
@@ -134,6 +145,10 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   Node *rhs = node->rhs;
   int64_t val;
 
+  if (!is_int8(node->ty) && !is_compare(node)) {
+    println("; node->ty not byte");
+    ast_node_dump(node);
+  }
   if (node->kind == ND_BITAND
   &&  is_integer_constant(node->rhs, &val)) {
     if ((val & ~0xFF)==0
@@ -147,7 +162,14 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 
   if (!is_compare(node)) {
     gen_expr(node);
-    cmp_zero(node->ty);
+    switch(node->kind) {
+    case ND_BITAND:
+    case ND_BITOR:
+    case ND_BITXOR:
+      break;
+    default:
+      cmp_zero(node->ty);
+    }
     println("\tjeq %s", if_false);
     return true;
   }
@@ -229,7 +251,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
 {
   int64_t val;
 
-  node = optimize_expr(node);
+  node = skip_integral_promotion(optimize_expr(node));
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   char *addr;
@@ -481,7 +503,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
       int off = gen_expr_x(lhs,false);
-      println("\tcpx #_%s",addr);
+      println("\tcpx #%s",addr);
       switch(node->kind) {
       case ND_EQ:
         println("\tjne %s", if_false);
@@ -593,6 +615,9 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   Node *rhs = node->rhs;
   int64_t val;
 
+  if (opt('g','3')) {
+    ast_node_dump(node);
+  }
   if (node->kind == ND_BITAND
   &&  is_integer_constant(node->rhs, &val)) {
     if ((val & ~0xFF)==0
@@ -606,7 +631,14 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 
   if (!is_compare(node)) {
     gen_expr(node);
-    cmp_zero(node->ty);
+    switch(node->kind) {
+    case ND_BITAND:
+    case ND_BITOR:
+    case ND_BITXOR:
+      break;
+    default:
+      cmp_zero(node->ty);
+    }
     println("\tjne %s", if_true);
     return true;
   }
@@ -686,12 +718,15 @@ bool gen_jump_if_true(Node *node, char *if_true)
 {
   int64_t val;
 
-  node = optimize_expr(node);
+  node = skip_integral_promotion(optimize_expr(node));
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   char *addr;
   char *if_thru = new_label("L_thru_%d");
 
+  if (opt('g','3')) {
+    ast_node_dump(node);
+  }
   if (is_integer_constant(node,&val)) {
     if (val) {
       println("\tjmp %s",if_true);
@@ -944,7 +979,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
       int off = gen_expr_x(lhs,false);
-      println("\tcpx #_%s",addr);
+      println("\tcpx #%s",addr);
       switch(node->kind) {
       case ND_EQ:
         println("\tjeq %s", if_true);

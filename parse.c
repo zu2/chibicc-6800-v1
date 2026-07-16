@@ -1,4 +1,4 @@
-// This file contains a recursive descent parser for C.
+
 //
 // Most functions in this file are named after the symbols they are
 // supposed to read from an input token list. For example, stmt() is
@@ -135,7 +135,7 @@ static int64_t eval_rval(Node *node, char ***label);
 bool is_const_expr(Node *node);
 static Node *assign(Token **rest, Token *tok);
 static Node *logor(Token **rest, Token *tok);
-static double eval_double(Node *node);
+double eval_double(Node *node);
 static Node *conditional(Token **rest, Token *tok);
 static Node *logand(Token **rest, Token *tok);
 static Node *bitor(Token **rest, Token *tok);
@@ -2226,7 +2226,7 @@ int64_t const_expr(Token **rest, Token *tok) {
   return eval(node);
 }
 
-static double eval_double(Node *node) {
+double eval_double(Node *node) {
   add_type(node);
 
   if (is_integer(node->ty)) {
@@ -2376,6 +2376,23 @@ static Node *to_assign(Node *binary) {
   return new_binary(ND_COMMA, expr1, expr2, tok);
 }
 
+//
+// For simple x, x op=y can be rewritten as x =x op y (e.g., a local variable).
+//
+static bool is_simple_var(Node *node)
+{
+
+  if (is_local_var(node)
+  ||  is_global_var(node)
+  ||  is_local_array_with_constant(node)
+  ||  is_global_array_with_constant(node)) {
+    return true;
+  }
+
+  return false;
+}
+
+
 static bool opeq_ok(Type *lty,Type *rty)
 {
   if (!lty || !rty) {
@@ -2414,6 +2431,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_simple_var(node)) {
+      return new_binary(ND_ASSIGN,node,new_add(node,rhs,tok),tok);
+    }
     if (!opeq_ok(node->ty,rhs->ty)
     &&   node->ty->kind != TY_CHAR) {
       return to_assign(new_add(node, rhs, tok));
@@ -2430,6 +2450,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_simple_var(node)) {
+      return new_binary(ND_ASSIGN,node,new_sub(node,rhs,tok),tok);
+    }
     if (!opeq_ok(node->ty,rhs->ty)
     &&   node->ty->kind != TY_CHAR) {
       return to_assign(new_sub(node, rhs, tok));
@@ -2446,6 +2469,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_simple_var(node)) {
+      return new_binary(ND_ASSIGN,node,new_binary(ND_MUL,node,rhs,tok),tok);
+    }
     if (opeq_ok(node->ty,rhs->ty)) {
       return new_binary(ND_MULEQ, node, rhs, tok);
     }
@@ -2456,6 +2482,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_simple_var(node)) {
+      return new_binary(ND_ASSIGN,node,new_binary(ND_DIV,node,rhs,tok),tok);
+    }
     if (opeq_ok(node->ty,rhs->ty)) {
       return new_binary(ND_DIVEQ, node, rhs, tok);
     }
@@ -2466,6 +2495,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_simple_var(node)) {
+      return new_binary(ND_ASSIGN,node,new_binary(ND_MOD,node,rhs,tok),tok);
+    }
     if (opeq_ok(node->ty,rhs->ty)) {
       return new_binary(ND_MODEQ, node, rhs, tok);
     }
@@ -2476,6 +2508,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_simple_var(node)) {
+      return new_binary(ND_ASSIGN,node,new_binary(ND_BITAND,node,rhs,tok),tok);
+    }
     if (opeq_ok(node->ty,rhs->ty)
     ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
     ||  rhs->kind==ND_NUM) {
@@ -2488,6 +2523,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_simple_var(node)) {
+      return new_binary(ND_ASSIGN,node,new_binary(ND_BITOR,node,rhs,tok),tok);
+    }
     if (opeq_ok(node->ty,rhs->ty)
     ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
     ||  (node->ty->kind == TY_CHAR && rhs->kind==ND_NUM)) {
@@ -2500,6 +2538,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_simple_var(node)) {
+      return new_binary(ND_ASSIGN,node,new_binary(ND_BITXOR,node,rhs,tok),tok);
+    }
     if (opeq_ok(node->ty,rhs->ty)
     ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
     ||  (node->ty->kind == TY_CHAR && rhs->kind==ND_NUM)) {
@@ -2511,13 +2552,13 @@ static Node *assign(Token **rest, Token *tok) {
   if (equal(tok, "<<=")) {
     add_type(node);
     Node *rhs = assign(rest, tok->next);
-    return new_binary(ND_SHLEQ, node, rhs, tok);
+    return new_binary(ND_SHLEQ, node, new_cast(rhs,ty_char), tok);
   }
 
   if (equal(tok, ">>=")) {
     add_type(node);
     Node *rhs = assign(rest, tok->next);
-    return new_binary(ND_SHREQ, node, rhs, tok);
+    return new_binary(ND_SHREQ, node, new_cast(rhs,ty_char), tok);
   }
 
   *rest = tok;

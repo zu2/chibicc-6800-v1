@@ -218,20 +218,14 @@ void make_comma_retval_unused(Node *node, bool all)
 
 Node *optimize_const_expr(Node *node)
 {
-    int64_t val;
-
     if (node->kind == ND_NUM) {
       return node;
     }
     if (is_const_expr(node)) {
-      val = eval(node);
       Node *new = new_node(ND_NUM, node->tok);
-      new->val = val;
-      if (node->lhs->ty->kind == TY_BOOL) {
-        new->ty = node->rhs->ty;
-      }else{
-        new->ty = node->lhs->ty;
-      }
+      new->fval = eval_double(node);
+      new->val = eval(node);
+      new->ty = node->ty;
       return new;
     }
     return node;
@@ -417,14 +411,14 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_ASSIGN:
     node = optimize_lr(node);
-    if(node->rhs->ty->kind == TY_BOOL
+    if(node->lhs->ty->kind == TY_BOOL
     && is_integer_constant(node->rhs,&val)) {
       node->rhs = new_num(val!=0,node->rhs->tok);
       node->rhs->ty = node->lhs->ty;
       node->ty = node->lhs->ty;
       return node;
     }
-    if(node->rhs->ty->kind == TY_CHAR
+    if(node->lhs->ty->kind == TY_CHAR
     && is_integer_constant(node->rhs,&val)) {
       node->rhs = new_num(val&255,node->rhs->tok);
       node->rhs->ty = node->lhs->ty;
@@ -446,6 +440,10 @@ Node *optimize_expr(Node *node)
     new->lhs->retval_unused = true;
     return new;
   case ND_CAST: {
+    if (node->ty->kind == TY_VOID) {
+      node->lhs = optimize_expr(node->lhs);
+      return node;
+    }
     node->lhs = optimize_expr(node->lhs);
     if (node->lhs->kind == ND_CAST) {
       if (node->ty->kind == TY_PTR
@@ -613,6 +611,7 @@ Node *optimize_expr(Node *node)
       node->lhs->els  = optimize_expr(new_cast(node->lhs->els ,node->ty));
       return node->lhs;
     }
+#if 0
     if (is_integer(node->ty)
     &&  node->lhs->kind==ND_NUM
     &&  is_integer(node->lhs->ty)) {
@@ -633,6 +632,7 @@ Node *optimize_expr(Node *node)
       new->ty  = node->ty;
       return new;
     }
+#endif
     if (is_flonum(node->ty)
     &&  node->lhs->kind==ND_NUM
     &&  is_integer(node->lhs->ty)) {
@@ -641,7 +641,7 @@ Node *optimize_expr(Node *node)
       new->ty   = node->ty;
       return new;
     }
-    return node;
+    return optimize_const_expr(node);
   } // ND_CAST
   case ND_MEMZERO:
     return node;
@@ -1092,30 +1092,6 @@ Node *optimize_expr(Node *node)
   case ND_OREQ:
   case ND_XOREQ:
     node = optimize_lr(node);
-    if (is_local_var(node->lhs)
-    ||  is_global_var(node->lhs)
-    ||  is_local_array_with_constant(node->lhs)
-    ||  is_global_array_with_constant(node->lhs)) {
-      Node *new = new_copy(node);
-      switch(node->kind) {
-//    case ND_ADDEQ:  new->kind = ND_ADD; break;
-//    case ND_SUBEQ:  new->kind = ND_SUB; break;
-      case ND_MULEQ:  new->kind = ND_MUL; break;
-      case ND_DIVEQ:  new->kind = ND_DIV; break;
-      case ND_MODEQ:  new->kind = ND_MOD; break;
-      case ND_ANDEQ:  new->kind = ND_BITAND; break;
-      case ND_OREQ:   new->kind = ND_BITOR;  break;
-      case ND_XOREQ:  new->kind = ND_BITXOR; break;
-      default:  assert(0);
-      }
-      add_type(new);
-      Node *new2 = new_copy(new);
-      new2->kind = ND_ASSIGN;
-      new2->lhs = node->lhs;
-      new2->rhs = new;
-      add_type(new2);
-      return optimize_expr(new2);
-    }
     return optimize_const_expr(node);
   case ND_SHLEQ:
   case ND_SHREQ: {
@@ -1161,6 +1137,7 @@ Node *optimize_condition(Node *node)
   &&  is_integer_constant(node->rhs,&val)
   &&  val==0 ) {
     node = new_unary(ND_NOT, optimize_condition(node->lhs), node->tok);
+    node->ty = ty_bool;
   }
   if (node->kind==ND_NE
   &&  is_integer_or_ptr(node->lhs->ty)

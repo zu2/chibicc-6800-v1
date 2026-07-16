@@ -122,6 +122,7 @@ Token *preprocess(Token *tok);
 //
 // parse.c
 //
+double eval_double(Node *node);
 int64_t eval2(Node *node, char ***label);
 int64_t eval(Node *node);
 Node *new_copy(Node *node);
@@ -450,11 +451,14 @@ Type *array_of(Type *base, int size);
 Type *vla_of(Type *base, Node *expr);
 Type *enum_type(void);
 Type *struct_type(void);
+Type *get_common_type(Type *ty1, Type *ty2);
+void usual_arith_conv(Node **lhs, Node **rhs);
 void add_type(Node *node);
 
 //
 // ast_dump.c
 //
+char *type_str(Type *ty);
 void ast_node_dump(Node *node);
 
 //

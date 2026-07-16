@@ -525,31 +525,18 @@ bool is_global_array_with_constant(Node *node)
 
 Type *is_integer_constant(Node *node, int64_t *val)
 {
-  if (node->kind == ND_CAST
-  &&  node->ty->kind == TY_PTR
-  &&  node->lhs->kind == ND_NUM
-  &&  node->lhs->val == 0) {
-    *val = 0;
+  if (!node->ty)
+    return NULL;
+
+  if (!is_integer_or_ptr(node->ty))
+    return NULL;
+
+  if (is_const_expr(node)) {
+    *val = eval2(node,NULL);
     return node->ty;
   }
 
-  // check integral promotion
-  if (node->kind == ND_CAST && node->ty->kind == TY_INT) {
-    switch (node->lhs->ty->kind) {
-    case TY_LONG:
-    case TY_FLOAT:
-      return NULL;
-    }
-    node = node->lhs;
-  }
-  if (node->kind != ND_NUM)
-    return NULL;
-  if (!is_integer(node->ty))
-    return NULL;
-
-  *val = node->val;
-
-  return node->ty;
+  return NULL;
 }
 
 
@@ -980,7 +967,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 
   if ((addr=is_addr_constant(node))) {
     if (test) return true;
-    println("\tldx #_%s",addr);
+    println("\tldx #%s",addr);
     IX_Dest = IX_None;
     return 0;
   }
@@ -2678,6 +2665,24 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
   } // ND_VAR
   case ND_DEREF:
     switch(node->lhs->kind){
+    // (ND_DEREF ty_char (ND_NUM TY_PTR e000))
+    case ND_NUM:
+      assert (node->lhs->ty != TY_PTR);
+      if (test) return 1;
+      switch(node->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        println("\t%s %ld",opb,node->lhs->val);
+        return 1;
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+      case TY_PTR:
+        println("\t%s %ld+1",opb,node->lhs->val);
+        println("\t%s %ld",opa,node->lhs->val);
+        return 1;
+      } // ND_DEREF → ND_NUM
+      break;
     // (ND_DEREF ty_int (ND_VAR TY_ARRAY(12) _L_1 global)
     case ND_VAR: {
       if (!is_integer(node->ty) || node->ty->kind==TY_LONG)
@@ -2830,14 +2835,14 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
-        println("\t%s #_%s",opb,addr);
+        println("\t%s #%s",opb,addr);
         return 1;
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
       case TY_PTR:
-        println("\t%s #<_%s", opb,addr);
-        println("\t%s #>_%s", opa,addr);
+        println("\t%s #<%s", opb,addr);
+        println("\t%s #>%s", opa,addr);
         return 1;
       }
       return 0;
@@ -4246,7 +4251,7 @@ static void opeq(Node *node)
   case ND_SHLEQ: {
     int64_t val;
 
-    switch(node->ty->kind) {
+    switch(node->lhs->ty->kind) {
     case TY_LONG:
       if (is_global_var(node->lhs)) {
         gen_expr(node->rhs);
@@ -4479,6 +4484,7 @@ void gen_expr(Node *node)
   Node *rhs = node->rhs;
   int off;
   int64_t val;
+  char *addr;
 
   switch (node->kind) {
   case ND_NULL_EXPR:
@@ -5171,11 +5177,25 @@ void gen_expr(Node *node)
       return;
     } // ND_MEMBER, bit-field
 
+    if (node->ty->kind == TY_LONG
+    ||  node->ty->kind == TY_FLOAT) {
+      gen_addr(node->lhs);
+      push();
+      gen_expr(node->rhs);
+      store(node->ty);
+      return;
+    }
+
     if (node->retval_unused && lhs->ty->size==2 && rhs->ty->size==2) {
       if (is_global_var(node->lhs)
       &&  test_expr_x(node->rhs)) {
         gen_expr_x(node->rhs,false);
         stx_EXT(node->lhs);
+        return;
+      }
+      if ((addr=is_addr_constant(node->lhs))!=NULL) {
+        gen_expr_x(node->rhs,false);
+        println("\tstx %s",addr);
         return;
       }
     }
@@ -5235,11 +5255,12 @@ void gen_expr(Node *node)
     &&  can_direct(node->lhs)) {
       gen_expr(node->rhs);
       gen_direct(node->lhs,"stab","staa");
+      invalidate_EXT(node->lhs);
       return;
     }
     if ((ty = is_integer_constant(node->rhs,&val))
     &&  ty->size <= 2
-    &&  is_integer(node->ty)
+    &&  is_integer_or_ptr(node->ty)
     &&  node->lhs->ty->size <= 2) {
       if (can_direct(node->lhs)) {
         gen_direct(node->rhs,"ldab","ldaa");
@@ -5270,6 +5291,11 @@ void gen_expr(Node *node)
           store_x(node->ty,0);
         }
       }
+      return;
+    }
+    if (can_direct(node->lhs)) {
+      gen_expr(node->rhs);
+      gen_direct(node->lhs,"stab","staa");
       return;
     }
     if (test_addr_x(node->lhs)){
@@ -5608,40 +5634,38 @@ void gen_expr(Node *node)
       println("\tjsr __cmpf32tos");	// @long cmp  TOS");
       IX_Dest = IX_None;
       println("\tbcc %s",L_cmpf1);	// when carry=1, compare NaN
+      println("\tclra");
       if (node->kind == ND_NE) {
         ldab_i(1);
       }else{
         println("\tclrb");
       }
-      println("\tclra");
       println("\tbra %s",L_cmpf2);
       println("%s:",L_cmpf1);
       println("\tclra");
-      if (node->kind == ND_EQ) {
-        println("; ND_EQ");
-        println("\teorb #1");		// 00->01, 01->00, FF->FE
-      } else if (node->kind == ND_NE) {
-        println("; float ND_NE");	// EQ:AccB==0, other FF or 01
-      } else if (node->kind == ND_LT) {	// AccB:FF true, other false
-        println("; ND_LT");
-        println("\tlsrb");		// FF->7F, other:00
-      } else if (node->kind == ND_GT) {	// AccB:01 true, other false
-        println("; ND_GT");
+      // Set bit 0 to compare result before andb #1.
+      if (node->kind == ND_EQ) {          // AccB:00 true
+        println("\teorb #1");	// FF,00,01 -> FE,01,00
+        println("\tandb #1"); //          -> 00,01,00
+      } else if (node->kind == ND_NE) {   // AccB:FF,01 true
+        println("\tandb #1"); // FF,00,01 -> 01,00,01
+      } else if (node->kind == ND_LT) {	  // AccB:FF true
+        println("\tlsrb");		// FF,00,01 -> 7F,00,00
+        println("\tandb #1"); //          -> 01,00,00
+      } else if (node->kind == ND_GT) {	  // AccB:01 true
         println("\tincb");		// FF,00,01 -> 00,01,02
         println("\tlsrb");		//          -> 00,00,01
-      } else if (node->kind == ND_LE) { // AccB:FF,00 true, other false
-        println("; ND_LE");
+      } else if (node->kind == ND_LE) {   // AccB:FF,00 true
         println("\tdecb");		// FF,00,01 -> FE,FF,00
-        println("\taslb");		//          -> FC,FE,00  C=1,1,0
-        println("\trolb");		//          -> F9,FD,00
-      } else if (node->kind == ND_GE) { // AccB:00,01 true, other false
-        println("; ND_GE");
-        println("\tsubb #2");		// AccB:00,01 Carry, other NC
-        println("\trolb");
+        println("\tlsrb");		//          -> 7F,7F,00
+        println("\tandb #1"); //          -> 01,01,00
+      } else if (node->kind == ND_GE) {   // AccB:00,01 true
+        println("\tincb");	  // FF,00,01 -> 00,01,02
+        println("\tlsrb");    //          -> 00,00,01 C=0,1,0
+        println("\tadcb #0"); //          -> 00,01,01
       } else {
         error_tok(node->tok, "invalid expression");
       }
-      println("\tandb #1");
       println("%s:",L_cmpf2);
       depth -= 4;
       IX_Dest = IX_None;
