@@ -13,7 +13,6 @@ bool builtin_signbit(Node *node)
     int64_t val;
     double  fval;
 
-    println("; ND_FUNCALL: builtin_signbit");
     if (is_integer_constant(node->args, &val)) {
       println("\tclra");
       if (val<0) {
