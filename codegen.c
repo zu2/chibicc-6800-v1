@@ -4624,9 +4624,24 @@ void gen_expr(Node *node)
       case TY_LONG:
         println("\tldx #_%s",var);
         IX_Dest = IX_None;
+        if (node->retval_unused) {
+          if (val==1) {
+            println("\tjsr __inc32x");
+            return;
+          }else if (val==-1) {
+            println("\tjsr __dec32x");
+            return;
+          }
+        }
         println("\tjsr __load32x");
-        println("\tjsr __add32i");
-        word32i(val);
+        if (val==1) {
+          println("\tjsr __inc32");
+        }else if (val==-1) {
+          println("\tjsr __dec32");
+        }else{
+          println("\tjsr __add32i");
+          word32i(val);
+        }
         println("\tldx #_%s",var);
         IX_Dest = IX_None;
         println("\tjsr __store32x");
@@ -4639,7 +4654,7 @@ void gen_expr(Node *node)
         assert(0);
       }
       return;
-    }
+    } // ND_POST_INCDEC → is_global_var
     if (node->lhs->ty->kind == TY_LONG) {
       gen_addr(node->lhs);
       push();
