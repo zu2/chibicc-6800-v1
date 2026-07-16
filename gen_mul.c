@@ -1,105 +1,161 @@
 #include "chibicc.h"
 
+
+bool is_byte_unum(Node *node)
+{
+  int64_t val;
+
+  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
+    return (val >= 0 && val <= 255);
+  }
+
+  return false;
+}
+
+bool is_uchar_or_unum(Node *node)
+{
+  if (node->ty->kind == TY_CHAR && !node->ty->is_unsigned)
+    return true;
+  if (is_byte_unum(node))
+    return true;
+
+  return false;
+}
+
+//
+// int = unsigned char * unsigned char
+//
 bool
 gen_mul8u(Node *node)
 {
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
+  Node *lhs = skip_integral_promotion(node->lhs);
+  Node *rhs = skip_integral_promotion(node->rhs);
   int64_t val;
 
-  if (node->lhs->kind == ND_CAST
-  &&  node->lhs->ty->kind == TY_INT) {
-    lhs = lhs->lhs;
-  }
-  if (node->rhs->kind == ND_CAST
-  &&  node->rhs->ty->kind == TY_INT) {
-    rhs = rhs->lhs;
-  }
-  if (lhs->ty->kind == TY_CHAR
-  &&  rhs->ty->kind == TY_CHAR) {
-    if (lhs->ty->is_unsigned
-    &&  rhs->ty->is_unsigned) {
-      if (is_integer_constant(rhs,&val)) {
-        switch(val){
-        case 0:
-          println("\tclrb");
-          println("\tclra");
-          return true;
-        case 1:
-          gen_expr(lhs);
-          println("\tclra");
-          return true;
-        case 2:
-        case 4:
-        case 8:
-        case 16:
-          gen_expr(lhs);
-          println("\tclra");
-          for(int i=2; i<=val; i*=2) {
-            println("\taslb");
-            println("\trola");
-          }
-          return true;
+  if (is_uchar_or_unum(lhs)
+  &&  is_uchar_or_unum(rhs)) {
+    if (is_integer_constant(rhs,&val)) {
+      switch(val){
+      case 0:
+        gen_expr(lhs);  // side effect?
+        println("\tclrb");
+        println("\tclra");
+        return true;
+      case 1:
+        gen_expr(lhs);
+        println("\tclra");
+        return true;
+      case 2:
+      case 4:
+      case 8:
+      case 16:
+        gen_expr(lhs);
+        println("\tclra");
+        for(int i=2; i<=val; i*=2) {
+          println("\taslb");
+          println("\trola");
         }
+        return true;
       }
-      if (can_direct_char(node->rhs)) {
-        gen_expr(lhs);
-        gen_direct_char(rhs,"ldaa",NULL);
-      }else if (test_addr_x(rhs)) {
-        gen_expr(lhs);
-        int off = gen_addr_x(rhs,false);
-        println("\tldaa %d,x",off);
-      }else{
-        gen_expr(lhs);
-        push1();
-        gen_expr(rhs);
-        popa();
-      }
-      println("\tjsr __mul8x8u");
-      IX_Dest = IX_None;
-      return true;
     }
+    if (can_direct_char(node->rhs)) {
+      gen_expr(lhs);
+      gen_direct_char(rhs,"ldaa",NULL);
+    }else if (test_addr_x(rhs)) {
+      gen_expr(lhs);
+      int off = gen_addr_x(rhs,false);
+      println("\tldaa %d,x",off);
+    }else{
+      gen_expr(lhs);
+      push1();
+      gen_expr(rhs);
+      popa();
+    }
+    println("\tjsr __mul8x8u");
+    IX_Dest = IX_None;
+    return true;
   }
+  return false;
+}
+
+bool is_byte_snum(Node *node)
+{
+  int64_t val;
+
+  if (node->kind == ND_NUM
+  &&  is_integer_constant(node, &val)
+  &&  !node->ty->is_unsigned) {
+    return (val >= -128 && val <= 127);
+  }
+
+  return false;
+}
+
+bool is_schar_or_snum(Node *node)
+{
+  if (node->ty->kind == TY_CHAR && node->ty->is_unsigned)
+    return true;
+  if (is_byte_unum(node))
+    return true;
+
   return false;
 }
 
 bool
 gen_mul8s(Node *node)
 {
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
+  Node *lhs = skip_integral_promotion(node->lhs);
+  Node *rhs = skip_integral_promotion(node->rhs);
+  int64_t val;
 
-  if (node->lhs->kind == ND_CAST
-  &&  node->lhs->ty->kind == TY_INT
-  && !node->lhs->ty->is_unsigned) {
-    lhs = lhs->lhs;
-  }
-  if (node->rhs->kind == ND_CAST
-  &&  node->rhs->ty->kind == TY_INT
-  && !node->rhs->ty->is_unsigned) {
-    rhs = rhs->lhs;
-  }
-  if (lhs->ty->kind == TY_CHAR
-  &&  rhs->ty->kind == TY_CHAR) {
-    if (!lhs->ty->is_unsigned
-    &&  !rhs->ty->is_unsigned) {
-      if (can_direct_char(node->rhs)) {
+  if (is_schar_or_snum(lhs)
+  &&  is_schar_or_snum(rhs)) {
+    if (is_integer_constant(rhs,&val)) {
+      switch(val){
+      case 0:
+        gen_expr(lhs);  // side effect?
+        println("\tclrb");
+        println("\tclra");
+        return true;
+      case 1:
         gen_expr(lhs);
-        gen_direct_char(rhs,"ldaa",NULL);
-      }else if (test_addr_x(rhs)) {
+        println("\tclra");
+        println("\tasrb");
+        println("\trolb");
+        println("\tsbca #0");
+        return true;
+      case 2:
+      case 4:
+      case 8:
+      case 16:
         gen_expr(lhs);
-        int off = gen_addr_x(rhs,false);
-        println("\tldaa %d,x",off);
-      }else{
-        gen_expr(lhs);
-        push1();
-        gen_expr(rhs);
-        popa();
+        println("\tclra");
+        println("\tasrb");
+        println("\trolb");
+        println("\tsbca #0");
+        for(int i=2; i<=val; i*=2) {
+          println("\taslb");
+          println("\trola");
+        }
+        return true;
       }
-      println("\tjsr __mul8x8s");
-      IX_Dest = IX_None;
-      return true;
     }
+    if (can_direct_char(node->rhs)) {
+      gen_expr(lhs);
+      gen_direct_char(rhs,"ldaa",NULL);
+    }else if (test_addr_x(rhs)) {
+      gen_expr(lhs);
+      int off = gen_addr_x(rhs,false);
+      println("\tldaa %d,x",off);
+    }else{
+      gen_expr(lhs);
+      push1();
+      gen_expr(rhs);
+      popa();
+    }
+    println("\tjsr __mul8x8s");
+    IX_Dest = IX_None;
+    return true;
   }
   return false;
 }

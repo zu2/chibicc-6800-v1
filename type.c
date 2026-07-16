@@ -69,7 +69,15 @@ bool is_scalar(Type *ty) {
   return is_numeric(ty) || ty->kind == TY_PTR;
 }
 
-bool is_null_ptr_const(Node *node) {
+static bool is_scalar_after_decay(Type *ty) {
+  return is_scalar(ty) || ty->kind == TY_ARRAY;
+}
+
+static bool is_ptr_or_array(Type *ty) {
+  return ty->kind == TY_PTR || ty->kind == TY_ARRAY;
+}
+
+bool is_null_ptr_constant(Node *node) {
   return node->kind == ND_NUM && is_integer(node->ty) && node->val == 0;
 }
 
@@ -340,9 +348,23 @@ void add_type(Node *node) {
     return;
   case ND_ADD:
   case ND_SUB:
+    usual_arith_conv(&node->lhs, &node->rhs);
+    node->ty = node->lhs->ty;
+    return;
   case ND_MUL:
   case ND_DIV:
+    if (!is_numeric(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_numeric(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
+    usual_arith_conv(&node->lhs, &node->rhs);
+    node->ty = node->lhs->ty;
+    return;
   case ND_MOD:
+    if (!is_integer(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_integer(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
     usual_arith_conv(&node->lhs, &node->rhs);
     node->ty = node->lhs->ty;
     return;
@@ -394,6 +416,15 @@ void add_type(Node *node) {
     return;
   case ND_MULEQ:
   case ND_DIVEQ:
+    if (node->lhs->ty->kind == TY_ARRAY)
+      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_numeric(node->lhs->ty))
+      error_tok(node->lhs->tok, "invalid operand");
+    if (!is_numeric(node->rhs->ty))
+      error_tok(node->rhs->tok, "invalid operand");
+    node->rhs = new_cast(node->rhs, get_common_type(node->lhs->ty, node->rhs->ty));
+    node->ty = node->lhs->ty;
+    return;
   case ND_MODEQ:
     if (node->lhs->ty->kind == TY_ARRAY)
       error_tok(node->lhs->tok, "not an lvalue");
@@ -401,19 +432,9 @@ void add_type(Node *node) {
       error_tok(node->lhs->tok, "invalid operand");
     if (!is_integer(node->rhs->ty))
       error_tok(node->rhs->tok, "invalid operand");
-#if 0
-    if (is_integer(node->rhs->ty)) {
-      int_promotion(&node->rhs);
-    }
-#else
     node->rhs = new_cast(node->rhs,
                         get_common_type(node->lhs->ty,node->rhs->ty));
-#endif
-#if 1
     node->ty = node->lhs->ty;
-#else
-    node->ty = get_common_type(node->lhs->ty,node->rhs->ty);
-#endif
     return;
   case ND_ANDEQ:
   case ND_OREQ:
@@ -453,29 +474,20 @@ void add_type(Node *node) {
       node->ty = ty_int;
       return;
     }
-    if ((node->lhs->ty->kind == TY_PTR || node->lhs->ty->kind == TY_ARRAY)
-    &&  (node->rhs->ty->kind == TY_PTR || node->rhs->ty->kind == TY_ARRAY)) {
+    if (is_ptr_or_array(node->lhs->ty)
+    &&  is_ptr_or_array(node->rhs->ty)) {
+      usual_arith_conv(&node->lhs, &node->rhs);
       node->ty = ty_int;
       return;
     }
-    // allow p == (void *)0;
-    if (node->lhs->ty->kind == TY_PTR && is_null_ptr_const(node->rhs)) {
-      node->ty = ty_int;
+    if (is_ptr_or_array(node->lhs->ty)
+    && !is_null_ptr_constant(node->rhs)) {
+      error_tok(node->rhs->tok, "invalid operand (expected pointer or 0)");
+    }
+    if (is_ptr_or_array(node->rhs->ty)
+    && !is_null_ptr_constant(node->lhs)) {
+      error_tok(node->lhs->tok, "invalid operand (expected pointer or 0)");
       return;
-    }
-    if (node->rhs->ty->kind == TY_PTR && is_null_ptr_const(node->lhs)) {
-      node->ty = ty_int;
-      return;
-    }
-    if (!is_numeric(node->lhs->ty)
-    && node->lhs->ty->kind != TY_PTR
-    && !is_null_ptr_const(node->lhs)) {
-      error_tok(node->lhs->tok, "invalid operand (expected pointer or 0) lhs");
-    }
-    if (!is_numeric(node->rhs->ty)
-    && node->rhs->ty->kind != TY_PTR
-    && !is_null_ptr_const(node->rhs)) {
-      error_tok(node->rhs->tok, "invalid operand (expected pointer or 0) rhs");
     }
     node->ty = ty_int;
     return;
@@ -483,25 +495,32 @@ void add_type(Node *node) {
   case ND_LE:
   case ND_GT:
   case ND_GE:
-    usual_arith_conv(&node->lhs, &node->rhs);
+    if (is_numeric(node->lhs->ty)
+    &&  is_numeric(node->rhs->ty)) {
+      usual_arith_conv(&node->lhs, &node->rhs);
+      node->ty = ty_int;
+      return;
+    }
+    if (!is_ptr_or_array(node->lhs->ty)) {
+      error_tok(node->lhs->tok, "invalid operand");
+    }
+    if (!is_ptr_or_array(node->rhs->ty)) {
+      error_tok(node->rhs->tok, "invalid operand");
+    }
     node->ty = ty_int;
     return;
-  case ND_FUNCALL:
-    node->ty = node->func_ty->return_ty;
-    return;
   case ND_NOT:
-    if (!is_scalar(node->lhs->ty))
+    if (!is_scalar_after_decay(node->lhs->ty))
       error_tok(node->lhs->tok, "invalid operand");
     node->ty = ty_int;
     return;
   case ND_LOGOR:
   case ND_LOGAND:
-    if (!is_scalar(node->lhs->ty))
+    if (!is_scalar_after_decay(node->lhs->ty))
       error_tok(node->lhs->tok, "invalid operand");
-    if (!is_scalar(node->rhs->ty))
+    if (!is_scalar_after_decay(node->rhs->ty))
       error_tok(node->rhs->tok, "invalid operand");
     node->ty = ty_int;
-    return;
     return;
   case ND_BITNOT:
     if (!is_integer(node->lhs->ty))
@@ -526,10 +545,36 @@ void add_type(Node *node) {
   case ND_COND:
     if (node->then->ty->kind == TY_VOID || node->els->ty->kind == TY_VOID) {
       node->ty = ty_void;
-    } else {
+      return;
+    }
+    if (is_numeric(node->then->ty) && is_numeric(node->els->ty)) {
       usual_arith_conv(&node->then, &node->els);
       node->ty = node->then->ty;
+      return;
     }
+    if (is_ptr_or_array(node->then->ty) && is_ptr_or_array(node->els->ty)) {
+      usual_arith_conv(&node->then, &node->els);
+      node->ty = node->then->ty;
+      return;
+    }
+    if (is_ptr_or_array(node->then->ty) && is_null_ptr_constant(node->els)) {
+      usual_arith_conv(&node->then, &node->els);
+      node->ty = node->then->ty;
+      return;
+    }
+    if (is_ptr_or_array(node->els->ty) && is_null_ptr_constant(node->then)) {
+      usual_arith_conv(&node->then, &node->els);
+      node->ty = node->els->ty;
+      return;
+    }
+    if (node->then->ty->kind == TY_STRUCT && is_compatible(node->then->ty, node->els->ty)) {
+      node->ty = node->then->ty;
+      return;
+    }
+    error_tok(node->tok, "invalid operand in conditional expression");
+    //
+  case ND_FUNCALL:
+    node->ty = node->func_ty->return_ty;
     return;
   case ND_COMMA:
     node->ty = node->rhs->ty;
