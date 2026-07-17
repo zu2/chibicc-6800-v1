@@ -996,7 +996,7 @@ Node *optimize_expr(Node *node)
           node->rhs = optimize_expr(node->rhs->lhs);
         }
 //  lhs >= rhs +1 → lhs>  rhs
-//  lhs >  rhs -1 → lhs>= rhs
+//  lhs >  rhs -1 → lhs>= rhsA
       }else if ((node->kind==ND_GE && node->rhs->kind==ND_ADD)
       ||  (node->kind==ND_GT && node->rhs->kind==ND_SUB)) {
         if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
@@ -1013,35 +1013,38 @@ Node *optimize_expr(Node *node)
       switch(node->kind){
       case ND_EQ:
         node = swap_lr(node);
-        break;
+        return optimize_const_expr(node);
       case ND_NE:
         node = swap_lr(node);
-        break;
+        return optimize_const_expr(node);
       case ND_LE:
         node = swap_lr(node);
         node->kind = ND_GE;
-        break;
+        return optimize_const_expr(node);
       case ND_GT:
         node = swap_lr(node);
         node->kind = ND_LT;
+        return optimize_const_expr(node);
+      default:
         break;
       }
-      return optimize_const_expr(node);
     }
     if (node->kind == ND_LE || node->kind == ND_GT) {
-      if (node->rhs->kind != ND_NUM
-      &&  test_addr_x(node->lhs)) {
+      println("; test_addr_x(node->lhs) %d",test_addr_x(node->lhs));
+      println("; is_addr_constant(node->lhs) %p",is_addr_constant(node->lhs));
+      if (test_addr_x(node->lhs) || (is_addr_constant(node->lhs)!=NULL)) {
         switch(node->kind) {
         case ND_LE:
           node = swap_lr(node);
           node->kind = ND_GE;
-          break;
+          return optimize_const_expr(node);
         case ND_GT:
           node = swap_lr(node);
           node->kind = ND_LT;
+          return optimize_const_expr(node);
+        default:
           break;
         }
-        return optimize_const_expr(node);
       }
     }
     return optimize_const_expr(node);

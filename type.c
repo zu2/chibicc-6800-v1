@@ -51,9 +51,11 @@ bool is_int16(Type *ty) {
 }
 
 bool is_int16_or_ptr(Type *ty) {
-  TypeKind k = ty->kind;
+  return is_int16(ty) || ty->kind == TY_PTR;
+}
 
-  return k == TY_SHORT || k == TY_INT  || k == TY_ENUM  || k == TY_PTR;
+bool is_int16_or_ptr_or_array(Type *ty) {
+  return is_int16_or_ptr(ty) || ty->kind == TY_ARRAY;
 }
 
 bool is_flonum(Type *ty) {
@@ -284,8 +286,12 @@ static void int_promotion(Node **node) {
 }
 
 Type *get_common_type(Type *ty1, Type *ty2) {
+
+  // Non-NULL ty->base means ptr/array/VLA; decay all of them alike.
   if (ty1->base)
     return pointer_to(ty1->base);
+  if (ty2->base)
+    return pointer_to(ty2->base);
 
   if (ty1->kind == TY_FUNC)
     return pointer_to(ty1);
@@ -489,6 +495,7 @@ void add_type(Node *node) {
       error_tok(node->lhs->tok, "invalid operand (expected pointer or 0)");
       return;
     }
+    usual_arith_conv(&node->lhs, &node->rhs);
     node->ty = ty_int;
     return;
   case ND_LT:
@@ -507,6 +514,7 @@ void add_type(Node *node) {
     if (!is_ptr_or_array(node->rhs->ty)) {
       error_tok(node->rhs->tok, "invalid operand");
     }
+    usual_arith_conv(&node->lhs, &node->rhs);
     node->ty = ty_int;
     return;
   case ND_NOT:
@@ -543,7 +551,7 @@ void add_type(Node *node) {
     node->ty = node->var->ty;
     return;
   case ND_COND:
-    if (node->then->ty->kind == TY_VOID || node->els->ty->kind == TY_VOID) {
+    if (node->then->ty->kind == TY_VOID && node->els->ty->kind == TY_VOID) {
       node->ty = ty_void;
       return;
     }
@@ -568,6 +576,10 @@ void add_type(Node *node) {
       return;
     }
     if (node->then->ty->kind == TY_STRUCT && is_compatible(node->then->ty, node->els->ty)) {
+      node->ty = node->then->ty;
+      return;
+    }
+    if (node->then->ty->kind == TY_UNION && is_compatible(node->then->ty, node->els->ty)) {
       node->ty = node->then->ty;
       return;
     }

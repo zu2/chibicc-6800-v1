@@ -2564,7 +2564,21 @@ static void builtin_alloca(void) {
 static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_char)
 {
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
+  char *addr;
 
+  if (!is_store && (addr=is_addr_constant(node))) {
+    switch (node->ty->kind) {
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+    case TY_PTR:
+    case TY_ARRAY:
+      if (test) return true;
+      println("\t%s #<%s", opb, addr);
+      println("\t%s #>%s",   opa, addr);
+      return 1;
+    }
+  }
   switch(node->kind){
   case ND_NUM: {
     switch (node->ty->kind) {
@@ -2741,7 +2755,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
       }
     } // ND_DEREF → ND_CAST
       break;
-    case ND_ADD: {
+    case ND_ADD: { // ND_DEREF → ND_ADD
       // global array[const]
       Node *lhs = node->lhs->lhs;
       Node *rhs = node->lhs->rhs;
@@ -4123,6 +4137,7 @@ static void opeq(Node *node)
     }
     switch(node->ty->kind) {
     case TY_LONG:
+      ast_node_dump(node);
       if (test_addr_x(lhs)) {
         gen_expr(rhs);
         int off = gen_addr_x(lhs,false);
@@ -5204,6 +5219,12 @@ void gen_expr(Node *node)
 
     if (node->ty->kind == TY_LONG
     ||  node->ty->kind == TY_FLOAT) {
+      if (test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        off = gen_addr_x(node->lhs,false);
+        store32x(off);
+        return;
+      }
       gen_addr(node->lhs);
       push();
       gen_expr(node->rhs);

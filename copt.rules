@@ -552,6 +552,12 @@
 	ldx #%1
 	jsr __xor32x
 	jsr __store32x
+=
+	ldx #%1
+	jsr __xor32x_store32x
+
+	ldx #%1
+	jsr __xor32x_store32x
 	ldx #%1
 =
 	ldx #%1

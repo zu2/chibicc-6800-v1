@@ -440,6 +440,7 @@ Type *is_pointer_constant(Node *node, int64_t *val);
 bool is_int8(Type *ty);
 bool is_int16(Type *ty);
 bool is_int16_or_ptr(Type *ty);
+bool is_int16_or_ptr_or_array(Type *ty);
 bool is_flonum(Type *ty);
 bool is_numeric(Type *ty);
 bool is_redundant_cast(Node *expr, Type *ty);

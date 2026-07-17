@@ -14,7 +14,7 @@ bool is_byte_unum(Node *node)
 
 bool is_uchar_or_unum(Node *node)
 {
-  if (node->ty->kind == TY_CHAR && !node->ty->is_unsigned)
+  if (node->ty->kind == TY_CHAR && node->ty->is_unsigned)
     return true;
   if (is_byte_unum(node))
     return true;
@@ -93,7 +93,7 @@ bool is_byte_snum(Node *node)
 
 bool is_schar_or_snum(Node *node)
 {
-  if (node->ty->kind == TY_CHAR && node->ty->is_unsigned)
+  if (node->ty->kind == TY_CHAR && !node->ty->is_unsigned)
     return true;
   if (is_byte_unum(node))
     return true;
@@ -178,29 +178,31 @@ gen_mul16(Node *node)
   bool addr_x = false; 
   bool global = false; 
   char ta[64], tb[64];
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
 
-  if (is_global_var(node->lhs)) {
+  if (is_global_var(lhs)) {
     global = true;
-    sprintf(tb,"_%s+1",node->lhs->var->name);
-    sprintf(ta,"_%s",  node->lhs->var->name);
+    sprintf(tb,"_%s+1",lhs->var->name);
+    sprintf(ta,"_%s",  lhs->var->name);
     println("\tldab %s",tb);
     println("\tldaa %s",ta);
-  } else if ((addr_x = test_addr_x(node->lhs))) {
-    off = gen_addr_x(node->lhs,false);
+  } else if ((addr_x = test_addr_x(lhs))) {
+    off = gen_addr_x(lhs,false);
     sprintf(tb,"%d,x",off+1);
     sprintf(ta,"%d,x",off);
     println("\tldab %s",tb);
     println("\tldaa %s",ta);
   }else{
-    gen_expr(node->lhs);
+    gen_expr(lhs);
   }
-  switch(node->rhs->kind){
+  switch(rhs->kind){
   case ND_NUM:
-    switch (node->rhs->ty->kind) {
+    switch (rhs->ty->kind) {
     case TY_INT:
     case TY_SHORT:
     case TY_ENUM:
-      switch(node->rhs->val){
+      switch(rhs->val){
       case -4:
         println("\taslb");
         println("\trola");
@@ -384,15 +386,15 @@ gen_mul16(Node *node)
         return true;
       }
     }
-    if (node->rhs->val>0 && node->rhs->val<256) {
-      println("\tldx #%ld",node->rhs->val);
+    if (rhs->val>0 && rhs->val<256) {
+      println("\tldx #%ld",rhs->val);
       println("\tjsr __mul16x8x");
       IX_Dest = IX_None;
       return true;
     }
   }
   push();
-  gen_expr(node->rhs);
+  gen_expr(rhs);
   println("\tjsr __mul16x16");
   IX_Dest = IX_None;
   ins(2);
