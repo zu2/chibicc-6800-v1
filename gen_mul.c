@@ -1,6 +1,5 @@
 #include "chibicc.h"
 
-
 bool is_byte_unum(Node *node)
 {
   int64_t val;
@@ -34,39 +33,91 @@ gen_mul8u(Node *node)
 
   if (is_uchar_or_unum(lhs)
   &&  is_uchar_or_unum(rhs)) {
+    gen_expr(lhs);
     if (is_integer_constant(rhs,&val)) {
       switch(val){
       case 0:
-        gen_expr(lhs);  // side effect?
         println("\tclrb");
         println("\tclra");
         return true;
       case 1:
-        gen_expr(lhs);
         println("\tclra");
         return true;
       case 2:
       case 4:
       case 8:
       case 16:
-        gen_expr(lhs);
+      case 32:
+      case 64:
         println("\tclra");
         for(int i=2; i<=val; i*=2) {
           println("\taslb");
           println("\trola");
         }
         return true;
+      case 3:
+        println("\tclra");
+        println("\tstab @tmp1+1");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca #0");
+        return true;
+      case 5:
+        if (opt('O','s')) break;
+        println("\tclra");
+        println("\tstab @tmp1+1");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca #0");
+        return true;
+      case 7:
+        if (opt('O','s')) break;
+        println("\tclra");
+        println("\tstab @tmp1+1");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\tsubb @tmp1+1");
+        println("\tsbca #0");
+        return true;
+      case 10:
+        if (opt('O','s')) break;
+        println("\tclra");
+        println("\tstab @tmp1+1");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca #0");
+        println("\taslb");
+        println("\trola");
+        return true;
+      case 100:
+        println("\tclra");
+        println("\tjsr __mul100");
+        return true;
+      case 128:
+        println("\ttba");
+        println("\tclrb");
+        println("\tlsra");
+        println("\trorb");
+        return true;
       }
     }
     if (can_direct_char(node->rhs)) {
-      gen_expr(lhs);
       gen_direct_char(rhs,"ldaa",NULL);
     }else if (test_addr_x(rhs)) {
-      gen_expr(lhs);
       int off = gen_addr_x(rhs,false);
       println("\tldaa %d,x",off);
     }else{
-      gen_expr(lhs);
       push1();
       gen_expr(rhs);
       popa();
@@ -110,45 +161,64 @@ gen_mul8s(Node *node)
 
   if (is_schar_or_snum(lhs)
   &&  is_schar_or_snum(rhs)) {
+    gen_expr(lhs);
     if (is_integer_constant(rhs,&val)) {
       switch(val){
       case 0:
-        gen_expr(lhs);  // side effect?
         println("\tclrb");
         println("\tclra");
         return true;
       case 1:
-        gen_expr(lhs);
-        println("\tclra");
-        println("\tasrb");
-        println("\trolb");
-        println("\tsbca #0");
+        sign_extend();
         return true;
       case 2:
       case 4:
       case 8:
       case 16:
-        gen_expr(lhs);
-        println("\tclra");
-        println("\tasrb");
-        println("\trolb");
-        println("\tsbca #0");
+      case 32:
+      case 64:
+        sign_extend();
         for(int i=2; i<=val; i*=2) {
           println("\taslb");
           println("\trola");
         }
         return true;
+      case 5:
+        if (opt('O','s')) break;
+        sign_extend();
+        println("\tstab @tmp1+1");
+        println("\taslb");
+        println("\trola");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca #0");
+        return true;
+      case 6:
+        if (opt('O','s')) break;
+        sign_extend();
+        println("\tstab @tmp1+1");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca #0");
+        println("\taslb");
+        println("\trola");
+        return true;
+      case 128:
+        println("\ttba");
+        println("\tclrb");
+        println("\tasra");
+        println("\trorb");
+        return true;
       }
     }
     if (can_direct_char(node->rhs)) {
-      gen_expr(lhs);
       gen_direct_char(rhs,"ldaa",NULL);
     }else if (test_addr_x(rhs)) {
-      gen_expr(lhs);
       int off = gen_addr_x(rhs,false);
       println("\tldaa %d,x",off);
     }else{
-      gen_expr(lhs);
       push1();
       gen_expr(rhs);
       popa();

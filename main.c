@@ -827,6 +827,7 @@ static void assemble(char *input, char *output) {
   run_subprocess(cmd,NULL,NULL);
 }
 
+#if 0
 static char *find_file(char *pattern) {
   char *path = NULL;
   glob_t buf = {};
@@ -836,6 +837,7 @@ static char *find_file(char *pattern) {
   globfree(&buf);
   return path;
 }
+#endif
 
 // Returns true if a given file exists.
 bool file_exists(char *path) {

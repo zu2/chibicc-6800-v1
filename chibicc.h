@@ -515,6 +515,7 @@ bool can_direct(Node *rhs);
 bool can_direct_char(Node *rhs);
 void gen_expr(Node *node);
 int gen_addr_x(Node *node,bool save_d);
+void gen_addr(Node *node);
 int count(void);
 char *new_label(char *fmt);
 char *new_jump_label();
@@ -525,12 +526,20 @@ void pop1(void);
 void popa(void);
 void popx(void);
 void ins(int n);
+void sign_extend(void);
 void ldab_i(int n);
 void ldd_i(int n);
+void and_i(int n);
+void load(Type *ty);
+bool can_load_x(Type *ty);
+void load_x(Type *ty,int off);
 void load_var(Node *node);
+void store_x(Type *ty,int off);
 void cmp_zero(Type *ty);
 Type *is_integer_constant(Node *node, int64_t *val);
 Type *is_flonum_constant(Node *node, double *val);
+bool gen_shl(Type *ty, uint64_t val);
+bool gen_shr(Type *ty, uint64_t val);
 
 
 extern int depth;
@@ -562,6 +571,11 @@ bool gen_mul8u(Node *node);
 bool gen_mul8s(Node *node);
 bool gen_mul16(Node *node);
 
+//
+// gen_bitfield.c
+//
+void load_bitfield(Node *node);
+void assign_to_bitfield(Node *node);
 
 //
 // opt_O3.c

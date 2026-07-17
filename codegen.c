@@ -1,6 +1,5 @@
 #include "chibicc.h"
 
-
 static FILE *output_file;
 int depth;
 static Obj *current_fn;
@@ -134,6 +133,14 @@ void ins(int n)
   return;
 }
 
+void sign_extend()
+{
+  println("\tclra");
+  println("\tasrb");
+  println("\trolb");
+  println("\tsbca #0");
+}
+
 // 
 // Removes stack args (flags may be affected).
 //
@@ -229,7 +236,7 @@ void ldd_i(int n)
   }
 }
 
-static void and_i(int n)
+void and_i(int n)
 {
   if ((n & 0x00ff)==0) {
     println("\tclrb");
@@ -876,7 +883,7 @@ bool gen_shr(Type *ty, uint64_t val)
 
 // Compute the absolute address of a given node.
 // It's an error if a given node does not reside in memory.
-static void gen_addr(Node *node)
+void gen_addr(Node *node)
 {
   switch (node->kind) {
   case ND_VAR:
@@ -1021,8 +1028,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     }
     return 0;
   case ND_MEMBER: {
-    Member *mem = node->member;
-    if (mem->is_bitfield) {     // bitfield cannot be move to IX
+    if (node->member->is_bitfield) {     // bitfield cannot be move to IX
       return false;
     }
     if (test_addr_x(node)) {
@@ -1070,7 +1076,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     if (is_int16_or_ptr(node->ty)
     &&  lhs->kind==ND_VAR) {
       if (is_global_var(lhs)) {
-        char *var = lhs->var->name;
         int64_t val;
         if (is_integer_constant(rhs,&val)) {
           switch(val) {
@@ -1150,7 +1155,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     if (is_int16_or_ptr(node->ty)
     &&  lhs->kind==ND_VAR) {
       if (is_global_var(lhs)) {
-        char *var = lhs->var->name;
         int64_t val;
         if (is_integer_constant(rhs,&val)) {
           switch(val) {
@@ -1421,7 +1425,7 @@ bool test_expr_x(Node *node)
 int gen_addr_x_sub(Node *node,bool save_d,bool test)
 {
   Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
+//Node *rhs = node->rhs;
   int off;
   int64_t val;
 
@@ -1696,7 +1700,7 @@ static void load32i(uint32_t val)
 }
 
 // Load a value from where %rax is pointing to.
-static void load(Type *ty) {
+void load(Type *ty) {
   switch (ty->kind) {
   case TY_ARRAY:
   case TY_STRUCT:
@@ -1777,7 +1781,7 @@ int ldx_x(Type *ty,int off)
   return off;
 }
 
-static void load_x(Type *ty,int off) {
+void load_x(Type *ty,int off) {
   // Note: Do not destroy IX in this routine.
   switch (ty->kind) {
   case TY_ARRAY:
@@ -1942,7 +1946,7 @@ static void clr_x(Type *ty,int off) {
   }
 }
 
-static void store_x(Type *ty,int off) {
+void store_x(Type *ty,int off) {
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
@@ -2042,7 +2046,7 @@ static char i8u16[]  = "clra\n\tasrb\n\trolb\n\tsbca #0";
 static char i8i32[]  = "jsr __s8to32";
 static char i8u32[]  = "jsr __s8to32";
 static char i8i64[]  = ";jsr __s8to64";
-static char i8u64[]  = ";jsr __s8to64";
+//static char i8u64[]  = ";jsr __s8to64";
 static char i8f32[]  = "clra\n\tasrb\n\trolb\n\tsbca #0\n\tjsr __i16tof32";
 static char i8f64[]  = ";jsr __u8tof64";
 // unsigned char to:
@@ -2051,7 +2055,7 @@ static char u8u16[]  = "clra";
 static char u8i32[]  = "jsr __u8to32";
 static char u8u32[]  = "jsr __u8to32";
 static char u8i64[]  = ";jsr __u8to64";
-static char u8u64[]  = ";jsr __u8to64";
+//static char u8u64[]  = ";jsr __u8to64";
 static char u8f32[]  = "clra\n\tjsr __u16tof32";
 static char u8f64[]  = ";jsr __u8tof64";
 // signed int to:
@@ -2691,7 +2695,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     switch(node->lhs->kind){
     // (ND_DEREF ty_char (ND_NUM TY_PTR e000))
     case ND_NUM:
-      assert (node->lhs->ty != TY_PTR);
+      assert (node->lhs->ty->kind == TY_PTR);
       if (test) return 1;
       switch(node->ty->kind) {
       case TY_BOOL:
@@ -4970,39 +4974,7 @@ void gen_expr(Node *node)
   case ND_MEMBER: {
     Member *mem = node->member;
     if (mem->is_bitfield) {
-      if (can_load_x(node->ty) && test_addr_x(node)) {
-        off = gen_addr_x(node,false);
-        load_x(ty_uint,off);
-      }else{
-        gen_addr(node);
-        load(ty_uint);
-      }
-      println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s, %s %d",
-		      mem->bit_width, mem->bit_offset,
-          (mem->ty->is_unsigned? "u": "i"),
-          __FILE__, __LINE__);
-//    println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
-      gen_shr(ty_uint, mem->bit_offset);
-      unsigned int mask = (unsigned int)(1L << mem->bit_width) - 1;
-      and_i(mask & 0xffff);
-      if (!mem->ty->is_unsigned && mem->bit_width!=16) {
-        char *label = new_jump_label();
-        if (mem->bit_width<=8)  {
-          println("\tbitb #<$%04x",(int)(1L << (mem->bit_width-1)));
-        }else{
-          println("\tbita #<$%04x",(int)(1L << (mem->bit_width-9)));
-        }
-        println("\tbeq %s",label);
-        if (mem->bit_width<=8)  {
-          if (mem->bit_width!=8) {
-            println("\torab #<$%04x",(~mask)&0xffff);
-          }
-          println("\toraa #$ff");
-        }else{
-          println("\toraa #>$%04x",(~mask)&0xffff);
-        }
-        println("%s:",label);
-      }
+      load_bitfield(node);
       return;
     }
     if (can_load_x(node->ty) && test_addr_x(node)) {
@@ -5024,7 +4996,6 @@ void gen_expr(Node *node)
       &&  lhs->rhs->ty->array_len<=256
       &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
-        char *label = new_jump_label();
         lhs->lhs = optimize_expr(new_cast(skip_integral_promotion(lhs->lhs),ty_uchar));
         gen_expr(lhs->lhs);
         println("\tldx #_%s",lhs->rhs->var->name);
@@ -5041,7 +5012,6 @@ void gen_expr(Node *node)
       &&  lhs->lhs->ty->array_len<=256
       &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
-        char *label = new_jump_label();
         lhs->rhs = optimize_expr(new_cast(skip_integral_promotion(lhs->rhs),ty_uchar));
         gen_expr(lhs->rhs);
         println("\tldx #_%s",lhs->lhs->var->name);
@@ -6761,7 +6731,7 @@ static void gen_stmt(Node *node)
   switch (node->kind) {
   case ND_IF: {
     Node *cond = node->cond;
-    int64_t val;
+
     int c = count();
     char L_else[32];
     char L_end[32];

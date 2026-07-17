@@ -857,7 +857,6 @@ Node *optimize_expr(Node *node)
   case ND_GE: {
     int64_t val;
     int64_t lval, rval;
-    Type *lty, *rty;
 
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
@@ -1030,8 +1029,6 @@ Node *optimize_expr(Node *node)
       }
     }
     if (node->kind == ND_LE || node->kind == ND_GT) {
-      println("; test_addr_x(node->lhs) %d",test_addr_x(node->lhs));
-      println("; is_addr_constant(node->lhs) %p",is_addr_constant(node->lhs));
       if (test_addr_x(node->lhs) || (is_addr_constant(node->lhs)!=NULL)) {
         switch(node->kind) {
         case ND_LE:
