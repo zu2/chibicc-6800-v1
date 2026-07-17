@@ -46,7 +46,11 @@ char *type_str(Type *ty)
   case TY_DOUBLE:return "TY_DOUBLE(7)";
   case TY_LDOUBLE:return "TY_LDOUBLE(8)";
   case TY_ENUM: return "TY_ENUM(9)";
-  case TY_PTR:  return "TY_PTR(10)";
+  case TY_PTR:  if (ty->is_unsigned) {
+                  return "TY_PTR(5):u";
+                }else{
+                  return "TY_PTR(5):s";
+                }
   case TY_FUNC: return "TY_FUNC(11)";
   case TY_ARRAY:return "TY_ARRAY(12)";
   case TY_VLA:  return "TY_VLA(13)";
