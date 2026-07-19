@@ -183,25 +183,37 @@ gen_mul8s(Node *node)
           println("\trola");
         }
         return true;
+      case 3:
+        if (opt('O','s')) break;
+        sign_extend();
+        println("\tstab @tmp1+1");
+        println("\tstaa @tmp1");
+        println("\taslb");
+        println("\trola");
+        println("\taddb @tmp1+1");
+        println("\tadca @tmp1");
+        return true;
       case 5:
         if (opt('O','s')) break;
         sign_extend();
         println("\tstab @tmp1+1");
+        println("\tstaa @tmp1");
         println("\taslb");
         println("\trola");
         println("\taslb");
         println("\trola");
         println("\taddb @tmp1+1");
-        println("\tadca #0");
+        println("\tadca @tmp1");
         return true;
       case 6:
         if (opt('O','s')) break;
         sign_extend();
         println("\tstab @tmp1+1");
+        println("\tstaa @tmp1");
         println("\taslb");
         println("\trola");
         println("\taddb @tmp1+1");
-        println("\tadca #0");
+        println("\tadca @tmp1");
         println("\taslb");
         println("\trola");
         return true;
