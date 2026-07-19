@@ -464,20 +464,6 @@
 	jsr __load32x_push
 
 
-	XXX
-	jsr __load32bx
-	jsr __push32
-=
-	jsr __load32bx_push
-
-	ldx #%1
-	jsr __store32x
-	ldx #%1
-	jsr __load32x
-=
-	ldx #%1
-	jsr __store32x
-
 	jsr __push32
 	tsx
 	ldx 4,x
@@ -496,78 +482,34 @@
 	ldx %1
 	jsr __%2x
 
-	ldx #%1
-	jsr __and32x
-	ldx #%1
-=
-	ldx #%1
-	jsr __and32x
-
-	ldx #%1
 	jsr __and32x
 	jsr __store32x
-	ldx #%1
 =
-	ldx #%1
 	jsr __and32x_store32x
 
-	ldx #%1
 	jsr __and32x_store32x
 	jsr __load32x
 =
-	ldx #%1
 	jsr __and32x_store32x
-	ldx #%1
 
-	ldx #%1
-	jsr __or32x
-	ldx #%1
-=
-	ldx #%1
-	jsr __or32x
-
-	ldx #%1
 	jsr __or32x
 	jsr __store32x
-	ldx #%1
 =
-	ldx #%1
 	jsr __or32x_store32x
 
-	ldx #%1
 	jsr __or32x_store32x
 	jsr __load32x
 =
-	ldx #%1
 	jsr __or32x_store32x
-	ldx #%1
 
-	ldx #%1
-	jsr __xor32x
-	ldx #%1
-=
-	ldx #%1
-	jsr __xor32x
-
-	ldx #%1
 	jsr __xor32x
 	jsr __store32x
 =
-	ldx #%1
 	jsr __xor32x_store32x
 
-	ldx #%1
-	jsr __xor32x_store32x
-	ldx #%1
-=
-	ldx #%1
-	jsr __xor32x_store32x
-
-	ldx #%1
 	jsr __xor32x_store32x
 	jsr __load32x
 =
-	ldx #%1
 	jsr __xor32x_store32x
 
 #

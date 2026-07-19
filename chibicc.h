@@ -548,7 +548,8 @@ typedef	enum {
   IX_BP,
   IX_VAR,
   IX_PTR,
-  IX_IMM,
+  IX_IMM_VAL,
+  IX_IMM_STR,
   IX_EXT,
 } IX_Type;
 

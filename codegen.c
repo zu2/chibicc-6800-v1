@@ -6,7 +6,8 @@ static Obj *current_fn;
 IX_Type	IX_Dest = IX_None;
 int IX_PTR_off = -1;
 char *IX_EXT_var = "";
-int IX_IMM_value = -1;
+char *IX_IMM_str = "";
+int   IX_IMM_val = -1;
 
 static void gen_stmt(Node *node);
 
@@ -384,6 +385,24 @@ void invalidate_EXT(Node *node)
   if (strcmp(var->name,IX_EXT_var)==0) {
     IX_Dest = IX_None;
   }
+}
+
+void ldx_IMM_STR(char *s)
+{
+  if (IX_Dest == IX_IMM_STR
+  &&  strcmp(IX_IMM_str,s)==0) {
+    return;
+  }
+  println("\tldx #%s",s);
+  IX_Dest    = IX_IMM_STR;
+  IX_IMM_str = s;
+}
+
+void ldx_IMM_VAR(char *s)
+{
+  char *p = calloc(1,strlen(s)+2);
+  strcat(strcpy(p,"_"),s);
+  ldx_IMM_STR(p);
 }
 
 void tfr_dx()
@@ -974,8 +993,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
 
   if ((addr=is_addr_constant(node))) {
     if (test) return true;
-    println("\tldx #%s",addr);
-    IX_Dest = IX_None;
+    ldx_IMM_STR(addr);
     return 0;
   }
   switch(node->kind) {
@@ -1192,8 +1210,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     }
     if (is_global_var(lhs)) {
       if (test) return true;
-      println("\tldx #_%s",lhs->var->name);
-      IX_Dest = IX_None;
+      ldx_IMM_VAR(lhs->var->name);
       return 0;
     }
     if (is_local_var(lhs)) {
@@ -1453,14 +1470,12 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     // Function
     if (node->ty->kind == TY_FUNC) {
       if (test) return 1;
-      println("\tldx #_%s",node->var->name);
-      IX_Dest = IX_None;
+      ldx_IMM_VAR(node->var->name);
       return 0;
     }
     // maybe Global variable
     if (test) return 1;
-    println("\tldx #_%s",node->var->name);
-    IX_Dest = IX_None;
+    ldx_IMM_VAR(node->var->name);
     return 0;
   case ND_DEREF:
     // (ND_DEREF ty_uchar (ND_POST_INCDEC (ND_VAR TY_PTR(10) src +8 ) 1))
@@ -1848,8 +1863,7 @@ void load_var(Node *node)
       println("\tldaa _%s",  node->var->name);
       break;
     case 4:
-      println("\tldx #_%s",node->var->name);
-      IX_Dest = IX_None;
+      ldx_IMM_VAR(node->var->name);
       load32x(0);
       break;
     default:
@@ -1883,7 +1897,7 @@ static void store(Type *ty) {
     return;
   case TY_FLOAT:
     popx();
-    println("\tjsr __store32x");	// store @long to (0-3,x)");
+    store32x(0);                      // store @long to (0-3,x)");
     return;
   case TY_DOUBLE:
     assert(ty->kind!=TY_DOUBLE);
@@ -1900,7 +1914,7 @@ static void store(Type *ty) {
     println("\tstab 1,x");
     println("\tstaa 0,x");
   }else if (ty->size == 4){
-    println("\tjsr __store32x");	// store @long to (0-3,x)");
+    store32x(0);                      // store @long to (0-3,x)");
   }else
     assert(0);
 }
@@ -3316,8 +3330,7 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
         return 1;
       }else{ // global
         if (test) return 1;
-        println("\tldx #_%s",rhs->var->name);
-        IX_Dest = IX_None;
+        ldx_IMM_VAR(rhs->var->name);
         jsr_32dx(opb,0);
         return 1;
       }
@@ -3628,8 +3641,8 @@ static void opeq(Node *node)
       gen_expr(rhs);
       println("\ttsx");
       println("\tldx 0,x");
-      println("\tjsr __add32x");
       IX_Dest = IX_None;
+      println("\tjsr __add32x");
       store(node->ty);
       return;
     // Handle non-char/int RHS case? XXX
@@ -3734,8 +3747,8 @@ static void opeq(Node *node)
       push();
       println("\ttsx");
       println("\tldx 0,x");
-      println("\tjsr __push32x");
       IX_Dest = IX_None;
+      println("\tjsr __push32x");
       depth+=4;
       gen_expr(rhs);
       println("\tjsr __sub32tos");
@@ -4155,11 +4168,13 @@ static void opeq(Node *node)
       pushl();
       println("\ttsx");
       println("\tldx 4,x");
+      IX_Dest = IX_None;
       load32x(0);
       println("\tjsr %s",optos);
-      depth -= 4;
       IX_Dest = IX_None;
-      break;
+      depth -= 4;
+      store(node->ty);
+      return;
     case TY_BOOL:
     case TY_CHAR: 
       if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
@@ -4198,7 +4213,6 @@ static void opeq(Node *node)
           assert(0);
         }
         println("\tstab %d,x",off);
-        IX_Dest = IX_None;
         return;
       }
       gen_addr(node->lhs);
@@ -4206,6 +4220,7 @@ static void opeq(Node *node)
       gen_expr(node->rhs);
       println("\ttsx");
       println("\tldx 0,x");
+      IX_Dest = IX_None;
       switch (node->kind) {
       case ND_ANDEQ:
         println("\tandb 0,x");
@@ -4217,9 +4232,8 @@ static void opeq(Node *node)
         println("\teorb 0,x");
         break;
       }
-//    println("\tclra");
-      IX_Dest = IX_None;
-      break;
+      store(node->ty);
+      return;
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
@@ -4252,6 +4266,7 @@ static void opeq(Node *node)
       gen_expr(node->rhs);
       println("\ttsx");
       println("\tldx 0,x");
+      IX_Dest = IX_None;
       switch (node->kind) {
       case ND_ANDEQ:
         println("\tandb 1,x");
@@ -4266,15 +4281,13 @@ static void opeq(Node *node)
         println("\teora 0,x");
         break;
       }
-      IX_Dest = IX_None;
-      break;
+      store(node->ty);
+      return;
     default:
       error_tok(node->tok,"invalid operand &,|,^");
       assert(0);
     }
-    IX_Dest = IX_None;
-    store(node->ty);
-    return;
+    assert(0);
   }
   case ND_SHREQ:
   case ND_SHLEQ: {
@@ -4285,8 +4298,7 @@ static void opeq(Node *node)
       if (is_global_var(node->lhs)) {
         gen_expr(node->rhs);
         push1();
-        println("\tldx #_%s",node->lhs->var->name);
-        IX_Dest = IX_None;
+        ldx_IMM_VAR(node->lhs->var->name);
         load32x(0);
         pop1();
         if (node->kind == ND_SHLEQ) {
@@ -4296,9 +4308,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __shr32s");
         }
-        IX_Dest = IX_None;
-        println("\tldx #_%s",node->lhs->var->name);
-        IX_Dest = IX_None;
+        ldx_IMM_VAR(node->lhs->var->name);
         store_x(node->ty,0);
         return;
       }
@@ -4308,6 +4318,7 @@ static void opeq(Node *node)
       push1();
       println("\ttsx");
       println("\tldx 1,x");
+      IX_Dest = IX_None;
       load32x(0);
       pop1();
       if (node->kind == ND_SHLEQ) {
@@ -4317,7 +4328,8 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __shr32s");
       }
-      break;
+      store(node->ty);
+      return;
     case TY_BOOL:
     case TY_CHAR: 
       if (is_global_var(lhs)) {
@@ -4492,12 +4504,12 @@ static void opeq(Node *node)
       }
       IX_Dest = IX_None;
       ins(1);
-      break;
+      store(node->ty);
+      return;
     default:
       assert(0);
     }
-    IX_Dest = IX_None;
-    store(node->ty);
+    assert(0);
     return;
   }
   default:
@@ -4641,8 +4653,7 @@ void gen_expr(Node *node)
         }
         break;
       case TY_LONG:
-        println("\tldx #_%s",var);
-        IX_Dest = IX_None;
+        ldx_IMM_VAR(var);
         if (node->retval_unused) {
           if (val==1) {
             println("\tjsr __inc32x");
@@ -4652,7 +4663,7 @@ void gen_expr(Node *node)
             return;
           }
         }
-        println("\tjsr __load32x");
+        load32x(0);
         if (val==1) {
           println("\tjsr __inc32");
         }else if (val==-1) {
@@ -4660,13 +4671,14 @@ void gen_expr(Node *node)
         }else{
           println("\tjsr __add32i");
           word32i(val);
+          IX_Dest = IX_None;
         }
-        println("\tldx #_%s",var);
-        IX_Dest = IX_None;
-        println("\tjsr __store32x");
+        ldx_IMM_VAR(var);
+        store32x(0);
         if (!node->retval_unused) {
           println("\tjsr __sub32i");
           word32i(val);
+          IX_Dest = IX_None;
         }
         break;
       default:
@@ -4678,11 +4690,11 @@ void gen_expr(Node *node)
       gen_addr(node->lhs);
       push();
       tfr_dx();
-      println("\tjsr __load32x");
+      load32x(0);
       println("\tjsr __add32i");
       word32i(val);
       popx();
-      println("\tjsr __store32x");
+      store32x(0);
       if (!node->retval_unused) {
         println("\tjsr __sub32i");
         word32i(val);
@@ -4839,14 +4851,13 @@ void gen_expr(Node *node)
         }
         break;
        case TY_LONG:
-         println("\tldx #_%s",var);
-         IX_Dest = IX_None;
-         println("\tjsr __load32x");
+         ldx_IMM_VAR(var);
+         load32x(0);
          println("\tjsr __add32i");
          word32i(val);
-         println("\tldx #_%s",var);
          IX_Dest = IX_None;
-         println("\tjsr __store32x");
+         ldx_IMM_VAR(var);
+         store32x(0);
          break;
       default:
         assert(0);
@@ -4857,11 +4868,11 @@ void gen_expr(Node *node)
       gen_addr(node->lhs);
       push();
       tfr_dx();
-      println("\tjsr __load32x");
+      load32x(0);
       println("\tjsr __add32i");
       word32i(val);
       popx();
-      println("\tjsr __store32x");
+      store32x(0);
       return;
     }
     if (test_addr_x(node->lhs)){
@@ -4998,11 +5009,10 @@ void gen_expr(Node *node)
         char *offset = new_label("L_%d");
         lhs->lhs = optimize_expr(new_cast(skip_integral_promotion(lhs->lhs),ty_uchar));
         gen_expr(lhs->lhs);
-        println("\tldx #_%s",lhs->rhs->var->name);
+        ldx_IMM_VAR(lhs->rhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
         println("%s:",offset);
         println("\tldab 0,x");
-        IX_Dest = IX_None;
         return;
       }
       if (node->ty->kind == TY_CHAR
@@ -5014,11 +5024,10 @@ void gen_expr(Node *node)
         char *offset = new_label("L_%d");
         lhs->rhs = optimize_expr(new_cast(skip_integral_promotion(lhs->rhs),ty_uchar));
         gen_expr(lhs->rhs);
-        println("\tldx #_%s",lhs->lhs->var->name);
+        ldx_IMM_VAR(lhs->lhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
         println("%s:",offset);
         println("\tldab 0,x");
-        IX_Dest = IX_None;
         return;
       }
     }
@@ -5399,7 +5408,7 @@ void gen_expr(Node *node)
                  __func__, __FILE__, __LINE__);
     }
     if (!node->var->is_local) {
-      println("\tldx #_%s",node->var->name);
+      ldx_IMM_VAR(node->var->name);
       println("\tclrb");
       int c = count();
       println("L_memzero_%d:", c);
@@ -5732,8 +5741,8 @@ void gen_expr(Node *node)
       pushl();
       gen_expr(rhs);
       println("\tjsr __add32tos");	// @long += TOS, pull TOS
-      depth -= 4;
       IX_Dest = IX_None;
+      depth -= 4;
       return;
     case ND_SUB:
       if (is_long_constant(rhs,&val)) {
@@ -5768,8 +5777,8 @@ void gen_expr(Node *node)
       pushl();
       gen_expr(rhs);
       println("\tjsr __sub32tos");	 // @long = TOS - @long, pull TOS");
-      depth -= 4;
       IX_Dest = IX_None;
+      depth -= 4;
       return;
     case ND_MUL:
       if (node->lhs->kind     == ND_CAST
@@ -5808,9 +5817,8 @@ void gen_expr(Node *node)
       }
       gen_expr(node->rhs);
       println("\tjsr __mul32tos");	// @long *= TOS, pull TOS");
-//  println("  imul %s, %s", di, ax);
-      depth -= 4;
       IX_Dest = IX_None;
+      depth -= 4;
       return;
     case ND_DIV:
       gen_expr(node->rhs);
@@ -5853,8 +5861,8 @@ void gen_expr(Node *node)
       pushl();
       gen_expr(node->rhs);
       println("\tjsr __and32tos");
-      depth -= 4;
       IX_Dest = IX_None;
+      depth -= 4;
       return;
     case ND_BITOR:
       gen_expr(node->lhs);
@@ -5874,8 +5882,8 @@ void gen_expr(Node *node)
       pushl();
       gen_expr(node->rhs);
       println("\tjsr __or32tos");
-      depth -= 4;
       IX_Dest = IX_None;
+      depth -= 4;
       return;
     case ND_BITXOR:
       gen_expr(node->lhs);
@@ -5894,8 +5902,8 @@ void gen_expr(Node *node)
       pushl();
       gen_expr(node->rhs);
       println("\tjsr __xor32tos");
-      depth -= 4;
       IX_Dest = IX_None;
+      depth -= 4;
       return;
     case ND_EQ:
     case ND_NE:
@@ -5963,7 +5971,6 @@ void gen_expr(Node *node)
       }else{
         println("\tjsr __shr32s");
       }
-      IX_Dest = IX_None;
       return;
     default:
       error_tok(node->tok, "TY_LONG: invalid expression");
