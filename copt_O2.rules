@@ -203,15 +203,19 @@ INC32_%M:
 
 	jsr __dec32
 =
-	ldx @long+2
-	dex
-	stx @long+2
-	inx
-	bne DEC32_%M
-	ldx @long
-	dex
-	stx @long
-DEC32_%M:
+	tst @long+3
+	bne DEC32_%M_3
+	tst @long+2
+	bne DEC32_%M_2
+	tst @long+1
+	bne DEC32_%M_1
+	dec @long
+DEC32_%M_1:
+	dec @long+1
+DEC32_%M_2:
+	dec @long+2
+DEC32_%M_3:
+	dec @long+3
 
 	jsr __add32i
 	.word %1
