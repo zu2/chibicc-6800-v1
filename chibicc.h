@@ -472,6 +472,8 @@ Node *skip_integral_promotion(Node *node);
 bool is_u8num(Node *node);
 bool is_s8num(Node *node);
 bool is_8num(Node *node, Type *ty);
+bool is_uchar_or_unum(Node *node);
+bool is_schar_or_snum(Node *node);
 
 Node *optimize_expr(Node *node);
 Node *optimize_condition(Node *node);

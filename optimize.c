@@ -86,6 +86,27 @@ bool is_8num(Node *node, Type *ty)
   return ty->is_unsigned? is_u8num(node): is_s8num(node);
 }
 
+bool is_uchar_or_unum(Node *node)
+{
+  if (node->ty->kind == TY_CHAR && node->ty->is_unsigned)
+    return true;
+  if (is_u8num(node))
+    return true;
+
+  return false;
+}
+
+bool is_schar_or_snum(Node *node)
+{
+  if (node->ty->kind == TY_CHAR && !node->ty->is_unsigned)
+    return true;
+  if (is_u8num(node))
+    return true;
+
+  return false;
+}
+
+
 Node *negate_condition(Node *node)
 {
   switch(node->kind){
@@ -1006,41 +1027,15 @@ Node *optimize_expr(Node *node)
     }
 
 //  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
-    if ( node_cost(node->lhs) < node_cost(node->rhs)
-    ||  (node_cost(node->lhs) == node_cost(node->rhs))) {
-//    println("; optimize RO %d swap_lr",node->kind);
-      switch(node->kind){
-      case ND_EQ:
-        node = swap_lr(node);
-        return optimize_const_expr(node);
-      case ND_NE:
-        node = swap_lr(node);
-        return optimize_const_expr(node);
-      case ND_LE:
-        node = swap_lr(node);
-        node->kind = ND_GE;
-        return optimize_const_expr(node);
-      case ND_GT:
-        node = swap_lr(node);
-        node->kind = ND_LT;
-        return optimize_const_expr(node);
-      default:
-        break;
-      }
-    }
-    if (node->kind == ND_LE || node->kind == ND_GT) {
-      if (test_addr_x(node->lhs) || (is_addr_constant(node->lhs)!=NULL)) {
-        switch(node->kind) {
+    if (node->ty->kind != TY_CHAR) {
+      if ( node_cost(node->lhs) == node_cost(node->rhs)
+      ||   test_addr_x(node->lhs)
+      || (is_addr_constant(node->lhs)!=NULL)) {
+        switch(node->kind){
         case ND_LE:
-          node = swap_lr(node);
-          node->kind = ND_GE;
-          return optimize_const_expr(node);
         case ND_GT:
-          node = swap_lr(node);
-          node->kind = ND_LT;
+          node = flip_condition(swap_lr(node));
           return optimize_const_expr(node);
-        default:
-          break;
         }
       }
     }

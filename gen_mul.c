@@ -1,26 +1,5 @@
 #include "chibicc.h"
 
-bool is_byte_unum(Node *node)
-{
-  int64_t val;
-
-  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
-    return (val >= 0 && val <= 255);
-  }
-
-  return false;
-}
-
-bool is_uchar_or_unum(Node *node)
-{
-  if (node->ty->kind == TY_CHAR && node->ty->is_unsigned)
-    return true;
-  if (is_byte_unum(node))
-    return true;
-
-  return false;
-}
-
 //
 // int = unsigned char * unsigned char
 //
@@ -126,29 +105,6 @@ gen_mul8u(Node *node)
     IX_Dest = IX_None;
     return true;
   }
-  return false;
-}
-
-bool is_byte_snum(Node *node)
-{
-  int64_t val;
-
-  if (node->kind == ND_NUM
-  &&  is_integer_constant(node, &val)
-  &&  !node->ty->is_unsigned) {
-    return (val >= -128 && val <= 127);
-  }
-
-  return false;
-}
-
-bool is_schar_or_snum(Node *node)
-{
-  if (node->ty->kind == TY_CHAR && !node->ty->is_unsigned)
-    return true;
-  if (is_byte_unum(node))
-    return true;
-
   return false;
 }
 
