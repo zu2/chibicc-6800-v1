@@ -14,7 +14,6 @@ bool is_compare(Node *node)
   return false;
 }
 
-#if 0
 bool is_compare_or_not(Node *node)
 {
   switch (node->kind) {
@@ -29,7 +28,6 @@ bool is_compare_or_not(Node *node)
   }
   return false;
 }
-#endif
 
 bool is_boolean_result(Node *node)
 {
@@ -145,10 +143,6 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   Node *rhs = node->rhs;
   int64_t val;
 
-  if (!is_int8(node->ty) && !is_compare(node)) {
-    println("; node->ty not byte");
-    ast_node_dump(node);
-  }
   if (node->kind == ND_BITAND
   &&  is_integer_constant(node->rhs, &val)) {
     if ((val & ~0xFF)==0
@@ -267,6 +261,12 @@ bool gen_jump_if_false(Node *node, char *if_false)
   if (node->kind == ND_NOT) {
     return gen_jump_if_true(lhs, if_false);
   }
+  if (isVAR(node) && is_byte(node)) {
+    if (gen_jump_if_false_8bit(node, if_false)) {
+      return true;
+    }
+    goto fallback;
+  }
 
   if (is_int16_or_ptr(node->ty)) {
     if (test_expr_x(node)) {
@@ -295,7 +295,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     return true;
   }
 
-  if (node->kind == ND_BITAND && is_int8(node->ty)) {
+  if (node->kind == ND_BITAND && is_int8(node->lhs->ty)) {
     if (gen_jump_if_false_8bit(node,if_false)) {
       return true;
     }
@@ -308,9 +308,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
     return true;
   }
 
-  // If one side is ND_NUM, both sides are promoted to int,
-  // so this can't be optimized. TODO: Fix optimize.c
-  if (is_byte(lhs) && is_byte(rhs)) {
+  if ((is_uchar_or_u8num(lhs) && is_uchar_or_u8num(rhs))
+  ||  (is_schar_or_s8num(lhs) && is_schar_or_s8num(rhs)) ){
     if (gen_jump_if_false_8bit(node, if_false)) {
       return true;
     }
@@ -615,9 +614,6 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   Node *rhs = node->rhs;
   int64_t val;
 
-  if (opt('g','3')) {
-    ast_node_dump(node);
-  }
   if (node->kind == ND_BITAND
   &&  is_integer_constant(node->rhs, &val)) {
     if ((val & ~0xFF)==0
@@ -724,9 +720,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
   char *addr;
   char *if_thru = new_label("L_thru_%d");
 
-  if (opt('g','3')) {
-    ast_node_dump(node);
-  }
   if (is_integer_constant(node,&val)) {
     if (val) {
       println("\tjmp %s",if_true);
@@ -771,7 +764,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return true;
   }
 
-  if (node->kind == ND_BITAND && is_int8(node->ty)) {
+  if (node->kind == ND_BITAND && is_int8(node->lhs->ty)) {
     gen_jump_if_true_8bit(node,if_true);
     return true;
   }
@@ -783,9 +776,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return true;
   }
 
-  // If one side is ND_NUM, both sides are promoted to int,
-  // so this can't be optimized. TODO: Fix optimize.c
-  if (is_byte(lhs) && is_byte(rhs)) {
+  if ((is_uchar_or_u8num(lhs) && is_uchar_or_u8num(rhs))
+  ||  (is_schar_or_s8num(lhs) && is_schar_or_s8num(rhs)) ){
     if (gen_jump_if_true_8bit(node, if_true)) {
       return true;
     }

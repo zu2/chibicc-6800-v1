@@ -472,8 +472,8 @@ Node *skip_integral_promotion(Node *node);
 bool is_u8num(Node *node);
 bool is_s8num(Node *node);
 bool is_8num(Node *node, Type *ty);
-bool is_uchar_or_unum(Node *node);
-bool is_schar_or_snum(Node *node);
+bool is_uchar_or_u8num(Node *node);
+bool is_schar_or_s8num(Node *node);
 
 Node *optimize_expr(Node *node);
 Node *optimize_condition(Node *node);
@@ -562,6 +562,8 @@ extern int IX_IMM_value;
 //
 // gen_jump.c
 //
+bool is_compare(Node *node);
+bool is_compare_or_not(Node *node);
 char *is_addr_constant(Node *node);
 bool gen_jump_if_false(Node *node,char *if_false);
 bool gen_jump_if_true(Node *node,char *if_true);
@@ -643,3 +645,5 @@ bool builtin_memcpy(Node *node);
 bool builtin_memset(Node *node);
 bool builtin_strcpy(Node *node);
 bool builtin_signbit(Node *node);
+
+extern bool opt_fwrapv;

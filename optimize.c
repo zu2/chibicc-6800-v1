@@ -54,6 +54,20 @@ Node *skip_uint_promotion(Node *node)
   return node;
 }
 
+bool is_int_promotion(Node *node)
+{
+  return is_integral_promotion(node) || is_uint_promotion(node);
+}
+
+Node *skip_int_promotion(Node *node)
+{
+  if (is_int_promotion(node)) {
+    return node->lhs;
+  }
+  return node;
+}
+
+
 bool is_u8num(Node *node)
 {
   int64_t val;
@@ -86,7 +100,7 @@ bool is_8num(Node *node, Type *ty)
   return ty->is_unsigned? is_u8num(node): is_s8num(node);
 }
 
-bool is_uchar_or_unum(Node *node)
+bool is_uchar_or_u8num(Node *node)
 {
   if (node->ty->kind == TY_CHAR && node->ty->is_unsigned)
     return true;
@@ -96,11 +110,11 @@ bool is_uchar_or_unum(Node *node)
   return false;
 }
 
-bool is_schar_or_snum(Node *node)
+bool is_schar_or_s8num(Node *node)
 {
   if (node->ty->kind == TY_CHAR && !node->ty->is_unsigned)
     return true;
-  if (is_u8num(node))
+  if (is_s8num(node))
     return true;
 
   return false;
@@ -391,6 +405,8 @@ Node *optimize_expr(Node *node)
   if (!node)
     return node;
 
+  node = optimize_const_expr(node);
+
   switch (node->kind) {
   case ND_NULL_EXPR:
   case ND_NUM:
@@ -557,6 +573,40 @@ Node *optimize_expr(Node *node)
       new->ty = node->ty;
       return optimize_const_expr(new);
     }
+    if (node->ty->kind == TY_CHAR) {
+      switch(node->lhs->kind) {
+      case ND_ADD:
+      case ND_SUB:
+//    case ND_MUL:  // need test.
+//    case ND_DIV:
+//    case ND_MOD:
+//    case ND_BITAND:
+//    case ND_BITOR:
+//    case ND_BITXOR:
+        if (is_int_promotion(node->lhs->lhs)
+        &&  is_compare_or_not(node->lhs->rhs)) {
+          node->lhs->lhs = skip_int_promotion(node->lhs->lhs);
+          node->lhs->rhs->ty = node->lhs->lhs->ty;
+          node->lhs->ty      = node->lhs->lhs->ty;
+          return optimize_const_expr(node->lhs);
+        }
+        if (is_int_promotion(node->lhs->rhs)
+        &&  is_compare_or_not(node->lhs->lhs)) {
+          node->lhs->rhs = skip_int_promotion(node->lhs->rhs);
+          node->lhs->lhs->ty = node->lhs->rhs->ty;
+          node->lhs->ty      = node->lhs->rhs->ty;
+          return optimize_const_expr(node->lhs);
+        }
+        if (is_compare_or_not(node->lhs->lhs)
+        &&  is_compare_or_not(node->lhs->rhs)) {
+          node->lhs->lhs->ty = ty_uchar;
+          node->lhs->rhs->ty = ty_uchar;
+          node->lhs->ty      = ty_uchar;
+          return optimize_const_expr(node->lhs);
+        }
+      }
+    }
+
     // (ND_CAST TY_CHAR(2) (- ty_int 8 (ND_CAST TY_INT(4) (ND_VAR ty_uchar _L_35 global)))
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
@@ -632,28 +682,6 @@ Node *optimize_expr(Node *node)
       node->lhs->els  = optimize_expr(new_cast(node->lhs->els ,node->ty));
       return node->lhs;
     }
-#if 0
-    if (is_integer(node->ty)
-    &&  node->lhs->kind==ND_NUM
-    &&  is_integer(node->lhs->ty)) {
-      Node *new = new_copy(node->lhs);
-      uint64_t val = node->lhs->val;
-      switch (node->ty->size) {
-      case 1:
-        val =  node->ty->is_unsigned ? (uint8_t)val : (int8_t)val;
-        break;
-      case 2:
-        val =  node->ty->is_unsigned ? (uint16_t)val : (int16_t)val;
-        break;
-      case 4:
-        val =  node->ty->is_unsigned ? (uint32_t)val : (int32_t)val;
-        break;
-      }
-      new->val = val;
-      new->ty  = node->ty;
-      return new;
-    }
-#endif
     if (is_flonum(node->ty)
     &&  node->lhs->kind==ND_NUM
     &&  is_integer(node->lhs->ty)) {
@@ -881,66 +909,42 @@ Node *optimize_expr(Node *node)
 
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
+
     if (node_cost(node->lhs) < node_cost(node->rhs)) {
       node = flip_condition(swap_lr(node));
-    }
-    if (is_integer_constant(node->lhs,&lval)
-    &&  is_integer_constant(node->rhs,&rval)) {
-      if ((node->lhs->ty == ty_int) && (node->rhs->ty == ty_int)) {
-        switch(node->kind) {
-        case ND_EQ:
-          node = new_num(lval==rval,node->tok);
-          node->ty = ty_int;
-          return node;
-        case ND_NE:
-          node = new_num(lval!=rval,node->tok);
-          node->ty = ty_int;
-          return node;
-        case ND_LT:
-          node = new_num(lval<rval,node->tok);
-          node->ty = ty_int;
-          return node;
-        case ND_LE:
-          node = new_num(lval<=rval,node->tok);
-          node->ty = ty_int;
-          return node;
-        case ND_GT:
-          node = new_num(lval>rval,node->tok);
-          node->ty = ty_int;
-          return node;
-        case ND_GE:
-          node = new_num(lval>=rval,node->tok);
-          node->ty = ty_int;
-          return node;
-        }
-      }
     }
     if (is_integral_promotion(node->lhs)
     &&  is_integral_promotion(node->rhs)
     &&  node->lhs->lhs->ty->is_unsigned == node->rhs->lhs->ty->is_unsigned) {
-      node->lhs = node->lhs->lhs;
-      node->rhs = node->rhs->lhs;
+      node->lhs = skip_integral_promotion(node->lhs);
+      node->rhs = skip_integral_promotion(node->rhs);
     }
     if (is_integral_promotion(node->lhs)
-    &&  is_8num(node->rhs,node->lhs->lhs->ty)) {
-      node->rhs->ty = node->lhs->lhs->ty;
-      node->lhs = node->lhs->lhs;
+    &&  node->rhs->kind==ND_NUM) {
+      if (is_uchar_or_u8num(node->lhs->lhs)
+       && is_uchar_or_u8num(node->rhs)) {
+        node->lhs = skip_integral_promotion(node->lhs);
+        node->rhs = skip_integral_promotion(node->rhs);
+        if (node->lhs->kind == ND_NUM) node->lhs->ty = ty_uchar;
+        if (node->rhs->kind == ND_NUM) node->rhs->ty = ty_uchar;
+      }else if (is_schar_or_s8num(node->lhs->lhs)
+             && is_schar_or_s8num(node->rhs)){
+        node->lhs = skip_integral_promotion(node->lhs);
+        node->rhs = skip_integral_promotion(node->rhs);
+        if (node->lhs->kind == ND_NUM) node->lhs->ty = ty_char;
+        if (node->rhs->kind == ND_NUM) node->rhs->ty = ty_char;
+      }
     }
-    if ( is_integer(node->ty)
+    if ( is_integer(node->lhs->ty)
     &&  node->kind==ND_LE
     && is_integer_constant(node->rhs,&val)) {
-      switch(node->ty->kind){
+      switch(node->lhs->ty->kind){
       case TY_CHAR:
-        if (( node->ty->is_unsigned && node->rhs->val < UINT8_MAX)
-        ||  (!node->ty->is_unsigned && node->rhs->val < INT8_MAX)) {
-          node->rhs->val++;
-          node->kind = ND_LT;
-        }
         break;
       case TY_SHORT:
       case TY_INT:
-        if (( node->ty->is_unsigned && node->rhs->val < UINT16_MAX)
-        ||  (!node->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
+        if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT16_MAX)
+        ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
           if (node->rhs->val!=0) {
             node->rhs->val++;
             node->kind = ND_LT;
@@ -948,29 +952,24 @@ Node *optimize_expr(Node *node)
         }
         break;
       case TY_LONG:
-        if (( node->ty->is_unsigned && node->rhs->val < UINT32_MAX)
-        ||  (!node->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
+        if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT32_MAX)
+        ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
           node->rhs->val++;
           node->kind = ND_LT;
         }
         break;
       }
     }
-    if ( is_integer(node->ty)
+    if ( is_integer(node->lhs->ty)
     &&  node->kind==ND_GT
     && is_integer_constant(node->rhs,&val)) {
-      switch(node->ty->kind){
+      switch(node->lhs->ty->kind){
       case TY_CHAR:
-        if (( node->ty->is_unsigned && node->rhs->val < UINT8_MAX)
-        ||  (!node->ty->is_unsigned && node->rhs->val < INT8_MAX)) {
-          node->rhs->val++;
-          node->kind = ND_GE;
-        }
         break;
       case TY_SHORT:
       case TY_INT:
-        if (( node->ty->is_unsigned && node->rhs->val < UINT16_MAX)
-        ||  (!node->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
+        if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT16_MAX)
+        ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
           if (node->rhs->val!=0) {
             node->rhs->val++;
             node->kind = ND_GE;
@@ -978,56 +977,65 @@ Node *optimize_expr(Node *node)
         }
         break;
       case TY_LONG:
-        if (( node->ty->is_unsigned && node->rhs->val < UINT32_MAX)
-        ||  (!node->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
+        if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT32_MAX)
+        ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
           node->rhs->val++;
           node->kind = ND_GE;
         }
         break;
       }
     }  
+//
+// For signed integer,
+//   x+1 invokes UB at INT_MAX,
+//   x-1 invokes UB at INT_MIN.
+// Assuming no UB, fold comparisons involving x +/- 1.
+//
+// Unsigned wraparound changes the semantics.
+//
 //  lhs -1 <  rhs → lhs<=rhs
 //  lhs +1 <= rhs → lhs< rhs
-//  signed integer: UB, unsigned integer: modulo
-    if ( is_integer(node->ty) && !node->lhs->ty->is_unsigned) {
-      if ((node->kind==ND_LT && node->lhs->kind==ND_SUB)
-      ||  (node->kind==ND_LE && node->lhs->kind==ND_ADD)) {
-        if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
-          node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
-          node->lhs = optimize_expr(node->lhs->lhs);
-        }
-//  lhs -1 >= rhs → lhs>  rhs
-//  lhs +1 >  rhs → lhs>= rhs
-      }else if ((node->kind==ND_GE && node->lhs->kind==ND_SUB)
-      ||  (node->kind==ND_GT && node->lhs->kind==ND_ADD)) {
-        if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
-          node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
-          node->lhs = optimize_expr(node->lhs->lhs);
+    if (!opt_fwrapv && !node->lhs->ty->is_unsigned) {
+      if ( is_integer(node->lhs->ty) && !node->lhs->ty->is_unsigned) {
+        if ((node->kind==ND_LT && node->lhs->kind==ND_SUB)
+        ||  (node->kind==ND_LE && node->lhs->kind==ND_ADD)) {
+          if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
+            node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
+            node->lhs = optimize_expr(node->lhs->lhs);
+          }
+  //  lhs -1 >= rhs → lhs>  rhs
+  //  lhs +1 >  rhs → lhs>= rhs
+        }else if ((node->kind==ND_GE && node->lhs->kind==ND_SUB)
+        ||  (node->kind==ND_GT && node->lhs->kind==ND_ADD)) {
+          if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
+            node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
+            node->lhs = optimize_expr(node->lhs->lhs);
+          }
         }
       }
-    }
 //  lhs <  rhs +1 → lhs<=rhs
 //  lhs <= rhs -1 → lhs< rhs
-    if ( is_integer(node->ty) && !node->rhs->ty->is_unsigned) {
-      if ((node->kind==ND_LT && node->rhs->kind==ND_ADD)
-      ||  (node->kind==ND_LE && node->rhs->kind==ND_SUB)) {
-        if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
-          node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
-          node->rhs = optimize_expr(node->rhs->lhs);
-        }
-//  lhs >= rhs +1 → lhs>  rhs
-//  lhs >  rhs -1 → lhs>= rhsA
-      }else if ((node->kind==ND_GE && node->rhs->kind==ND_ADD)
-      ||  (node->kind==ND_GT && node->rhs->kind==ND_SUB)) {
-        if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
-          node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
-          node->rhs = optimize_expr(node->rhs->lhs);
+      if ( is_integer(node->lhs->ty) && !node->rhs->ty->is_unsigned) {
+        if ((node->kind==ND_LT && node->rhs->kind==ND_ADD)
+        ||  (node->kind==ND_LE && node->rhs->kind==ND_SUB)) {
+          if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
+            node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
+            node->rhs = optimize_expr(node->rhs->lhs);
+          }
+  //  lhs >= rhs +1 → lhs>  rhs
+  //  lhs >  rhs -1 → lhs>= rhs
+        }else if ((node->kind==ND_GE && node->rhs->kind==ND_ADD)
+        ||  (node->kind==ND_GT && node->rhs->kind==ND_SUB)) {
+          if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
+            node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
+            node->rhs = optimize_expr(node->rhs->lhs);
+          }
         }
       }
     }
 
 //  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
-    if (node->ty->kind != TY_CHAR) {
+    if (node->lhs->ty->kind != TY_CHAR) {
       if ( node_cost(node->lhs) == node_cost(node->rhs)
       ||   test_addr_x(node->lhs)
       || (is_addr_constant(node->lhs)!=NULL)) {

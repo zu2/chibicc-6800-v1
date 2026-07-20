@@ -29,13 +29,18 @@ void printout(char *fmt, ...) {
   va_end(ap);
 }
 
-char *new_label(char *fmt)
+char *new_label_count(char *fmt,int c)
 {
   char *buf = calloc(1,strlen(fmt)+20); // 20?
 
-  sprintf(buf, fmt, count());
+  sprintf(buf, fmt, c);
 
   return buf;
+}
+
+char *new_label(char *fmt)
+{
+  return new_label_count(fmt,count());
 }
 
 char *new_jump_label(void)
@@ -2201,7 +2206,10 @@ static int is_empty_cast(Type *from, Type *to) {
 }
 
 static void push_struct(Type *ty) {
-  println("; stack depth = %d",depth);
+  if (opt('g','3')) {
+    println("; %s %s %d",__func__,__FILE__,__LINE__);
+    println("; stack depth = %d",depth);
+  }
   int sz = ty->size;
   assert(sz != 0);
 
@@ -2216,7 +2224,9 @@ static void push_struct(Type *ty) {
     println("\tjsr __push_struct_x");
   }
   depth += sz;
-  println("; stack depth = %d",depth);
+  if (opt('g','3')) {
+    println("; stack depth = %d",depth);
+  }
 }
 
 
@@ -5497,11 +5507,26 @@ void gen_expr(Node *node)
   }
   case ND_NOT: {
     int c = count();
-    char L_not[30];
-    char L_end[30];
-    sprintf(L_not, "L_not_%d",c);
-    sprintf(L_end, "L_end_%d",c);
+    char *L_not = new_label_count("L_not_%d",c);
+    char *L_end = new_label_count("L_end_%d",c);
 
+    if (is_int8(node->lhs->ty)) {
+      gen_expr(node->lhs);
+      println("\tnegb");
+      println("\tldab #1");
+      println("\tsbcb #0");
+      return;
+    }
+    if (is_int16_or_ptr(node->lhs->ty)) {
+      gen_expr(node->lhs);
+      println("\taba");
+      println("\tadca #0");
+      println("\tnega");
+      println("\tldaa #0");
+      println("\tldab #1");
+      println("\tsbcb #0");
+      return;
+    }
     if (!gen_jump_if_false(node->lhs,L_not)){
       assert(0);
     }
