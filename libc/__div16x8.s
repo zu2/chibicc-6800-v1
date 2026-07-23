@@ -1,34 +1,50 @@
 ;
-;	AccB = IX / AccB
+;	AccAB = IX / AccB
 ;
 	.export __div16x8
+	.export __mod16x8
 	.code
+;
+__mod16x8:
+	tsx
+	ldx 2,x
+	bsr divide
+	rts
+;
 __div16x8:
 	tsx
 	ldx 2,x
+	bsr divide
+	ldab @tmp2+1
+	ldaa @tmp2
+	comb
+	coma
+	rts
+;
+;	@tmp2 = IX / AccB
+;	AccAB: Remainder
+;
+divide:
 	stx @tmp2	; dividend
 	stab @tmp1+1	; divisor
-	staa @tmp1
 	ldx #16		; loop counter
 	clra
-	clrb		; carry is also cleared
-__div16x16_1:
+	clrb		; carry also cleared
+loop:
 	rol @tmp2+1	; shift dividend
 	rol @tmp2
 	rolb
 	rola
 	subb @tmp1+1	; divisor
-	sbca @tmp1
-	bcc __div16x16_2
+	sbca #0
+	bcc skip
 	addb @tmp1+1
-	adca @tmp1	; C must 1
-__div16x16_2:
-	dex		; quotient bit will be added to @tmp at next loop.
-	bne __div16x16_1
+	adca #0		; C must 1
+skip:
+	dex		; quotient bit will be added to @tmp2+1 at next loop.
+	bne loop
 	rol @tmp2+1	; Shift to get the remaining quotient 1 bit
 	rol @tmp2
-	com @tmp2+1
-	com @tmp2
 	rts
 ;
 ; Note:
@@ -42,6 +58,6 @@ __div16x16_2:
 ;
 ; Also, the quotient bit was inverted, COM operation is required when the loop is exited.
 ; 
-; Delete one INC/DEC from the loop saves 6*16 = 96 cycles.
+; one INC/DEC in the loop needs 0..96cycles. (6*16 = 96).
 ; The final rol/com takes 24 cycles, but it is still faster.
 ;
