@@ -96,7 +96,8 @@ static StringArray input_paths;
 static StringArray tmpfiles;
 
 static void usage(int status) {
-  fprintf(stderr, "chibicc [-v][-g][-O[123]][-Os][-D name][-o <path>][-I dir][-tarch][-Zaddr][-Caddr][-nostartfiles][-nostatic-locals]  <file> [-lxx]\n");
+  fprintf(stderr, "chibicc [-v[vv]][-g[0123]][-O[123s]][-S][-c][-D name][-U name][-o <path>][-I dir][-Zaddr][-Caddr][-nostartfiles][-nostartfiles][-[no]static-locals][-t<machine>]  <file> [-lxx]\n");
+  fprintf(stderr,"machine: emu6800(default),mikbug,bm,jr100,jr200\n");
   exit(status);
 }
 
