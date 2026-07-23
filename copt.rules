@@ -6,6 +6,20 @@
 #	jmp & bra
 #
 
+	jsr %1
+	rts
+=
+	jmp %1
+
+	jsr %1
+%2:
+	rts
+=
+	jmp %1
+%2:
+	rts
+
+
 	rts
 	rts
 =
