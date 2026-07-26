@@ -102,7 +102,7 @@ gen_mul8u(Node *node)
       popa();
     }
     println("\tjsr __mul8x8u");
-    IX_Dest = IX_None;
+    IX_invalidate();
     return true;
   }
   return false;
@@ -192,7 +192,7 @@ gen_mul8s(Node *node)
       popa();
     }
     println("\tjsr __mul8x8s");
-    IX_Dest = IX_None;
+    IX_invalidate();
     return true;
   }
   return false;
@@ -427,14 +427,14 @@ gen_mul16(Node *node)
     if (rhs->val>0 && rhs->val<256) {
       println("\tldx #%ld",rhs->val);
       println("\tjsr __mul16x8x");
-      IX_Dest = IX_None;
+      IX_invalidate();
       return true;
     }
   }
   push();
   gen_expr(rhs);
   println("\tjsr __mul16x16");
-  IX_Dest = IX_None;
+  IX_invalidate();
   ins(2);
   return true;
 }

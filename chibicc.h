@@ -558,6 +558,13 @@ typedef	enum {
 extern IX_Type	IX_Dest;
 extern int IX_PTR_off;
 extern int IX_IMM_value;
+extern char *IX_IMM_str;
+extern char *IX_EXT_var;
+
+//
+// ix_tracking.c
+//
+void IX_invalidate(void);
 
 //
 // gen_jump.c

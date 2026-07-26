@@ -286,7 +286,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     gen_jump_if_true(lhs, if_thru);
     gen_jump_if_false(rhs, if_false);
     println("%s:", if_thru);
-    IX_Dest = IX_None;
+    IX_invalidate();
     return true;
   }
   if (node->kind == ND_LOGAND) {
@@ -527,7 +527,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
     push();
     gen_expr(lhs);
     println("\ttsx");
-    IX_Dest = IX_None;
+    IX_invalidate();
     println("\tsubb 1,x");
     println("\tsbca 0,x");
     println("\tins");
@@ -760,7 +760,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     gen_jump_if_false(lhs, if_thru);
     gen_jump_if_true(rhs, if_true);
     println("%s:", if_thru);
-    IX_Dest = IX_None;
+    IX_invalidate();
     return true;
   }
 
@@ -1000,7 +1000,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     push();
     gen_expr(lhs);
     println("\ttsx");
-    IX_Dest = IX_None;
+    IX_invalidate();
     println("\tsubb 1,x");
     println("\tsbca 0,x");
     println("\tins");

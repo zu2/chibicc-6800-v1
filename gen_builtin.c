@@ -32,7 +32,7 @@ bool builtin_memset(Node *node)
       }
       println("\tcpx #%d",(uint16_t)(dst+num+odd));
       println("\tbne %s",loop);
-      IX_Dest = IX_None;
+      IX_invalidate();
       if (!node->retval_unused) {
         ldd_i(dst);
       }
@@ -86,7 +86,7 @@ bool builtin_memcpy(Node *node)
         println("\tcpx #%d",(uint16_t)(dst+num));
         println("\tbne %s",loop);
       }
-      IX_Dest = IX_None;
+      IX_invalidate();
       if (!node->retval_unused) {
         ldd_i(dst);
       }
@@ -134,7 +134,7 @@ bool builtin_strcpy(Node *node)
     size_t size = var->ty->size;  // Size includes the trailing \0
 
 //  ast_node_dump(arg1);
-    IX_Dest = IX_None;
+    IX_invalidate();
     int off = 0;
     if (test_expr_x(arg1)) {
       off = gen_expr_x(arg1,false);
@@ -142,7 +142,7 @@ bool builtin_strcpy(Node *node)
       gen_expr(arg1);
       tfr_dx();
     }
-    IX_Dest = IX_None;
+    IX_invalidate();
     if (size==0) {  // XXX ?
       error("strcpy literal size==0");
     }else if (!opt('O','0')
