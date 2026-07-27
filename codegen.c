@@ -5222,7 +5222,9 @@ void gen_expr(Node *node)
       return;
     }
 
-    if (node->retval_unused && lhs->ty->size==2 && rhs->ty->size==2) {
+    if (node->retval_unused
+    && is_int16_or_ptr(lhs)
+    && is_int16_or_ptr(rhs)) {
       if (is_global_var(node->lhs)
       &&  test_expr_x(node->rhs)) {
         gen_expr_x(node->rhs,false);
