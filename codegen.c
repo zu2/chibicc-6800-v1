@@ -2704,7 +2704,9 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         println("\t%s _%s+1",opb,node->var->name);
         if (opa)
           println("\t%s _%s",opa,node->var->name);
-        invalidate_EXT(node);
+        if (is_store) {
+          invalidate_EXT(node);
+        }
         return 1;
       }
     }
