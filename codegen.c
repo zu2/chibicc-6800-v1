@@ -5494,15 +5494,10 @@ void gen_expr(Node *node)
     if (!gen_jump_if_false(cond,L_else)){
       assert(0);
     }
-    IX_Type  IX_Save = IX_Dest;
-    int IX_Save_PTR_off = IX_PTR_off;
-    char *IX_Save_EXT_var = IX_EXT_var;
     gen_expr(node->then);
     println("\tjmp %s",L_end);
     println("%s:", L_else);
-    IX_Dest = IX_Save;
-    IX_PTR_off = IX_Save_PTR_off;
-    IX_EXT_var = IX_Save_EXT_var;
+    IX_invalidate();
     gen_expr(node->els);
     println("%s:", L_end);
     IX_invalidate();
