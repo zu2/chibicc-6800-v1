@@ -382,7 +382,8 @@ void invalidate_EXT(Node *node)
   Obj *var = node->var;
   assert(!var->is_local);
 
-  if (strcmp(var->name,IX_EXT_var)==0) {
+  if (IX_Dest == IX_EXT
+  &&  strcmp(var->name,IX_EXT_var)==0) {
     IX_invalidate();
   }
 }
@@ -1286,7 +1287,6 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     &&  node->lhs->var->offset<=6) {
       if (test) return true;
       ldx_bp();
-      IX_Dest = IX_BP;
       for (int i=0; i<node->lhs->var->offset; i++) {
         println("\tinx");
         IX_invalidate();
@@ -3752,8 +3752,8 @@ static void opeq(Node *node)
       push();
       println("\ttsx");
       println("\tldx 0,x");
-      IX_invalidate();
       println("\tjsr __push32x");
+      IX_invalidate();
       depth+=4;
       gen_expr(rhs);
       println("\tjsr __sub32tos");
@@ -4577,7 +4577,6 @@ void gen_expr(Node *node)
 
     if (is_global_var(node->lhs)) {
       char *var = node->lhs->var->name;
-      invalidate_EXT(node->lhs);
       switch (node->lhs->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
@@ -4600,6 +4599,7 @@ void gen_expr(Node *node)
             println("\tsubb #%d",val);
           break;
         }
+        invalidate_EXT(node->lhs);
         break;
         // TY_BOOL, TY_CHAR
       case TY_SHORT:
@@ -4617,6 +4617,7 @@ void gen_expr(Node *node)
             println("\tbne %s",label);
             println("\tinc _%s",var);
             println("%s:",label);
+            invalidate_EXT(node->lhs);
           }
         }else if (node->retval_unused && val==2) {
           ldx_EXT(node->lhs);
@@ -4634,6 +4635,7 @@ void gen_expr(Node *node)
             println("\tsubb #<%d",val);
             println("\tsbca #>%d",val);
           }
+          invalidate_EXT(node->lhs);
         } else if (node->retval_unused && val==-1) {
           ldx_EXT(node->lhs);
           println("\tdex");
@@ -4655,11 +4657,13 @@ void gen_expr(Node *node)
             println("\taddb #<%d",val);
             println("\tadca #>%d",val);
           }
+          invalidate_EXT(node->lhs);
         }
         break;
       case TY_LONG:
         ldx_IMM_VAR(var);
         if (node->retval_unused) {
+          invalidate_EXT(node->lhs);
           if (val==1) {
             println("\tjsr __inc32x");
             return;
@@ -4792,7 +4796,6 @@ void gen_expr(Node *node)
     int off;
 
     if (is_global_var(node->lhs)) {
-      invalidate_EXT(node->lhs);
       char *var = node->lhs->var->name;
       switch (node->lhs->ty->kind) {
       case TY_BOOL:
@@ -4814,6 +4817,7 @@ void gen_expr(Node *node)
           println("\tstab _%s",var);
           break;
         }
+        invalidate_EXT(node->lhs);
         break;
         // TY_BOOL, TY_CHAR
       case TY_SHORT:
@@ -4836,6 +4840,7 @@ void gen_expr(Node *node)
           println("\tadca #>%d",val);
           println("\tstab _%s+1",var);
           println("\tstaa _%s",var);
+          invalidate_EXT(node->lhs);
         } else if (node->retval_unused && val==-1) {
           ldx_EXT(node->lhs);
           println("\tdex");
@@ -4853,6 +4858,7 @@ void gen_expr(Node *node)
           println("\tsbca #>%d",val);
           println("\tstab _%s+1",var);
           println("\tstaa _%s",var);
+          invalidate_EXT(node->lhs);
         }
         break;
        case TY_LONG:
@@ -7286,7 +7292,6 @@ static void emit_text(Obj *prog) {
       des(fn->stack_size);
       println("\ttsx");	 	      // 4 1
       println("\tstx @bp");			// 5 2
-      IX_Dest = IX_BP;
     }else if (opt('O','s')) {
       println("\tsts @bp");
       if (fn->stack_size-1<=255) {
@@ -7297,7 +7302,6 @@ static void emit_text(Obj *prog) {
         println("\tjsr __sub_bp_d");
       } 
       println("\ttxs");
-      IX_Dest = IX_BP;
     }else{					// make new bp
       println("\tsts @bp");     // 5 2	total 31cyc,17bytes
       println("\tldab @bp+1");	// 3 2
@@ -7308,8 +7312,8 @@ static void emit_text(Obj *prog) {
       println("\tstaa @bp");		// 4 2
       println("\tldx @bp");			// 4 2
       println("\ttxs");         // 4 1
-      IX_Dest = IX_BP;
     }
+    IX_Dest = IX_BP;
     depth = 0;
     if (fn->alloca_bottom) {
       if (fn->alloca_bottom->offset<256){
