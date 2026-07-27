@@ -303,7 +303,11 @@ void adx()
 
 void ldx_bp()
 {
-  if (IX_Dest != IX_BP){
+  if (IX_Dest == IX_BP){
+    if (opt('g','3')) {
+      println("; optimize ldx @bp");
+    }
+  } else {
     if (opt('g','3')) {
       println("; stack depth = %d",depth);
     }
@@ -336,6 +340,9 @@ void ldx_nX(int off)
 void ldx_bp_nX(int off)
 {
   if (IX_Dest == IX_PTR && IX_PTR_off == off){
+    if (opt('g','3')) {
+      println("; optimize ldx %d,x",off);
+    }
     return;
   }
   ldx_bp();
@@ -349,6 +356,9 @@ void ldx_EXT(Node *node)
   assert(!var->is_local);
 
   if (IX_Dest == IX_EXT && strcmp(var->name,IX_EXT_var)==0) {
+    if (opt('g','3')) {
+      println("; optimize ldx _%s",var->name);
+    }
     return;
   }
   println("\tldx _%s",var->name);
@@ -392,6 +402,9 @@ void ldx_IMM_STR(char *s)
 {
   if (IX_Dest == IX_IMM_STR
   &&  strcmp(IX_IMM_str,s)==0) {
+    if (opt('g','3')) {
+      println("; optimize ldx #%s",s);
+    }
     return;
   }
   println("\tldx #%s",s);
