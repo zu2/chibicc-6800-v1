@@ -337,7 +337,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         println("; ulong >= 0 is always true");
       }else{
         int off = gen_addr_x(lhs,false);
-        println("\ttst %d,x",off);
+        println("\tldab %d,x",off);
         println("\tjmi %s", if_false);
       }
       return true;
@@ -792,7 +792,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
     switch(node->kind) {
     case ND_GE:
       if (lhs->ty->is_unsigned) {
-        println("; ulong >= 0 is always false");
+        println("; ulong >= 0 is always true");
         println("\tjmp %s",if_true);
       }else{
         int off = gen_addr_x(lhs,false);
@@ -805,7 +805,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
         println("; ulong < 0 is always false");
       }else{
         int off = gen_addr_x(lhs,false);
-        println("\ttst %d,x",off);
+        println("\tldab %d,x",off);
         println("\tjmi %s", if_true);
       }
       return true;
