@@ -557,14 +557,24 @@ typedef	enum {
 
 extern IX_Type	IX_Dest;
 extern int IX_PTR_off;
-extern int IX_IMM_value;
+extern int IX_IMM_val;
 extern char *IX_IMM_str;
 extern char *IX_EXT_var;
+
+typedef struct {
+  IX_Type  dest;
+  int      ptr_off;
+  char    *ext_var;
+  char    *imm_str;
+  int      imm_val;
+} IX_State;
 
 //
 // ix_tracking.c
 //
 void IX_invalidate(void);
+IX_State IX_save(void);
+void     IX_restore(IX_State s);
 
 //
 // gen_jump.c
