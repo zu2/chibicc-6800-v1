@@ -1078,7 +1078,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       if (is_global_var(vp)
       &&  (0 <= val && val<256)) {
         if (test) return true;
-        println("\tldx _%s",vp->var->name);
+        ldx_EXT(vp);
         off = ldx_x(node->lhs->ty,val);
         return off;
       }
