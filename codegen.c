@@ -5223,8 +5223,8 @@ void gen_expr(Node *node)
     }
 
     if (node->retval_unused
-    && is_int16_or_ptr(lhs)
-    && is_int16_or_ptr(rhs)) {
+    && is_int16_or_ptr(lhs->ty)
+    && is_int16_or_ptr(rhs->ty)) {
       if (is_global_var(node->lhs)
       &&  test_expr_x(node->rhs)) {
         gen_expr_x(node->rhs,false);
