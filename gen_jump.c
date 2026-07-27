@@ -271,6 +271,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   if (is_int16_or_ptr(node->ty)) {
     if (test_expr_x(node)) {
       gen_expr_x(node,false);
+      println("\tcpx #0");
       println("\tjeq %s", if_false);
       return true;
     }
@@ -647,9 +648,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
       if (val == 0) {
-        if (node->kind != ND_EQ && node->kind != ND_NE) {
-          println("\ttstb");
-        }
+        println("\ttstb");
       }else{
         println("\tcmpb #%ld", val);
       }
@@ -740,6 +739,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   if (is_int16_or_ptr(node->ty)) {
     if (test_expr_x(node)) {
       gen_expr_x(node,false);
+      println("\tcpx #0");
       println("\tjne %s", if_true);
       return true;
     }
@@ -765,8 +765,9 @@ bool gen_jump_if_true(Node *node, char *if_true)
   }
 
   if (node->kind == ND_BITAND && is_int8(node->lhs->ty)) {
-    gen_jump_if_true_8bit(node,if_true);
-    return true;
+    if (gen_jump_if_true_8bit(node,if_true)) {
+      return true;
+    }
   }
 
   if (!is_compare(node)) {
@@ -845,7 +846,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
           return true;
         } else {
           println("; int>0 is !(int<0) && !(int==0)");
-          println("\tjeq %s", if_thru);
+          println("\tbeq %s", if_thru);
           println("\tjpl %s", if_true);
           println("%s:",if_thru);
           return true;
@@ -983,12 +984,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
         assert(0);    // It's strange to fail
       }
   } else if (can_direct(rhs)) {
-    gen_expr(lhs);  // Evaluate LHS anyway; no side-effect check yet.
-    if (rhs->kind == ND_NUM && rhs->val == 0) {
-      if (node->kind != ND_EQ && node->kind != ND_NE) {
-        println("\ttsta");
-      }
-    } else if (!gen_direct(rhs, "subb", "sbca")) {
+    gen_expr(lhs);
+    if (!gen_direct(rhs, "subb", "sbca")) {
       assert(0);
     }
   } else if (0 && opt('O','s') && is_compare(node)) {
@@ -1035,7 +1032,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   case ND_LE:
     if (lhs->ty->is_unsigned) {
       println("\tjcs %s", if_true);
-      println("\tjhi %s", if_thru);
+      println("\tbhi %s", if_thru);
       println("\ttstb");
       println("\tjeq %s", if_true);
       println("%s:", if_thru);
