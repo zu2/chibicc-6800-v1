@@ -132,9 +132,9 @@ static int isNUM(Node *node) { return node->kind == ND_NUM; }
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
 
 //
-// Compare two 8 signed/unsigned integers.
+// Compare two 8-bit signed/unsigned integers.
 //   Generate code that branches to if_false if the comparison result is false.
-//   Return 1 if code was generated.
+//   Return true if code was generated.
 // For other types, generate no code and return false.
 //
 static bool gen_jump_if_false_8bit(Node *node, char *if_false)
@@ -176,7 +176,56 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
       if (val == 0) {
-        println("\ttstb");
+        switch(node->kind) {
+        case ND_EQ:
+          println("\ttstb");
+          println("\tjne %s",if_false);
+          return true;
+        case ND_NE:
+          println("\ttstb");
+          println("\tjeq %s",if_false);
+          return true;
+        case ND_LT:
+          if (lhs->ty->is_unsigned) {
+            println("; uchar <0 is always false");
+            println("\tjmp %s",if_false);
+          }else{
+            println("\ttstb");
+            println("\tjpl %s",if_false);
+          }
+          return true;
+        case ND_GE:
+          if (lhs->ty->is_unsigned) {
+            println("; uchar >=0 is always true");
+          }else{
+            println("\ttstb");
+            println("\tjmi %s",if_false);
+          }
+          return true;
+        case ND_LE:
+          if (lhs->ty->is_unsigned) {
+            println("; uchar <= 0 is uchar == 0");
+            println("\ttstb");
+            println("\tjne %s", if_false);
+          } else {
+            println("; schar <= 0 is schar < 1");
+            println("\tcmpb #1");
+            println("\tjge %s", if_false);
+          }
+          return true;
+        case ND_GT:
+          if (lhs->ty->is_unsigned) {
+            println("; uchar > 0 is uchar != 0");
+            println("\ttstb");
+            println("\tjeq %s", if_false);
+          } else {
+            println("; schar > 0 is schar >= 1");
+            println("\tcmpb #1");
+            println("\tjlt %s", if_false);
+          }
+          return true;
+        }
+        assert(0);
       }else{
         println("\tcmpb #%ld", val);
       }
@@ -238,7 +287,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 //
 // Compare two 8- or 16-bit integers.
 //   Generate code that branches to if_false if the comparison result is false.
-//   Return 1 if code was generated.
+//   Return true if code was generated.
 // For other types, generate no code and return false.
 //
 bool gen_jump_if_false(Node *node, char *if_false)
@@ -604,9 +653,9 @@ fallback:
 }
 
 //
-// Compare two 8 signed/unsigned integers.
-//   Generate code that branches to if_false if the comparison result is false.
-//   Return 1 if code was generated.
+// Compare two 8-bit signed/unsigned integers.
+//   Generate code that branches to if_true if the comparison result is true.
+//   Return true if code was generated.
 // For other types, generate no code and return false.
 //
 static bool gen_jump_if_true_8bit(Node *node, char *if_true)
@@ -648,7 +697,56 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
       if (val == 0) {
-        println("\ttstb");
+       switch (node->kind) {
+        case ND_EQ:
+          println("\ttstb");
+          println("\tjeq %s", if_true);
+          return true;
+        case ND_NE:
+          println("\ttstb");
+          println("\tjne %s", if_true);
+          return true;
+        case ND_LT:
+          if (lhs->ty->is_unsigned) {
+            println("; uchar < 0 is always false");
+          } else {
+            println("\ttstb");
+            println("\tjmi %s", if_true);
+          }
+          return true;
+        case ND_GE:
+          if (lhs->ty->is_unsigned) {
+            println("; uchar >= 0 is always true");
+            println("\tjmp %s", if_true);
+          } else {
+            println("\ttstb");
+            println("\tjpl %s", if_true);
+          }
+          return true;
+        case ND_LE:
+          if (lhs->ty->is_unsigned) {
+            println("; uchar <= 0 is uchar == 0");
+            println("\ttstb");
+            println("\tjeq %s", if_true);
+          } else {
+            println("; schar <= 0 is schar < 1");
+            println("\tcmpb #1");
+            println("\tjlt %s", if_true);
+          }
+          return true;
+        case ND_GT:
+          if (lhs->ty->is_unsigned) {
+            println("; uchar > 0 is uchar != 0");
+            println("\ttstb");
+            println("\tjne %s", if_true);
+          } else {
+            println("; schar > 0 is schar >= 1");
+            println("\tcmpb #1");
+            println("\tjge %s", if_true);
+          }
+          return true;
+        }
+        assert(0);
       }else{
         println("\tcmpb #%ld", val);
       }
@@ -706,7 +804,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 //
 // Compare two 8- or 16-bit integers.
 //   Generate code that branches to if_true if the comparison result is true.
-//   Return 1 if code was generated.
+//   Return true if code was generated.
 // For other types, generate no code and return false.
 //
 bool gen_jump_if_true(Node *node, char *if_true)
