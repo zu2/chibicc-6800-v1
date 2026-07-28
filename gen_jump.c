@@ -67,10 +67,11 @@ Type *is_byte(Node *node)
   return NULL;
 }
 
+// Return a constant expression usable after '#', or NULL.
+// The value must be an address, not the contents of one.
 // (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 0)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
-// (ND_DEREF ty_uchar (ND_CAST TY_PTR(10) (ND_NUM ty_uint 61120)))
 char *is_addr_constant(Node *node)
 {
   int64_t val;
@@ -95,15 +96,6 @@ char *is_addr_constant(Node *node)
     char *p = calloc(1,strlen(node->lhs->lhs->var->name)+32);
     sprintf(p,"_%s+%ld",node->lhs->lhs->var->name,val);
     return p;
-  }
-  if (node->kind == ND_DEREF
-  &&  node->lhs->kind == ND_CAST
-  &&  node->lhs->ty->kind == TY_PTR) {
-    if (is_integer_constant(node->lhs->lhs,&val)) {
-      char *p = calloc(1,32);
-      sprintf(p,"%ld",val);
-      return p;
-    }
   }
   return NULL;
 }
@@ -156,14 +148,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 
   if (!is_compare(node)) {
     gen_expr(node);
-    switch(node->kind) {
-    case ND_BITAND:
-    case ND_BITOR:
-    case ND_BITXOR:
-      break;
-    default:
-      cmp_zero(node->ty);
-    }
+    cmp_zero(node->ty);
     println("\tjeq %s", if_false);
     return true;
   }
@@ -235,7 +220,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     }
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
-    int off = gen_addr_x(rhs,true);
+    int off = gen_addr_x(rhs,false);
     println("\tcmpb %d,x",off);
   }else{
     gen_expr(lhs);
@@ -327,21 +312,30 @@ bool gen_jump_if_false(Node *node, char *if_false)
     if (test_addr_x(node)) {
       int off = gen_addr_x(node,false);
       ldx_nX(off);
+      println("\tcpx #0");
       println("\tjeq %s", if_false);
       return true;
     }
   }
 
   if (node->kind == ND_LOGOR) {
-    gen_jump_if_true(lhs, if_thru);
-    gen_jump_if_false(rhs, if_false);
+    if (!gen_jump_if_true(lhs, if_thru)) {
+      return false;
+    }
+    if (!gen_jump_if_false(rhs, if_false)) {
+      assert(0);
+    }
     println("%s:", if_thru);
     IX_invalidate();
     return true;
   }
   if (node->kind == ND_LOGAND) {
-    gen_jump_if_false(lhs, if_false);
-    gen_jump_if_false(rhs, if_false);
+    if (!gen_jump_if_false(lhs, if_false)) {
+      return false;
+    }
+    if (!gen_jump_if_false(rhs, if_false)) {
+      assert(0);
+    }
     return true;
   }
 
@@ -677,14 +671,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 
   if (!is_compare(node)) {
     gen_expr(node);
-    switch(node->kind) {
-    case ND_BITAND:
-    case ND_BITOR:
-    case ND_BITXOR:
-      break;
-    default:
-      cmp_zero(node->ty);
-    }
+    cmp_zero(node->ty);
     println("\tjne %s", if_true);
     return true;
   }
@@ -754,6 +741,10 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
       gen_expr(lhs);
       gen_direct_char(rhs, "cmpb", NULL);
     }
+  }else if (test_addr_x(rhs)) {
+    gen_expr(lhs);
+    int off = gen_addr_x(rhs,false);
+    println("\tcmpb %d,x",off);
   }else{
     gen_expr(lhs);
     push1();
@@ -844,19 +835,28 @@ bool gen_jump_if_true(Node *node, char *if_true)
     if (test_addr_x(node)) {
       int off = gen_addr_x(node,false);
       ldx_nX(off);
+      println("\tcpx #0");
       println("\tjne %s", if_true);
       return true;
     }
   }
 
   if (node->kind == ND_LOGOR) {
-    gen_jump_if_true(lhs, if_true);
-    gen_jump_if_true(rhs, if_true);
+    if (!gen_jump_if_true(lhs, if_true)) {
+      return false;
+    }
+    if (!gen_jump_if_true(rhs, if_true)) {
+      assert(0);
+    }
     return true;
   }
   if (node->kind == ND_LOGAND) {
-    gen_jump_if_false(lhs, if_thru);
-    gen_jump_if_true(rhs, if_true);
+    if (!gen_jump_if_false(lhs, if_thru)) {
+      return false;
+    }
+    if (!gen_jump_if_true(rhs, if_true)) {
+      assert(0);
+    }
     println("%s:", if_thru);
     IX_invalidate();
     return true;

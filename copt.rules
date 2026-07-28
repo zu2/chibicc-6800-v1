@@ -210,14 +210,8 @@
 =
 	clra
 	incb
+;	tstb	; need check
 
-
-	XXX
-	clra
-	aba
-	adca #0
-=
-	tstb
 
 	clra
 	clrb
@@ -860,6 +854,7 @@
 	tstb
 =
 	incb
+;	tstb	; need check
 
 
 	ldab %2
@@ -1022,16 +1017,44 @@
 	clra
 	ldab %1
 
+#
+# inx and dex set Z but not N or V
+#
+
+# peepcheck: clobbers N V
 	inx
 	cpx #0
+	jeq %1
 =
 	inx
+	jeq %1
 
+# peepcheck: clobbers N V
+	inx
+	cpx #0
+	jne %1
+=
+	inx
+	jne %1
+
+# peepcheck: clobbers N V
 	dex
 	cpx #0
+	jeq %1
 =
 	dex
+	jeq %1
 
+# peepcheck: clobbers N V
+	dex
+	cpx #0
+	jne %1
+=
+	dex
+	jne %1
+
+
+# ldx and stx set N and Z from the 16-bit value and clear V
 	ldx %1
 	cpx #0
 =
