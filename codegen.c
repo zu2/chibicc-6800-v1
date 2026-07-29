@@ -2971,9 +2971,6 @@ bool gen_direct_char(Node *rhs,char *opb, char *opa)
 //
 int gen_direct_lr(Node *node, char *opb, char *opa)
 {
-    node->lhs = optimize_expr(node->lhs);
-    node->rhs = optimize_expr(node->rhs);
-
     int can_direct_lhs = can_direct(node->lhs);
     int can_direct_rhs = can_direct(node->rhs);
 
@@ -4540,7 +4537,6 @@ static void opeq(Node *node)
 // Generate code for a given node.
 void gen_expr(Node *node)
 {
-  node = optimize_expr(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   int off;
@@ -5154,7 +5150,6 @@ void gen_expr(Node *node)
     Type    *ty;
     int64_t val;
 
-    node = optimize_expr(node);
     Node *lhs = node->lhs;
     Node *rhs = node->rhs;
 
@@ -6273,7 +6268,6 @@ void gen_expr(Node *node)
     ins(2);
     return;
   case ND_MUL:
-    node = optimize_expr(node);
     if (gen_mul8u(node)) {
       return;
     }
@@ -6769,7 +6763,6 @@ static void gen_stmt(Node *node)
   // With -g2 or higher, AST node details are also embedded;
   // Assembly may sometimes fail in such cases.
   if (opt('g','3')) {
-    node = optimize_expr(node);
     ast_node_dump(node);
   }
 
@@ -6847,6 +6840,7 @@ static void gen_stmt(Node *node)
       IX_invalidate();
     }
     if (node->inc) {
+      node->inc = optimize_expr(node->inc);
       if (opt('g','3')) {
         stmt_dump(node->inc->loc);
         ast_node_dump(node->inc);
@@ -6872,7 +6866,7 @@ static void gen_stmt(Node *node)
       IX_invalidate();
     }
     stmt_dump(node->cond->loc);
-    node->cond = optimize_expr(node->cond);
+    node->cond = optimize_condition(node->cond);
     if (is_integer_constant(node->cond,&val)) {
       if (val!=0) {
         println("\tjmp %s", L_begin);
@@ -6896,6 +6890,7 @@ static void gen_stmt(Node *node)
     bool has_case_ranges = false;
     bool need_integral_promotion = false;
 
+    node->cond = optimize_expr(node->cond);
     if (node->cond->ty->size == 1) {
       for (Node *n = node->case_next; n; n = n->case_next) {
         if (node->cond->ty->is_unsigned) {
@@ -7013,6 +7008,7 @@ static void gen_stmt(Node *node)
     mark_used_label(node->unique_label);
     return;
   case ND_GOTO_EXPR:
+    node->lhs = optimize_expr(node->lhs);
     gen_expr(node->lhs);
     println("\tpshb	; jmp [AccD]");
     println("\tpsha");
