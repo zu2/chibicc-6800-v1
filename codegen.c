@@ -6440,6 +6440,31 @@ void gen_expr(Node *node)
     }
     if ((lhs->ty->kind==TY_CHAR || lhs->ty->kind==TY_BOOL)
     &&  (rhs->ty->kind==TY_CHAR || rhs->ty->kind==TY_BOOL)) { // char relop char
+      if (node->lhs->ty->is_unsigned
+      &&  is_integer_constant(node->rhs, &val)
+      &&  val==0){
+        int64_t val;
+        gen_expr(node->lhs);
+        if (node->lhs->ty->is_unsigned) {
+          switch(node->kind) {
+          case ND_EQ: println("\tjsr __eq8");
+                      return;
+          case ND_NE: println("\tjsr __ne8");
+                      return;
+          case ND_LT: println("\tclrb");
+                      println("\tclra");
+                      return;
+          case ND_LE: println("\tjsr __eq8");
+                      return;
+          case ND_GT: println("\tjsr __ne8");
+                      return;
+          case ND_GE: println("\tclra");
+                      println("\tldab #1");
+                      return;
+          default:    assert(0);
+          }
+        }
+      }
       if (can_direct_char(node->rhs)){
         gen_expr(node->lhs);
         if(!gen_direct_char(node->rhs,"subb",NULL)) {
@@ -6489,13 +6514,34 @@ void gen_expr(Node *node)
       return;
     }
     // may be TY_INT
+    if (node->lhs->ty->is_unsigned
+    &&  is_integer_constant(node->rhs, &val)
+    &&  val==0){
+      int64_t val;
+      gen_expr(node->lhs);
+      if (node->lhs->ty->is_unsigned) {
+        switch(node->kind) {
+        case ND_EQ: println("\tjsr __eq16");
+                    return;
+        case ND_NE: println("\tjsr __ne16");
+                    return;
+        case ND_LT: println("\tclrb");
+                    println("\tclra");
+                    return;
+        case ND_LE: println("\tjsr __eq16");
+                    return;
+        case ND_GT: println("\tjsr __ne16");
+                    return;
+        case ND_GE: println("\tclra");
+                    println("\tldab #1");
+                    return;
+        default:    assert(0);
+        }
+      }
+    }
     if (can_direct(node->rhs)){
       gen_expr(node->lhs);
-      int64_t val;
-
-      if (is_integer_constant(node->rhs, &val) && val==0){
-        println("\ttsta");
-      }else if(!gen_direct(node->rhs,"subb","sbca")) {
+      if(!gen_direct(node->rhs,"subb","sbca")) {
         assert(0);
       }
     }else{
