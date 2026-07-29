@@ -6775,8 +6775,6 @@ static void gen_stmt(Node *node)
 
   switch (node->kind) {
   case ND_IF: {
-    Node *cond = node->cond;
-
     int c = count();
     char L_else[32];
     char L_end[32];
@@ -6788,8 +6786,13 @@ static void gen_stmt(Node *node)
       sprintf(L_end, "L_end_%d"  ,c);
       strcpy(L_else,L_end);
     }
-    cond = optimize_condition(cond);
-    if (!gen_jump_if_false(cond,L_else)){
+#if 0
+    fprintf(stderr, "IF %p cond=%p kind=%d lhs=%p line=%d\n",
+        (void*)node, (void*)node->cond, node->cond->kind,
+        (void*)node->cond->lhs, node->cond->tok->line_no);
+#endif
+    node->cond = optimize_condition(node->cond);
+    if (!gen_jump_if_false(node->cond,L_else)){
       assert(0);
     }
     gen_stmt(node->then);
@@ -6804,7 +6807,6 @@ static void gen_stmt(Node *node)
     return;
   }
   case ND_FOR: {
-    Node *cond = node->cond;
     int64_t val;
     char if_false[30];
     int c = count();
@@ -6818,23 +6820,23 @@ static void gen_stmt(Node *node)
     }
     println("L_begin_%d:", c);
     IX_invalidate();
-    if (cond) {
-      cond = optimize_condition(cond);
+    if (node->cond) {
+      node->cond = optimize_condition(node->cond);
       if (opt('g','3')) {
         stmt_dump(node->cond->loc);
-        ast_node_dump(cond);
+        ast_node_dump(node->cond);
       }
-      if (is_integer_constant(cond,&val)) {
+      if (is_integer_constant(node->cond,&val)) {
         if (val==0) {
 //        println("\tjmp %s", if_false);
           return; // conditon always false, no code generated
         }
       }else{
-        if (!gen_jump_if_false(cond,if_false)){
+        if (!gen_jump_if_false(node->cond,if_false)){
           assert(0);
-//        gen_expr(cond);
-//        if (!is_compare_or_not(cond))
-//          cmp_zero(cond->ty);
+//        gen_expr(node->cond);
+//        if (!is_compare_or_not(node->cond))
+//          cmp_zero(node->cond->ty);
 //        println("\tjeq %s", if_false);
         }
       }
@@ -6858,7 +6860,6 @@ static void gen_stmt(Node *node)
     return;
   }
   case ND_DO: {
-    Node *cond = node->cond;
     int c = count();
     int64_t val;
     char L_begin[30];
@@ -6870,19 +6871,19 @@ static void gen_stmt(Node *node)
       println("%s:", node->cont_label);
       IX_invalidate();
     }
-    stmt_dump(cond->loc);
-    cond = optimize_expr(cond);
-    if (is_integer_constant(cond,&val)) {
+    stmt_dump(node->cond->loc);
+    node->cond = optimize_expr(node->cond);
+    if (is_integer_constant(node->cond,&val)) {
       if (val!=0) {
         println("\tjmp %s", L_begin);
         IX_invalidate();
       }
     }else{
-      if (!gen_jump_if_true(cond,L_begin)){
+      if (!gen_jump_if_true(node->cond,L_begin)){
         assert(0);
-//      gen_expr(cond);
-//      if (!is_compare_or_not(cond))
-//        cmp_zero(cond->ty);
+//      gen_expr(node->cond);
+//      if (!is_compare_or_not(node->cond))
+//        cmp_zero(node->cond->ty);
 //      println("\tjne %s", L_begin);
       }
       IX_invalidate();
@@ -7025,7 +7026,8 @@ static void gen_stmt(Node *node)
     return;
   case ND_RETURN:
     if (node->lhs) {
-      gen_expr(optimize_expr(node->lhs));
+      node->lhs = optimize_expr(node->lhs);
+      gen_expr(node->lhs);
       Type *ty = node->lhs->ty;
       switch (ty->kind) {
       case TY_STRUCT:
@@ -7045,8 +7047,9 @@ static void gen_stmt(Node *node)
 //    println("\tjmp L_return_%s", current_fn->name);
     return;
   case ND_EXPR_STMT:
+    node->lhs = optimize_expr(node->lhs);
     node->lhs->retval_unused = true;
-    gen_expr(optimize_expr(node->lhs));
+    gen_expr(node->lhs);
     return;
   case ND_ASM:
     if (strchr(node->asm_str,':')==NULL) {

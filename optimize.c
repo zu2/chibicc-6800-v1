@@ -398,7 +398,6 @@ Node *optimize_bitop_integral_promotion(Node *node)
 
 Node *optimize_expr(Node *node)
 {
-  Node *new;
   int64_t val;
   double fval;
 
@@ -437,7 +436,7 @@ Node *optimize_expr(Node *node)
     }
     return node;
   case ND_MEMBER:
-    return node;
+    return optimize_l(node);
   case ND_DEREF:
     node->lhs = optimize_expr(node->lhs);
     return node;
@@ -472,10 +471,11 @@ Node *optimize_expr(Node *node)
     //for (Node *n = node->body; n; n = n->next)
     //  optimize_stmt(n);
     return node;
-  case ND_COMMA:
-    new =  optimize_lr(node);
+  case ND_COMMA: {
+    Node *new =  optimize_lr(node);
     new->lhs->retval_unused = true;
     return new;
+  }
   case ND_CAST: {
     if (node->ty->kind == TY_VOID) {
       node->lhs = optimize_expr(node->lhs);
@@ -726,11 +726,11 @@ Node *optimize_expr(Node *node)
     node->lhs = optimize_expr(node->lhs);
     node->lhs = skip_integral_promotion(node->lhs);
     if (is_compare(node->lhs)) {
-      if (is_compare(new) && can_negate(new)) {
-        node->kind = negate_kind(new->kind);
-        node->rhs  = new->lhs->rhs;
-        node->ty   = new->lhs->ty;
-        node->lhs  = new->lhs->lhs; // must be last
+      if (is_compare(node->lhs) && can_negate(node->lhs)) {
+        node->kind = negate_kind(node->lhs->kind);
+        node->rhs  = node->lhs->rhs;
+        node->ty   = node->lhs->ty;
+        node->lhs  = node->lhs->lhs; // must be last
         return optimize_expr(node);
       }
     }
@@ -912,7 +912,6 @@ Node *optimize_expr(Node *node)
   case ND_GT:
   case ND_GE: {
     int64_t val;
-    int64_t lval, rval;
 
     node->lhs = optimize_expr(node->lhs);
     node->rhs = optimize_expr(node->rhs);
