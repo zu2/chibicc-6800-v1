@@ -723,19 +723,16 @@ Node *optimize_expr(Node *node)
   // Rewrite !(node) into the negated related op.
   // when float compare, only == and != rewrited.
   case ND_NOT:
+    node->lhs = optimize_expr(node->lhs);
     node->lhs = skip_integral_promotion(node->lhs);
     if (is_compare(node->lhs)) {
-      Node *new = optimize_lr(new_copy(node->lhs));
       if (is_compare(new) && can_negate(new)) {
         node->kind = negate_kind(new->kind);
-        node->lhs  = new->lhs;
-        node->rhs  = new->rhs;
-        node->ty   = new->ty;
+        node->rhs  = new->lhs->rhs;
+        node->ty   = new->lhs->ty;
+        node->lhs  = new->lhs->lhs; // must be last
         return optimize_expr(node);
-      }else{
-        node->lhs = new;
       }
-      return optimize_const_expr(node);
     }
     if (is_integer_constant(node->lhs,&val)) {
       Node *new = new_num((val==0),node->tok);
