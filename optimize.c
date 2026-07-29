@@ -919,6 +919,54 @@ Node *optimize_expr(Node *node)
     if (node_cost(node->lhs) < node_cost(node->rhs)) {
       node = flip_condition(swap_lr(node));
     }
+//
+// For signed integer,
+//   x+1 invokes UB at INT_MAX,
+//   x-1 invokes UB at INT_MIN.
+// Assuming no UB, fold comparisons involving x +/- 1.
+//
+// Unsigned wraparound changes the semantics.
+//
+//  lhs -1 <  rhs → lhs<=rhs
+//  lhs +1 <= rhs → lhs< rhs
+    if (!opt_fwrapv && !node->lhs->ty->is_unsigned) {
+      if ( is_integer(node->lhs->ty) && !node->lhs->ty->is_unsigned) {
+        if ((node->kind==ND_LT && node->lhs->kind==ND_SUB)
+        ||  (node->kind==ND_LE && node->lhs->kind==ND_ADD)) {
+          if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
+            node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
+            node->lhs = optimize_expr(node->lhs->lhs);
+          }
+  //  lhs -1 >= rhs → lhs>  rhs
+  //  lhs +1 >  rhs → lhs>= rhs
+        }else if ((node->kind==ND_GE && node->lhs->kind==ND_SUB)
+        ||  (node->kind==ND_GT && node->lhs->kind==ND_ADD)) {
+          if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
+            node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
+            node->lhs = optimize_expr(node->lhs->lhs);
+          }
+        }
+      }
+//  lhs <  rhs +1 → lhs<=rhs
+//  lhs <= rhs -1 → lhs< rhs
+      if ( is_integer(node->lhs->ty) && !node->rhs->ty->is_unsigned) {
+        if ((node->kind==ND_LT && node->rhs->kind==ND_ADD)
+        ||  (node->kind==ND_LE && node->rhs->kind==ND_SUB)) {
+          if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
+            node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
+            node->rhs = optimize_expr(node->rhs->lhs);
+          }
+  //  lhs >= rhs +1 → lhs>  rhs
+  //  lhs >  rhs -1 → lhs>= rhs
+        }else if ((node->kind==ND_GE && node->rhs->kind==ND_ADD)
+        ||  (node->kind==ND_GT && node->rhs->kind==ND_SUB)) {
+          if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
+            node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
+            node->rhs = optimize_expr(node->rhs->lhs);
+          }
+        }
+      }
+    }
     if (is_integral_promotion(node->lhs)
     &&  is_integral_promotion(node->rhs)
     &&  node->lhs->lhs->ty->is_unsigned == node->rhs->lhs->ty->is_unsigned) {
@@ -991,54 +1039,6 @@ Node *optimize_expr(Node *node)
         break;
       }
     }  
-//
-// For signed integer,
-//   x+1 invokes UB at INT_MAX,
-//   x-1 invokes UB at INT_MIN.
-// Assuming no UB, fold comparisons involving x +/- 1.
-//
-// Unsigned wraparound changes the semantics.
-//
-//  lhs -1 <  rhs → lhs<=rhs
-//  lhs +1 <= rhs → lhs< rhs
-    if (!opt_fwrapv && !node->lhs->ty->is_unsigned) {
-      if ( is_integer(node->lhs->ty) && !node->lhs->ty->is_unsigned) {
-        if ((node->kind==ND_LT && node->lhs->kind==ND_SUB)
-        ||  (node->kind==ND_LE && node->lhs->kind==ND_ADD)) {
-          if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
-            node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
-            node->lhs = optimize_expr(node->lhs->lhs);
-          }
-  //  lhs -1 >= rhs → lhs>  rhs
-  //  lhs +1 >  rhs → lhs>= rhs
-        }else if ((node->kind==ND_GE && node->lhs->kind==ND_SUB)
-        ||  (node->kind==ND_GT && node->lhs->kind==ND_ADD)) {
-          if(is_integer_constant(node->lhs->rhs,&val) &&  val==1 ){
-            node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
-            node->lhs = optimize_expr(node->lhs->lhs);
-          }
-        }
-      }
-//  lhs <  rhs +1 → lhs<=rhs
-//  lhs <= rhs -1 → lhs< rhs
-      if ( is_integer(node->lhs->ty) && !node->rhs->ty->is_unsigned) {
-        if ((node->kind==ND_LT && node->rhs->kind==ND_ADD)
-        ||  (node->kind==ND_LE && node->rhs->kind==ND_SUB)) {
-          if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
-            node->kind = (node->kind==ND_LT)?ND_LE:ND_LT;
-            node->rhs = optimize_expr(node->rhs->lhs);
-          }
-  //  lhs >= rhs +1 → lhs>  rhs
-  //  lhs >  rhs -1 → lhs>= rhs
-        }else if ((node->kind==ND_GE && node->rhs->kind==ND_ADD)
-        ||  (node->kind==ND_GT && node->rhs->kind==ND_SUB)) {
-          if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
-            node->kind = (node->kind==ND_GE)?ND_GT:ND_GE;
-            node->rhs = optimize_expr(node->rhs->lhs);
-          }
-        }
-      }
-    }
 
 //  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
     if (node->lhs->ty->kind != TY_CHAR) {
