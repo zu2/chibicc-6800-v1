@@ -120,32 +120,32 @@ bool is_schar_or_s8num(Node *node)
   return false;
 }
 
-
-Node *negate_condition(Node *node)
+static bool can_negate(Node *node)
 {
-  switch(node->kind){
+  switch(node->kind) {
   case ND_EQ:
-    node->kind = ND_NE;
-    break;
   case ND_NE:
-    node->kind = ND_EQ;
-    break;
+    return true;
   case ND_LT:
-    node->kind = ND_GE;
-    break;
   case ND_LE:
-    node->kind = ND_GT;
-    break;
   case ND_GT:
-    node->kind = ND_LE;
-    break;
   case ND_GE:
-    node->kind = ND_LT;
-    break;
-  default:
-    assert(0);
+    return !is_flonum(node->lhs->ty) && !is_flonum(node->rhs->ty);
   }
-  return node;
+  return false;
+}
+
+static NodeKind negate_kind(NodeKind kind)
+{
+  switch(kind){
+  case ND_EQ: return ND_NE;
+  case ND_NE: return ND_EQ;
+  case ND_LT: return ND_GE;
+  case ND_LE: return ND_GT;
+  case ND_GT: return ND_LE;
+  case ND_GE: return ND_LT;
+  }
+  assert(0);
 }
 
 Node *flip_condition(Node *node)
@@ -724,10 +724,17 @@ Node *optimize_expr(Node *node)
   // In the case of float, rewriting is not possible because there is NaN.
   case ND_NOT:
     node->lhs = skip_integral_promotion(node->lhs);
-    if (is_compare(node->lhs)
-    &&  is_integer(node->lhs->lhs->ty)
-    &&  is_integer(node->lhs->rhs->ty)){
-      return negate_condition(optimize_lr(node->lhs));
+    if (is_compare(node->lhs)) {
+      Node *new = optimize_condition(new_copy(node->lhs));
+      if (is_compare(new) && can_negate(new)) {
+        node->kind = negate_kind(new->kind);
+        node->lhs  = new->lhs;
+        node->rhs  = new->rhs;
+        node->ty   = new->ty;
+      }else{
+        node->lhs = new;
+      }
+      return optimize_const_expr(node);
     }
     if (is_integer_constant(node->lhs,&val)) {
       Node *new = new_num((val==0),node->tok);
@@ -1133,7 +1140,15 @@ Node *optimize_condition(Node *node)
     node = optimize_condition(node->lhs->lhs);
   }
   if (node->kind == ND_NOT && is_compare(node->lhs)) {
-    node = negate_condition(optimize_condition(node->lhs));
+    Node *new = optimize_condition(new_copy(node->lhs));
+    if (is_compare(new) && can_negate(new)) {
+      node->kind = negate_kind(new->kind);
+      node->lhs  = new->lhs;
+      node->rhs  = new->rhs;
+      node->ty   = new->ty;
+    }else{
+      node->lhs = new;
+    }
   }
   if (node->kind==ND_EQ
   &&  is_integer_or_ptr(node->lhs->ty)

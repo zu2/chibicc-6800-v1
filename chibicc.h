@@ -478,7 +478,6 @@ bool is_schar_or_s8num(Node *node);
 Node *optimize_expr(Node *node);
 Node *optimize_condition(Node *node);
 Obj *optimize(Obj *prog);
-Node *negate_condition(Node *node);
 Node *flip_condition(Node *node);
 Node *swap_lr(Node *node);
 
