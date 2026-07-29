@@ -720,17 +720,18 @@ Node *optimize_expr(Node *node)
   case ND_LABEL_VAL:
     return node;
   // If the ND_NOT negates the result of a relational operator,
-  // rewrite the relational operator.
-  // In the case of float, rewriting is not possible because there is NaN.
+  // Rewrite !(node) into the negated related op.
+  // when float compare, only == and != rewrited.
   case ND_NOT:
     node->lhs = skip_integral_promotion(node->lhs);
     if (is_compare(node->lhs)) {
-      Node *new = optimize_condition(new_copy(node->lhs));
+      Node *new = optimize_lr(new_copy(node->lhs));
       if (is_compare(new) && can_negate(new)) {
         node->kind = negate_kind(new->kind);
         node->lhs  = new->lhs;
         node->rhs  = new->rhs;
         node->ty   = new->ty;
+        return optimize_expr(node);
       }else{
         node->lhs = new;
       }
