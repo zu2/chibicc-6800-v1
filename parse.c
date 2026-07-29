@@ -282,6 +282,7 @@ Node *new_cast(Node *expr, Type *ty) {
     return expr;
   }
   if (is_integer(expr->ty) && is_integer(ty)
+  &&  ty->kind != TY_BOOL
   &&  expr->ty->size == ty->size
   &&  expr->ty->is_unsigned == ty->is_unsigned){
       return expr;
