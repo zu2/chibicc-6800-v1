@@ -5029,8 +5029,7 @@ void gen_expr(Node *node)
       &&  lhs->rhs->ty->array_len<=256
       &&  !is_integer_constant(lhs->lhs,&val)) {
         char *offset = new_label("L_%d");
-        lhs->lhs = optimize_expr(new_cast(skip_integral_promotion(lhs->lhs),ty_uchar));
-        gen_expr(lhs->lhs);
+        gen_expr(optimize_expr(new_cast(skip_integral_promotion(lhs->lhs),ty_uchar)));
         ldx_IMM_VAR(lhs->rhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
         println("%s:",offset);
@@ -5042,10 +5041,9 @@ void gen_expr(Node *node)
       &&  lhs->ty->kind == TY_ARRAY
       &&  is_global_array(lhs->lhs)
       &&  lhs->lhs->ty->array_len<=256
-      &&  !is_integer_constant(lhs->lhs,&val)) {
+      &&  !is_integer_constant(lhs->rhs,&val)) {
         char *offset = new_label("L_%d");
-        lhs->rhs = optimize_expr(new_cast(skip_integral_promotion(lhs->rhs),ty_uchar));
-        gen_expr(lhs->rhs);
+        gen_expr(optimize_expr(new_cast(skip_integral_promotion(lhs->rhs),ty_uchar)));
         ldx_IMM_VAR(lhs->lhs->var->name);
         println("\tstab %s+1    ; XXX !",offset);
         println("%s:",offset);
