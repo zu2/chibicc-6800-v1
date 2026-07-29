@@ -350,7 +350,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
       new->ty  = ty_char;
       new->lhs = skip_integral_promotion(node->lhs);
       new->rhs = node->rhs;
-      new->rhs->ty = ty_uchar;
+      new->rhs->ty = ty_char;
       new = new_cast(new,ty_int);
       return optimize_const_expr(new);
     }
@@ -444,7 +444,7 @@ Node *optimize_expr(Node *node)
     }
     if(node->lhs->ty->kind == TY_CHAR
     && is_integer_constant(node->rhs,&val)) {
-      node->rhs = new_num(val&255,node->rhs->tok);
+      node->rhs = new_num(val,node->rhs->tok);
       node->rhs->ty = node->lhs->ty;
       node->ty = node->lhs->ty;
       return node;
