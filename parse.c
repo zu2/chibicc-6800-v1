@@ -1590,14 +1590,15 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
     return cur;
 
   if (ty->kind == TY_FLOAT) {
-    float f = eval_double(init->expr);
-    write_buf(buf+offset, *(long *)&f, ty->size);
+    union { float f32; uint32_t u32; } u = { eval_double(init->expr) };
+    write_buf(buf+offset, u.u32, ty->size);
     return cur;
   }
 
   if (ty->kind == TY_DOUBLE) {
     assert(0);
-    *(double *)(buf + offset) = eval_double(init->expr);
+    union { double f64; uint64_t u64; } u = { eval_double(init->expr) };
+    write_buf(buf + offset, u.u64, ty->size);
     return cur;
   }
 
