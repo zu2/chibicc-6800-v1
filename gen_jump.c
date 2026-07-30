@@ -279,7 +279,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
 {
   int64_t val;
 
-  node = skip_integral_promotion(optimize_expr(node));
+  node = skip_integral_promotion(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   char *addr;
@@ -802,7 +802,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
 {
   int64_t val;
 
-  node = skip_integral_promotion(optimize_expr(node));
+  node = skip_integral_promotion(node);
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
   char *addr;

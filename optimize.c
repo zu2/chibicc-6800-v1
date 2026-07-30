@@ -92,14 +92,6 @@ bool is_s8num(Node *node)
   return false;
 }
 
-bool is_8num(Node *node, Type *ty)
-{
-  if (!is_int8(ty)) {
-    return false;
-  }
-  return ty->is_unsigned? is_u8num(node): is_s8num(node);
-}
-
 bool is_uchar_or_u8num(Node *node)
 {
   if (node->ty->kind == TY_CHAR && node->ty->is_unsigned)
@@ -683,7 +675,7 @@ Node *optimize_expr(Node *node)
   case ND_MEMZERO:
     return node;
   case ND_COND:
-    node->cond = optimize_expr(node->cond);
+    node->cond = optimize_condition(node->cond);
     node->then = optimize_expr(node->then);
     node->els  = optimize_expr(node->els);
     switch(node->then->kind) {

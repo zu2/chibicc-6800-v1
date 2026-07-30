@@ -5488,10 +5488,7 @@ void gen_expr(Node *node)
     sprintf(L_else,"L_else_%d",c);
     sprintf(L_end, "L_end_%d",c);
 
-    Node *cond;
-    cond = optimize_condition(node->cond);
-
-    if (!gen_jump_if_false(cond,L_else)){
+    if (!gen_jump_if_false(node->cond,L_else)){
       assert(0);
     }
     gen_expr(node->then);

@@ -470,7 +470,6 @@ bool is_integral_promotion_or_byte(Node *node);
 Node *skip_integral_promotion(Node *node);
 bool is_u8num(Node *node);
 bool is_s8num(Node *node);
-bool is_8num(Node *node, Type *ty);
 bool is_uchar_or_u8num(Node *node);
 bool is_schar_or_s8num(Node *node);
 
