@@ -1727,7 +1727,12 @@ static void load32i(uint32_t val)
   IX_invalidate();
 }
 
-// Load a value from where %rax is pointing to.
+// Load a value from where AccA:B is pointing to.
+//
+//   __load8 sets AccB only. Treat AccA as undefined.
+//   __load16 sets AccA:B.
+//   __load32 sets @long.
+//   All of them leave the address in IX, but this compiler does not use it.
 void load(Type *ty) {
   switch (ty->kind) {
   case TY_ARRAY:
@@ -1735,34 +1740,21 @@ void load(Type *ty) {
   case TY_UNION:
   case TY_FUNC:
   case TY_VLA:
-    // If it is an array, do not attempt to load a value to the
-    // register because in general we can't load an entire array to a
-    // register. As a result, the result of an evaluation of an array
-    // becomes not the array itself but the address of the array.
-    // This is where "array is automatically converted to a pointer to
-    // the first element of the array in C" occurs.
+    // These cannot fit in a register, so the address becomes the value.
+    // This is where "an array becomes a pointer to its first element" happens.
     return;
   case TY_FLOAT:
     println("\tjsr __load32");		// @long = (AccAB)");
     IX_invalidate();
-//  println("  movss (%%rax), %%xmm0");
     return;
   case TY_DOUBLE:
     assert(ty->kind!=TY_DOUBLE);
-//  println("  movsd (%%rax), %%xmm0");
     return;
   case TY_LDOUBLE:
     assert(ty->kind!=TY_LDOUBLE);
-//  println("  fldt (%%rax)");
     return;
   }
 
-// char *insn = ty->is_unsigned ? "movz" : "movs";
-  // When we load a char or a short value to a register, we always
-  // extend them to the size of int, so we can assume the lower half of
-  // a register always contains a valid value. The upper half of a
-  // register for char, short and int may contain garbage. When we load
-  // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
     println("\tjsr __load8");
   }else if (ty->size == 2){
@@ -6430,16 +6422,10 @@ void gen_expr(Node *node)
   case ND_LT:
   case ND_LE:
   case ND_GT:
-  case ND_GE: // int relop int
-    if ((node->rhs->kind ==ND_NUM)
-    &&  (node->rhs->ty->kind != TY_INT)
-    &&  (node->lhs->ty->kind != node->rhs->ty->kind)
-    &&  (node->lhs->ty->size != node->rhs->ty->size)) {
-//    println("; Type mismatch between lhs and rhs");
-      error_tok(node->tok, "Type mismatch between lhs and rhs");
-    }
-    if ((lhs->ty->kind==TY_CHAR || lhs->ty->kind==TY_BOOL)
-    &&  (rhs->ty->kind==TY_CHAR || rhs->ty->kind==TY_BOOL)) { // char relop char
+  case ND_GE: // 8 ot 16bit relop
+    // 8bit relop 8bit ?
+    if (is_int8(node->lhs->ty) && is_int8(node->rhs->ty)) {
+      assert(node->lhs->ty->is_unsigned == node->rhs->ty->is_unsigned);
       if (is_integer_constant(node->rhs, &val) &&  val==0){
         gen_expr(node->lhs);
         if (node->lhs->ty->is_unsigned) {
@@ -6516,8 +6502,11 @@ void gen_expr(Node *node)
       }
       return;
     }
-    // may be TY_INT
-
+    // must be 16bit op 16bit
+    // must be 16bit op 16bit
+    if (!is_int16_or_ptr_or_array(node->lhs->ty)
+    ||  !is_int16_or_ptr_or_array(node->rhs->ty))
+      error_tok(node->tok, "internal error: not 16bit op 16bit");
     // expr op 0
     if (is_integer_constant(node->rhs, &val) && val==0){
       gen_expr(node->lhs);
