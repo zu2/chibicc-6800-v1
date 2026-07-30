@@ -131,6 +131,7 @@ static Node *expr_stmt(Token **rest, Token *tok);
 static Node *expr(Token **rest, Token *tok);
 int64_t eval(Node *node);
 int64_t eval2(Node *node, char ***label);
+static int64_t eval_bool(Node *expr);
 static int64_t eval_rval(Node *node, char ***label);
 bool is_const_expr(Node *node);
 static Node *assign(Token **rest, Token *tok);
@@ -1564,7 +1565,9 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
 
         char *loc = buf + offset + mem->offset;
         uint64_t oldval = read_buf(loc, mem->ty->size);
-        uint64_t newval = eval(expr);
+        // C99 6.3.1.2: a value becomes 1 if it is not 0.
+        uint64_t newval = (mem->ty->kind == TY_BOOL) ? eval_bool(expr)
+                                                     : eval(expr);
         uint64_t mask = (1L << mem->bit_width) - 1;
         uint64_t combined = oldval | ((newval & mask) << mem->bit_offset);
         write_buf(loc, combined, mem->ty->size);
@@ -1595,6 +1598,11 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
   if (ty->kind == TY_DOUBLE) {
     assert(0);
     *(double *)(buf + offset) = eval_double(init->expr);
+    return cur;
+  }
+
+  if (ty->kind == TY_BOOL) {
+    write_buf(buf + offset, eval_bool(init->expr), ty->size);
     return cur;
   }
 
@@ -2038,10 +2046,15 @@ int64_t eval(Node *node) {
   return eval2(node, NULL);
 }
 
+
 static int64_t fit_to_type(int64_t val, Type *ty)
 {
   if (!ty || !is_integer(ty))
     return val;
+
+  // C99 6.3.1.2: a value becomes 1 if it is not 0.
+  if (ty->kind == TY_BOOL)
+    return val != 0;
 
   switch (ty->size) {
   case 1: return ty->is_unsigned ? (uint8_t)val  : (int8_t)val;
@@ -2049,6 +2062,14 @@ static int64_t fit_to_type(int64_t val, Type *ty)
   case 4: return ty->is_unsigned ? (int64_t)(uint32_t)val : (int64_t)(int32_t)val;
   default: assert(0);
   }
+}
+
+// C99 6.3.1.2: a value becomes 1 if it is not 0.
+static int64_t eval_bool(Node *expr) {
+  add_type(expr);
+  if (is_flonum(expr->ty))
+    return eval_double(expr) != 0;
+  return eval(expr) != 0;
 }
 
 // Evaluate a given node as a constant expression.
@@ -2139,6 +2160,7 @@ int64_t eval2(Node *node, char ***label) {
   case ND_LOGOR:
     return eval(node->lhs) || eval(node->rhs);
   case ND_CAST: {
+    if (node->ty->kind == TY_BOOL) return eval_bool(node->lhs);
     return fit_to_type(eval2(node->lhs, label),node->ty);
   }
   case ND_ADDR:
