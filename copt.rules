@@ -1182,14 +1182,6 @@
 	clra
 	ldab %1
 
-	cmpb #<0
-=
-	tstb
-
-	subb #<0
-=
-	tstb
-
 #
 # remove redundant lda
 #

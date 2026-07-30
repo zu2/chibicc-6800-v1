@@ -16,13 +16,8 @@
 ;	if Z=0 then AccAB=1 else 0
 ;
 __eq8:
-	bne	__false
-        clra
-	incb
-	rts
-__false:
+	beq	__true
 	clra
-__false2:
 	clrb
 	rts
 ;
@@ -31,7 +26,7 @@ __false2:
 __ne8:
 	beq	__false
 __true:
-	clra
+        clra
 	ldab #1
 	rts
 ;
@@ -39,6 +34,7 @@ __true:
 ;
 __lt8s:
 	blt	__true
+__false:
 	clrb
 	clra
 	rts

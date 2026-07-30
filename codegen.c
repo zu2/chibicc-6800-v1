@@ -6440,27 +6440,30 @@ void gen_expr(Node *node)
     }
     if ((lhs->ty->kind==TY_CHAR || lhs->ty->kind==TY_BOOL)
     &&  (rhs->ty->kind==TY_CHAR || rhs->ty->kind==TY_BOOL)) { // char relop char
-      if (node->lhs->ty->is_unsigned
-      &&  is_integer_constant(node->rhs, &val)
-      &&  val==0){
-        int64_t val;
+      if (is_integer_constant(node->rhs, &val) &&  val==0){
         gen_expr(node->lhs);
         if (node->lhs->ty->is_unsigned) {
           switch(node->kind) {
-          case ND_EQ: println("\tjsr __eq8");
-                      return;
-          case ND_NE: println("\tjsr __ne8");
-                      return;
+          case ND_EQ: println("\tjsr __eq8_zero"); return;
+          case ND_NE: println("\tjsr __ne8_zero"); return;
           case ND_LT: println("\tclrb");
                       println("\tclra");
                       return;
-          case ND_LE: println("\tjsr __eq8");
-                      return;
-          case ND_GT: println("\tjsr __ne8");
-                      return;
+          case ND_LE: println("\tjsr __eq8_zero"); return;
+          case ND_GT: println("\tjsr __ne8_zero"); return;
           case ND_GE: println("\tclra");
                       println("\tldab #1");
                       return;
+          default:    assert(0);
+          }
+        }else{  // signed
+          switch(node->kind) {
+          case ND_EQ: println("\tjsr __eq8_zero");    return;
+          case ND_NE: println("\tjsr __ne8_zero");    return;
+          case ND_LT: println("\tjsr __lt8s_zero");   return;
+          case ND_GE: println("\tjsr __ge8s_zero");   return;
+          case ND_LE: println("\tjsr __le8s_zero");   return;
+          case ND_GT: println("\tjsr __gt8s_zero");   return;
           default:    assert(0);
           }
         }
@@ -6514,27 +6517,32 @@ void gen_expr(Node *node)
       return;
     }
     // may be TY_INT
-    if (node->lhs->ty->is_unsigned
-    &&  is_integer_constant(node->rhs, &val)
-    &&  val==0){
-      int64_t val;
+
+    // expr op 0
+    if (is_integer_constant(node->rhs, &val) && val==0){
       gen_expr(node->lhs);
       if (node->lhs->ty->is_unsigned) {
         switch(node->kind) {
-        case ND_EQ: println("\tjsr __eq16");
-                    return;
-        case ND_NE: println("\tjsr __ne16");
-                    return;
+        case ND_EQ: println("\tjsr __eq16_zero");   return;
+        case ND_NE: println("\tjsr __ne16_zero");   return;
         case ND_LT: println("\tclrb");
                     println("\tclra");
                     return;
-        case ND_LE: println("\tjsr __eq16");
-                    return;
-        case ND_GT: println("\tjsr __ne16");
-                    return;
+        case ND_LE: println("\tjsr __eq16_zero");   return;
+        case ND_GT: println("\tjsr __ne16_zero");   return;
         case ND_GE: println("\tclra");
                     println("\tldab #1");
                     return;
+        default:    assert(0);
+        }
+      }else{
+        switch(node->kind) { // signed
+        case ND_EQ: println("\tjsr __eq16_zero");   return;
+        case ND_NE: println("\tjsr __ne16_zero");   return;
+        case ND_LT: println("\tjsr __lt16s_zero");  return;
+        case ND_LE: println("\tjsr __le16s_zero");  return;
+        case ND_GT: println("\tjsr __gt16s_zero");  return;
+        case ND_GE: println("\tjsr __ge16s_zero");  return;
         default:    assert(0);
         }
       }
