@@ -475,6 +475,13 @@ void add_type(Node *node) {
     return;
   case ND_EQ:
   case ND_NE:
+  // C99 6.3.2.1p4: a function designator becomes a pointer to function.
+    if (node->lhs->ty->kind == TY_FUNC){
+      node->lhs = new_cast(node->lhs, pointer_to(node->lhs->ty));
+    }
+    if (node->rhs->ty->kind == TY_FUNC){
+      node->rhs = new_cast(node->rhs, pointer_to(node->rhs->ty));
+    }
     if (is_numeric(node->lhs->ty) && is_numeric(node->rhs->ty)) {
       usual_arith_conv(&node->lhs, &node->rhs);
       node->ty = ty_int;
