@@ -465,7 +465,6 @@ void ast_node_dump(Node *node);
 //
 // optimize.c
 //
-bool is_char_or_bool(Type *ty);
 bool is_integral_promotion(Node *node);
 bool is_integral_promotion_or_byte(Node *node);
 Node *skip_integral_promotion(Node *node);
