@@ -1507,44 +1507,17 @@ static Node *lvar_initializer(Token **rest, Token *tok, Obj *var) {
 }
 
 static uint64_t read_buf(char *buf, int sz) {
-  if (sz == 1)
-    return *buf;
-  if (sz == 2)
-    return *(uint16_t *)buf;
-  if (sz == 4)
-    return *(uint32_t *)buf;
-  if (sz == 8)
-    return *(uint64_t *)buf;
-  unreachable();
+  uint64_t val = 0;
+  for (int i = 0; i < sz; i++)
+    val = (val << 8) | (unsigned char)buf[i];
+  return val;
 }
 
 static void write_buf(char *buf, uint64_t val, int sz) {
-  char *p = (char *)&val;
-
-  if (sz == 1) {
-    *buf = val;
-  }else if (sz == 2) {
-    buf[0] = p[1];
-    buf[1] = p[0];
-//    *(uint16_t *)buf = val;
-  }else if (sz == 4) {
-    buf[0] = p[3];
-    buf[1] = p[2];
-    buf[2] = p[1];
-    buf[3] = p[0];
-//    *(uint32_t *)buf = val;
-  }else if (sz == 8) {
-    buf[0] = p[7];
-    buf[1] = p[6];
-    buf[2] = p[5];
-    buf[3] = p[4];
-    buf[4] = p[3];
-    buf[5] = p[2];
-    buf[6] = p[1];
-    buf[7] = p[0];
-//    *(uint64_t *)buf = val;
-  }else
-    unreachable();
+  for (int i = sz - 1; i >= 0; i--) {
+    buf[i] = val & 0xff;
+    val >>= 8;
+  }
 }
 
 static Relocation *
