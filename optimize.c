@@ -333,7 +333,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
       Node *new = new_copy(node);
       new->ty  = ty_uchar;
       new->lhs = skip_integral_promotion(node->lhs);
-      new->rhs = node->rhs;
+      new->rhs = new_copy(node->rhs);
       new->rhs->ty = ty_uchar;
       new = new_cast(new,ty_int);
       return optimize_const_expr(new);
@@ -349,7 +349,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
       Node *new = new_copy(node);
       new->ty  = ty_char;
       new->lhs = skip_integral_promotion(node->lhs);
-      new->rhs = node->rhs;
+      new->rhs = new_copy(node->rhs);
       new->rhs->ty = ty_char;
       new = new_cast(new,ty_int);
       return optimize_const_expr(new);
