@@ -340,7 +340,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
     }
   }
   // char op -128..127
-  //    (int)char op -128..127 -> (int)(uchar op 0..255)
+  //    (int)char op -128..127 -> (int)(char op -128..127)
   if (!skip_integral_promotion(node->lhs)->ty->is_unsigned) {
     if (node->rhs->kind           == ND_NUM
     &&  node->rhs->ty->kind       == TY_INT
