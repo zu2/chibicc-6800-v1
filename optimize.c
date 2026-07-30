@@ -909,7 +909,7 @@ Node *optimize_expr(Node *node)
 //
 //  lhs -1 <  rhs → lhs<=rhs
 //  lhs +1 <= rhs → lhs< rhs
-    if (!opt_fwrapv && !node->lhs->ty->is_unsigned) {
+    if (!opt_fwrapv) {
       if ( is_integer(node->lhs->ty) && !node->lhs->ty->is_unsigned) {
         if ((node->kind==ND_LT && node->lhs->kind==ND_SUB)
         ||  (node->kind==ND_LE && node->lhs->kind==ND_ADD)) {
@@ -929,7 +929,7 @@ Node *optimize_expr(Node *node)
       }
 //  lhs <  rhs +1 → lhs<=rhs
 //  lhs <= rhs -1 → lhs< rhs
-      if ( is_integer(node->lhs->ty) && !node->rhs->ty->is_unsigned) {
+      if ( is_integer(node->rhs->ty) && !node->rhs->ty->is_unsigned) {
         if ((node->kind==ND_LT && node->rhs->kind==ND_ADD)
         ||  (node->kind==ND_LE && node->rhs->kind==ND_SUB)) {
           if(is_integer_constant(node->rhs->rhs,&val) &&  val==1 ){
@@ -988,8 +988,10 @@ Node *optimize_expr(Node *node)
       case TY_LONG:
         if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT32_MAX)
         ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
-          node->rhs->val++;
-          node->kind = ND_LT;
+          if (node->rhs->val != 0) {
+            node->rhs->val++;
+            node->kind = ND_LT;
+          }
         }
         break;
       }
@@ -1013,8 +1015,10 @@ Node *optimize_expr(Node *node)
       case TY_LONG:
         if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT32_MAX)
         ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
-          node->rhs->val++;
-          node->kind = ND_GE;
+          if (node->rhs->val != 0) {
+            node->rhs->val++;
+            node->kind = ND_GE;
+          }
         }
         break;
       }
