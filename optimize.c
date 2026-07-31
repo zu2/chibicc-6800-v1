@@ -791,27 +791,6 @@ Node *optimize_expr(Node *node)
         return new;
       }
     }
-    if (node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->lhs->lhs,&val)
-    &&  node->rhs->kind == ND_CAST
-    &&  node->rhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->rhs->lhs,&val2)) {
-      new = new_copy(node->lhs);
-      new->lhs = new_num(val+val2,node->tok);
-      new->lhs->ty = node->lhs->lhs->ty;
-      return new;
-    }
-    if (node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->lhs->lhs,&val)
-    &&  is_integer_constant(node->rhs,&val2)) {
-      new = new_copy(node->lhs);
-      new->lhs = new_num(val+val2,node->rhs->tok);
-      new->lhs->ty = node->rhs->ty;
-      return new;
-    }
-
     return node;
   } // ND_ADD
   case ND_SUB: {
@@ -839,17 +818,6 @@ Node *optimize_expr(Node *node)
         new->rhs->ty = node->lhs->rhs->ty;
         return new;
       }
-    }
-    if (node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->lhs->lhs,&val)
-    &&  node->rhs->kind == ND_CAST
-    &&  node->rhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->rhs->lhs,&val2)) {
-      new = new_copy(node->lhs);
-      new->lhs = new_num(val-val2,node->tok);
-      new->lhs->ty = node->lhs->lhs->ty;
-      return new;
     }
     return node;
   }
