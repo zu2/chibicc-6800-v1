@@ -2891,8 +2891,25 @@ static Node *cast(Token **rest, Token *tok) {
     if (equal(tok, "{"))
       return unary(rest, start);
 
+    // check cast float <-> pointer
+    Node *expr = cast(rest, tok);
+    add_type(expr);
+    if (ty->kind == TY_PTR && is_flonum(expr->ty))
+      error_tok(start, "cannot cast a floating type to a pointer");
+    if (is_flonum(ty) && expr->ty->base)
+      error_tok(start, "cannot cast a pointer to a floating type");
+
+    // check cast scalar <-> struct/union
+    if (ty->kind != TY_VOID) {
+      if (!is_numeric(ty) && ty->kind != TY_PTR)
+        error_tok(start, "cast to a non-scalar type");
+      if (!is_numeric(expr->ty) && !expr->ty->base
+      &&  expr->ty->kind != TY_FUNC)
+        error_tok(start, "cast of a non-scalar value");
+    }
+
     // type cast
-    Node *node = new_cast(cast(rest, tok), ty);
+    Node *node = new_cast(expr, ty);
     node->tok = start;
     return node;
   }
