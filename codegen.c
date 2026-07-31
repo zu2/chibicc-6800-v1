@@ -237,17 +237,61 @@ void ldd_i(int n)
   }
 }
 
-void and_i(int n)
+void andb_i(int n)
 {
   if ((n & 0x00ff)==0) {
     println("\tclrb");
   } else if ((n & 0x00ff)!=0x00ff) {
-    println("\tandb #<$%02x",n);
+    println("\tandb #<%u",n);
   }
+}
+
+void and_i(int n)
+{
+  andb_i(n);
   if ((n & 0x0ff00)==0) {
     println("\tclra");
   } else if ((n & 0xff00)!=0xff00) {
-    println("\tanda #>$%02x",n);
+    println("\tanda #>%u",n);
+  }
+}
+
+void orab_i(int n)
+{
+  if ((n & 0x00ff)!=0) {
+    println("\torab #<%u",n);
+  }
+}
+
+void ora_i(int n)
+{
+  orab_i(n);
+  if ((n & 0xff00)!=0) {
+    println("\toraa #>%u",n);
+  }
+}
+
+void eorb_i(int n)
+{
+  if ((n & 0x00ff)==0) {
+    ;
+  } else if ((n & 0x00ff)==0x00ff) {
+    println("\tcomb");
+  } else {
+    println("\teorb #<%u",n);
+  }
+}
+
+void eor_i(int n)
+{
+  eorb_i(n);
+
+  if ((n & 0xff00)==0) {
+    ;
+  } else if ((n & 0xff00)==0xff00) {
+    println("\tcoma");
+  } else {
+    println("\teora #>%u",n);
   }
 }
 
@@ -2629,19 +2673,21 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         }else{
           ldd_i((uint16_t)node->val);
         }
+      } else if (strcmp(opb,"ldab")==0) {
+        if (opa) ldd_i ((uint16_t)node->val);
+        else     ldab_i((uint16_t)node->val);
+      } else if (strcmp(opb,"andb")==0) {
+        if (opa) and_i ((uint16_t)node->val);
+        else     andb_i((uint16_t)node->val);
+      } else if (strcmp(opb,"orab")==0) {
+        if (opa) ora_i ((uint16_t)node->val);
+        else     orab_i((uint16_t)node->val);
+      } else if (strcmp(opb,"eorb")==0) {
+        if (opa) eor_i ((uint16_t)node->val);
+        else     eorb_i((uint16_t)node->val);
       } else {
-        if (!((!strcmp(opb,"orab") && ((uint16_t)node->val & 0x00ff)==0))
-        &&  !((!strcmp(opb,"andb") && ((uint16_t)node->val & 0x00ff)==0xff))
-        &&  !((!strcmp(opb,"eorb") && ((uint16_t)node->val & 0x00ff)==0))){
-          println("\t%s #<%u", opb, (uint16_t)node->val);
-        }
-        if (opa) {
-          if (!((!strcmp(opb,"orab") && ((uint16_t)node->val & 0xff00)==0))
-          &&  !((!strcmp(opb,"andb") && ((uint16_t)node->val & 0xff00)==0xff00))
-          &&  !((!strcmp(opb,"eorb") && ((uint16_t)node->val & 0xff00)==0))){
-            println("\t%s #>%u", opa, (uint16_t)node->val);
-          }
-        }
+        println("\t%s #<%u", opb, (uint16_t)node->val);
+        if (opa) println("\t%s #>%u", opa, (uint16_t)node->val);
       }
       return 1;
     default:
@@ -4163,7 +4209,6 @@ static void opeq(Node *node)
     }
     switch(node->ty->kind) {
     case TY_LONG:
-      ast_node_dump(node);
       if (test_addr_x(lhs)) {
         gen_expr(rhs);
         int off = gen_addr_x(lhs,false);

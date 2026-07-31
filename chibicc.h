@@ -505,9 +505,6 @@ int gen_expr_x(Node *node,bool save_d);
 bool test_expr_x(Node *node);
 void codegen(Obj *prog, FILE *out);
 int align_to(int n, int align);
-bool is_compare(Node *node);
-bool is_compare_or_not(Node *node);
-bool is_boolean_result(Node *node);
 bool gen_direct(Node *rhs,char *opb, char *opa);
 bool gen_direct_char(Node *rhs,char *opb, char *opa);
 bool can_direct(Node *rhs);
@@ -578,6 +575,7 @@ void     IX_restore(IX_State s);
 //
 bool is_compare(Node *node);
 bool is_compare_or_not(Node *node);
+bool is_boolean_result(Node *node);
 char *is_addr_constant(Node *node);
 bool gen_jump_if_false(Node *node,char *if_false);
 bool gen_jump_if_true(Node *node,char *if_true);

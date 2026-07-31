@@ -77,8 +77,8 @@ rtests:
 btests:
 	(cd benchmark; for d in */; do $(MAKE) -C $$d; done)
 
-#test: install wtests ctests ztests rtests btests
-test: install ztests btests
+test: install wtests ctests ztests rtests btests
+#test: install ztests btests
 
 
 # Misc.
