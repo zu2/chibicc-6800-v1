@@ -990,8 +990,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
       case ND_GT:
         if (lhs->ty->is_unsigned) {
           println("; uint > 0 is true for any value other than zero.");
-          println("\tjne %s",if_true);
-          return true;
+          node->kind = ND_NE;
         } else {
           println("\ttsta");
         }
