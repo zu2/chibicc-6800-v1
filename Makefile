@@ -62,10 +62,23 @@ chibicc: $(OBJS)
 $(OBJS): chibicc.h
 
 
-test: install
+wtests:
+	(cd wtest/ ; ./runtests)
+
+ctests:
+	(cd c-compiler/ ; ././test_cases.sh )
+
+ztests:
 	(cd ztest/ ; ./runall)
-#	(cd wtests/ ; ./runtests)
-#	(cd rtest/; ./runall)
+
+rtests:
+	(cd rtest/; ./runall)
+
+btests:
+	(cd benchmark; for d in */; do $(MAKE) -C $$d; done)
+
+#test: install wtests ctests ztests rtests btests
+test: install ztests btests
 
 
 # Misc.
