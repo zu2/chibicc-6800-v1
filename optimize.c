@@ -465,7 +465,7 @@ Node *optimize_expr(Node *node)
     if (node->lhs->kind == ND_CAST) {
       if (node->ty->kind == TY_PTR
       &&  node->lhs->ty->kind == TY_PTR) {
-        node = node->lhs;
+        node->lhs = node->lhs->lhs;
       }
     }
     if (node->ty->kind==TY_BOOL
