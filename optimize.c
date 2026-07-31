@@ -482,10 +482,6 @@ Node *optimize_expr(Node *node)
         return optimize_expr(node->lhs);
       }
     }
-    if (node->lhs->kind == ND_CAST
-    &&  node->ty == node->lhs->ty) {
-      return node->lhs;
-    }
     if (node->ty->kind  == TY_CHAR
     &&  node->lhs->kind == ND_CAST
     &&  (node->lhs->ty->kind == TY_SHORT
