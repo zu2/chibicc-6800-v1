@@ -178,12 +178,9 @@ static int node_cost(Node *node)
 {
   int sign = !node->ty->is_unsigned;
 
-
   if (node->kind==ND_NUM) {
     return 2;
-  }else if (node->kind == ND_CAST
-        &&  node->ty->kind == TY_PTR
-        &&  node->lhs->kind == ND_NUM) {
+  }else if (is_pointer_constant(node,NULL)) {
     return 5;
   }else if (is_global_var(node)) {
     return 150+sign;

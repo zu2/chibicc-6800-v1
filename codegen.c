@@ -634,7 +634,9 @@ Type *is_pointer_constant(Node *node, int64_t *val)
   if (!is_integer_or_ptr(node->ty))
     return NULL;
 
-  *val = node->val;
+  if (val) {
+    *val = node->val;
+  }
 
   return node->ty;
 }
