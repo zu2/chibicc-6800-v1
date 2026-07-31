@@ -422,8 +422,13 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_ADDR:
     node->lhs = optimize_expr(node->lhs);
-    if (node->lhs->kind == ND_DEREF)
-      return node->lhs->lhs;
+    if (node->lhs->kind == ND_DEREF) {
+      Node *lhs = node->lhs->lhs;
+      /* keep the T* type. an outer pointer cast folds this away */
+      if (lhs->ty->kind == TY_ARRAY)
+        return new_cast(lhs, node->ty);
+      return lhs;
+    }
     return node;
   case ND_ASSIGN:
     node = optimize_lr(node);
