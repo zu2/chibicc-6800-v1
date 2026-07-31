@@ -1088,6 +1088,13 @@ Node *optimize_condition(Node *node)
 
   node = optimize_expr(node);
 
+  switch (node->kind) {
+  case ND_LOGAND:
+  case ND_LOGOR:
+    node->lhs = optimize_condition(node->lhs);
+    node->rhs = optimize_condition(node->rhs);
+    break;
+  }
   if (node->kind == ND_NOT && node->lhs->kind == ND_NOT) {
     node = optimize_condition(node->lhs->lhs);
   }
