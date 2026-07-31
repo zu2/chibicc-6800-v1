@@ -1095,36 +1095,37 @@ Node *optimize_condition(Node *node)
     node->rhs = optimize_condition(node->rhs);
     break;
   }
+  // !!x -> x
   if (node->kind == ND_NOT && node->lhs->kind == ND_NOT) {
     node = optimize_condition(node->lhs->lhs);
   }
-  if (node->kind == ND_NOT && is_compare(node->lhs)) {
-    Node *new = optimize_condition(new_copy(node->lhs));
-    if (is_compare(new) && can_negate(new)) {
-      node->kind = negate_kind(new->kind);
-      node->lhs  = new->lhs;
-      node->rhs  = new->rhs;
-      node->ty   = new->ty;
-    }else{
-      node->lhs = new;
-    }
-  }
+  // x==0 -> !x
   if (node->kind==ND_EQ
   &&  is_integer_or_ptr(node->lhs->ty)
   &&  is_integer_constant(node->rhs,&val)
   &&  val==0 ) {
-    node = new_unary(ND_NOT, optimize_condition(node->lhs), node->tok);
-    node->ty = ty_bool;
+    Token *tok = node->tok;
+    node = optimize_condition(node->lhs);
+    if (node->kind == ND_NOT) {
+      node = node->lhs;       // !!x -> x
+    }else{
+      node = new_unary(ND_NOT, node, tok);
+     node->ty = ty_bool;
+    }
   }
+  // x != 0 -> x
   if (node->kind==ND_NE
   &&  is_integer_or_ptr(node->lhs->ty)
   &&  is_integer_constant(node->rhs,&val)
   &&  val==0 ) {
     node = optimize_condition(node->lhs);
   }
+  // In conditions, drop cast to wider integer types.
+  // The boolean result is the same, but it costs more.
   if (node->kind == ND_CAST
-  &&  node->ty->kind == TY_INT
-  &&  (node->lhs->ty->kind == TY_INT || node->lhs->ty->kind == TY_CHAR)) {
+  &&  is_integer(node->ty)
+  &&  is_integer(node->lhs->ty)
+  &&  node->ty->size >= node->lhs->ty->size) {
     node = node->lhs;
   }
 
