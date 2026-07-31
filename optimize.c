@@ -1057,8 +1057,8 @@ Node *optimize_expr(Node *node)
     if (is_integer_constant(node->rhs,&val)) {
       if (val==0) {
         return node->lhs;
-      } else if (val<0) {
-//      warn_tok(node->tok,"shift count negative, undefined behavior");
+      } else if (val<0 || val >= (node->ty->size)*8) {
+//      warn_tok(node->tok,"shift count negative/too big, undefined behavior");
         Node *new = new_num(0,node->tok);
         new->ty   = node->ty;
         new =  new_binary(ND_ASSIGN, node->lhs, new, node->tok);
