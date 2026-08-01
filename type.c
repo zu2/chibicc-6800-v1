@@ -80,7 +80,7 @@ static bool is_ptr_or_array(Type *ty) {
 }
 
 bool is_null_ptr_constant(Node *node) {
-  return node->kind == ND_NUM && is_integer(node->ty) && node->val == 0;
+  return is_const_expr(node) && is_integer(node->ty) && eval(node) == 0;
 }
 
 bool is_bitfield(Node *node) {
