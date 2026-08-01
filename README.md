@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/) for the Motorola MC6800 architecture.
+This is a Motorola MC6800 cross-compiler based on [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/).
 
 The compiler targets the MC6800 and is designed to generate efficient code. It works well on the MC6800 and provides good performance.
 
