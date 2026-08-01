@@ -612,15 +612,14 @@ Type *is_integer_constant(Node *node, int64_t *val)
   if (!node->ty)
     return NULL;
 
-  if (!is_integer_or_ptr(node->ty))
+  if (node->kind != ND_NUM || !is_integer_or_ptr(node->ty))
     return NULL;
 
-  if (is_const_expr(node)) {
-    *val = eval2(node,NULL);
-    return node->ty;
+  if (val) {
+    *val = node->val;
   }
 
-  return NULL;
+  return node->ty;
 }
 
 
@@ -629,10 +628,9 @@ Type *is_pointer_constant(Node *node, int64_t *val)
   if (node->kind == ND_CAST && node->ty->kind == TY_PTR) {
     node = node->lhs;
   }
-  if (node->kind != ND_NUM)
+  if (node->kind != ND_NUM || !is_integer_or_ptr(node->ty)){
     return NULL;
-  if (!is_integer_or_ptr(node->ty))
-    return NULL;
+  }
 
   if (val) {
     *val = node->val;
@@ -646,10 +644,9 @@ Type *is_long_constant(Node *node, int64_t *val)
   if (node->kind == ND_CAST && node->ty->kind == TY_LONG) {
     node = node->lhs;
   }
-  if (node->kind != ND_NUM)
+  if (node->kind != ND_NUM || !is_integer(node->ty)) {
     return NULL;
-  if (!is_integer(node->ty))
-    return NULL;
+  }
 
   *val = node->val;
 
@@ -658,10 +655,9 @@ Type *is_long_constant(Node *node, int64_t *val)
 
 Type *is_flonum_constant(Node *node, double *val)
 {
-  if (node->kind != ND_NUM)
+  if (node->kind != ND_NUM ||!is_flonum(node->ty)) {
     return NULL;
-  if (!is_flonum(node->ty))
-    return NULL;
+  }
 
   *val = node->fval;
 
