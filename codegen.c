@@ -665,15 +665,6 @@ Type *is_flonum_constant(Node *node, double *val)
 }
 
 //
-// node is array name?
-//
-bool is_var_array(Node *node)
-{
-  return (node->kind == ND_VAR && node->ty->kind == TY_ARRAY);
-}
-
-
-//
 // cf. https://www.zukeran.org/shin/d/2024/12/30/6800-programing-11/
 //
 bool gen_shl(Type *ty, uint64_t val)
@@ -1336,9 +1327,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) p +0 ))
     if (node->kind == ND_CAST
     &&  node->ty->kind == TY_PTR
-    &&  node->lhs->kind == ND_VAR
-    &&  node->lhs->ty->kind == TY_ARRAY
-    &&  node->lhs->var->is_local
+    &&  is_local_array(node->lhs)
     &&  node->lhs->var->offset<=6) {
       if (test) return true;
       ldx_bp();
@@ -1385,9 +1374,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
       }
     }
     //(+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +0 ) 6)
-    if (lhs->kind     == ND_VAR
-    &&  lhs->ty->kind == TY_ARRAY
-    &&  lhs->var->is_local
+    if (is_local_array(lhs)
     &&  is_integer_constant(rhs,&val)) {
       off = lhs->var->offset + val;
       if (off <= 252) {
@@ -1395,9 +1382,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
         return gen_addr_x(lhs,true) + val;
       }
     }
-    if (lhs->kind     == ND_VAR
-    &&  lhs->ty->kind == TY_ARRAY
-    &&  !lhs->var->is_local
+    if (is_global_array(lhs)
     &&  is_integer_constant(rhs,&val)) {
       if (val <= 252) { // TODO: Preferably, use label + constant instead of IX.
         if (test) return true;

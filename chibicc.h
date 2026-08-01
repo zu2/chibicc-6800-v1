@@ -442,6 +442,7 @@ bool is_int16(Type *ty);
 bool is_int16_or_ptr(Type *ty);
 bool is_int16_or_ptr_or_array(Type *ty);
 bool is_flonum(Type *ty);
+bool is_scalar(Type *ty);
 bool is_numeric(Type *ty);
 bool is_redundant_cast(Node *expr, Type *ty);
 bool is_compatible(Type *t1, Type *t2);
@@ -488,6 +489,8 @@ void println(char *fmt, ...);
 __attribute__((format(printf, 1, 2)))
 void printout(char *fmt, ...);
 bool is_local_var(Node *node);
+bool is_local_array(Node *node);
+bool is_global_array(Node *node);
 bool is_global_var(Node *node);
 bool is_local_array_with_constant(Node *node);
 bool is_global_array_with_constant(Node *node);

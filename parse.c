@@ -2901,7 +2901,7 @@ static Node *cast(Token **rest, Token *tok) {
 
     // check cast scalar <-> struct/union
     if (ty->kind != TY_VOID) {
-      if (!is_numeric(ty) && ty->kind != TY_PTR)
+      if (!is_scalar(ty))
         error_tok(start, "cast to a non-scalar type");
       if (!is_numeric(expr->ty) && !expr->ty->base
       &&  expr->ty->kind != TY_FUNC)

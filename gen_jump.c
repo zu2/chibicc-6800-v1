@@ -78,9 +78,7 @@ char *is_addr_constant(Node *node)
 
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_PTR
-  &&  node->lhs->kind == ND_VAR
-  &&  node->lhs->ty->kind == TY_ARRAY
-  &&  !node->lhs->var->is_local) {
+  &&  is_global_array(node->lhs)) {
     char *p = calloc(1,strlen(node->lhs->var->name)+2);
     sprintf(p,"_%s",node->lhs->var->name);
     return p;
@@ -89,9 +87,7 @@ char *is_addr_constant(Node *node)
   &&  node->ty->kind == TY_PTR
   &&  node->lhs->kind == ND_ADD
   &&  node->lhs->ty->kind == TY_ARRAY
-  &&  node->lhs->lhs->kind == ND_VAR
-  &&  node->lhs->lhs->ty->kind == TY_ARRAY
-  &&  !node->lhs->lhs->var->is_local
+  &&  is_global_array(node->lhs->lhs)
   &&  is_integer_constant(node->lhs->rhs,&val)) {
     char *p = calloc(1,strlen(node->lhs->lhs->var->name)+32);
     sprintf(p,"_%s+%ld",node->lhs->lhs->var->name,val);
