@@ -142,58 +142,95 @@ MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
 - For `long`, optimized subroutines are used for comparison, providing relatively fast execution.
 - Recursive functions such as Ackermann ([`9005-ack.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9005-ack.c)) and Takeuchi's tarai ([`9100-tarai.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9100-tarai.c)) run efficiently, even with the overhead of function prologue and epilogue.
 
-## Details of Integer Arithmetic
+## 8-bit Integer Code Generation Details
 
-- The MC6800 cannot directly transfer between AccAB and IX registers, and IX is required for stack data operations.
-- A naive stack machine implementation would be slow, so chibicc-6800-v1 uses the IX register for address calculations whenever possible.
-- For global variables and local variables with fixed offsets, AccAB is avoided as much as possible.
-- Supports 32-bit `long`; does not support 64-bit `long long`.
+Integer types are 8-bit char, 16-bit short and int, and 32-bit long. Pointers are 16-bit. bool values are stored internally as 8-bit values.
+
+C's integer promotions cause operations on bool and char values to be usually performed as int operations.
+
+On the MC6800, most arithmetic and logical operations are performed on 8-bit values. Handling 16-bit values requires additional instructions and is more expensive.
+
+Therefore, it is important to keep 8-bit values as 8-bit whenever possible. The original chibicc follows the C standard and creates an AST with integer promotions applied. chibicc-6800-v1 analyzes and transforms the AST to remove unnecessary promotions. It also generates 8-bit operations where possible during code generation. In particular, generating 8-bit conditional branches can significantly improve performance on the MC6800.
+
+These optimizations are carefully designed to preserve the original C semantics of integer promotions.
+
+## 16-bit Integer Code Generation Details
+
+The MC6800 has very limited register resources. It provides two 8-bit accumulators (A and B) and one 16-bit index register (IX) for general-purpose code generation. Since int operations use 16-bit values, A and B are used together as AccAB, leaving very few available registers.
+
+The IX register plays an important role in code generation. It is mainly used for address calculations, stack variables, pointers, and array accesses. Unlike AccAB, IX cannot perform general arithmetic operations. Its available operations are limited to increment, decrement, and simple comparisons such as equality checks and checks for negative or non-negative values. In addition, IX cannot be directly saved and restored using the stack.
+
+For 16-bit values, keeping calculations in IX whenever possible can generate more efficient code, because moving values between IX and AccAB requires additional instructions. When calculating addresses for global variables and local variables with fixed offsets, AccAB is avoided whenever possible.
+
+Because IX is needed for many operations and cannot be easily saved, tracking and reusing the value held in IX is important for generating efficient code on the MC6800.
+
+The original chibicc uses stack-based operations when generating code, while also taking advantage of the many registers available on x64. This approach is effective on x64, but it is inefficient on the MC6800, which has few registers and limited stack support.
+
+## Details of Long Integer Arithmetic
+
+- Supports 32-bit `long` integer operations.
+- The MC6800 has only 8-bit accumulator registers (AccA and AccB), so 32-bit operations require multiple steps and are more expensive.
+- `long long` (64-bit) is not supported because its larger data size and implementation cost are too expensive for the MC6800's limited memory.
+
+The compiler generates long integer operations using a stack-oriented code generation model. To improve performance, it generates code that uses registers effectively where possible. Long integer helper routines, such as multiplication and division, are implemented in assembly language for better performance.
 
 ## Details of Floating-Point Arithmetic
 
-- Supports IEEE754 32-bit single-precision `float`.
+- Supports IEEE 754 32-bit single-precision `float`.
 - Only round-to-nearest mode is supported.
 - Handles subnormal numbers.
-- Does not support `double` or `long double`.
-- Currently implements addition, subtraction, multiplication, division, `fabsf`, `fsqrtf`, `floorf`, and `ceilf`. Other functions may be supported in the future.
+- `double` and `long double` are not supported because their larger data sizes and implementation cost are too expensive for the MC6800's limited memory.
+- Provides basic arithmetic operations and several floating-point functions, including `fabsf`, `fsqrtf`, `floorf`, and `ceilf`. Some functions are implemented, but many are still missing. If you need a specific function, please open an issue.
 
-The IEEE754 float implementation has passed the Paranoia test for addition, subtraction, multiplication, division, and sqrtf. Other parts are still in progress.
+The IEEE 754 float implementation is written in assembly language, providing better performance and smaller code size than a C implementation. Other parts are still being improved.
 
-- https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/EXAMPLES/benchmarks/paranoia
 ---
 # Optimization Options
 
 ## Supported Optimization Flags
 
-- The compiler supports the `-O` and `-Os` options for optimization.  
-- You can also specify `-O0`, `-O1`, and `-O2`
-- The default optimization level is `-O0`.
+- The compiler supports the `-O` and `-Os` optimization options.
+- You can also specify `-O0`, `-O1`, `-O2`, and `-O3`.
+- The default optimization level is `-O2`. The `-O` option is equivalent to `-O2`.
 
-## Behavior of Each Option
+## Details of Each Option
 
-- **`-O0`**:  
-  No optimization is performed at this level.
+- **`-O0`**:
+  Performs the same basic optimizations as `-O1`, but disables peephole optimization.
 
-- **`-O`, `-O1`, `-O2`**:  
-  If `/opt/fcc/lib/copt` is available, chibicc will use it to perform peephole optimization
+- **`-O1`**:
+  Enables basic optimization with peephole optimization.
+
+- **`-O`**:
+  Equivalent to `-O2`.
+
+- **`-O2`**:
+  Enables a higher optimization level than `-O1`. It may generate larger code.
 
 - **`-O3`**:
-  -O3 is an experimental feature. Use at your own risk, after reviewing the generated code.
+  `-O3` is an experimental feature. It includes the optimizations of `-O2` and may generate self-modifying code. Review the generated code before using it.
 
-- **`-Os`**:  
-  This option generates code aimed at minimizing the size of the object file. As a trade-off, the resulting code may run approximately 5%-25% slower.
+- **`-Os`**:
+  This option generates code aimed at minimizing code size. It uses helper calls more aggressively to reduce code size. In particular, function prologues and epilogues are replaced with helper calls, which can significantly slow down small functions due to the additional call overhead. This trade-off can be useful on the MC6800, where memory is very limited.
+
+Note that `-O2` and higher may place local variables in static storage when possible. This behavior can be disabled with the `-nostatic-locals` option.
 
 ---
 # Design Notes
 
-## Stack frame
+## Stack Frame
 
-This compiler, like the x86 version, uses the frame pointer (`@bp`) to access local variables and arguments.  
-On the 6800, due to the limited number of registers, `@bp` is placed in the zero page.  
-Unlike other 6800 compilers that obtain the stack position using `TSX`, chibicc-6800 uses `LDX @bp`.  
-Although this makes the instruction one byte larger, the number of cycles required is the same.  
-Furthermore, when arithmetic operations on the stack pointer are needed, omitting `STS` can offset the size difference.
+This compiler inherits the frame pointer design from the original x64 version of chibicc. A virtual register (`@bp`) is used to access local variables and arguments.
 
+Since the 6800 does not have enough registers to dedicate one as a frame pointer, `@bp` is implemented in the zero page.
+
+Unlike other 6800 compilers that obtain the stack position using `tsx`, chibicc-6800 uses `ldx @bp`. Although this requires one more byte in the instruction, the number of CPU cycles is the same.
+
+Accessing local variables often requires `ldx @bp`. Pointer operations can also frequently generate sequences such as `ldx @bp` followed by `ldx n,X`, which are inefficient. To reduce these cases, this compiler tracks the state of the IX register and avoids generating unnecessary loads whenever possible.
+
+Normally, the stack pointer and `@bp` point to the same location. When they match, `tsx` is generated instead of `ldx @bp`, saving one byte of code size.
+
+For local array access, address calculations involving `@bp` and an index are required. Compilers without a frame pointer may need to store the temporary stack position, such as with `STS @tmp`. Since chibicc-6800 keeps the frame pointer in `@bp`, these extra stores can be avoided in such cases.
 
 ### Key points:
 
@@ -241,7 +278,7 @@ If stack restoration is fast with @bp, compiler use ldx @bp / txs. For many argu
 
 ### Function Arguments Handling
 
-Adjusting the stack in the called function can make the return process trickier. Instead of just using `RTS`, you'll need extra instructions like `TSX/LDX 0,X/INS.../JMP 0,X`. However, if many `INS` instructions are required, the difference in how the callee restores the stack becomes less significant.
+Adjusting the stack in the called function can make the return process trickier. Instead of just using `RTS`, you'll need extra instructions like `tsx/ldx 0,X/ins.../jmp 0,X`. However, if many `ins` instructions are required, the difference in how the callee restores the stack becomes less significant.
 
 ## float/long in zero page
 
