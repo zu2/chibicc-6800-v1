@@ -14,20 +14,15 @@ Some parts of the code may exist for testing, and some code and comments remain 
 # Topics
 
 - **Data types:** `int` and pointers are 16-bit; `long` and `float` are 32-bit. `double` and `long long` (64-bit or more) are unsupported.
-- **Structs/unions:** Passing/returning by value are implemented. but this increases code size; use pointers instead.
-- **Bit fields:** Implemented, but generally discouraged due to inefficiency.
 - **Function parameters:** Only the first parameter is passed via registers (A/B/@long). If the first parameter is a struct/union, all parameters are passed via the stack.
 - **Return values:** Struct/union return values pass their address as an implicit first argument in a register. All other normal arguments are passed on the stack.
+- **IEEE 754 floating-point:** 32-bit floating-point arithmetic is implemented in assembly language, making it faster and smaller than a C implementation. It can handle subnormal, NaN, and Inf values. Basic arithmetic operations have good precision, but other functions may have reduced precision.
+- **Structs/unions:** Passing and returning by value are implemented, but they increase code size. Using pointers is recommended instead.
+- **Bit fields:** Implemented, but generally discouraged because they generate inefficient code.
 
-The compiler passes basic tests, but there are still some issues remaining.
+The compiler passes basic tests. If you find any issues, please report them.
 
-IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C.
-
-It can handle subnormal, NaN and Inf values. It passes basic testing.
-
-Basic arithmetic operations have good precision, but other functions may have reduced precision.
-
-The original chibicc compiles C source code using stack-based operations, but also makes use of the many registers available on x64. This is inefficient on the MC6800, which has few registers and limited stack support. chibicc-6800-v1 optimizes code generation for the MC6800.
+The original chibicc uses stack-based operations when generating code, while also taking advantage of the many registers available on x64. This is inefficient on the MC6800, which has few registers and limited stack support. chibicc-6800-v1 optimizes code generation for the MC6800.
 
 Fuzix-BinTools is required to assemble and link compiled objects.
 For testing, we use emu6800 from Fuzix-Compiler-Kit.
