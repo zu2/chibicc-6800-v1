@@ -105,6 +105,44 @@ This will compile the source file and execute the resulting binary using the emu
 ![mandelbrot](./img/20250624-mandelbrot.png "mandelbrot ascii art")
 
 ---
+## Usage on Other Platforms
+
+To run this compiler on systems other than `emu6800`, you can specify the target platform using command-line options. Depending on the option, the appropriate startup code (`crt0*.s`), program start address, initial stack pointer, and link-time addresses are automatically configured.
+
+### Target Options
+
+* **Default (No option):** Generates code for `emu6800` (uses `crt0.s`).
+* **`-tmikbug`:** MIKBUG (uses `crt0_mikbug.s`)
+* **`-tbm`:** Hitachi BASICMASTER L2 / L2II / Jr (uses `crt0_bm.s`)
+* **`-tjr100`:** National JR-100 (uses `crt0_jr100.s`)
+* **`-tjr200`:** National JR-200 (uses `crt0_jr200.s`)
+
+If you need to use this compiler on a platform not listed above, you will need to create a custom `crt0` file and specify the appropriate link-time parameters.
+
+By running with `-vv`, such as `chibicc -vv a.c`, you can check how chibicc performs compilation and linking. Please use this as a reference:
+
+```
+$ chibicc -vv a.c
+chibicc -vv a.c -cc1 -cc1-input b.c -cc1-output /tmp/chibicc-tGegnu 
+/opt/fcc/lib/copt /opt/chibicc/lib/copt.rules 
+/opt/fcc/lib/copt /opt/chibicc/lib/copt_O2.rules 
+as6800 -o /tmp/chibicc-cuScKa /tmp/chibicc-Vhhfpv 
+ld6800 -b -C256 -Z0 -m a.map -o a.bin /opt/chibicc/lib/crt0.o /tmp/chibicc-cuScKa /opt/chibicc/lib/dummyfloat.o /opt/chibicc/lib/clibs.a /opt/chibicc/lib/libc.a
+```
+
+> **Note:** While I am familiar with `emu6800` and the BASICMASTER series, my familiarity with other architectures is limited. If you encounter any bugs or wish to request support for additional platforms, please open an issue.
+
+## Examples
+
+The following projects by kwhr0 utilize this compiler:
+
+- [bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo)
+  - A bare-metal implementation for the Hitachi BASICMASTER
+- [kwhr0/bm2-xevious](https://github.com/kwhr0/bm2-xevious)
+  - famous retro game
+- http://kwhr0.g2.xrea.com/hard/68vs80/index.html
+
+---
 # Performance
 
 ## Integer Operations
@@ -216,6 +254,13 @@ The IEEE 754 float implementation is written in assembly language, providing bet
   This option generates code aimed at minimizing code size. It uses helper calls more aggressively to reduce code size. In particular, function prologues and epilogues are replaced with helper calls, which can significantly slow down small functions due to the additional call overhead. This trade-off can be useful on the MC6800, where memory is very limited.
 
 Note that `-O2` and higher may place local variables in static storage when possible. This behavior can be disabled with the `-nostatic-locals` option.
+
+## Options for Code Generation Verification
+
+- `-g2` (or `-gg`): Embeds the C source code as comments into the output assembly source (`.s`).
+- `-g3` (or `-ggg`): Embeds the Abstract Syntax Tree (AST) and other information as well.
+
+> **Note:** If the embedded debug information is excessively long and exceeds the maximum line length supported by the assembler, it may cause an assembly error.
 
 ---
 # Design Notes
@@ -412,11 +457,13 @@ IX addressing can only use offsets from 0 to 255, so there are limitations. If a
 
 ## Bitfield Support
 
-Bit fields enable the packing of multiple small integer values into a struct, thereby reducing memory usage. However, on the MC6800, manipulation of bit fields is generally inefficient. Accessing or modifying a bit field requires multiple shift and bitwise operations (such as AND and XOR) to isolate or update specific bits. This leads to an increased instruction count and slower execution compared to access of regular integer struct members.
+> **Warning:** Bit fields result in inefficient code on the MC6800, and their use is not recommended.
 
-- Bitfields are always packed into 16-bit (int) units, starting at the least significant bit (bit 0) of each word.
-- When a non-bitfield member appears in a struct, bitfield packing ends, and any following bitfields start at the next 16-bit boundary.
-- Zero-width fields (e.g., unsigned int : 0;) force alignment to the next 16-bit boundary.
+Bit fields allow you to pack multiple small integer values into a struct to save memory. However, handling bit fields on the MC6800 is generally inefficient. Accessing or modifying a bit field requires multiple shift and bitwise operations (such as AND and XOR) to isolate or update specific bits. Because of this, it increases the instruction count and runs slower than accessing regular integer struct members.
+
+- Bit fields are always packed into 16-bit (`int`) units, starting from the least significant bit (bit 0) of each word.
+- When a non-bitfield member appears in a struct, bitfield packing stops, and any following bitfields start at the next 16-bit boundary.
+- Zero-width fields (e.g., `unsigned int : 0;`) force alignment to the next 16-bit boundary.
 - In unions, the lowest-addressed byte corresponds to the upper 8 bits of the bitfield word, and the highest-addressed byte to the lower 8 bits.
 - The size of a struct or union containing bitfields is rounded up so that all bitfields fit into full 16-bit units.
 
@@ -435,44 +482,6 @@ struct S {
 - a, b, and c are packed into the first 16-bit word.
 - d is placed at the next byte.
 - e starts at the next 16-bit word.
-
----
-## Usage on Other Platforms
-
-To run this compiler on systems other than `emu6800`, you can specify the target platform using command-line options. Depending on the option, the appropriate startup code (`crt0*.s`), program start address, initial stack pointer, and link-time addresses are automatically configured.
-
-### Target Options
-
-* **Default (No option):** Generates code for `emu6800` (uses `crt0.s`).
-* **`-tmikbug`:** MIKBUG (uses `crt0_mikbug.s`)
-* **`-tbm`:** Hitachi BASICMASTER L2 / L2II / Jr (uses `crt0_bm.s`)
-* **`-tjr100`:** National JR-100 (uses `crt0_jr100.s`)
-* **`-tjr200`:** National JR-200 (uses `crt0_jr200.s`)
-
-If you need to use this compiler on a platform not listed above, you will need to create a custom `crt0` file and specify the appropriate link-time parameters.
-
-By running with `-vv`, such as `chibicc -vv a.c`, you can check how chibicc performs compilation and linking. Please use this as a reference:
-
-```
-$ chibicc -vv a.c
-chibicc -vv a.c -cc1 -cc1-input b.c -cc1-output /tmp/chibicc-tGegnu 
-/opt/fcc/lib/copt /opt/chibicc/lib/copt.rules 
-/opt/fcc/lib/copt /opt/chibicc/lib/copt_O2.rules 
-as6800 -o /tmp/chibicc-cuScKa /tmp/chibicc-Vhhfpv 
-ld6800 -b -C256 -Z0 -m a.map -o a.bin /opt/chibicc/lib/crt0.o /tmp/chibicc-cuScKa /opt/chibicc/lib/dummyfloat.o /opt/chibicc/lib/clibs.a /opt/chibicc/lib/libc.a
-```
-
-> **Note:** While I am familiar with `emu6800` and the BASICMASTER series, my familiarity with other architectures is limited. If you encounter any bugs or wish to request support for additional platforms, please open an issue.
-
-## Examples
-
-The following projects by kwhr0 utilize this compiler:
-
-- [bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo)
-  - A bare-metal implementation for the Hitachi BASICMASTER
-- [kwhr0/bm2-xevious](https://github.com/kwhr0/bm2-xevious)
-  - famous retro game
-- http://kwhr0.g2.xrea.com/hard/68vs80/index.html
 
 ---
 # Reference compilers
