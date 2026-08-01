@@ -1,4 +1,4 @@
-# chibicc-6800-v1: A small C Compiler for MC6800
+# chibicc-6800-v1: C Compiler for MC6800
 
 ## Overview
 
@@ -141,6 +141,8 @@ MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
 - For `char` and `int`, direct branching is generated without relying on subroutines.
 - For `long`, optimized subroutines are used for comparison, providing relatively fast execution.
 - Recursive functions such as Ackermann ([`9005-ack.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9005-ack.c)) and Takeuchi's tarai ([`9100-tarai.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9100-tarai.c)) run efficiently, even with the overhead of function prologue and epilogue.
+
+# Code Generation Details
 
 ## 8-bit Integer Code Generation Details
 
@@ -400,17 +402,6 @@ Branches "if (x\>y)" are converted to jge (bge) instructions.
 	ins
 ```
 
-## Float
-
-The `float` type follows the IEEE 754 standard for single-precision floating-point numbers, supporting both normalized and subnormal values.
-
-IEEE 754 32-bit floating-point arithmetic code is written in assembler, which is faster and also smaller in size compared to code written in C
-
-Currently, addition, subtraction, multiplication, division, comparison, absolute value (fabs), and square root (sqrtf) are implemented. Other functions are under consideration.
-
-Float can handle subnormal, NaN and Inf values. It passes basic testing.
-
-
 ## Large size object / local area
 
 IX addressing can only use offsets from 0 to 255, so there are limitations. If an offset greater than 255 is needed, calculations using AccAB are required, which leads to less efficient code.
@@ -446,11 +437,42 @@ struct S {
 - e starts at the next 16-bit word.
 
 ---
-# Usage in Other Platform
+## Usage on Other Platforms
 
-To run this compiler on systems other than emu6800, crt0 (the startup code), the program’s start address, and the initial stack pointer value must be changed. The link-time address should also be adjusted. Please refer to kwhr0’s Hitachi BASICMASTER project for examples.
+To run this compiler on systems other than `emu6800`, you can specify the target platform using command-line options. Depending on the option, the appropriate startup code (`crt0*.s`), program start address, initial stack pointer, and link-time addresses are automatically configured.
 
-This compiler is also used in `kwhr0`'s [bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo), [kwhr0/bm2-chibicc-demo](https://github.com/kwhr0/bm2-chibicc-demo) project. 
+### Target Options
+
+* **Default (No option):** Generates code for `emu6800` (uses `crt0.s`).
+* **`-tmikbug`:** MIKBUG (uses `crt0_mikbug.s`)
+* **`-tbm`:** Hitachi BASICMASTER L2 / L2II / Jr (uses `crt0_bm.s`)
+* **`-tjr100`:** National JR-100 (uses `crt0_jr100.s`)
+* **`-tjr200`:** National JR-200 (uses `crt0_jr200.s`)
+
+If you need to use this compiler on a platform not listed above, you will need to create a custom `crt0` file and specify the appropriate link-time parameters.
+
+By running with `-vv`, such as `chibicc -vv a.c`, you can check how chibicc performs compilation and linking. Please use this as a reference:
+
+```
+$ chibicc -vv a.c
+chibicc -vv a.c -cc1 -cc1-input b.c -cc1-output /tmp/chibicc-tGegnu 
+/opt/fcc/lib/copt /opt/chibicc/lib/copt.rules 
+/opt/fcc/lib/copt /opt/chibicc/lib/copt_O2.rules 
+as6800 -o /tmp/chibicc-cuScKa /tmp/chibicc-Vhhfpv 
+ld6800 -b -C256 -Z0 -m a.map -o a.bin /opt/chibicc/lib/crt0.o /tmp/chibicc-cuScKa /opt/chibicc/lib/dummyfloat.o /opt/chibicc/lib/clibs.a /opt/chibicc/lib/libc.a
+```
+
+> **Note:** While I am familiar with `emu6800` and the BASICMASTER series, my familiarity with other architectures is limited. If you encounter any bugs or wish to request support for additional platforms, please open an issue.
+
+## Examples
+
+The following projects by kwhr0 utilize this compiler:
+
+- [bm2-baremetal-demo](https://github.com/kwhr0/bm2-baremetal-demo)
+  - A bare-metal implementation for the Hitachi BASICMASTER
+- [kwhr0/bm2-xevious](https://github.com/kwhr0/bm2-xevious)
+  - famous retro game
+- http://kwhr0.g2.xrea.com/hard/68vs80/index.html
 
 ---
 # Reference compilers
