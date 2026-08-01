@@ -72,7 +72,7 @@ bool is_u8num(Node *node)
 {
   int64_t val;
 
-  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
+  if (is_integer_constant(node, &val)) {
     if (val >= 0  && val <= 255) {
       return true;
     }
@@ -84,7 +84,7 @@ bool is_s8num(Node *node)
 {
   int64_t val;
 
-  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
+  if (is_integer_constant(node, &val)) {
     if (val >= -128  && val <= 127) {
       return true;
     }
