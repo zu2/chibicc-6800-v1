@@ -6,9 +6,9 @@ This is a Motorola MC6800 cross-compiler based on [@rui314](https://www.sigbus.i
 
 The compiler targets the MC6800 and is designed to generate efficient code. It works well on the MC6800 and provides good performance.
 
-Many C programs, including Dhrystone and Whetstone benchmarks, now run successfully on the MC6800. The compiler also supports IEEE 754 32-bit floating-point operations through an assembly implementation.
+Many C programs, including Dhrystone and Whetstone benchmarks, now run on the MC6800. The compiler also supports IEEE 754 32-bit floating-point operations through an assembly implementation.
 
-Some parts of the code may exist for testing, and some code and comments remain from the implementation process. If you find any issues, feedback is welcome.
+Some test code or implementation notes may still remain. Feedback and bug reports are always welcome.
 
 ----
 # Topics
@@ -105,11 +105,11 @@ This will compile the source file and execute the resulting binary using the emu
 ![mandelbrot](./img/20250624-mandelbrot.png "mandelbrot ascii art")
 
 ---
-## Usage on Other Platforms
+# Usage and Examples on Other Platforms
 
 To run this compiler on systems other than `emu6800`, you can specify the target platform using command-line options. Depending on the option, the appropriate startup code (`crt0*.s`), program start address, initial stack pointer, and link-time addresses are automatically configured.
 
-### Target Options
+## Target Options
 
 * **Default (No option):** Generates code for `emu6800` (uses `crt0.s`).
 * **`-tmikbug`:** MIKBUG (uses `crt0_mikbug.s`)

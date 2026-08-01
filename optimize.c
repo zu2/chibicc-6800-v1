@@ -793,6 +793,21 @@ Node *optimize_expr(Node *node)
         return new;
       }
     }
+    // (+ (ADDR (DEREF (+ x V))) C) -> (+ (ADDR (DEREF (+ x C))) V)
+    if (is_integer_constant(node->rhs,&val)
+    &&  node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  node->lhs->lhs->kind == ND_ADD
+    &&  is_integer(node->lhs->lhs->rhs->ty)
+    && !is_integer_constant(node->lhs->lhs->rhs,&val2)) {
+      Node *inner = node->lhs->lhs;
+      new = new_copy(node);
+      new->lhs = new_copy(node->lhs);
+      new->lhs->lhs = new_copy(inner);
+      new->lhs->lhs->rhs = node->rhs;
+      new->rhs = inner->rhs;
+      return new;
+    }
     return node;
   } // ND_ADD
   case ND_SUB: {
