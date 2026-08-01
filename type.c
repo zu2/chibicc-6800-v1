@@ -83,11 +83,6 @@ bool is_null_ptr_constant(Node *node) {
   return node->kind == ND_NUM && is_integer(node->ty) && node->val == 0;
 }
 
-// add from slimcc
-bool is_array(Type *ty) {
-  return ty->kind == TY_ARRAY || ty->kind == TY_VLA;
-}
-
 bool is_bitfield(Node *node) {
   return node->kind == ND_MEMBER && node->member->is_bitfield;
 }
