@@ -825,11 +825,25 @@ Node *optimize_expr(Node *node)
   }
   case ND_MUL: {
     int64_t val;
+    int64_t val2;
 
     node = optimize_lr_swap(node);
     if (is_integer_constant(node->lhs,&val)
     &&  is_integer_constant(node->rhs,&val)) {
       return optimize_const_expr(node);
+    }
+    // (x ± c1) * c2 -> x * c2 ± c1 * c2  (arr[i+1] makes this tree)
+    if (is_integer_constant(node->rhs,&val)
+    && (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
+    &&  is_integer_constant(node->lhs->rhs,&val2)) {
+      Node *new = new_copy(node->lhs);
+      new->ty  = node->ty;
+      new->lhs = new_copy(node);
+      new->lhs->lhs = node->lhs->lhs;
+      new->lhs->rhs = node->rhs;
+      new->rhs = new_num(val*val2, node->tok);
+      new->rhs->ty = node->ty;
+      return optimize_const_expr(new);
     }
 
     return node;
