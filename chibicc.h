@@ -469,6 +469,7 @@ void ast_node_dump(Node *node);
 bool is_integral_promotion(Node *node);
 bool is_integral_promotion_or_byte(Node *node);
 Node *skip_integral_promotion(Node *node);
+Node *skip_bye_to_int(Node *node);
 bool is_u8num(Node *node);
 bool is_s8num(Node *node);
 bool is_uchar_or_u8num(Node *node);

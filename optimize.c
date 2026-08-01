@@ -30,7 +30,7 @@ Node *skip_integral_promotion(Node *node)
   return node;
 }
 
-bool is_uint_promotion(Node *node)
+bool is_byte_to_uint(Node *node)
 {
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_INT
@@ -46,22 +46,22 @@ bool is_uint_promotion(Node *node)
   return false;
 }
 
-Node *skip_uint_promotion(Node *node)
+Node *skip_byte_to_uint(Node *node)
 {
-  if (is_uint_promotion(node)) {
+  if (is_byte_to_uint(node)) {
     return node->lhs;
   }
   return node;
 }
 
-bool is_int_promotion(Node *node)
+bool is_byte_to_int(Node *node)
 {
-  return is_integral_promotion(node) || is_uint_promotion(node);
+  return is_integral_promotion(node) || is_byte_to_uint(node);
 }
 
-Node *skip_int_promotion(Node *node)
+Node *skip_byte_to_int(Node *node)
 {
-  if (is_int_promotion(node)) {
+  if (is_byte_to_int(node)) {
     return node->lhs;
   }
   return node;
@@ -543,11 +543,11 @@ Node *optimize_expr(Node *node)
     }
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
-    &&  is_uint_promotion(node->lhs->lhs)
-    &&  is_uint_promotion(node->lhs->rhs)) {
+    &&  is_byte_to_uint(node->lhs->lhs)
+    &&  is_byte_to_uint(node->lhs->rhs)) {
       Node *new = new_copy(node->lhs);
-      new->lhs = skip_uint_promotion(node->lhs->lhs);
-      new->rhs = skip_uint_promotion(node->lhs->rhs);
+      new->lhs = skip_byte_to_uint(node->lhs->lhs);
+      new->rhs = skip_byte_to_uint(node->lhs->rhs);
       new->ty = node->ty;
       return optimize_const_expr(new);
     }
@@ -561,16 +561,16 @@ Node *optimize_expr(Node *node)
 //    case ND_BITAND:
 //    case ND_BITOR:
 //    case ND_BITXOR:
-        if (is_int_promotion(node->lhs->lhs)
+        if (is_byte_to_int(node->lhs->lhs)
         &&  is_compare_or_not(node->lhs->rhs)) {
-          node->lhs->lhs = skip_int_promotion(node->lhs->lhs);
+          node->lhs->lhs = skip_byte_to_int(node->lhs->lhs);
           node->lhs->rhs->ty = node->lhs->lhs->ty;
           node->lhs->ty      = node->lhs->lhs->ty;
           return optimize_const_expr(node->lhs);
         }
-        if (is_int_promotion(node->lhs->rhs)
+        if (is_byte_to_int(node->lhs->rhs)
         &&  is_compare_or_not(node->lhs->lhs)) {
-          node->lhs->rhs = skip_int_promotion(node->lhs->rhs);
+          node->lhs->rhs = skip_byte_to_int(node->lhs->rhs);
           node->lhs->lhs->ty = node->lhs->rhs->ty;
           node->lhs->ty      = node->lhs->rhs->ty;
           return optimize_const_expr(node->lhs);
@@ -590,7 +590,7 @@ Node *optimize_expr(Node *node)
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
     &&  node->lhs->lhs->kind == ND_NUM
     &&  (is_integral_promotion(node->lhs->rhs)
-       ||is_uint_promotion(node->lhs->rhs)) ) {
+       ||is_byte_to_uint(node->lhs->rhs)) ) {
       Node *new = new_copy(node->lhs);
       new->ty = node->ty;
       new->lhs = node->lhs->lhs;
@@ -933,6 +933,16 @@ Node *optimize_expr(Node *node)
         node->rhs = skip_integral_promotion(node->rhs);
         if (node->lhs->kind == ND_NUM) node->lhs->ty = ty_char;
         if (node->rhs->kind == ND_NUM) node->rhs->ty = ty_char;
+      }
+    }
+    // uchar op 8 bit constant
+    if (is_byte_to_uint(node->lhs)
+    &&  node->rhs->kind == ND_NUM) {
+      if (is_uchar_or_u8num(node->lhs->lhs)
+       && is_uchar_or_u8num(node->rhs)) {
+        node->lhs = skip_byte_to_uint(node->lhs);
+        if (node->lhs->kind == ND_NUM) node->lhs->ty = ty_uchar;
+        node->rhs->ty = ty_uchar;
       }
     }
     if ( is_integer(node->lhs->ty)
