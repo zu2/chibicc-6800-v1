@@ -56,7 +56,7 @@ Type *is_byte(Node *node)
     return node->ty;
   }
 
-  if (node->kind == ND_NUM && is_integer_constant(node, &val)) {
+  if (is_integer_constant(node, &val)) {
     if (node->ty->is_unsigned && val >= 0 && val <= 255) {
       return node->ty;
     }
