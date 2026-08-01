@@ -2,18 +2,14 @@
 
 ## Overview
 
-This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/), modified to create a C compiler for the Motorola MC6800 architecture.
+This project is a fork of [@rui314](https://www.sigbus.info/)'s [chibicc](https://github.com/rui314/chibicc/) for the Motorola MC6800 architecture.
 
-This project was created as a tool for studying compilers for the MC6800, and while it includes extra code and comments that may not be essential, they reflect the learning process and experimentation involved in developing the compiler.
+The compiler targets the MC6800 and is designed to generate efficient code. It works well on the MC6800 and provides good performance.
 
-A lot of things about object code generation and performance only became clear once I actually implemented it. Some parts of the code may be there just for testing.
+Many C programs, including Dhrystone and Whetstone benchmarks, now run successfully on the MC6800. The compiler also supports IEEE 754 32-bit floating-point operations through an assembly implementation.
 
-However, it works reasonably well on the MC6800. I hope it may still be of some use.
+Some parts of the code may exist for testing, and some code and comments remain from the implementation process. If you find any issues, feedback is welcome.
 
-Dhrystone and Whetstone benchmarks now run successfully on the MC6800.
-
-- https://github.com/z88dk/z88dk/tree/master/support/benchmarks/dhrystone21
-- https://github.com/z88dk/z88dk/tree/master/support/benchmarks/whetstone
 ----
 # Topics
 
