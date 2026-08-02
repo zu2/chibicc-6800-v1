@@ -2677,71 +2677,72 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     }
   } // ND_NUM
   case ND_VAR: {
-    if (node->var->ty->kind != TY_VLA ){
-      if(node->var->is_local){
-        if (node->ty->kind==TY_ARRAY) {
-          if (test) return true;
-          println("\t%s @bp+1",opb);
-          if (opa)
-            println("\t%s @bp",opa);
-          if (strcmp(opb,"addb")==0 && node->var->offset==0) {
-            return 1;
-          }
-          println("\t%s #<%d",opb,node->var->offset);
-          if (opa)
-            println("\t%s #>%d",opa,node->var->offset);
+    if (node->var->ty->kind == TY_VLA ) {
+      return 0;
+    }
+    if(node->var->is_local){
+      if (node->ty->kind==TY_ARRAY) {
+        if (test) return true;
+        println("\t%s @bp+1",opb);
+        if (opa)
+          println("\t%s @bp",opa);
+        if (strcmp(opb,"addb")==0 && node->var->offset==0) {
           return 1;
         }
-        if (!test_addr_x(node)) return 0;
-        if (is_int8(node->ty)) {
-          if (test) {
-            return is_char || node->ty->is_unsigned;
-          }
-          int off = gen_addr_x(node,true);
-          println("\t%s %d,x",opb,off);
-          if (!is_store && opa) {
-            println("\t%s #0",opa);
-          }
-        }else{
-          if (test) return 1;
-          int off = gen_addr_x(node,true);
-          println("\t%s %d,x",opb,off+1);
-          if (opa)
-            println("\t%s %d,x",opa,off);
-        }
-        return 1;
-      }else{
-        // global
-        if (node->ty->kind==TY_FUNC)
-          return 0;
-//      if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned && !opa)
-//          return 0;
-        if (test) return 1;
-        if (is_int8(node->ty)) {
-   	      if (is_store) {
-            println("\t%s _%s",opb,node->var->name);
-            invalidate_EXT(node);
-            return 1;
-          }
-          println("\t%s _%s",opb,node->var->name);
-          if (opa)
-            println("\t%s #0",opa);
-	        return 1;
-	      }
-        if (node->ty->kind==TY_ARRAY) {
-          println("\t%s #<_%s",opb,node->var->name);
-          if (opa)
-            println("\t%s #>_%s",opa,node->var->name);
-	        return 1;
-        }
-        println("\t%s _%s+1",opb,node->var->name);
+        println("\t%s #<%d",opb,node->var->offset);
         if (opa)
-          println("\t%s _%s",opa,node->var->name);
-        if (is_store) {
-          invalidate_EXT(node);
-        }
+          println("\t%s #>%d",opa,node->var->offset);
         return 1;
       }
+      if (!test_addr_x(node)) return 0;
+      if (is_int8(node->ty)) {
+        if (test) {
+          return is_char || node->ty->is_unsigned;
+        }
+        int off = gen_addr_x(node,true);
+        println("\t%s %d,x",opb,off);
+        if (!is_store && opa) {
+          println("\t%s #0",opa);
+        }
+      }else{
+        if (test) return 1;
+        int off = gen_addr_x(node,true);
+        println("\t%s %d,x",opb,off+1);
+        if (opa)
+          println("\t%s %d,x",opa,off);
+      }
+      return 1;
+    }else{
+      // global
+      if (node->ty->kind==TY_FUNC)
+        return 0;
+//    if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned && !opa)
+//        return 0;
+      if (test) return 1;
+      if (is_int8(node->ty)) {
+   	    if (is_store) {
+          println("\t%s _%s",opb,node->var->name);
+          invalidate_EXT(node);
+          return 1;
+        }
+        println("\t%s _%s",opb,node->var->name);
+        if (opa)
+          println("\t%s #0",opa);
+	      return 1;
+	    }
+      if (node->ty->kind==TY_ARRAY) {
+        println("\t%s #<_%s",opb,node->var->name);
+        if (opa)
+          println("\t%s #>_%s",opa,node->var->name);
+	      return 1;
+      }
+      println("\t%s _%s+1",opb,node->var->name);
+      if (opa)
+        println("\t%s _%s",opa,node->var->name);
+      if (is_store) {
+        invalidate_EXT(node);
+      }
+      return 1;
     }
     return 0;
   } // ND_VAR
@@ -3356,19 +3357,20 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
     }
   } // ND_NUM
   case ND_VAR: {
-    if (rhs->var->ty->kind != TY_VLA){
-      if (!test_addr_x(rhs)) return 0;
-      if (rhs->var->is_local){
-        if (test) return 1;
-        int off = gen_addr_x(rhs,true);
-        jsr_32dx(opb,off);
-        return 1;
-      }else{ // global
-        if (test) return 1;
-        ldx_IMM_VAR(rhs->var->name);
-        jsr_32dx(opb,0);
-        return 1;
-      }
+    if (rhs->var->ty->kind == TY_VLA){
+      return 0;
+    }
+    if (!test_addr_x(rhs)) return 0;
+    if (rhs->var->is_local){
+      if (test) return 1;
+      int off = gen_addr_x(rhs,true);
+      jsr_32dx(opb,off);
+      return 1;
+    }else{ // global
+      if (test) return 1;
+      ldx_IMM_VAR(rhs->var->name);
+      jsr_32dx(opb,0);
+      return 1;
     }
     return 0;
   } // ND_VAR
