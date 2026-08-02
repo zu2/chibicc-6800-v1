@@ -1489,7 +1489,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
   case ND_VAR:
     // Variable-length array, which is always local.
     if (node->var->ty->kind == TY_VLA){
-      if (node->var->offset<=254) {
+      if (node->var->offset<=252) {
         if (test) return 1;
         println("; gen_addr_x():TY_LDA,%d ",node->var->offset);
         ldx_bp_nX(node->var->offset);
@@ -1499,7 +1499,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     }
     // Local variable
     if (node->var->is_local) {
-      if (node->var->offset <= 254){
+      if (node->var->offset <= 252){
         if (test) return 1;
         ldx_bp();
         return node->var->offset;
@@ -3401,90 +3401,76 @@ static int gen_direct_long(Node *rhs,char *opb, char *opa)
   return gen_direct_long_sub(rhs,opb,opa,0);
 }
 
+// 0: nowhere  1: local frame (off,x)  2: in the code (#imm)  3: global label (_name)
+static int long_location_type(Node *node)
+{
+  switch (node->kind) {
+  case ND_NUM:
+    return 2;
+  case ND_VAR:
+    // A VLA variable holds a pointer at var->offset, not the data.
+    if (node->var->ty->kind == TY_VLA)
+      break;
+    if (node->var->is_local && test_addr_x(node))
+      return 1;
+    if (is_global_var(node))
+      return 3;
+    break;
+  }
+  return 0;
+}
+
 //
-int gen_direct_long2(Node *node,char *opb, char *opa)
+// @long = lhs op rhs
+//
+//  - 32-bit work is a stack machine whose top is @long. push and pop
+//    of four bytes costs more than the op itself, so here we read
+//    both sides where they are and only the result goes into @long.
+//  - opb and opa are the op codes for the lowest byte and for the
+//    upper three. They differ because add and sub have to carry.
+//
+int gen_direct_long2(Node *node, char *opb, char *opa)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
-  int L =  ((lhs->kind == ND_NUM) && (lhs->ty->kind == TY_LONG))*2
-        +  ((lhs->kind == ND_VAR) && test_addr_x(lhs) &&  lhs->var->is_local);
-  int R =  ((rhs->kind == ND_NUM) && (rhs->ty->kind == TY_LONG))*2
-        +  ((rhs->kind == ND_VAR) && test_addr_x(rhs) &&  rhs->var->is_local);
+  int L = long_location_type(lhs);
+  int R = long_location_type(rhs);
   int loff = 0;
   int roff = 0;
-  uint64_t lv;
-  uint64_t rv;
+  uint64_t lv = lhs->val;
+  uint64_t rv = rhs->val;
 
-//
-//  If both L and R are local variables, IX is @bp for both, so this is fine.
-//  Should IX change in the future, this could cause problems.
-//
-  if (L==1)
+  // A constant and a global do not use IX at all. Two locals share the
+  // same base @bp. So IX is loaded at most once, whatever the pair is.
+  if (L==1) { // lhs is local var.
     loff = gen_addr_x(lhs,false);
-  else
-    lv   = lhs->val;
-  if (R==1)
+  }
+  if (R==1) { // rhs is local var.
     roff = gen_addr_x(rhs,false);
-  else
-    rv   = rhs->val;
-  
-  if (L==1)
-    println("\tldab %d,x",loff+3);
-  else
-    ldab_i((int)(lv & 0x000000FF));
-  if (R==1)
-    println("\t%s %d,x",opb,roff+3);
-  else
-    println("\t%s #%d",opb,(int)(rv & 0x000000FF));
-  println("\tstab @long+3");
-  if (L==1)
-    println("\tldaa %d,x",loff+2);
-  else
-    println("\tldaa #%d",(int)((lv & 0x0000FF00)>>8));
-  if (R==1)
-    println("\t%s %d,x",opa,roff+2);
-  else
-    println("\t%s #%d",opa,(int)((rv & 0x0000FF00)>>8));
-  println("\tstaa @long+2");
-  if (L==1)
-    println("\tldaa %d,x",loff+1);
-  else
-    println("\tldaa #%d",(int)((lv & 0x00FF0000)>>16));
-  if (R==1)
-    println("\t%s %d,x",opa,roff+1);
-  else
-    println("\t%s #%d",opa,(int)((rv & 0x00FF0000)>>16));
-  println("\tstaa @long+1");
-  if (L==1)
-    println("\tldaa %d,x",loff);
-  else
-    println("\tldaa #%d",(int)((lv & 0xFF000000)>>24));
-  if (R==1)
-    println("\t%s %d,x",opa,roff);
-  else
-    println("\t%s #%d",opa,(int)((rv & 0xFF000000)>>24));
-  println("\tstaa @long");
+  }
+
+  for (int i = 3; i >= 0; i--) {
+    char *ld = (i==3) ? "ldab" : "ldaa";
+    char *st = (i==3) ? "stab" : "staa";
+    char *op = (i==3) ? opb    : opa;
+    int   sh = (3-i)*8;
+
+    if      (L==1) println("\t%s %d,x",   ld, loff+i);
+    else if (L==2) println("\t%s #%d",    ld, (int)((lv >> sh) & 0xFF));
+    else           println("\t%s _%s+%d", ld, lhs->var->name, i);
+
+    if      (R==1) println("\t%s %d,x",   op, roff+i);
+    else if (R==2) println("\t%s #%d",    op, (int)((rv >> sh) & 0xFF));
+    else           println("\t%s _%s+%d", op, rhs->var->name, i);
+
+    println("\t%s @long+%d", st, i);
+  }
   return 1;
 }
 
 int can_direct_long2(Node *node)
 {
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-
-  int L =  ((lhs->kind == ND_NUM) && (lhs->ty->kind == TY_LONG))*2
-        +  ((lhs->kind == ND_VAR) && test_addr_x(lhs) &&  lhs->var->is_local);
-  int R =  ((rhs->kind == ND_NUM) && (rhs->ty->kind == TY_LONG))*2
-        +  ((rhs->kind == ND_VAR) && test_addr_x(rhs) &&  rhs->var->is_local);
-  if (!L || !R){
-    return 0;
-  }
-  if (L==1 && !test_addr_x(lhs))
-    return 0;
-  if (R==1 && !test_addr_x(rhs))
-    return 0;
-
-  return 1;
+  return long_location_type(node->lhs) && long_location_type(node->rhs);
 }
 
 static void gen_funcall(Node *node)
