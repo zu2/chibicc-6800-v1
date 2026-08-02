@@ -1363,8 +1363,7 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     &&  rhs->ty->kind  == TY_PTR
     &&  rhs->lhs->kind == ND_NUM
     &&  is_integer(rhs->lhs->ty)) {
-      if (lhs->lhs->kind == ND_VAR
-      &&  lhs->lhs->var->is_local) {
+      if (is_local_var(lhs->lhs)) {
         off = lhs->lhs->var->offset + rhs->lhs->val;
         if (off<=252) {
           if (test) return true;
