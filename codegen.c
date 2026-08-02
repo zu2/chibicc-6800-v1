@@ -3481,7 +3481,7 @@ int can_direct_long2(Node *node)
   }
   if (L==1 && !test_addr_x(lhs))
     return 0;
-  if (R==1 && !test_addr_x(lhs))
+  if (R==1 && !test_addr_x(rhs))
     return 0;
 
   return 1;
