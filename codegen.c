@@ -6334,17 +6334,10 @@ void gen_expr(Node *node)
         }
       }
     }
+    // 16bit / 16bit
     gen_expr(node->rhs);
-    if (node->rhs->ty->kind == TY_BOOL
-    ||  node->rhs->ty->kind == TY_CHAR) {
-      cast(node->rhs->ty, node->ty->is_unsigned? ty_uint: ty_int);
-    }
     push();
     gen_expr(node->lhs);
-    if (node->rhs->ty->kind == TY_BOOL
-    ||  node->rhs->ty->kind == TY_CHAR) {
-      cast(node->lhs->ty, node->ty->is_unsigned? ty_uint: ty_int);
-    }
     if (node->ty->is_unsigned) {
       println("\tjsr __div16x16u");
     }else{
@@ -6355,10 +6348,8 @@ void gen_expr(Node *node)
     return;
   case ND_MOD:
     gen_expr(node->rhs);
-    cast(node->rhs->ty, node->ty);
     push();
     gen_expr(node->lhs);
-//  cast(node->lhs->ty, node->ty);
     if (node->ty->is_unsigned) {
       println("\tjsr __rem16x16u");
     }else{
