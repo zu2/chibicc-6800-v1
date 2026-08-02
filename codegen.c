@@ -2769,8 +2769,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     case ND_VAR: {
       if (!is_integer(node->ty) || node->ty->kind==TY_LONG)
         return 0;
-      if (node->lhs->ty->kind == TY_ARRAY
-      &&  !node->lhs->var->is_local) {
+      if (is_global_array(node->lhs)) {
         if (test) return 1;
         switch(node->ty->kind) {
         case TY_BOOL:
@@ -2899,8 +2898,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) m +0 )
     if (node->ty->kind == TY_PTR
     &&  node->lhs->kind == ND_VAR
-    &&  node->lhs->var->is_local
-    &&  node->lhs->ty->kind == TY_ARRAY){
+    &&  is_local_array(node->lhs)) {
        if (test)
          return 1;
       println("\taddb @bp+1");
