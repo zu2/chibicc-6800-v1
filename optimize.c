@@ -618,7 +618,7 @@ Node *optimize_expr(Node *node)
       if (is_integral_promotion(node->lhs->lhs)) {
         node->lhs->lhs = node->lhs->lhs->lhs;
       }
-      return node->lhs;
+      return optimize_expr(node->lhs);
     }
     // (ND_CAST TY_CHAR(2) (|&^ TY_INT(4) (int) (int)))
     if (node->ty->kind == TY_CHAR) {
@@ -808,6 +808,19 @@ Node *optimize_expr(Node *node)
       new->rhs = inner->rhs;
       return new;
     }
+    // (+ (ND_CAST TY_PTR (+ arr c1)) c2) -> (ND_CAST TY_PTR (+ arr (c1+c2)))
+    if (is_integer_constant(node->rhs,&val)
+    &&  node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  node->lhs->lhs->kind == ND_ADD
+    &&  is_integer_constant(node->lhs->lhs->rhs,&val2)) {
+      Node *add  = new_copy(node->lhs->lhs);
+      add->rhs   = new_num(val2+val,node->tok);
+      add->rhs->ty = node->lhs->lhs->rhs->ty;
+      new        = new_copy(node->lhs);
+      new->lhs   = add;
+      return new;
+    }
     return node;
   } // ND_ADD
   case ND_SUB: {
@@ -835,6 +848,18 @@ Node *optimize_expr(Node *node)
         new->rhs->ty = node->lhs->rhs->ty;
         return new;
       }
+    }
+    if (is_integer_constant(node->rhs,&val)
+    &&  node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  node->lhs->lhs->kind == ND_ADD
+    &&  is_integer_constant(node->lhs->lhs->rhs,&val2)) {
+      Node *add  = new_copy(node->lhs->lhs);
+      add->rhs   = new_num(val2-val,node->tok);
+      add->rhs->ty = node->lhs->lhs->rhs->ty;
+      new        = new_copy(node->lhs);
+      new->lhs   = add;
+      return new;
     }
     return node;
   }

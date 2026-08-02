@@ -166,11 +166,6 @@ static bool block_has_funcall(Node *node);
 static bool block_has_funcall_list(Node *node);
 static void promote_locals_to_static(Obj *locals_before);
 
-static int align_down(int n, int align) {
-  return n;
-//return align_to(n - align + 1, align);
-}
-
 static void enter_scope(void) {
   Scope *sc = calloc(1, sizeof(Scope));
   sc->next = scope;
