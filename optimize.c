@@ -770,6 +770,7 @@ Node *optimize_expr(Node *node)
     int64_t val;
     int64_t val2;
     Node *new;
+    Node *base;
 
     node = optimize_lr_swap(node);
     if (is_integer_constant(node->lhs,&val)
@@ -795,10 +796,7 @@ Node *optimize_expr(Node *node)
     }
     // (+ (ND_CAST TY_PTR (+ arr V)) C) -> (+ (ND_CAST TY_PTR (+ arr C)) V)
     if (is_integer_constant(node->rhs,&val)
-    &&  node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  node->lhs->lhs->kind == ND_ADD) {
-      Node *base = node->lhs->lhs;
+    &&  (base = is_array_base(node->lhs))) {
       Node *arr  = is_global_array(base->lhs) ? base->lhs :
                    is_global_array(base->rhs) ? base->rhs : NULL;
       if (arr) {
@@ -818,10 +816,8 @@ Node *optimize_expr(Node *node)
     }
     // (+ (ND_CAST TY_PTR (+ arr c1)) c2) -> (ND_CAST TY_PTR (+ arr (c1+c2)))
     if (is_integer_constant(node->rhs,&val)
-    &&  node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  node->lhs->lhs->kind == ND_ADD
-    &&  is_integer_constant(node->lhs->lhs->rhs,&val2)) {
+    &&  (base = is_array_base(node->lhs))
+    &&  is_integer_constant(base->rhs,&val2)) {
       Node *add  = new_copy(node->lhs->lhs);
       add->rhs   = new_num(val2+val,node->tok);
       add->rhs->ty = node->lhs->lhs->rhs->ty;
@@ -835,6 +831,7 @@ Node *optimize_expr(Node *node)
     int64_t val;
     int64_t val2;
     Node *new;
+    Node *base;
 
     node = optimize_lr(node);
     if (is_integer_constant(node->lhs,&val)
@@ -858,11 +855,8 @@ Node *optimize_expr(Node *node)
       }
     }
     // (- (ND_CAST TY_PTR (+ arr V)) C) -> (+ (ND_CAST TY_PTR (+ arr -C)) V)
-        if (is_integer_constant(node->rhs,&val)
-    &&  node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  node->lhs->lhs->kind == ND_ADD) {
-      Node *base = node->lhs->lhs;
+    if (is_integer_constant(node->rhs,&val)
+    &&  (base = is_array_base(node->lhs))) {
       Node *arr  = is_global_array(base->lhs) ? base->lhs :
                    is_global_array(base->rhs) ? base->rhs : NULL;
       Node *idx  = (arr == base->lhs) ? base->rhs : base->lhs;
@@ -883,10 +877,8 @@ Node *optimize_expr(Node *node)
     }
     // (- (ND_CAST TY_PTR (+ arr c1)) c2) -> (ND_CAST TY_PTR (+ arr (c1-c2)))
     if (is_integer_constant(node->rhs,&val)
-    &&  node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  node->lhs->lhs->kind == ND_ADD
-    &&  is_integer_constant(node->lhs->lhs->rhs,&val2)) {
+    &&  (base = is_array_base(node->lhs))
+    &&  is_integer_constant(base->rhs,&val2)) {
       Node *add  = new_copy(node->lhs->lhs);
       add->rhs   = new_num(val2-val,node->tok);
       add->rhs->ty = node->lhs->lhs->rhs->ty;

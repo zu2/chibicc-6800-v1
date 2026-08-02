@@ -67,6 +67,16 @@ Type *is_byte(Node *node)
   return NULL;
 }
 
+// Return the inner ND_ADD of (ND_CAST TY_PTR (+ ...)), or NULL.
+Node *is_array_base(Node *node)
+{
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_PTR
+  &&  node->lhs->kind == ND_ADD)
+    return node->lhs;
+  return NULL;
+}
+
 // Return a constant expression usable after '#', or NULL.
 // The value must be an address, not the contents of one.
 // (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
