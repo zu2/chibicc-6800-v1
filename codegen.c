@@ -3523,10 +3523,14 @@ static void gen_funcall(Node *node)
     if (!current_fn->ty->is_variadic) {
       error_tok(node->tok, "__builtin_va_start_addr: not variadic function");
     }
+    // The arg must be the last named parameter.
+    Obj *last = current_fn->params;
+    while (last && last->next)
+      last = last->next;
     if (node->args->kind != ND_VAR
-    ||  !node->args->var->is_local
-    ||  node->args->var->ty->kind == TY_VLA) {
-      error_tok(node->tok, "__builtin_va_start_addr: bad arg");
+    ||  !last
+    ||  node->args->var != last) {
+      error_tok(node->tok, "_builtin_va_start_addr: not the last named parameter");
     }
     // var is the first parameter and pass-by-register ?
     int passed_by_reg = 0;
