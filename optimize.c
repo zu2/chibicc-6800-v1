@@ -474,8 +474,7 @@ Node *optimize_expr(Node *node)
     &&  is_boolean_result(node->lhs)){
       return node->lhs;
     }
-    if (node->ty->kind == TY_CHAR
-    ||  node->ty->kind == TY_BOOL) {
+    if (is_int8(node->ty)) {
       switch(node->lhs->kind) {
       case ND_LOGAND:
       case ND_LOGOR:

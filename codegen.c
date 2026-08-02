@@ -2694,7 +2694,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
           return 1;
         }
         if (!test_addr_x(node)) return 0;
-        if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL){
+        if (is_int8(node->ty)) {
           if (test) {
             return is_char || node->ty->is_unsigned;
           }
@@ -2718,7 +2718,7 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
 //      if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned && !opa)
 //          return 0;
         if (test) return 1;
-        if (node->ty->kind==TY_CHAR || node->ty->kind==TY_BOOL) {
+        if (is_int8(node->ty)) {
    	      if (is_store) {
             println("\t%s _%s",opb,node->var->name);
             invalidate_EXT(node);
@@ -5563,7 +5563,7 @@ void gen_expr(Node *node)
     println("%s:", L_not);
     ldab_i(1);
     println("%s:", L_end);
-    if (node->ty->kind != TY_CHAR && node->ty->kind != TY_BOOL){
+    if (!is_int8(node->ty)) {
       println("\tclra");
     }
     return;
@@ -5605,7 +5605,7 @@ void gen_expr(Node *node)
     println("%s:",L_false);
     ldab_i(0);
     println("L_end_%d:", c);
-    if (node->ty->kind != TY_CHAR && node->ty->kind != TY_BOOL){
+    if (!is_int8(node->ty)) {
       println("\tclra");
     }
     IX_invalidate();
@@ -5628,7 +5628,7 @@ void gen_expr(Node *node)
     println("%s:",L_true);
     ldab_i(1);
     println("%s:", L_end);
-    if (node->ty->kind != TY_CHAR && node->ty->kind != TY_BOOL){
+    if (!is_int8(node->ty)) {
       println("\tclra");
     }
     IX_invalidate();
@@ -6359,16 +6359,14 @@ void gen_expr(Node *node)
     ins(2);
     return;
   case ND_BITAND:
-    if (node->ty->kind == TY_BOOL
-    ||  node->ty->kind == TY_CHAR) {
+    if (is_int8(node->ty)) {
       if (gen_direct_lr(node,"andb",NULL))
         return;
     }
     if (gen_direct_lr(node,"andb","anda")){
       return;
     }
-    if (node->ty->kind == TY_BOOL
-    ||  node->ty->kind == TY_CHAR) {
+    if (is_int8(node->ty)) {
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
@@ -6388,8 +6386,7 @@ void gen_expr(Node *node)
     ins(2);
     return;
   case ND_BITOR:
-    if (node->ty->kind == TY_BOOL
-    ||  node->ty->kind == TY_CHAR) {
+    if (is_int8(node->ty)) {
       if (gen_direct_lr(node,"orab",NULL)) {
         return;
       }
@@ -6397,8 +6394,7 @@ void gen_expr(Node *node)
     if (gen_direct_lr(node,"orab","oraa")) {
       return;
     }
-    if (node->ty->kind == TY_BOOL
-    ||  node->ty->kind == TY_CHAR) {
+    if (is_int8(node->ty)) {
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
@@ -6421,8 +6417,7 @@ void gen_expr(Node *node)
     ins(2);
     return;
   case ND_BITXOR:
-    if (node->ty->kind == TY_BOOL
-    ||  node->ty->kind == TY_CHAR) {
+    if (is_int8(node->ty)) {
       if (gen_direct_lr(node,"eorb",NULL))
         return;
     }
