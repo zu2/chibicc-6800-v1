@@ -6359,80 +6359,39 @@ void gen_expr(Node *node)
     ins(2);
     return;
   case ND_BITAND:
-    if (is_int8(node->ty)) {
-      if (gen_direct_lr(node,"andb",NULL))
-        return;
-    }
-    if (gen_direct_lr(node,"andb","anda")){
-      return;
-    }
-    if (is_int8(node->ty)) {
-      gen_expr(node->lhs);
-      push1();
-      gen_expr(node->rhs);
-      println("\ttsx");
-      println("\tandb 0,x");
-      IX_invalidate();
-      ins(1);
-      return;
-    }
-    gen_expr(node->lhs);
-    push();
-    gen_expr(node->rhs);
-    println("\ttsx");
-    println("\tandb 1,x");
-    println("\tanda 0,x");
-    IX_invalidate();
-    ins(2);
-    return;
   case ND_BITOR:
+  case ND_BITXOR: {
+    char *opb, *opa;
+    switch (node->kind) {
+    case ND_BITAND: opb = "andb"; opa = "anda"; break;
+    case ND_BITOR:  opb = "orab"; opa = "oraa"; break;
+    case ND_BITXOR: opb = "eorb"; opa = "eora"; break;
+    default: assert(0);
+    }
     if (is_int8(node->ty)) {
-      if (gen_direct_lr(node,"orab",NULL)) {
+      if (gen_direct_lr(node, opb, NULL))
         return;
-      }
-    }
-    if (gen_direct_lr(node,"orab","oraa")) {
-      return;
-    }
-    if (is_int8(node->ty)) {
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
       println("\ttsx");
-      println("\torab 0,x");
+      println("\t%s 0,x", opb);
       IX_invalidate();
       ins(1);
       return;
     }
-    if (gen_direct_lr(node,"orab","oraa"))
+    if (gen_direct_lr(node, opb, opa))
       return;
-
     gen_expr(node->lhs);
     push();
     gen_expr(node->rhs);
     println("\ttsx");
-    println("\torab 1,x");
-    println("\toraa 0,x");
+    println("\t%s 1,x", opb);
+    println("\t%s 0,x", opa);
     IX_invalidate();
     ins(2);
     return;
-  case ND_BITXOR:
-    if (is_int8(node->ty)) {
-      if (gen_direct_lr(node,"eorb",NULL))
-        return;
-    }
-    if (gen_direct_lr(node,"eorb","eora"))
-      return;
-
-    gen_expr(node->lhs);
-    push();
-    gen_expr(node->rhs);
-    println("\ttsx");
-    println("\teorb 1,x");
-    println("\teora 0,x");
-    IX_invalidate();
-    ins(2);
-    return;
+  } // ND_BITAND, ND_BITOR, ND_BITOXR
   case ND_EQ:
   case ND_NE:
   case ND_LT:
