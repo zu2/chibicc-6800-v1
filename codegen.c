@@ -5783,9 +5783,11 @@ void gen_expr(Node *node)
         IX_invalidate();
         return;
       }
-      if (can_direct_long2(node)){
-        gen_direct_long2(node,"addb","adca");
-        return;
+      if (!opt('O','s')) {
+        if (can_direct_long2(node)){
+          gen_direct_long2(node,"addb","adca");
+          return;
+        }
       }
       gen_expr(lhs);
       if (can_direct_long(rhs)){
@@ -5818,9 +5820,11 @@ void gen_expr(Node *node)
         IX_invalidate();
         return;
       }
-      if (can_direct_long2(node)){
-        gen_direct_long2(node,"subb","sbca");
-        return;
+      if (!opt('O','s')) {
+        if (can_direct_long2(node)){
+          gen_direct_long2(node,"subb","sbca");
+          return;
+        }
       }
       if (can_direct_long(rhs)){
         gen_expr(lhs);
