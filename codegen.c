@@ -3440,29 +3440,29 @@ int gen_direct_long2(Node *node,char *opb, char *opa)
   if (L==1)
     println("\tldaa %d,x",loff+2);
   else
-    println("\tldaa #%d",(int)(lv & 0x0000FF00)>>8);
+    println("\tldaa #%d",(int)((lv & 0x0000FF00)>>8));
   if (R==1)
     println("\t%s %d,x",opa,roff+2);
   else
-    println("\t%s #%d",opa,(int)(rv & 0x0000FF00)>>8);
+    println("\t%s #%d",opa,(int)((rv & 0x0000FF00)>>8));
   println("\tstaa @long+2");
   if (L==1)
     println("\tldaa %d,x",loff+1);
   else
-    println("\tldaa #%d",(int)(lv & 0x00FF0000)>>16);
+    println("\tldaa #%d",(int)((lv & 0x00FF0000)>>16));
   if (R==1)
     println("\t%s %d,x",opa,roff+1);
   else
-    println("\t%s #%d",opa,(int)(rv & 0x00FF0000)>>16);
+    println("\t%s #%d",opa,(int)((rv & 0x00FF0000)>>16));
   println("\tstaa @long+1");
   if (L==1)
     println("\tldaa %d,x",loff);
   else
-    println("\tldaa #%d",(int)(lv & 0xFF000000)>>24);
+    println("\tldaa #%d",(int)((lv & 0xFF000000)>>24));
   if (R==1)
     println("\t%s %d,x",opa,roff);
   else
-    println("\t%s #%d",opa,(int)(rv & 0xFF000000)>>24);
+    println("\t%s #%d",opa,(int)((rv & 0xFF000000)>>24));
   println("\tstaa @long");
   return 1;
 }
