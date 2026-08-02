@@ -3567,6 +3567,7 @@ static Node *primary(Token **rest, Token *tok) {
     return new_num(is_compatible(t1, t2), start);
   }
 
+#if	0
   if (equal(tok, "__builtin_reg_class")) {
     tok = skip(tok->next, "(");
     Type *ty = typename(&tok, tok);
@@ -3579,7 +3580,6 @@ static Node *primary(Token **rest, Token *tok) {
     return new_num(2, start);
   }
 
-#if	0
   if (equal(tok, "__builtin_compare_and_swap")) {
     Node *node = new_node(ND_CAS, tok);
     tok = skip(tok->next, "(");
