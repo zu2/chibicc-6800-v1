@@ -5423,6 +5423,11 @@ void gen_expr(Node *node)
     gen_expr(node->rhs);
     return;
   case ND_CAST:
+    if ((addr=is_addr_constant(node))) {
+      println("\tldab #<%s",addr);
+      println("\tldaa #>%s",addr);
+      return;
+    }
     if (node->ty->kind==TY_LONG
     &&  is_int16(node->lhs->ty)
     &&  node->lhs->kind==ND_NUM

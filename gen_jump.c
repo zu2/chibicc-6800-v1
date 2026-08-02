@@ -90,7 +90,7 @@ char *is_addr_constant(Node *node)
   &&  is_global_array(node->lhs->lhs)
   &&  is_integer_constant(node->lhs->rhs,&val)) {
     char *p = calloc(1,strlen(node->lhs->lhs->var->name)+32);
-    sprintf(p,"_%s+%ld",node->lhs->lhs->var->name,val);
+    sprintf(p,"_%s%+ld",node->lhs->lhs->var->name,val);
     return p;
   }
   return NULL;

@@ -793,20 +793,28 @@ Node *optimize_expr(Node *node)
         return new;
       }
     }
-    // (+ (ADDR (DEREF (+ x V))) C) -> (+ (ADDR (DEREF (+ x C))) V)
+    // (+ (ND_CAST TY_PTR (+ arr V)) C) -> (+ (ND_CAST TY_PTR (+ arr C)) V)
     if (is_integer_constant(node->rhs,&val)
     &&  node->lhs->kind == ND_CAST
     &&  node->lhs->ty->kind == TY_PTR
-    &&  node->lhs->lhs->kind == ND_ADD
-    &&  is_integer(node->lhs->lhs->rhs->ty)
-    && !is_integer_constant(node->lhs->lhs->rhs,&val2)) {
-      Node *inner = node->lhs->lhs;
-      new = new_copy(node);
-      new->lhs = new_copy(node->lhs);
-      new->lhs->lhs = new_copy(inner);
-      new->lhs->lhs->rhs = node->rhs;
-      new->rhs = inner->rhs;
-      return new;
+    &&  node->lhs->lhs->kind == ND_ADD) {
+      Node *base = node->lhs->lhs;
+      Node *arr  = is_global_array(base->lhs) ? base->lhs :
+                   is_global_array(base->rhs) ? base->rhs : NULL;
+      if (arr) {
+        Node *idx = (arr == base->lhs) ? base->rhs : base->lhs;
+        if (is_integer(idx->ty)
+        && !is_integer_constant(idx,&val2)) {
+          Node *add = new_copy(base);
+          add->lhs = arr;
+          add->rhs = node->rhs;
+          new = new_copy(node);
+          new->lhs = new_copy(node->lhs);
+          new->lhs->lhs = add;
+          new->rhs = idx;
+          return new;
+        }
+      }
     }
     // (+ (ND_CAST TY_PTR (+ arr c1)) c2) -> (ND_CAST TY_PTR (+ arr (c1+c2)))
     if (is_integer_constant(node->rhs,&val)
@@ -849,6 +857,31 @@ Node *optimize_expr(Node *node)
         return new;
       }
     }
+    // (- (ND_CAST TY_PTR (+ arr V)) C) -> (+ (ND_CAST TY_PTR (+ arr -C)) V)
+        if (is_integer_constant(node->rhs,&val)
+    &&  node->lhs->kind == ND_CAST
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  node->lhs->lhs->kind == ND_ADD) {
+      Node *base = node->lhs->lhs;
+      Node *arr  = is_global_array(base->lhs) ? base->lhs :
+                   is_global_array(base->rhs) ? base->rhs : NULL;
+      Node *idx  = (arr == base->lhs) ? base->rhs : base->lhs;
+      if (arr
+      &&  is_integer(idx->ty)
+      && !is_integer_constant(idx,&val2)) {
+        Node *add = new_copy(base);
+        add->lhs = arr;
+        add->rhs = new_num(-val,node->tok);
+        add->rhs->ty = node->rhs->ty;
+        new = new_copy(node);
+        new->kind = ND_ADD;
+        new->lhs = new_copy(node->lhs);
+        new->lhs->lhs = add;
+        new->rhs = idx;
+        return new;
+      }
+    }
+    // (- (ND_CAST TY_PTR (+ arr c1)) c2) -> (ND_CAST TY_PTR (+ arr (c1-c2)))
     if (is_integer_constant(node->rhs,&val)
     &&  node->lhs->kind == ND_CAST
     &&  node->lhs->ty->kind == TY_PTR
