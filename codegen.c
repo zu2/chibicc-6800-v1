@@ -3491,8 +3491,10 @@ int gen_direct_long2(Node *node, char *opb, char *opa)
 // Two 2's are fine because they share @bp.
 int can_direct_long2(Node *node)
 {
-  int L = long_location_type(node->lhs);
-  int R = long_location_type(node->rhs);
+  Node *lhs = skip_empty_cast(node->lhs);
+  Node *rhs = skip_empty_cast(node->rhs);
+  int L = long_location_type(lhs);
+  int R = long_location_type(rhs);
 
   if (!L || !R)             return 0;
   if (L==1 || L==3)         return 1;   // lhs does not need IX
@@ -4202,7 +4204,7 @@ static void opeq(Node *node)
 
     switch(node->kind) {
     case ND_ANDEQ: op = "andb"; optos = "__and32tos"; break;
-    case ND_OREQ:  op = "orb";  optos = "__or32tos";  break;
+    case ND_OREQ:  op = "orab"; optos = "__or32tos";  break;
     case ND_XOREQ: op = "eorb"; optos = "__xor32tos"; break;
     default:
       assert(0);
