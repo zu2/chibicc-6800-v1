@@ -5437,15 +5437,8 @@ void gen_expr(Node *node)
       println("\tldaa #>%s",addr);
       return;
     }
-    if (node->ty->kind==TY_LONG
-    &&  is_int16(node->lhs->ty)
-    &&  node->lhs->kind==ND_NUM
-    &&  node->lhs->val>=0) {
-      gen_expr(node->lhs);
-      println("\tstab @long+3");
-      println("\tstaa @long+2");
-      println("\tclr  @long+1");
-      println("\tclr  @long");
+    if (is_long_constant(node,&val)) {
+      load32i(val);
       return;
     }
     gen_expr(node->lhs);
