@@ -11,25 +11,26 @@
 ;
 __inc32:
         inc @long+3
-        bne __inc32_ret
+        bne ret
         inc @long+2
-        bne __inc32_ret
+        bne ret
         inc @long+1
-        bne __inc32_ret
+        bne ret
         inc @long
-__inc32_ret:
+ret:
 	rts
 ;
 ;	__dec32        	@long--
 ;
 __dec32:
-        ldx @long+2
-        dex
-        stx @long+2
-        inx
-        bne __dec32_ret
-        ldx @long
-        dex
-        stx @long
-__dec32_ret:
+	tst @long+3
+	bne dec32_3
+	tst @long+2
+	bne dec32_2
+	tst @long+1
+	bne dec32_1
+	dec @long
+dec32_1:dec @long+1
+dec32_2:dec @long+2
+dec32_3:dec @long+3
         rts

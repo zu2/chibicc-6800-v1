@@ -4719,6 +4719,7 @@ void gen_expr(Node *node)
         }
         ldx_IMM_VAR(var);
         store32x(0);
+        invalidate_EXT(node->lhs);
         if (!node->retval_unused) {
           println("\tjsr __sub32i");
           word32i(val);
@@ -4904,6 +4905,7 @@ void gen_expr(Node *node)
          IX_invalidate();
          ldx_IMM_VAR(var);
          store32x(0);
+         invalidate_EXT(node->lhs);
          break;
       default:
         assert(0);
@@ -5245,6 +5247,9 @@ void gen_expr(Node *node)
         gen_expr(node->rhs);
         off = gen_addr_x(node->lhs,false);
         store32x(off);
+        if (is_global_var(node->lhs)) {
+          invalidate_EXT(node->lhs);
+        }
         return;
       }
       gen_addr(node->lhs);
