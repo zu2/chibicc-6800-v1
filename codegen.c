@@ -647,8 +647,9 @@ Type *is_long_constant(Node *node, int64_t *val)
   if (node->kind != ND_NUM || !is_integer(node->ty)) {
     return NULL;
   }
-
-  *val = node->val;
+  if (val) {
+    *val = node->val;
+  }
 
   return node->ty;
 }
@@ -3029,6 +3030,37 @@ int gen_direct_lr(Node *node, char *opb, char *opa)
     return 0;
 }
 
+//
+// @long = lhs op rhs, where is the node (lhs,rhs) ?
+//
+// 0: nowhere
+// 1: integer constant (#imm)
+// 2: local frame (off,x)
+// 3: global label (_name)
+// 4: other, test_addr_x() holds (takes IX)
+//
+static int long_location_type(Node *node)
+{
+  if (is_long_constant(node,NULL)) {
+    return 1;
+  }
+
+  if (node->kind == ND_VAR) {
+    // A VLA variable holds a pointer at var->offset, not the data.
+    if (node->var->ty->kind == TY_VLA)
+      return 0;
+    if (node->var->is_local && test_addr_x(node))
+      return 2;
+    if (is_global_var(node))
+      return 3;
+    return 0;
+  }
+  if (test_addr_x(node)) {
+    return 4;
+  }
+  return 0;
+}
+
 static int gen_direct_long_and(int64_t v,char *opb, char *opa){
   uint32_t v1 = v & 0x000000FF;
   uint32_t v2 = v & 0x0000FF00;
@@ -3272,67 +3304,107 @@ int gen_direct_shr_long(Node *node,int64_t val)
   }
   return 0;
 }
-void  jsr_32dx(char *opb,int off)
+
+//
+// @long op= (off,IX)
+//
+// op is the stem. for example,
+// when op == "add", op32x makes jsr __add32x, __add32bx, __add32dx
+//
+static void op32x(char *op, int off)
 {
-  if (off==0) {
-    if (strcmp(opb,"addb")==0) {
-      println("\tjsr __add32x");
-    }else if (strcmp(opb,"subb")==0) {
-      println("\tjsr __sub32x");
-    }else if (strcmp(opb,"andb")==0) {
-      println("\tjsr __and32x");
-    }else if (strcmp(opb,"orab")==0) {
-      println("\tjsr __or32x");
-    }else if (strcmp(opb,"eorb")==0) {
-      println("\tjsr __xor32x");
-    }else{
-      fprintf(stderr,"; __func__ opb %s\n",opb);
-      fflush(stderr);
-      assert(0);
-    }
-  }else if (off<=255) {
+  if (off == 0) {
+    println("\tjsr __%s32x", op);      // __op32x does not touch IX
+    return;
+  }
+  if (off <= 255) {
     ldab_i(off);
-    if (strcmp(opb,"addb")==0) {
-      println("\tjsr __add32bx");
-    }else if (strcmp(opb,"subb")==0) {
-      println("\tjsr __sub32bx");
-    }else if (strcmp(opb,"andb")==0) {
-      println("\tjsr __and32bx");
-    }else if (strcmp(opb,"orab")==0) {
-      println("\tjsr __or32bx");
-    }else if (strcmp(opb,"eorb")==0) {
-      println("\tjsr __xor32bx");
-    }else{
-      assert(0);
-    }
-    IX_invalidate();
-  }else{
+    println("\tjsr __%s32bx", op);
+  } else {
     ldd_i(off);
-    if (strcmp(opb,"addb")==0) {
-      println("\tjsr __add32dx");
-    }else if (strcmp(opb,"subb")==0) {
-      println("\tjsr __sub32dx");
-    }else if (strcmp(opb,"andb")==0) {
-      println("\tjsr __and32dx");
-    }else if (strcmp(opb,"orab")==0) {
-      println("\tjsr __or32dx");
-    }else if (strcmp(opb,"eorb")==0) {
-      println("\tjsr __xor32dx");
-    }else{
-      assert(0);
-    }
+    println("\tjsr __%s32dx", op);
+  }
+  IX_invalidate();
+}
+
+//
+// @long = (lhs op= rhs). lhs must be reachable with IX alone.
+// The bx and dx forms return with IX at the operand, so the result goes
+// back at offset 0. The immediate form destroys IX, so the address is
+// built twice.
+//
+// @long = (lhs op= rhs).
+//
+//
+static void gen_opeq32(char *op, Node *lhs, Node *rhs)
+{
+  int64_t val;
+
+  if (is_long_constant(rhs,&val)) {
+    load32x(gen_addr_x(lhs,false));
+    println("\tjsr __%s32i", op);
+    word32i(val);
     IX_invalidate();
+    store32x(gen_addr_x(lhs,false));
+    return;
+  }
+  gen_expr(rhs);
+  op32x(op, gen_addr_x(lhs,false));
+  store32x(0);  // jsr __op32bx, op32dx calculate IX=IX+off
+}
+
+static void gen_direct_op32x(char *op, Node *rhs)
+{
+  int64_t val;
+
+  rhs = skip_empty_cast(rhs);
+
+  switch (long_location_type(rhs)) {
+  case 1:
+    is_long_constant(rhs, &val);
+    println("\tjsr %si", op);
+    word32i(val);
+    IX_invalidate();
+    break;
+  case 2:
+  case 4:
+    op32x(op, gen_addr_x(rhs,false));
+    break;
+  case 3:
+    ldx_IMM_VAR(rhs->var->name);
+    op32x(op, 0);
+    break;
+  default:
+    assert(0);
   }
 }
 
+#if 1
+static char *opb2op(char *opb)
+{
+
+  if (strcmp(opb,"ldab")==0) return "load";
+  if (strcmp(opb,"stab")==0) return "store";
+  if (strcmp(opb,"addb")==0) return "add";
+  if (strcmp(opb,"subb")==0) return "sub";
+  if (strcmp(opb,"andb")==0) return "and";
+  if (strcmp(opb,"orab")==0) return "or";
+  if (strcmp(opb,"eorb")==0) return "xor";
+
+  assert(0);
+}
 //
 // long version:
 // If rhs is a simple expression, it is computed directly without pushing it onto the stack.
 //
 static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
 {
+  char *op;
+
   if (opt('O','s'))
     return 0;
+
+
   switch(rhs->kind){
   case ND_NUM: {
     switch (rhs->ty->kind) {
@@ -3371,12 +3443,12 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
     if (rhs->var->is_local){
       if (test) return 1;
       int off = gen_addr_x(rhs,true);
-      jsr_32dx(opb,off);
+      op32x(opb2op(opb),off);
       return 1;
     }else{ // global
       if (test) return 1;
       ldx_IMM_VAR(rhs->var->name);
-      jsr_32dx(opb,0);
+      op32x(opb2op(opb),0);
       return 1;
     }
     return 0;
@@ -3388,13 +3460,14 @@ static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
     if (test_addr_x(rhs)) {
       if (test) return 1;
       int off = gen_addr_x(rhs,false);
-      jsr_32dx(opb,off);
+      op32x(opb2op(opb),off);
       return 1;
     }
     return 0;
   }
   return 0;
 }
+#endif
 
 static int can_direct_long(Node *rhs)
 {
@@ -3406,36 +3479,6 @@ static int can_direct_long(Node *rhs)
 static int gen_direct_long(Node *rhs,char *opb, char *opa)
 {
   return gen_direct_long_sub(rhs,opb,opa,0);
-}
-
-//
-// @long = lhs op rhs, where is the node (lhs,rhs) ?
-//
-// 0: nowhere
-// 1: integer constant (#imm)
-// 2: local frame (off,x)
-// 3: global label (_name)
-// 4: other, test_addr_x() holds (takes IX)
-//
-static int long_location_type(Node *node)
-{
-  switch (node->kind) {
-  case ND_NUM:
-    assert(is_integer(node->ty));
-    return 1;
-  case ND_VAR:
-    // A VLA variable holds a pointer at var->offset, not the data.
-    if (node->var->ty->kind == TY_VLA)
-      return 0;
-    if (node->var->is_local && test_addr_x(node))
-      return 2;
-    if (is_global_var(node))
-      return 3;
-    return 0;
-  }
-  if (test_addr_x(node))
-    return 4;
-  return 0;
 }
 
 //
@@ -3455,16 +3498,16 @@ int gen_direct_long2(Node *node, char *opb, char *opa)
   int R = long_location_type(rhs);
   int loff = 0;
   int roff = 0;
-  uint64_t lv = lhs->val;
-  uint64_t rv = rhs->val;
+  int64_t lv;
+  int64_t rv;
 
-  // A constant and a global do not use IX at all. Two locals share the
-  // same base @bp. And a 4 is only paired with a 1 or a 3. So IX is
-  // loaded at most once, whatever the pair is.
-  if (L==2 || L==4) {
+  if (L == 1) is_long_constant(lhs,&lv);
+  if (R == 1) is_long_constant(rhs,&rv); 
+
+  if (L==2 || L==4) { // lhs: imm or global var
     loff = gen_addr_x(lhs,false);
   }
-  if (R==2 || R==4) {
+  if (R==2 || R==4) { // rhs: imm or global var
     roff = gen_addr_x(rhs,false);
   }
 
@@ -4200,22 +4243,18 @@ static void opeq(Node *node)
   case ND_OREQ:
   case ND_XOREQ: {
     char *op;
-    char *optos;
 
     switch(node->kind) {
-    case ND_ANDEQ: op = "andb"; optos = "__and32tos"; break;
-    case ND_OREQ:  op = "orab"; optos = "__or32tos";  break;
-    case ND_XOREQ: op = "eorb"; optos = "__xor32tos"; break;
+    case ND_ANDEQ: op = "and"; break;
+    case ND_OREQ:  op = "or";  break;
+    case ND_XOREQ: op = "xor"; break;
     default:
       assert(0);
     }
     switch(node->ty->kind) {
     case TY_LONG:
       if (test_addr_x(lhs)) {
-        gen_expr(rhs);
-        int off = gen_addr_x(lhs,false);
-        jsr_32dx(op,off);
-        store32x(0);
+        gen_opeq32(op,lhs,rhs); // @long = lhs opeq rhs
         return;
       }
       gen_addr(lhs);
@@ -4226,7 +4265,7 @@ static void opeq(Node *node)
       println("\tldx 4,x");
       IX_invalidate();
       load32x(0);
-      println("\tjsr %s",optos);
+      println("\tjsr %stos",op);  // call and32tos,or32tos,xor32tos
       IX_invalidate();
       depth -= 4;
       store(node->ty);
