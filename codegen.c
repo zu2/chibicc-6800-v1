@@ -3362,7 +3362,7 @@ static void gen_direct_op32x(char *op, Node *rhs)
   switch (long_location_type(rhs)) {
   case 1:
     is_long_constant(rhs, &val);
-    println("\tjsr %si", op);
+    println("\tjsr %s32i", op);
     word32i(val);
     IX_invalidate();
     break;
@@ -3498,16 +3498,16 @@ int gen_direct_long2(Node *node, char *opb, char *opa)
   int R = long_location_type(rhs);
   int loff = 0;
   int roff = 0;
-  int64_t lv;
-  int64_t rv;
+  int64_t lv = 0;
+  int64_t rv = 0;
 
   if (L == 1) is_long_constant(lhs,&lv);
   if (R == 1) is_long_constant(rhs,&rv); 
 
-  if (L==2 || L==4) { // lhs: imm or global var
+  if (L==2 || L==4) { // lhs: local or other var
     loff = gen_addr_x(lhs,false);
   }
-  if (R==2 || R==4) { // rhs: imm or global var
+  if (R==2 || R==4) { // rhs: local or other var
     roff = gen_addr_x(rhs,false);
   }
 
@@ -4265,7 +4265,7 @@ static void opeq(Node *node)
       println("\tldx 4,x");
       IX_invalidate();
       load32x(0);
-      println("\tjsr %stos",op);  // call and32tos,or32tos,xor32tos
+      println("\tjsr %s32tos",op);  // call and32tos,or32tos,xor32tos
       IX_invalidate();
       depth -= 4;
       store(node->ty);
