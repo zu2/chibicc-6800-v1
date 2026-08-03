@@ -1548,9 +1548,9 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       if ((node->lhs->ty->kind == TY_PTR)
       &&  (node->lhs->lhs->kind == ND_VAR)
       &&   is_local_var(node->lhs->lhs)
-      &&  (node->lhs->lhs->var->offset<256)
+      &&  (node->lhs->lhs->var->offset<=252)
       &&  is_integer_constant(node->lhs->rhs,&val)
-      &&  (0<=val && val<256)) {
+      &&  (0<=val && val<=252)) {
         if (test) return true;
         ldx_bp_nX(node->lhs->lhs->var->offset);
         return val;
@@ -1558,7 +1558,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       // (ND_DEREF ty_int (+ TY_ARRAY(12) ...  n))
       if (node->lhs->ty->kind == TY_ARRAY
       &&  is_integer_constant(node->lhs->rhs,&val)
-      &&  (0<=val && val<256)
+      &&  (0<=val && val<=252)
       &&  test_addr_x(node->lhs->lhs)) {
         if (test) return true;
         if (is_global_array(node->lhs->lhs)) {
@@ -1567,7 +1567,7 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
           return 0;
         }
         off = gen_addr_x(node->lhs->lhs,false);
-        if (off+val <256) {
+        if (off+val <= 252) {
           return  off + val;
         }
         // OOPS! too large array
