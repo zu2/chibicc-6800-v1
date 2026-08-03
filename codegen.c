@@ -2231,6 +2231,13 @@ static int is_empty_cast(Type *from, Type *to) {
   return cast_table[t1][t2]==NULL;
 }
 
+static Node *skip_empty_cast(Node *node)
+{
+  while (node->kind == ND_CAST && is_empty_cast(node->lhs->ty, node->ty))
+    node = node->lhs;
+  return node;
+}
+
 static void push_struct(Type *ty) {
   if (opt('g','3')) {
     println("; %s %s %d",__func__,__FILE__,__LINE__);
@@ -3401,11 +3408,15 @@ static int gen_direct_long(Node *rhs,char *opb, char *opa)
   return gen_direct_long_sub(rhs,opb,opa,0);
 }
 
+//
+// @long = lhs op rhs, where is the node (lhs,rhs) ?
+//
 // 0: nowhere
 // 1: integer constant (#imm)
 // 2: local frame (off,x)
 // 3: global label (_name)
 // 4: other, test_addr_x() holds (takes IX)
+//
 static int long_location_type(Node *node)
 {
   switch (node->kind) {
@@ -3438,8 +3449,8 @@ static int long_location_type(Node *node)
 //
 int gen_direct_long2(Node *node, char *opb, char *opa)
 {
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
+  Node *lhs = skip_empty_cast(node->lhs);
+  Node *rhs = skip_empty_cast(node->rhs);
   int L = long_location_type(lhs);
   int R = long_location_type(rhs);
   int loff = 0;
@@ -5797,7 +5808,6 @@ void gen_expr(Node *node)
         if (gen_direct_long(rhs,"addb","adca")){
           return;
         }
-        assert(0);
       }
       pushl();
       gen_expr(rhs);
@@ -5829,14 +5839,13 @@ void gen_expr(Node *node)
           return;
         }
       }
+
+      gen_expr(lhs);
       if (can_direct_long(rhs)){
-        gen_expr(lhs);
         if (gen_direct_long(rhs,"subb","sbca")){
           return;
         }
-        assert(0);
       }
-      gen_expr(lhs);
       pushl();
       gen_expr(rhs);
       println("\tjsr __sub32tos");	 // @long = TOS - @long, pull TOS");
@@ -5919,7 +5928,6 @@ void gen_expr(Node *node)
         if (gen_direct_long(node->rhs,"andb","anda")){
           return;
         }
-        assert(0);
       }
       pushl();
       gen_expr(node->rhs);
@@ -5935,12 +5943,10 @@ void gen_expr(Node *node)
         IX_invalidate();
         return;
       }
-      println("; can_direct_long(node->rhs) %d",can_direct_long(node->rhs));
       if (can_direct_long(node->rhs)){
         if (gen_direct_long(node->rhs,"orab","oraa")){
           return;
         }
-        assert(0);
       }
       pushl();
       gen_expr(node->rhs);
@@ -5960,7 +5966,6 @@ void gen_expr(Node *node)
         if (gen_direct_long(node->rhs,"eorb","eora")){
           return;
         }
-        assert(0);
       }
       pushl();
       gen_expr(node->rhs);
