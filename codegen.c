@@ -3061,6 +3061,7 @@ static int long_location_type(Node *node)
   return 0;
 }
 
+#if 0
 static int gen_direct_long_and(int64_t v,char *opb, char *opa){
   uint32_t v1 = v & 0x000000FF;
   uint32_t v2 = v & 0x0000FF00;
@@ -3198,6 +3199,7 @@ static int gen_direct_long_xor(uint64_t v,char *opb, char *opa){
 
   return 1;
 }
+#endif
 //
 //
 // shift operation
@@ -3379,106 +3381,50 @@ static void gen_direct_op32x(char *op, Node *rhs)
   }
 }
 
-#if 1
-static char *opb2op(char *opb)
+//
+// Generate one byte of a long operand, for the ld/op/st frame.
+// nth is 0..3, 0 is the most significant byte.
+// R is long_location_type(rhs). A constant is not handled here.
+//
+static void gen_direct_long_nth_byte(char *op, int R, Node *rhs, int roff, int nth)
 {
+  assert(R == 2 || R == 3 || R == 4);
 
-  if (strcmp(opb,"ldab")==0) return "load";
-  if (strcmp(opb,"stab")==0) return "store";
-  if (strcmp(opb,"addb")==0) return "add";
-  if (strcmp(opb,"subb")==0) return "sub";
-  if (strcmp(opb,"andb")==0) return "and";
-  if (strcmp(opb,"orab")==0) return "or";
-  if (strcmp(opb,"eorb")==0) return "xor";
-
-  assert(0);
+  if (R == 3)
+    println("\t%s _%s+%d", op, rhs->var->name, nth);
+  else
+    println("\t%s %d,x", op, roff+nth);
 }
+
 //
-// long version:
-// If rhs is a simple expression, it is computed directly without pushing it onto the stack.
+// @long op= rhs, expanded byte by byte.
+// opb is for the lowest byte and opa for the upper three, because
+// add and sub have to carry.
 //
-static int gen_direct_long_sub(Node *rhs,char *opb, char *opa, int test)
+static bool gen_direct_long(Node *rhs, char *opb, char *opa)
 {
-  char *op;
+  rhs = skip_empty_cast(rhs);
+  int R = long_location_type(rhs);
+  int roff = 0;
 
-  if (opt('O','s'))
-    return 0;
+  if (R==2 || R==4)
+    roff = gen_addr_x(rhs,false);
 
+  println("\tldab @long+3");
+  gen_direct_long_nth_byte(opb, R, rhs, roff, 3);
+  println("\tstab @long+3");
 
-  switch(rhs->kind){
-  case ND_NUM: {
-    switch (rhs->ty->kind) {
-    case TY_LONG:
-      if (test)
-        return 1;
-      // TODO: Branching with strcmp is not pretty. think it later.
-      if (strcmp(opb,"andb")==0)
-        return gen_direct_long_and(rhs->val,opb,opa);
-      if (strcmp(opb,"orab")==0)
-        return gen_direct_long_or(rhs->val,opb,opb);
-      if (strcmp(opb,"eorb")==0)
-        return gen_direct_long_xor(rhs->val,opb,opa);
-      println("\tldab @long+3");
-      println("\t%s #%u", opb, (uint32_t) (rhs->val & 0x000000FF));
-      println("\tstab @long+3");
-      println("\tldaa @long+2");
-      println("\t%s #%u", opa, (uint32_t)((rhs->val & 0x0000FF00)>>8));
-      println("\tstaa @long+2");
-      println("\tldaa @long+1");
-      println("\t%s #%u", opa, (uint32_t)((rhs->val & 0x00FF0000)>>16));
-      println("\tstaa @long+1");
-      println("\tldaa @long");
-      println("\t%s #%u", opa, (uint32_t)((rhs->val & 0xFF000000)>>24));
-      println("\tstaa @long");
-      return 1;
-    default:
-      return 0;
-    }
-  } // ND_NUM
-  case ND_VAR: {
-    if (rhs->var->ty->kind == TY_VLA){
-      return 0;
-    }
-    if (!test_addr_x(rhs)) return 0;
-    if (rhs->var->is_local){
-      if (test) return 1;
-      int off = gen_addr_x(rhs,true);
-      op32x(opb2op(opb),off);
-      return 1;
-    }else{ // global
-      if (test) return 1;
-      ldx_IMM_VAR(rhs->var->name);
-      op32x(opb2op(opb),0);
-      return 1;
-    }
-    return 0;
-  } // ND_VAR
-  case ND_CAST:
-    if(is_empty_cast(rhs->lhs->ty, rhs->ty))
-      return gen_direct_long_sub(rhs->lhs, opb, opa, test);
-  default:
-    if (test_addr_x(rhs)) {
-      if (test) return 1;
-      int off = gen_addr_x(rhs,false);
-      op32x(opb2op(opb),off);
-      return 1;
-    }
-    return 0;
+  for (int nth = 2; nth >= 0; nth--) {
+    println("\tldaa @long+%d", nth);
+    gen_direct_long_nth_byte(opa, R, rhs, roff, nth);
+    println("\tstaa @long+%d", nth);
   }
-  return 0;
-}
-#endif
-
-static int can_direct_long(Node *rhs)
-{
-  int r = gen_direct_long_sub(rhs,NULL,NULL,1);	// test mode
-
-  return r;
+  return true;
 }
 
-static int gen_direct_long(Node *rhs,char *opb, char *opa)
+static bool can_direct_long(Node *rhs)
 {
-  return gen_direct_long_sub(rhs,opb,opa,0);
+  return long_location_type(skip_empty_cast(rhs)) != 0;
 }
 
 //
