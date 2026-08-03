@@ -3401,22 +3401,29 @@ static int gen_direct_long(Node *rhs,char *opb, char *opa)
   return gen_direct_long_sub(rhs,opb,opa,0);
 }
 
-// 0: nowhere  1: local frame (off,x)  2: in the code (#imm)  3: global label (_name)
+// 0: nowhere
+// 1: integer constant (#imm)
+// 2: local frame (off,x)
+// 3: global label (_name)
+// 4: other, test_addr_x() holds (takes IX)
 static int long_location_type(Node *node)
 {
   switch (node->kind) {
   case ND_NUM:
-    return 2;
+    assert(is_integer(node->ty));
+    return 1;
   case ND_VAR:
     // A VLA variable holds a pointer at var->offset, not the data.
     if (node->var->ty->kind == TY_VLA)
-      break;
+      return 0;
     if (node->var->is_local && test_addr_x(node))
-      return 1;
+      return 2;
     if (is_global_var(node))
       return 3;
-    break;
+    return 0;
   }
+  if (test_addr_x(node))
+    return 4;
   return 0;
 }
 
@@ -3441,11 +3448,12 @@ int gen_direct_long2(Node *node, char *opb, char *opa)
   uint64_t rv = rhs->val;
 
   // A constant and a global do not use IX at all. Two locals share the
-  // same base @bp. So IX is loaded at most once, whatever the pair is.
-  if (L==1) { // lhs is local var.
+  // same base @bp. And a 4 is only paired with a 1 or a 3. So IX is
+  // loaded at most once, whatever the pair is.
+  if (L==2 || L==4) {
     loff = gen_addr_x(lhs,false);
   }
-  if (R==1) { // rhs is local var.
+  if (R==2 || R==4) {
     roff = gen_addr_x(rhs,false);
   }
 
@@ -3455,22 +3463,31 @@ int gen_direct_long2(Node *node, char *opb, char *opa)
     char *op = (i==3) ? opb    : opa;
     int   sh = (3-i)*8;
 
-    if      (L==1) println("\t%s %d,x",   ld, loff+i);
-    else if (L==2) println("\t%s #%d",    ld, (int)((lv >> sh) & 0xFF));
-    else           println("\t%s _%s+%d", ld, lhs->var->name, i);
+    if      (L==2 || L==4) println("\t%s %d,x",   ld, loff+i);
+    else if (L==1)         println("\t%s #%d",    ld, (int)((lv >> sh) & 0xFF));
+    else                   println("\t%s _%s+%d", ld, lhs->var->name, i);
 
-    if      (R==1) println("\t%s %d,x",   op, roff+i);
-    else if (R==2) println("\t%s #%d",    op, (int)((rv >> sh) & 0xFF));
-    else           println("\t%s _%s+%d", op, rhs->var->name, i);
+    if      (R==2 || R==4) println("\t%s %d,x",   op, roff+i);
+    else if (R==1)         println("\t%s #%d",    op, (int)((rv >> sh) & 0xFF));
+    else                   println("\t%s _%s+%d", op, rhs->var->name, i);
 
     println("\t%s @long+%d", st, i);
   }
   return 1;
 }
 
+// The MC6800 has only one IX, so 2 and 4 cannot be used at the same time.
+// Two 2's are fine because they share @bp.
 int can_direct_long2(Node *node)
 {
-  return long_location_type(node->lhs) && long_location_type(node->rhs);
+  int L = long_location_type(node->lhs);
+  int R = long_location_type(node->rhs);
+
+  if (!L || !R)             return 0;
+  if (L==1 || L==3)         return 1;   // lhs does not need IX
+  if (R==1 || R==3)         return 1;   // rhs does not need IX
+  if (L==2 && R==2)         return 1;   // share @bp
+  return 0;
 }
 
 static void gen_funcall(Node *node)
