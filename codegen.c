@@ -5635,6 +5635,9 @@ void gen_expr(Node *node)
       println("\tnegb");
       println("\tldab #1");
       println("\tsbcb #0");
+      if (!is_int8(node->ty)) {
+        println("\tclra");
+      }
       return;
     }
     if (is_int16_or_ptr(node->lhs->ty)) {
