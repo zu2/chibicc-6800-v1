@@ -1,11 +1,12 @@
 #include "chibicc.h"
 
+// use TY_CHAR not is_int8: (_Bool)(1^3) is 1, but (_Bool)1 ^ (_Bool)3 is 0
 bool is_integral_promotion(Node *node)
 {
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_INT
   && !node->ty->is_unsigned
-  &&  is_int8(node->lhs->ty)) {
+  &&  node->lhs->ty->kind == TY_CHAR) {
     return true;
   }
   return false;
@@ -16,7 +17,7 @@ bool is_integral_promotion_or_byte(Node *node)
   if (is_integral_promotion(node)) {
     return true;
   }
-  if (is_int8(node->ty)) {
+  if (node->ty->kind == TY_CHAR) {
     return true;
   }
   return false;
@@ -641,7 +642,9 @@ Node *optimize_expr(Node *node)
         return optimize_expr(node->lhs);
       }
     }
-    if (node->ty->size < node->lhs->ty->size) {
+    // not for _Bool: (_Bool)(1^3) is 1, but (_Bool)1 ^ (_Bool)3 is 0
+    if (node->ty->kind != TY_BOOL
+    &&  node->ty->size < node->lhs->ty->size) {
       switch(node->lhs->kind) {
       case ND_BITAND:
       case ND_BITOR:
