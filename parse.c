@@ -2373,6 +2373,10 @@ static Node *to_assign(Node *binary) {
 //
 static bool is_simple_var(Node *node)
 {
+  // 32 bit work goes through @long, so x = x op y needs one more
+  // load than x op= y. Do not split it.
+  if (node->ty->kind == TY_LONG)
+    return false;
 
   if (is_local_var(node)
   ||  is_global_var(node)

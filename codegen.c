@@ -3309,6 +3309,65 @@ int gen_direct_shr_long(Node *node,int64_t val)
   return 0;
 }
 
+// off,x op= val, one byte at a time.
+// add and sub: bytes are tied by the carry, so go LSB to MSB.
+// Low bytes of 0 are skipped. The first byte emitted uses AccB.
+static void gen_opeq32_carry(char *op, int off, int64_t val)
+{
+  char *opb;
+  char *opa;
+  bool emitted = false;
+
+  if      (!strcmp(op,"add")) { opb = "addb"; opa = "adca"; }
+  else if (!strcmp(op,"sub")) { opb = "subb"; opa = "sbca"; }
+  else assert(0);
+
+  for (int nth = 3; nth >= 0; nth--) {
+    uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
+
+    if (!emitted && imm == 0)
+      continue;
+
+    if (!emitted) {
+      println("\tldab %d,x", off+nth);
+      println("\t%s #%u", opb, imm);
+      println("\tstab %d,x", off+nth);
+      emitted = true;
+    } else {
+      println("\tldaa %d,x", off+nth);
+      println("\t%s #%u", opa, imm);
+      println("\tstaa %d,x", off+nth);
+    }
+  }
+}
+
+// off,x op= val, one byte at a time.
+// and, or and xor: bytes are free of each other.
+static void gen_opeq32_bit(char *op, int off, int64_t val)
+{
+  char *opb;
+  char *opa;
+
+  if      (!strcmp(op,"and")) { opb = "andb"; opa = "anda"; }
+  else if (!strcmp(op,"or"))  { opb = "orab"; opa = "oraa"; }
+  else if (!strcmp(op,"xor")) { opb = "eorb"; opa = "eora"; }
+  else assert(0);
+
+  for (int nth = 3; nth >= 0; nth--) {
+    uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
+
+    if (nth == 3) {
+      println("\tldab %d,x", off+nth);
+      println("\t%s #%u", opb, imm);
+      println("\tstab %d,x", off+nth);
+    } else {
+      println("\tldaa %d,x", off+nth);
+      println("\t%s #%u", opa, imm);
+      println("\tstaa %d,x", off+nth);
+    }
+  }
+}
+
 //
 // @long op= (off,IX)
 //
@@ -3673,6 +3732,19 @@ static void opeq(Node *node)
       return;
     case TY_LONG:
       if (test_addr_x(lhs)) {
+        int64_t v;
+
+        if (node->retval_unused
+        && is_long_constant(rhs,&v)) {
+          if (v==1 || v==-1) {
+            op32x(v==1 ? "inc" : "dec", gen_addr_x(lhs,false));
+            return;
+          }
+          if (!opt('O','s')) {
+            gen_opeq32_carry("add", gen_addr_x(lhs,false), v);
+            return;
+          }
+        }
         gen_opeq32("add",lhs,rhs);
         return;
       }
@@ -3784,7 +3856,20 @@ static void opeq(Node *node)
       return;
     case TY_LONG:
       if (test_addr_x(lhs)) {
-        gen_opeq32("rsub",lhs,rhs);   // @long = lhs -= rhs
+        int64_t v;
+
+        if (node->retval_unused
+        && is_long_constant(rhs,&v)) {
+          if (v==1 || v==-1) {
+            op32x(v==1 ? "dec" : "inc", gen_addr_x(lhs,false));
+            return;
+          }
+          if (!opt('O','s')) {
+            gen_opeq32_carry("sub", gen_addr_x(lhs,false), v);
+            return;
+          }
+        }
+        gen_opeq32("rsub",lhs,rhs);
         return;
       }
       gen_addr(lhs);
@@ -4198,6 +4283,13 @@ static void opeq(Node *node)
     switch(node->ty->kind) {
     case TY_LONG:
       if (test_addr_x(lhs)) {
+        int64_t v;
+        if (!opt('O','s')
+        &&  node->retval_unused
+        &&  is_long_constant(rhs,&v)) {
+          gen_opeq32_bit(op, gen_addr_x(lhs,false), v);
+          return;
+        }
         gen_opeq32(op,lhs,rhs); // @long = lhs opeq rhs
         return;
       }
