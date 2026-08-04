@@ -329,6 +329,22 @@ Node *optimize_bitop_integral_promotion(Node *node)
       return optimize_const_expr(new);
     }
   }
+  // (int)char & 0..127 -> (int)(uchar & 0..127)
+  // (int)-1 | 0x7F -> -1, not (int)(uchar)0xFF. Same for ^.
+  if (node->kind == ND_BITAND
+  &&  !skip_integral_promotion(node->lhs)->ty->is_unsigned
+  &&  node->rhs->kind     == ND_NUM
+  &&  node->rhs->ty->kind == TY_INT
+  &&  node->rhs->val      >= 0
+  &&  node->rhs->val      <= 127) {
+    Node *new = new_copy(node);
+    new->ty  = ty_uchar;
+    new->lhs = skip_integral_promotion(node->lhs);
+    new->rhs = new_copy(node->rhs);
+    new->rhs->ty = ty_uchar;
+    new = new_cast(new,ty_int);
+    return optimize_const_expr(new);
+  }
   // char op -128..127
   //    (int)char op -128..127 -> (int)(char op -128..127)
   if (!skip_integral_promotion(node->lhs)->ty->is_unsigned) {
