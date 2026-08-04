@@ -113,7 +113,7 @@ bool is_schar_or_s8num(Node *node)
   return false;
 }
 
-static bool can_negate(Node *node)
+static bool can_negate_compare(Node *node)
 {
   switch(node->kind) {
   case ND_EQ:
@@ -722,14 +722,12 @@ Node *optimize_expr(Node *node)
   case ND_NOT:
     node->lhs = optimize_expr(node->lhs);
     node->lhs = skip_integral_promotion(node->lhs);
-    if (is_compare(node->lhs)) {
-      if (is_compare(node->lhs) && can_negate(node->lhs)) {
-        node->kind = negate_kind(node->lhs->kind);
-        node->rhs  = node->lhs->rhs;
-        node->ty   = node->lhs->ty;
-        node->lhs  = node->lhs->lhs; // must be last
-        return optimize_expr(node);
-      }
+    if (can_negate_compare(node->lhs)) {
+      node->kind = negate_kind(node->lhs->kind);
+      node->rhs  = node->lhs->rhs;
+      node->ty   = node->lhs->ty;
+      node->lhs  = node->lhs->lhs; // must be last
+      return optimize_expr(node);
     }
     if (is_integer_constant(node->lhs,&val)) {
       Node *new = new_num((val==0),node->tok);
