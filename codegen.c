@@ -7061,7 +7061,13 @@ static void gen_stmt(Node *node)
 //    println("\tjmp L_return_%s", current_fn->name);
     return;
   case ND_EXPR_STMT:
+    if (opt('g','4')) {
+      ast_node_dump(node->lhs);
+    }
     node->lhs = optimize_expr(node->lhs);
+    if (opt('g','4')) {
+      ast_node_dump(node->lhs);
+    }
     node->lhs->retval_unused = true;
     gen_expr(node->lhs);
     return;

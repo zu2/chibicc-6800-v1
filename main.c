@@ -71,7 +71,9 @@ bool opt(char op, char lv)
     case '2':
       return opt_g == '2' || opt_g == '3';
     case '3':
-      return opt_g == '3';
+      return opt_g == '3' || opt_g == '4';
+    case '4':
+      return opt_g == '4';
     default:
       return false;
     }
@@ -96,7 +98,7 @@ static StringArray input_paths;
 static StringArray tmpfiles;
 
 static void usage(int status) {
-  fprintf(stderr, "chibicc [-v[vv]][-g[0123]][-O[123s]][-S][-c][-D name][-U name][-o <path>][-I dir][-Zaddr][-Caddr][-nostartfiles][-nostartfiles][-[no]static-locals][-t<machine>]  <file> [-lxx]\n");
+  fprintf(stderr, "chibicc [-v[vv]][-g[01234]][-O[123s]][-S][-c][-D name][-U name][-o <path>][-I dir][-Zaddr][-Caddr][-nostartfiles][-nostartfiles][-[no]static-locals][-t<machine>]  <file> [-lxx]\n");
   fprintf(stderr,"machine: emu6800(default),mikbug,bm,jr100,jr200\n");
   exit(status);
 }
@@ -449,6 +451,9 @@ static void parse_args(int argc, char **argv) {
         opt_g = '2';
         if (argv[i][3]=='g') {
           opt_g = '3';
+          if (argv[i][4]=='g') {
+            opt_g = '4';
+          }
         }
       }else if(isdigit(argv[i][2])){
         opt_g = argv[i][2];
@@ -457,6 +462,7 @@ static void parse_args(int argc, char **argv) {
         case '1':
         case '2':
         case '3':
+        case '4':
           break;
         default:
           error("unknown debug option: %s", argv[i]);
