@@ -942,7 +942,24 @@ Node *optimize_expr(Node *node)
 
     return node;
   } // ND_SUB,MUL,DIV,MOD
-  case ND_BITAND:
+  case ND_BITAND: {
+    int64_t val;
+
+    node = optimize_lr_swap(node);
+    node = optimize_bitop_integral_promotion(node);
+
+    // x & 0..255 -> (T)((uchar)x & 0..255)
+    if (node->kind == ND_BITAND
+    &&  is_int16(node->ty)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  0 <= val && val <= 255) {
+      Node *new = new_copy(node);
+      new->ty  = ty_uchar;
+      new->lhs = new_cast(node->lhs,ty_uchar);
+      return optimize_expr(new_cast(new,node->ty));
+    }
+    return node;
+  }
   case ND_BITOR:
   case ND_BITXOR:
     node = optimize_lr_swap(node);
