@@ -1113,17 +1113,12 @@ Node *optimize_expr(Node *node)
       }
     }  
 
-//  println("; optimize RO %d cost:%d %d",node->kind,node_cost(node->lhs),node_cost(node->rhs));
-    if (node->lhs->ty->kind != TY_CHAR) {
-      if ( node_cost(node->lhs) == node_cost(node->rhs)
+    if (node->kind == ND_LE || node->kind == ND_GT) {
+      if (node->lhs->ty->kind != TY_CHAR
+      && ( node_cost(node->lhs) == node_cost(node->rhs)
       ||   test_addr_x(node->lhs)
-      || (is_addr_constant(node->lhs)!=NULL)) {
-        switch(node->kind){
-        case ND_LE:
-        case ND_GT:
-          node = flip_condition(swap_lr(node));
-          return optimize_const_expr(node);
-        }
+      || (is_addr_constant(node->lhs)!=NULL))) {
+        node = flip_condition(swap_lr(node));
       }
     }
     return optimize_const_expr(node);
