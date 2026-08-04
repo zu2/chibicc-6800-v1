@@ -12,7 +12,7 @@ bool is_integral_promotion(Node *node)
   return false;
 }
 
-bool is_integral_promotion_or_byte(Node *node)
+bool is_integral_promotion_or_char(Node *node)
 {
   if (is_integral_promotion(node)) {
     return true;
@@ -309,7 +309,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
     return optimize_const_expr(new_cast(new,ty_int));
   }
   // LHS check
-  if (!is_integral_promotion_or_byte(node->lhs)) {
+  if (!is_integral_promotion_or_char(node->lhs)) {
     return optimize_const_expr(node);
   }
     
@@ -347,7 +347,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
   }
   // char op char, uchar op uchar
   //    (int)lhs op (int)rhs -> (int)(lhs op rhs)
-  if (is_integral_promotion_or_byte(node->rhs)
+  if (is_integral_promotion_or_char(node->rhs)
   &&  (skip_integral_promotion(node->lhs)->ty->is_unsigned
     == skip_integral_promotion(node->rhs)->ty->is_unsigned)) {
     Node *new = new_copy(node);
@@ -359,7 +359,7 @@ Node *optimize_bitop_integral_promotion(Node *node)
   }
   // char & uchar
   if (node->kind == ND_BITAND
-  &&  is_integral_promotion_or_byte(node->rhs)
+  &&  is_integral_promotion_or_char(node->rhs)
   &&  (skip_integral_promotion(node->lhs)->ty->is_unsigned
     != skip_integral_promotion(node->rhs)->ty->is_unsigned)) {
     Node *new = new_copy(node);
@@ -627,16 +627,16 @@ Node *optimize_expr(Node *node)
       case ND_BITAND:
       case ND_BITOR:
       case ND_BITXOR:
-        if (is_integral_promotion_or_byte(node->lhs->lhs)) {
+        if (is_integral_promotion_or_char(node->lhs->lhs)) {
           node->lhs->lhs = skip_integral_promotion(node->lhs->lhs);
         }
-        if (is_integral_promotion_or_byte(node->lhs->rhs)) {
+        if (is_integral_promotion_or_char(node->lhs->rhs)) {
           node->lhs->rhs = skip_integral_promotion(node->lhs->rhs);
         }
-        if (!is_integral_promotion_or_byte(node->lhs->lhs)) {
+        if (!is_integral_promotion_or_char(node->lhs->lhs)) {
           node->lhs->lhs = new_cast(node->lhs->lhs,ty_char);
         }
-        if (!is_integral_promotion_or_byte(node->lhs->rhs)) {
+        if (!is_integral_promotion_or_char(node->lhs->rhs)) {
           node->lhs->rhs = new_cast(node->lhs->rhs,ty_char);
         }
         node->lhs->ty = node->ty;

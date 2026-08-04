@@ -467,7 +467,7 @@ void ast_node_dump(Node *node);
 // optimize.c
 //
 bool is_integral_promotion(Node *node);
-bool is_integral_promotion_or_byte(Node *node);
+bool is_integral_promotion_or_char(Node *node);
 Node *skip_integral_promotion(Node *node);
 Node *skip_bye_to_int(Node *node);
 bool is_u8num(Node *node);
