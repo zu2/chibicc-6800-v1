@@ -3779,6 +3779,10 @@ static void opeq(Node *node)
       store(node->ty);
       return;
     case TY_LONG:
+      if (test_addr_x(lhs)) {
+        gen_opeq32("rsub",lhs,rhs);   // @long = lhs -= rhs
+        return;
+      }
       gen_addr(lhs);
       push();
       println("\ttsx");
@@ -4201,7 +4205,7 @@ static void opeq(Node *node)
       println("\tldx 4,x");
       IX_invalidate();
       load32x(0);
-      println("\tjsr %s32tos",op);  // call and32tos,or32tos,xor32tos
+      println("\tjsr __%s32tos",op);  // call and32tos,or32tos,xor32tos
       IX_invalidate();
       depth -= 4;
       store(node->ty);
