@@ -3596,23 +3596,6 @@ static void gen_funcall(Node *node)
   // Removes pushed arguments before calling a function for speed
   remove_args(stack_args);
 
-  // If the return value is a type shorter than an int,
-  // the upper bytes contain garbage, so we correct it.
-#if 0
-  switch (node->ty->kind) {
-  case TY_BOOL:
-    println("\tclra");
-    return;
-  case TY_CHAR:
-    println("\tclra");
-    if (!node->ty->is_unsigned){
-      println("\tasrb");
-      println("\trolb");
-      println("\tsbca #0");
-    }
-    return;
-  }
-#endif
   return;
 }
 
