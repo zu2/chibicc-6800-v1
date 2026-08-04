@@ -126,7 +126,6 @@ Node *skip_redundant_ptr_cast(Node *node)
   return node;
 }
 
-static int isNUM(Node *node) { return node->kind == ND_NUM; }
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
 
 //
