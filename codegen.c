@@ -3309,6 +3309,80 @@ int gen_direct_shr_long(Node *node,int64_t val)
   return 0;
 }
 
+//
+// @long op= val, one byte at a time.
+// add and sub: bytes are tied by the carry, so go LSB to MSB.
+// Low bytes of 0 are skipped. The first byte emitted uses AccB.
+//
+// IX is not touched. jsr __op32i breaks it.
+//
+static void gen_direct_32i_carry(char *op, int64_t val)
+{
+  char *opb = !strcmp(op,"add") ? "addb" : "subb";
+  char *opa = !strcmp(op,"add") ? "adca" : "sbca";
+  bool emitted = false;
+
+  for (int nth = 3; nth >= 0; nth--) {
+    uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
+
+    if (!emitted && imm == 0)
+      continue;
+
+    if (!emitted) {
+      println("\tldab @long+%d", nth);
+      println("\t%s #%u", opb, imm);
+      println("\tstab @long+%d", nth);
+      emitted = true;
+    } else {
+      println("\tldaa @long+%d", nth);
+      println("\t%s #%u", opa, imm);
+      println("\tstaa @long+%d", nth);
+    }
+  }
+}
+
+//
+// @long op= val, one byte at a time.
+// and, or and xor: bytes are free of each other, so any order works.
+//
+// Per byte:
+//   and 0xFF, or 0x00, xor 0x00 -> the byte does not change. skip
+//   and 0x00                    -> clr
+//   xor 0xFF                    -> com
+//   or  0xFF                    -> ldab #$FF, stab
+//   other                       -> ldab, op, stab
+//
+// CLR and COM have no direct mode, so they are 3 bytes here.
+// IX is not touched. jsr __op32i breaks it.
+//
+static void gen_direct_32i_bit(char *op, int64_t val)
+{
+  char *opb = !strcmp(op,"and") ? "andb" : !strcmp(op,"or") ? "orab" : "eorb";
+  uint8_t nop = !strcmp(op,"and") ? 0xFF : 0x00;   // byte does not change
+  uint8_t all = 0xFF ^ nop;                        // byte becomes all-set
+
+  for (int nth = 3; nth >= 0; nth--) {
+    uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
+
+    if (imm == nop)
+      continue;
+
+    if (imm != all) {
+      println("\tldab @long+%d", nth);
+      println("\t%s #%u", opb, imm);
+      println("\tstab @long+%d", nth);
+    } else if (!strcmp(op,"and")) {
+      println("\tclr @long+%d", nth);
+    } else if (!strcmp(op,"xor")) {
+      println("\tcom @long+%d", nth);
+    } else {
+      println("\tldab #$FF");
+      println("\tstab @long+%d", nth);
+    }
+  }
+}
+
+
 // off,x op= val, one byte at a time.
 // add and sub: bytes are tied by the carry, so go LSB to MSB.
 // Low bytes of 0 are skipped. The first byte emitted uses AccB.
@@ -5635,6 +5709,9 @@ void gen_expr(Node *node)
       println("\tnegb");
       println("\tldab #1");
       println("\tsbcb #0");
+      if (!is_int8(node->ty)) {
+        println("\tclra");
+      }
       return;
     }
     if (is_int16_or_ptr(node->lhs->ty)) {
@@ -5852,19 +5929,18 @@ void gen_expr(Node *node)
   case TY_LONG: {
     switch (node->kind) {
     case ND_ADD:
-      if (test_addr_x(lhs) && !test_addr_x(rhs)){
-        node = swap_lr(node);
-      }
       if (is_long_constant(rhs,&val)) {
         gen_expr(lhs);
         if (val==1) {
           println("\tjsr __inc32");
-//        IX_invalidate();
           return;
         }
         if (val==-1) {
           println("\tjsr __dec32");
-          IX_invalidate();
+          return;
+        }
+        if (opt('O','2')) {
+          gen_direct_32i_carry("add",val);
           return;
         }
         println("\tjsr __add32i");
@@ -5895,12 +5971,14 @@ void gen_expr(Node *node)
         gen_expr(lhs);
         if (val==1) {
           println("\tjsr __dec32");
-          IX_invalidate();
           return;
         }
         if (val==-1) {
           println("\tjsr __inc32");
-//        IX_invalidate();
+          return;
+        }
+        if (opt('O','2')) {
+          gen_direct_32i_carry("sub",val);
           return;
         }
         println("\tjsr __sub32i");
@@ -5994,6 +6072,10 @@ void gen_expr(Node *node)
     case ND_BITAND:
       gen_expr(node->lhs);
       if (is_long_constant(rhs,&val)) {
+        if (opt('O','2')) {
+          gen_direct_32i_bit("and",val);
+          return;
+        }
         println("\tjsr __and32i");
         word32i(val);
         IX_invalidate();
@@ -6013,6 +6095,10 @@ void gen_expr(Node *node)
     case ND_BITOR:
       gen_expr(node->lhs);
       if (is_long_constant(rhs,&val)) {
+        if (opt('O','2')) {
+          gen_direct_32i_bit("or",val);
+          return;
+        }
         println("\tjsr __or32i");
         word32i(val);
         IX_invalidate();
@@ -6032,6 +6118,10 @@ void gen_expr(Node *node)
     case ND_BITXOR:
       gen_expr(node->lhs);
       if (is_long_constant(rhs,&val)) {
+        if (opt('O','2')) {
+          gen_direct_32i_bit("xor",val);
+          return;
+        }
         println("\tjsr __xor32i");
         word32i(val);
         IX_invalidate();
