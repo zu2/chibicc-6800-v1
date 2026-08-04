@@ -3276,29 +3276,33 @@ static void gen_opeq32_carry(char *op, int off, int64_t val)
 }
 
 // off,x op= val, one byte at a time.
-// and, or and xor: bytes are free of each other.
-static void gen_opeq32_bit(char *op, int off, int64_t val)
+// Bytes are free of each other, so clr and com may touch the C flag.
+static void gen_opeq32_bit(NodeKind kind, int off, int64_t val)
 {
   char *opb;
-  char *opa;
+  char *fmt;      // the instructions that do the whole byte
+  uint8_t keep;   // this byte stays as it is
+  uint8_t whole;  // this byte is done by fmt
 
-  if      (!strcmp(op,"and")) { opb = "andb"; opa = "anda"; }
-  else if (!strcmp(op,"or"))  { opb = "orab"; opa = "oraa"; }
-  else if (!strcmp(op,"xor")) { opb = "eorb"; opa = "eora"; }
-  else assert(0);
+  switch (kind) {
+  case ND_ANDEQ: opb="andb"; keep=0xFF; whole=0x00; fmt="\tclr %d,x"; break;
+  case ND_OREQ:  opb="orab"; keep=0x00; whole=0xFF; fmt="\tldab #$FF\n\tstab %d,x"; break;
+  case ND_XOREQ: opb="eorb"; keep=0x00; whole=0xFF; fmt="\tcom %d,x"; break;
+  default: assert(0);
+  }
 
   for (int nth = 3; nth >= 0; nth--) {
     uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
 
-    if (nth == 3) {
-      println("\tldab %d,x", off+nth);
-      println("\t%s #%u", opb, imm);
-      println("\tstab %d,x", off+nth);
-    } else {
-      println("\tldaa %d,x", off+nth);
-      println("\t%s #%u", opa, imm);
-      println("\tstaa %d,x", off+nth);
+    if (imm == keep)
+      continue;
+    if (imm == whole) {
+      println(fmt, off+nth);
+      continue;
     }
+    println("\tldab %d,x", off+nth);
+    println("\t%s #%u", opb, imm);
+    println("\tstab %d,x", off+nth);
   }
 }
 
@@ -3627,7 +3631,7 @@ static void opeq(Node *node)
         int64_t v;
 
         if (node->retval_unused
-        && is_long_constant(rhs,&v)) {
+        &&  is_long_constant(rhs,&v)) {
           if (v==1 || v==-1) {
             op32x(v==1 ? "inc" : "dec", gen_addr_x(lhs,false));
             return;
@@ -4179,7 +4183,7 @@ static void opeq(Node *node)
         if (!opt('O','s')
         &&  node->retval_unused
         &&  is_long_constant(rhs,&v)) {
-          gen_opeq32_bit(op, gen_addr_x(lhs,false), v);
+          gen_opeq32_bit(node->kind, gen_addr_x(lhs,false), v);
           return;
         }
         gen_opeq32(op,lhs,rhs); // @long = lhs opeq rhs
@@ -4679,7 +4683,7 @@ void gen_expr(Node *node)
         break;
       case TY_LONG:
         ldx_IMM_VAR(var);
-        if (node->retval_unused) {
+        if (1 && node->retval_unused) {
           invalidate_EXT(node->lhs);
           if (val==1) {
             println("\tjsr __inc32x");
