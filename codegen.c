@@ -5789,9 +5789,11 @@ void gen_expr(Node *node)
         return;
       }
       gen_expr(lhs);                // @long = lhs
-      if (can_direct_long(rhs)){    // @long += rhs
-        if (gen_direct_long(rhs,"addb","adca")){
-          return;
+      if (!opt('O','s')) {
+        if (can_direct_long(rhs)){    // @long += rhs
+          if (gen_direct_long(rhs,"addb","adca")){
+            return;
+          }
         }
       }
       pushl();
@@ -5826,9 +5828,11 @@ void gen_expr(Node *node)
       }
 
       gen_expr(lhs);                // @long = lhs
-      if (can_direct_long(rhs)){    // @lomg -= rhs
-        if (gen_direct_long(rhs,"subb","sbca")){
-          return;
+      if (!opt('O','s')) {
+        if (can_direct_long(rhs)){    // @lomg -= rhs
+          if (gen_direct_long(rhs,"subb","sbca")){
+            return;
+          }
         }
       }
       pushl();
@@ -5918,9 +5922,11 @@ void gen_expr(Node *node)
         return;
       }
       gen_expr(node->lhs);            // @long = lhs
-      if (can_direct_long(node->rhs)){
-        if (gen_direct_long(node->rhs,"andb","anda")){  // @long &= rhs
-          return;
+      if (!opt('O','s')) {
+        if (can_direct_long(node->rhs)){
+          if (gen_direct_long(node->rhs,"andb","anda")){  // @long &= rhs
+            return;
+          }
         }
       }
       pushl();
@@ -5946,9 +5952,11 @@ void gen_expr(Node *node)
         return;
       }
       gen_expr(node->lhs);            // @long = lhs
-      if (can_direct_long(node->rhs)){
-        if (gen_direct_long(node->rhs,"orab","oraa")){  // @long |= rhs
-          return;
+      if (!opt('O','s')) {
+        if (can_direct_long(node->rhs)){
+          if (gen_direct_long(node->rhs,"orab","oraa")){  // @long |= rhs
+            return;
+          }
         }
       }
       pushl();
@@ -5974,9 +5982,11 @@ void gen_expr(Node *node)
         return;
       }
       gen_expr(node->lhs);           // @long = lhs
-      if (can_direct_long(node->rhs)){
-        if (gen_direct_long(node->rhs,"eorb","eora")){  // @long ^= rhs
-          return;
+      if (!opt('O','s')) {
+        if (can_direct_long(node->rhs)){
+          if (gen_direct_long(node->rhs,"eorb","eora")){  // @long ^= rhs
+            return;
+          }
         }
       }
       pushl();
