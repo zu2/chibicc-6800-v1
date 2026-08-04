@@ -1054,8 +1054,10 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     case TY_LDOUBLE:
       return false;
     case TY_LONG:
+      assert(0);
       if (test) return true;
       println("\tldx @long+2");
+      IX_invalidate();
       return 0;
     case TY_BOOL:
     case TY_CHAR:
