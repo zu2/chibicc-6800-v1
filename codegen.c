@@ -3420,7 +3420,7 @@ static bool can_direct_long(Node *rhs)
 //  - opb and opa are the op codes for the lowest byte and for the
 //    upper three. They differ because add and sub have to carry.
 //
-int gen_direct_long2(Node *node, char *opb, char *opa)
+bool gen_direct_long2(Node *node, char *opb, char *opa)
 {
   Node *lhs = skip_empty_cast(node->lhs);
   Node *rhs = skip_empty_cast(node->rhs);
@@ -3457,23 +3457,24 @@ int gen_direct_long2(Node *node, char *opb, char *opa)
 
     println("\t%s @long+%d", st, i);
   }
-  return 1;
+  return true;
 }
 
 // The MC6800 has only one IX, so 2 and 4 cannot be used at the same time.
 // Two 2's are fine because they share @bp.
-int can_direct_long2(Node *node)
+bool can_direct_long2(Node *node)
 {
   Node *lhs = skip_empty_cast(node->lhs);
   Node *rhs = skip_empty_cast(node->rhs);
   int L = long_location_type(lhs);
   int R = long_location_type(rhs);
 
-  if (!L || !R)             return 0;
-  if (L==1 || L==3)         return 1;   // lhs does not need IX
-  if (R==1 || R==3)         return 1;   // rhs does not need IX
-  if (L==2 && R==2)         return 1;   // share @bp
-  return 0;
+  if (!L || !R)             return false;
+  if (L==1 || L==3)         return true;   // lhs does not need IX
+  if (R==1 || R==3)         return true;   // rhs does not need IX
+  if (L==2 && R==2)         return true;   // share @bp
+
+  return false;
 }
 
 static void gen_funcall(Node *node)
