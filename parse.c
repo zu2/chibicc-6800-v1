@@ -2504,7 +2504,6 @@ static Node *assign(Token **rest, Token *tok) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITAND,node,rhs,tok),tok);
     }
     if (opeq_ok(node->ty,rhs->ty)
-    ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
     ||  rhs->kind==ND_NUM) {
       return new_binary(ND_ANDEQ, node, rhs, tok);
     }
@@ -2518,9 +2517,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITOR,node,rhs,tok),tok);
     }
-    if (opeq_ok(node->ty,rhs->ty)
-    ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
-    ||  (node->ty->kind == TY_CHAR && rhs->kind==ND_NUM)) {
+    if (opeq_ok(node->ty,rhs->ty)) {
       return new_binary(ND_OREQ, node, rhs, tok);
     }
     return to_assign(new_binary(ND_BITOR, node, rhs, tok));
@@ -2533,9 +2530,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITXOR,node,rhs,tok),tok);
     }
-    if (opeq_ok(node->ty,rhs->ty)
-    ||  (node->ty->kind == TY_CHAR && rhs->ty->kind == TY_CHAR)
-    ||  (node->ty->kind == TY_CHAR && rhs->kind==ND_NUM)) {
+    if (opeq_ok(node->ty,rhs->ty)) {
       return new_binary(ND_XOREQ, node, rhs, tok);
     }
     return to_assign(new_binary(ND_BITXOR, node, rhs, tok));
