@@ -3339,32 +3339,6 @@ static void gen_opeq32(char *op, Node *lhs, Node *rhs)
   store32x(0);  // jsr __op32bx, op32dx calculate IX=IX+off
 }
 
-static void gen_direct_op32x(char *op, Node *rhs)
-{
-  int64_t val;
-
-  rhs = skip_empty_cast(rhs);
-
-  switch (long_location_type(rhs)) {
-  case 1:
-    is_long_constant(rhs, &val);
-    println("\tjsr %s32i", op);
-    word32i(val);
-    IX_invalidate();
-    break;
-  case 2:
-  case 4:
-    op32x(op, gen_addr_x(rhs,false));
-    break;
-  case 3:
-    ldx_IMM_VAR(rhs->var->name);
-    op32x(op, 0);
-    break;
-  default:
-    assert(0);
-  }
-}
-
 //
 // Generate one byte of a long operand, for the ld/op/st frame.
 // nth is 0..3, 0 is the most significant byte.
