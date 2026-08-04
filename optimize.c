@@ -601,8 +601,9 @@ Node *optimize_expr(Node *node)
     }
     if (node->ty->kind == TY_CHAR
     &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
-    &&  is_integral_promotion(node->lhs->lhs)
-    &&  node->lhs->rhs->kind == ND_NUM) {
+    &&  node->lhs->rhs->kind == ND_NUM
+    &&  (is_integral_promotion(node->lhs->lhs)
+       ||is_byte_to_uint(node->lhs->lhs)) ) {
       Node *new = new_copy(node->lhs);
       new->ty = node->ty;
       new->lhs = node->lhs->lhs->lhs;
