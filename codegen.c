@@ -3672,6 +3672,10 @@ static void opeq(Node *node)
       store(node->ty);
       return;
     case TY_LONG:
+      if (test_addr_x(lhs)) {
+        gen_opeq32("add",lhs,rhs);
+        return;
+      }
       gen_addr(lhs);
       push();
       gen_expr(rhs);
