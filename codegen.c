@@ -2187,10 +2187,9 @@ static void cast(Type *from, Type *to) {
     if (from->kind == TY_BOOL)
       return;
     if (from->kind == TY_CHAR) {
-      println("\tclra");
       println("\tnegb");    // if AccB==0 then C=0 else C=1
-      println("\ttab");     // Zero AccB preserving carry flag
-      println("\trolb");    // C to AccB
+      println("\trolb");    // C to AccB:b0
+      println("\tandb #1"); // drop b7-b1
       return;
     }
     if (is_int16_or_ptr(from)) {
