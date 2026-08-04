@@ -6140,6 +6140,7 @@ void gen_expr(Node *node)
     &&  is_integer_constant(node->lhs->rhs, &val)
     &&  val==2
     &&  is_int8(node->lhs->lhs->lhs->ty)
+    &&  node->lhs->lhs->lhs->ty->is_unsigned
     &&  test_addr_x(node->lhs->lhs->lhs)) {
       gen_expr(node->rhs);
       off = gen_addr_x(node->lhs->lhs->lhs,false);
