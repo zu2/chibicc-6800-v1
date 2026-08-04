@@ -3332,26 +3332,14 @@ static void op32x(char *op, int off)
 }
 
 //
-// @long = (lhs op= rhs). lhs must be reachable with IX alone.
-// The bx and dx forms return with IX at the operand, so the result goes
-// back at offset 0. The immediate form destroys IX, so the address is
-// built twice.
-//
 // @long = (lhs op= rhs).
 //
+// lhs must be reachable with IX alone.
+// The bx and dx forms return with IX at the operand, so the result
+// goes back at offset 0.
 //
 static void gen_opeq32(char *op, Node *lhs, Node *rhs)
 {
-  int64_t val;
-
-  if (is_long_constant(rhs,&val)) {
-    load32x(gen_addr_x(lhs,false));
-    println("\tjsr __%s32i", op);
-    word32i(val);
-    IX_invalidate();
-    store32x(gen_addr_x(lhs,false));
-    return;
-  }
   gen_expr(rhs);
   op32x(op, gen_addr_x(lhs,false));
   store32x(0);  // jsr __op32bx, op32dx calculate IX=IX+off
