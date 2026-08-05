@@ -3203,42 +3203,36 @@ static void gen_direct_32i_carry(char *op, int64_t val)
 
 //
 // @long op= val, one byte at a time.
-// and, or and xor: bytes are free of each other, so any order works.
-//
-// Per byte:
-//   and 0xFF, or 0x00, xor 0x00 -> the byte does not change. skip
-//   and 0x00                    -> clr
-//   xor 0xFF                    -> com
-//   or  0xFF                    -> ldab #$FF, stab
-//   other                       -> ldab, op, stab
-//
+// Bytes are free of each other, so clr and com may touch the C flag.
 // CLR and COM have no direct mode, so they are 3 bytes here.
 // IX is not touched. jsr __op32i breaks it.
 //
-static void gen_direct_32i_bit(char *op, int64_t val)
+static void gen_direct_32i_bit(NodeKind kind, int64_t val)
 {
-  char *opb = !strcmp(op,"and") ? "andb" : !strcmp(op,"or") ? "orab" : "eorb";
-  uint8_t nop = !strcmp(op,"and") ? 0xFF : 0x00;   // byte does not change
-  uint8_t all = 0xFF ^ nop;                        // byte becomes all-set
+  char *opb;
+  char *fmt;      // does the whole byte
+  uint8_t keep;   // leave this byte alone
+  uint8_t whole;  // use fmt for this byte
+
+  switch (kind) {
+  case ND_BITAND: opb="andb"; keep=0xFF; whole=0x00; fmt="\tclr @long+%d"; break;
+  case ND_BITOR:  opb="orab"; keep=0x00; whole=0xFF; fmt="\tldab #$FF\n\tstab @long+%d"; break;
+  case ND_BITXOR: opb="eorb"; keep=0x00; whole=0xFF; fmt="\tcom @long+%d"; break;
+  default: assert(0);
+  }
 
   for (int nth = 3; nth >= 0; nth--) {
     uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
 
-    if (imm == nop)
+    if (imm == keep)
       continue;
-
-    if (imm != all) {
-      println("\tldab @long+%d", nth);
-      println("\t%s #%u", opb, imm);
-      println("\tstab @long+%d", nth);
-    } else if (!strcmp(op,"and")) {
-      println("\tclr @long+%d", nth);
-    } else if (!strcmp(op,"xor")) {
-      println("\tcom @long+%d", nth);
-    } else {
-      println("\tldab #$FF");
-      println("\tstab @long+%d", nth);
+    if (imm == whole) {
+      println(fmt, nth);
+      continue;
     }
+    println("\tldab @long+%d", nth);
+    println("\t%s #%u", opb, imm);
+    println("\tstab @long+%d", nth);
   }
 }
 
@@ -3343,44 +3337,31 @@ static void gen_opeq32(char *op, Node *lhs, Node *rhs)
 }
 
 //
-// Generate one byte of a long operand, for the ld/op/st frame.
-// nth is 0..3, 0 is the most significant byte.
-// R is long_location_type(rhs). A constant is not handled here.
-//
-static void gen_direct_long_nth_byte(char *op, int R, Node *rhs, int roff, int nth)
-{
-  assert(R == 2 || R == 3 || R == 4);
-
-  if (R == 3)
-    println("\t%s _%s+%d", op, rhs->var->name, nth);
-  else
-    println("\t%s %d,x", op, roff+nth);
-}
-
-//
 // @long op= rhs, expanded byte by byte.
-// opb is for the lowest byte and opa for the upper three, because
-// add and sub have to carry.
+// The caller must have checked can_direct_long.
 //
-static bool gen_direct_long(Node *rhs, char *opb, char *opa)
+static void gen_direct_long(Node *rhs, char *opb, char *opa)
 {
   rhs = skip_empty_cast(rhs);
   int R = long_location_type(rhs);
   int roff = 0;
 
+  assert(R == 2 || R == 3 || R == 4);
+
   if (R==2 || R==4)
     roff = gen_addr_x(rhs,false);
 
   println("\tldab @long+3");
-  gen_direct_long_nth_byte(opb, R, rhs, roff, 3);
+  if (R == 3) println("\t%s _%s+3", opb, rhs->var->name);
+  else        println("\t%s %d,x",  opb, roff+3);
   println("\tstab @long+3");
 
   for (int nth = 2; nth >= 0; nth--) {
     println("\tldaa @long+%d", nth);
-    gen_direct_long_nth_byte(opa, R, rhs, roff, nth);
+    if (R == 3) println("\t%s _%s+%d", opa, rhs->var->name, nth);
+    else        println("\t%s %d,x",   opa, roff+nth);
     println("\tstaa @long+%d", nth);
   }
-  return true;
 }
 
 static bool can_direct_long(Node *rhs)
@@ -5776,10 +5757,9 @@ void gen_expr(Node *node)
       }
       gen_expr(lhs);                // @long = lhs
       if (!opt('O','s')) {
-        if (can_direct_long(rhs)){    // @long += rhs
-          if (gen_direct_long(rhs,"addb","adca")){
-            return;
-          }
+        if (can_direct_long(rhs)){
+          gen_direct_long(node->rhs,"addb","adca");   // @long += rhs
+          return;
         }
       }
       pushl();
@@ -5815,10 +5795,9 @@ void gen_expr(Node *node)
 
       gen_expr(lhs);                // @long = lhs
       if (!opt('O','s')) {
-        if (can_direct_long(rhs)){    // @lomg -= rhs
-          if (gen_direct_long(rhs,"subb","sbca")){
-            return;
-          }
+        if (can_direct_long(rhs)){
+          gen_direct_long(node->rhs,"subb","sbca");   // @long -= rhs
+          return;
         }
       }
       pushl();
@@ -5895,7 +5874,7 @@ void gen_expr(Node *node)
       if (is_long_constant(rhs,&val)) {
         gen_expr(node->lhs);            // @long = lhs
         if (opt('O','2')) {
-          gen_direct_32i_bit("and",val);  // @long &= val
+          gen_direct_32i_bit(node->kind,val);  // @long &= val
           return;
         }
         println("\tjsr __and32i");    //  @long &= val
@@ -5910,9 +5889,8 @@ void gen_expr(Node *node)
       gen_expr(node->lhs);            // @long = lhs
       if (!opt('O','s')) {
         if (can_direct_long(node->rhs)){
-          if (gen_direct_long(node->rhs,"andb","anda")){  // @long &= rhs
-            return;
-          }
+          gen_direct_long(node->rhs,"andb","anda");   // @long &= rhs
+          return;
         }
       }
       pushl();
@@ -5925,7 +5903,7 @@ void gen_expr(Node *node)
       if (is_long_constant(rhs,&val)) {
         gen_expr(node->lhs);            // @long = lhs
         if (opt('O','2')) {
-          gen_direct_32i_bit("or",val); // @Long |= val
+          gen_direct_32i_bit(node->kind,val); // @Long |= val
           return;
         }
         println("\tjsr __or32i");       // @long |= val
@@ -5940,9 +5918,8 @@ void gen_expr(Node *node)
       gen_expr(node->lhs);            // @long = lhs
       if (!opt('O','s')) {
         if (can_direct_long(node->rhs)){
-          if (gen_direct_long(node->rhs,"orab","oraa")){  // @long |= rhs
-            return;
-          }
+          gen_direct_long(node->rhs,"orab","oraa");   // @long |= rhs
+          return;
         }
       }
       pushl();
@@ -5955,7 +5932,7 @@ void gen_expr(Node *node)
       if (is_long_constant(rhs,&val)) {
         gen_expr(node->lhs);           // @long = lhs
         if (opt('O','2')) {
-          gen_direct_32i_bit("xor",val);  // @long ^= rhs
+          gen_direct_32i_bit(node->kind,val);  // @long ^= rhs
           return;
         }
         println("\tjsr __xor32i");    // @long ^= rhs
@@ -5970,9 +5947,8 @@ void gen_expr(Node *node)
       gen_expr(node->lhs);           // @long = lhs
       if (!opt('O','s')) {
         if (can_direct_long(node->rhs)){
-          if (gen_direct_long(node->rhs,"eorb","eora")){  // @long ^= rhs
-            return;
-          }
+          gen_direct_long(node->rhs,"eorb","eora");   // @long ^= rhs
+          return;
         }
       }
       pushl();
