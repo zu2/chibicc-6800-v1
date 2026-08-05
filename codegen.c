@@ -6508,11 +6508,8 @@ void gen_expr(Node *node)
     case TY_CHAR:
       char *skip = new_jump_label();
       char *loop = new_jump_label();
-      if (can_direct_char(node->lhs)
-      &&  can_direct_char(node->rhs)) {
-        if(!gen_direct_char(node->lhs,"ldab",NULL)) {
-          assert(0);
-        }
+      if (can_direct_char(node->rhs)) {
+        gen_expr(node->lhs);
         if(!gen_direct_char(node->rhs,"ldaa",NULL)) {
           assert(0);
         }
@@ -6639,6 +6636,7 @@ void gen_expr(Node *node)
       return;
     case TY_SHORT:
     case TY_INT:
+    case TY_ENUM:
       gen_expr(node->rhs);
       push1();
       gen_expr(node->lhs);

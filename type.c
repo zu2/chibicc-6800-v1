@@ -233,6 +233,7 @@ int int_rank(Type *t) {
     case TY_CHAR:
     case TY_SHORT:
       return 0;
+    case TY_ENUM:
     case TY_INT:
       return 1;
     case TY_LONG:
