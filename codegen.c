@@ -3468,6 +3468,30 @@ bool can_direct_long2(Node *node)
   return false;
 }
 
+//
+// @long op= rhs, through the stack
+//
+static void gen_long_tos(Node *node)
+{
+  char *op;
+
+  switch (node->kind) {
+  case ND_ADD:    op="add"; break;
+  case ND_SUB:    op="sub"; break;
+  case ND_BITAND: op="and"; break;
+  case ND_BITOR:  op="or";  break;
+  case ND_BITXOR: op="xor"; break;
+  default: assert(0);
+  }
+
+  gen_expr(node->lhs);
+  pushl();
+  gen_expr(node->rhs);
+  println("\tjsr __%s32tos", op);
+  IX_invalidate();
+  depth -= 4;
+}
+
 static void gen_funcall(Node *node)
 {
   if (node->lhs->kind == ND_VAR
@@ -5791,15 +5815,12 @@ void gen_expr(Node *node)
       gen_expr(lhs);                // @long = lhs
       if (!opt('O','s')) {
         if (can_direct_long(node)){
+          gen_expr(lhs);
           gen_direct_long(node);   // @long += rhs
           return;
         }
       }
-      pushl();
-      gen_expr(rhs);
-      println("\tjsr __add32tos");	// @long += TOS, pull TOS
-      IX_invalidate();
-      depth -= 4;
+      gen_long_tos(node);           // push lhs; @long += TOS (and remove TOS)
       return;
     case ND_SUB:
       if (is_long_constant(rhs,&val)) {
@@ -5829,15 +5850,12 @@ void gen_expr(Node *node)
       gen_expr(lhs);                // @long = lhs
       if (!opt('O','s')) {
         if (can_direct_long(node)){
+          gen_expr(lhs);
           gen_direct_long(node);    // @long -= rhs
           return;
         }
       }
-      pushl();
-      gen_expr(rhs);
-      println("\tjsr __sub32tos");	 // @long = TOS - @long, pull TOS");
-      IX_invalidate();
-      depth -= 4;
+      gen_long_tos(node);           // push lhs; @long -= TOS (and remove TOS)
       return;
     case ND_MUL:
       if (node->lhs->kind     == ND_CAST
@@ -5928,18 +5946,14 @@ void gen_expr(Node *node)
         gen_direct_long2(node);       // @long = lhs op rhs
         return;
       }
-      gen_expr(lhs);                  // @long = lhs
       if (!opt('O','s')) {
         if (can_direct_long(node)){
+          gen_expr(lhs);
           gen_direct_long(node);      // @long op= rhs
           return;
         }
       }
-      pushl();
-      gen_expr(rhs);
-      println("\tjsr __%s32tos",op);  // @long op= tos
-      IX_invalidate();
-      depth -= 4;
+      gen_long_tos(node);           // push lhs; @long op= TOS (and remove TOS)
       return;
     } // ND_BITAND, ND_BITOR, ND_BITXOR
     case ND_EQ:
