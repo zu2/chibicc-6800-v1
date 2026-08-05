@@ -5871,92 +5871,45 @@ void gen_expr(Node *node)
       IX_invalidate();
       return;
     case ND_BITAND:
+    case ND_BITOR:
+    case ND_BITXOR: {
+      char *opb, *opa;  // MC6800 instruction names
+      char *op;         // bare stem for __*32i / __*32tos
+      switch (node->kind) {
+      case ND_BITAND: opb="andb"; opa="anda"; op="and"; break;
+      case ND_BITOR:  opb="orab"; opa="oraa"; op="or";  break;
+      case ND_BITXOR: opb="eorb"; opa="eora"; op="xor"; break;
+      default: assert(0);
+      }
       if (is_long_constant(rhs,&val)) {
-        gen_expr(node->lhs);            // @long = lhs
+        gen_expr(lhs);                // @long = lhs
         if (opt('O','2')) {
-          gen_direct_32i_bit(node->kind,val);  // @long &= val
+          gen_direct_32i_bit(node->kind,val);  // @long op= val
           return;
         }
-        println("\tjsr __and32i");    //  @long &= val
+        println("\tjsr __%s32i",op);   // @long op= val
         word32i(val);
         IX_invalidate();
         return;
       }
       if (can_direct_long2(node)) {
-        gen_direct_long2(node,"andb","anda"); // @long = lhs & rhs
+        gen_direct_long2(node,opb,opa); // @long = lhs op rhs
         return;
       }
-      gen_expr(node->lhs);            // @long = lhs
+      gen_expr(lhs);                  // @long = lhs
       if (!opt('O','s')) {
-        if (can_direct_long(node->rhs)){
-          gen_direct_long(node->rhs,"andb","anda");   // @long &= rhs
+        if (can_direct_long(rhs)){
+          gen_direct_long(rhs,opb,opa);   // @long op= rhs
           return;
         }
       }
       pushl();
-      gen_expr(node->rhs);
-      println("\tjsr __and32tos");    // @long &= tos
+      gen_expr(rhs);
+      println("\tjsr __%s32tos",op);  // @long op= tos
       IX_invalidate();
       depth -= 4;
       return;
-    case ND_BITOR:
-      if (is_long_constant(rhs,&val)) {
-        gen_expr(node->lhs);            // @long = lhs
-        if (opt('O','2')) {
-          gen_direct_32i_bit(node->kind,val); // @Long |= val
-          return;
-        }
-        println("\tjsr __or32i");       // @long |= val
-        word32i(val);
-        IX_invalidate();
-        return;
-      }
-      if (can_direct_long2(node)){
-        gen_direct_long2(node,"orab","oraa"); // @long = lhs | rhs
-        return;
-      }
-      gen_expr(node->lhs);            // @long = lhs
-      if (!opt('O','s')) {
-        if (can_direct_long(node->rhs)){
-          gen_direct_long(node->rhs,"orab","oraa");   // @long |= rhs
-          return;
-        }
-      }
-      pushl();
-      gen_expr(node->rhs);
-      println("\tjsr __or32tos");   // @long |= tos
-      IX_invalidate();
-      depth -= 4;
-      return;
-    case ND_BITXOR:
-      if (is_long_constant(rhs,&val)) {
-        gen_expr(node->lhs);           // @long = lhs
-        if (opt('O','2')) {
-          gen_direct_32i_bit(node->kind,val);  // @long ^= rhs
-          return;
-        }
-        println("\tjsr __xor32i");    // @long ^= rhs
-        word32i(val);
-        IX_invalidate();
-        return;
-      }
-      if (can_direct_long2(node)){
-        gen_direct_long2(node,"eorb","eora"); // @long = lhs ^ rhs
-        return;
-      }
-      gen_expr(node->lhs);           // @long = lhs
-      if (!opt('O','s')) {
-        if (can_direct_long(node->rhs)){
-          gen_direct_long(node->rhs,"eorb","eora");   // @long ^= rhs
-          return;
-        }
-      }
-      pushl();
-      gen_expr(node->rhs);
-      println("\tjsr __xor32tos");    // @long ^= tos
-      IX_invalidate();
-      depth -= 4;
-      return;
+    } // ND_BITAND, ND_BITOR, ND_BITXOR
     case ND_EQ:
     case ND_NE:
     case ND_LT:
