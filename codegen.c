@@ -3170,24 +3170,51 @@ int gen_direct_shr_long(Node *node,int64_t val)
 }
 
 //
-// @long op= val, one byte at a time.
-// add and sub: bytes are tied by the carry, so go LSB to MSB.
-// Low bytes of 0 are skipped. The first byte emitted uses AccB.
+// @long op= val
 //
-// IX is not touched. jsr __op32i breaks it.
+//  - val of 1 or -1 becomes inc32 or dec32. add and sub swap them.
+//  - At -O2 and above it makes the code for each byte. Bytes are tied
+//    by the carry, so go LSB to MSB. Low bytes of 0 are skipped and
+//    the first byte emitted uses AccB.
+//  - IX is not touched. jsr __op32i breaks it.
 //
-static void gen_direct_32i_carry(char *op, int64_t val)
+static void gen_direct_long_addsub_imm(Node *node, int64_t val)
 {
-  char *opb = !strcmp(op,"add") ? "addb" : "subb";
-  char *opa = !strcmp(op,"add") ? "adca" : "sbca";
+  char *opb, *opa;
   bool emitted = false;
+
+  if (val==1 || val==-1) {
+    switch (node->kind) {
+    case ND_ADD: println(val==1 ? "\tjsr __inc32" : "\tjsr __dec32"); break;
+    case ND_SUB: println(val==1 ? "\tjsr __dec32" : "\tjsr __inc32"); break;
+    default: assert(0);
+    }
+    return;
+  }
+
+  if (!opt('O','2')) {
+    switch (node->kind) {
+    case ND_ADD: println("\tjsr __add32i"); break;
+    case ND_SUB: println("\tjsr __sub32i"); break;
+    default: assert(0);
+    }
+    word32i(val);
+    IX_invalidate();
+    return;
+  }
+
+  switch (node->kind) {
+  case ND_ADD: opb="addb"; opa="adca"; break;
+  case ND_SUB: opb="subb"; opa="sbca"; break;
+  default: assert(0);
+  }
 
   for (int nth = 3; nth >= 0; nth--) {
     uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
 
-    if (!emitted && imm == 0)
+    if (!emitted && imm == 0) {
       continue;
-
+    }
     if (!emitted) {
       println("\tldab @long+%d", nth);
       println("\t%s #%u", opb, imm);
@@ -3254,7 +3281,7 @@ static void gen_direct_long_bitop_imm(Node *node, int64_t val)
 // off,x op= val, one byte at a time.
 // add and sub: bytes are tied by the carry, so go LSB to MSB.
 // Low bytes of 0 are skipped. The first byte emitted uses AccB.
-static void gen_opeq32_carry(char *op, int off, int64_t val)
+static void gen_opeq32_addsub(char *op, int off, int64_t val)
 {
   char *opb;
   char *opa;
@@ -3285,7 +3312,7 @@ static void gen_opeq32_carry(char *op, int off, int64_t val)
 
 // off,x op= val, one byte at a time.
 // Bytes are free of each other, so clr and com may touch the C flag.
-static void gen_opeq32_bit(NodeKind kind, int off, int64_t val)
+static void gen_opeq32_bitop(NodeKind kind, int off, int64_t val)
 {
   char *opb;
   char *fmt;      // the instructions that do the whole byte
@@ -3689,7 +3716,7 @@ static void opeq(Node *node)
             return;
           }
           if (!opt('O','s')) {
-            gen_opeq32_carry("add", gen_addr_x(lhs,false), v);
+            gen_opeq32_addsub("add", gen_addr_x(lhs,false), v);
             return;
           }
         }
@@ -3813,7 +3840,7 @@ static void opeq(Node *node)
             return;
           }
           if (!opt('O','s')) {
-            gen_opeq32_carry("sub", gen_addr_x(lhs,false), v);
+            gen_opeq32_addsub("sub", gen_addr_x(lhs,false), v);
             return;
           }
         }
@@ -4235,7 +4262,7 @@ static void opeq(Node *node)
         if (!opt('O','s')
         &&  node->retval_unused
         &&  is_long_constant(rhs,&v)) {
-          gen_opeq32_bit(node->kind, gen_addr_x(lhs,false), v);
+          gen_opeq32_bitop(node->kind, gen_addr_x(lhs,false), v);
           return;
         }
         gen_opeq32(op,lhs,rhs); // @long = lhs opeq rhs
@@ -5804,22 +5831,8 @@ void gen_expr(Node *node)
     switch (node->kind) {
     case ND_ADD:
       if (is_long_constant(rhs,&val)) {
-        gen_expr(lhs);              // @long = lhs
-        if (val==1) {
-          println("\tjsr __inc32"); // @long++
-          return;
-        }
-        if (val==-1) {
-          println("\tjsr __dec32"); // @long--
-          return;
-        }
-        if (opt('O','2')) {
-          gen_direct_32i_carry("add",val);  // @long += val
-          return;
-        }
-        println("\tjsr __add32i");  // @long += val
-        word32i(val);
-        IX_invalidate();
+        gen_expr(lhs);                         // @long = lhs
+        gen_direct_long_addsub_imm(node,val);  // @long += val
         return;
       }
       if (can_direct_long2(node)){
@@ -5839,21 +5852,7 @@ void gen_expr(Node *node)
     case ND_SUB:
       if (is_long_constant(rhs,&val)) {
         gen_expr(lhs);              // @long = lhs
-        if (val==1) {
-          println("\tjsr __dec32"); // @long--
-          return;
-        }
-        if (val==-1) {
-          println("\tjsr __inc32"); // @long++
-          return;
-        }
-        if (opt('O','2')) {
-          gen_direct_32i_carry("sub",val);  // @long -= val
-          return;
-        }
-        println("\tjsr __sub32i");    // @long -= val
-        word32i(val);
-        IX_invalidate();
+        gen_direct_long_addsub_imm(node,val);  // @long -= val
         return;
       }
       if (can_direct_long2(node)){
