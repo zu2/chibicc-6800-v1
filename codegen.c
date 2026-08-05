@@ -3364,17 +3364,36 @@ static void op32x(char *op, int off)
 }
 
 //
-// @long = (lhs op= rhs).
+// @long = (lhs op= rhs)
 //
-// lhs must be reachable with IX alone.
-// The bx and dx forms return with IX at the operand, so the result
-// goes back at offset 0.
+//  - sub uses rsub, so that @long = lhs - @long.
 //
-static void gen_opeq32(char *op, Node *lhs, Node *rhs)
+static void gen_opeq32(Node *node)
 {
-  gen_expr(rhs);
-  op32x(op, gen_addr_x(lhs,false));
-  store32x(0);  // jsr __op32bx, op32dx calculate IX=IX+off
+  char *op;
+
+  switch (node->kind) {
+  case ND_ADDEQ: op="add";  break;
+  case ND_SUBEQ: op="rsub"; break;
+  case ND_ANDEQ: op="and";  break;
+  case ND_OREQ:  op="or";   break;
+  case ND_XOREQ: op="xor";  break;
+  default: assert(0);
+  }
+
+  if (test_addr_x(node->lhs)) {
+    gen_expr(node->rhs);                       // @long = rhs
+    op32x(op, gen_addr_x(node->lhs,false));    // @long op= lhs
+    store32x(0);                               // lhs = @long
+    return;
+  }
+
+  gen_addr(node->lhs);   // AB = &lhs
+  push();                // save &lhs
+  gen_expr(node->rhs);   // @long = rhs
+  popx();                // IX = &lhs
+  op32x(op, 0);          // @long op= [IX]
+  store32x(0);           // [IX] = @long
 }
 
 //
@@ -3720,17 +3739,8 @@ static void opeq(Node *node)
             return;
           }
         }
-        gen_opeq32("add",lhs,rhs);
-        return;
       }
-      gen_addr(lhs);
-      push();
-      gen_expr(rhs);
-      println("\ttsx");
-      println("\tldx 0,x");
-      IX_invalidate();
-      println("\tjsr __add32x");
-      store(node->ty);
+      gen_opeq32(node);
       return;
     // Handle non-char/int RHS case? XXX
     case TY_BOOL:
@@ -3844,21 +3854,8 @@ static void opeq(Node *node)
             return;
           }
         }
-        gen_opeq32("rsub",lhs,rhs);
-        return;
       }
-      gen_addr(lhs);
-      push();
-      println("\ttsx");
-      println("\tldx 0,x");
-      println("\tjsr __push32x");
-      IX_invalidate();
-      depth+=4;
-      gen_expr(rhs);
-      println("\tjsr __sub32tos");
-      IX_invalidate();
-      depth-=4;
-      store(node->ty);
+      gen_opeq32(node);
       return;
     case TY_BOOL:
       // Handle non-char/int RHS case?
@@ -4245,16 +4242,7 @@ static void opeq(Node *node)
   }
   case ND_ANDEQ:
   case ND_OREQ:
-  case ND_XOREQ: {
-    char *op;
-
-    switch(node->kind) {
-    case ND_ANDEQ: op = "and"; break;
-    case ND_OREQ:  op = "or";  break;
-    case ND_XOREQ: op = "xor"; break;
-    default:
-      assert(0);
-    }
+  case ND_XOREQ:
     switch(node->ty->kind) {
     case TY_LONG:
       if (test_addr_x(lhs)) {
@@ -4265,21 +4253,8 @@ static void opeq(Node *node)
           gen_opeq32_bitop(node->kind, gen_addr_x(lhs,false), v);
           return;
         }
-        gen_opeq32(op,lhs,rhs); // @long = lhs opeq rhs
-        return;
       }
-      gen_addr(lhs);
-      push();
-      gen_expr(rhs);
-      pushl();
-      println("\ttsx");
-      println("\tldx 4,x");
-      IX_invalidate();
-      load32x(0);
-      println("\tjsr __%s32tos",op);  // call and32tos,or32tos,xor32tos
-      IX_invalidate();
-      depth -= 4;
-      store(node->ty);
+      gen_opeq32(node); // @long = lhs opeq rhs
       return;
     case TY_BOOL:
     case TY_CHAR: 
@@ -4394,7 +4369,6 @@ static void opeq(Node *node)
       assert(0);
     }
     assert(0);
-  }
   case ND_SHREQ:
   case ND_SHLEQ: {
     int64_t val;
