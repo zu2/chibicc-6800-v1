@@ -6475,7 +6475,11 @@ void gen_expr(Node *node)
 
     if (is_integer_constant(node->rhs, &val)){
       gen_expr(node->lhs);
-      gen_shl(node->lhs->ty,val);
+      if (node->ty->size < node->lhs->ty->size) {
+        gen_shl(node->ty,val);
+      }else{
+        gen_shl(node->lhs->ty,val);
+      }
       return;
     }
     switch(node->ty->kind) {
