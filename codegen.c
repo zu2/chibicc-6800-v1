@@ -3338,35 +3338,53 @@ static void gen_opeq32(char *op, Node *lhs, Node *rhs)
 
 //
 // @long op= rhs, expanded byte by byte.
-// The caller must have checked can_direct_long.
 //
-static void gen_direct_long(Node *rhs, char *opb, char *opa)
+static void gen_direct_long(Node *node)
 {
-  rhs = skip_empty_cast(rhs);
+  Node *rhs = skip_empty_cast(node->rhs);
+  char *opb, *opa;
   int R = long_location_type(rhs);
   int roff = 0;
 
   assert(R == 2 || R == 3 || R == 4);
 
-  if (R==2 || R==4)
-    roff = gen_addr_x(rhs,false);
+  switch (node->kind) {
+  case ND_ADD:    opb="addb"; opa="adca"; break;
+  case ND_SUB:    opb="subb"; opa="sbca"; break;
+  case ND_BITAND: opb="andb"; opa="anda"; break;
+  case ND_BITOR:  opb="orab"; opa="oraa"; break;
+  case ND_BITXOR: opb="eorb"; opa="eora"; break;
+  default: assert(0);
+  }
 
+  if (R==2 || R==4) {
+    roff = gen_addr_x(rhs,false);
+  }
+
+  // ldab -> op -> stab
   println("\tldab @long+3");
-  if (R == 3) println("\t%s _%s+3", opb, rhs->var->name);
-  else        println("\t%s %d,x",  opb, roff+3);
+  if (R == 3) {
+    println("\t%s _%s+3", opb, rhs->var->name);
+  } else {
+    println("\t%s %d,x",  opb, roff+3);
+  }
   println("\tstab @long+3");
 
+  // ldaa -> op -> staa
   for (int nth = 2; nth >= 0; nth--) {
     println("\tldaa @long+%d", nth);
-    if (R == 3) println("\t%s _%s+%d", opa, rhs->var->name, nth);
-    else        println("\t%s %d,x",   opa, roff+nth);
+    if (R == 3) {
+      println("\t%s _%s+%d", opa, rhs->var->name, nth);
+    } else {
+      println("\t%s %d,x",   opa, roff+nth);
+    }
     println("\tstaa @long+%d", nth);
   }
 }
 
-static bool can_direct_long(Node *rhs)
+static bool can_direct_long(Node *node)
 {
-  return long_location_type(skip_empty_cast(rhs)) != 0;
+  return long_location_type(skip_empty_cast(node->rhs)) != 0;
 }
 
 //
@@ -3375,13 +3393,14 @@ static bool can_direct_long(Node *rhs)
 //  - 32-bit work is a stack machine whose top is @long. push and pop
 //    of four bytes costs more than the op itself, so here we read
 //    both sides where they are and only the result goes into @long.
-//  - opb and opa are the op codes for the lowest byte and for the
-//    upper three. They differ because add and sub have to carry.
+//  - opb is for the lowest byte, opa for the upper three. add and sub
+//    have to carry.
 //
-bool gen_direct_long2(Node *node, char *opb, char *opa)
+bool gen_direct_long2(Node *node)
 {
   Node *lhs = skip_empty_cast(node->lhs);
   Node *rhs = skip_empty_cast(node->rhs);
+  char *opb, *opa;
   int L = long_location_type(lhs);
   int R = long_location_type(rhs);
   int loff = 0;
@@ -3389,15 +3408,21 @@ bool gen_direct_long2(Node *node, char *opb, char *opa)
   int64_t lv = 0;
   int64_t rv = 0;
 
-  if (L == 1) is_long_constant(lhs,&lv);
-  if (R == 1) is_long_constant(rhs,&rv); 
+  switch (node->kind) {
+  case ND_ADD:    opb="addb"; opa="adca"; break;
+  case ND_SUB:    opb="subb"; opa="sbca"; break;
+  case ND_BITAND: opb="andb"; opa="anda"; break;
+  case ND_BITOR:  opb="orab"; opa="oraa"; break;
+  case ND_BITXOR: opb="eorb"; opa="eora"; break;
+  default: assert(0);
+  }
 
-  if (L==2 || L==4) { // lhs: local or other var
-    loff = gen_addr_x(lhs,false);
-  }
-  if (R==2 || R==4) { // rhs: local or other var
-    roff = gen_addr_x(rhs,false);
-  }
+  if (L == 1) is_long_constant(lhs,&lv);
+  if (R == 1) is_long_constant(rhs,&rv);
+
+  // lhs,rhs: local or other var
+  if (L==2 || L==4) loff = gen_addr_x(lhs,false);
+  if (R==2 || R==4) roff = gen_addr_x(rhs,false);
 
   for (int i = 3; i >= 0; i--) {
     char *ld = (i==3) ? "ldab" : "ldaa";
@@ -3405,13 +3430,21 @@ bool gen_direct_long2(Node *node, char *opb, char *opa)
     char *op = (i==3) ? opb    : opa;
     int   sh = (3-i)*8;
 
-    if      (L==2 || L==4) println("\t%s %d,x",   ld, loff+i);
-    else if (L==1)         println("\t%s #%d",    ld, (int)((lv >> sh) & 0xFF));
-    else                   println("\t%s _%s+%d", ld, lhs->var->name, i);
+    switch (L) {
+    case 1: println("\t%s #%d",    ld, (int)((lv >> sh) & 0xFF)); break;
+    case 2: // THRU
+    case 4: println("\t%s %d,x",   ld, loff+i);                   break;
+    case 3: println("\t%s _%s+%d", ld, lhs->var->name, i);        break;
+    default: assert(0);
+    }
 
-    if      (R==2 || R==4) println("\t%s %d,x",   op, roff+i);
-    else if (R==1)         println("\t%s #%d",    op, (int)((rv >> sh) & 0xFF));
-    else                   println("\t%s _%s+%d", op, rhs->var->name, i);
+    switch (R) {
+    case 1: println("\t%s #%d",    op, (int)((rv >> sh) & 0xFF)); break;
+    case 2: // THRU
+    case 4: println("\t%s %d,x",   op, roff+i);                   break;
+    case 3: println("\t%s _%s+%d", op, rhs->var->name, i);        break;
+    default: assert(0);
+    }
 
     println("\t%s @long+%d", st, i);
   }
@@ -5751,14 +5784,14 @@ void gen_expr(Node *node)
         IX_invalidate();
         return;
       }
-      if (can_direct_long2(node)){  // @long = lhs + rhs
-        gen_direct_long2(node,"addb","adca");
+      if (can_direct_long2(node)){
+        gen_direct_long2(node);     // @long = lhs + rhs
         return;
       }
       gen_expr(lhs);                // @long = lhs
       if (!opt('O','s')) {
-        if (can_direct_long(rhs)){
-          gen_direct_long(node->rhs,"addb","adca");   // @long += rhs
+        if (can_direct_long(node)){
+          gen_direct_long(node);   // @long += rhs
           return;
         }
       }
@@ -5788,15 +5821,15 @@ void gen_expr(Node *node)
         IX_invalidate();
         return;
       }
-      if (can_direct_long2(node)){  // @long = lhs - rhs
-        gen_direct_long2(node,"subb","sbca");
+      if (can_direct_long2(node)){
+        gen_direct_long2(node);     // @long = lhs - rhs
         return;
       }
 
       gen_expr(lhs);                // @long = lhs
       if (!opt('O','s')) {
-        if (can_direct_long(rhs)){
-          gen_direct_long(node->rhs,"subb","sbca");   // @long -= rhs
+        if (can_direct_long(node)){
+          gen_direct_long(node);    // @long -= rhs
           return;
         }
       }
@@ -5873,12 +5906,11 @@ void gen_expr(Node *node)
     case ND_BITAND:
     case ND_BITOR:
     case ND_BITXOR: {
-      char *opb, *opa;  // MC6800 instruction names
-      char *op;         // bare stem for __*32i / __*32tos
+      char *op;   // stem of __*32i / __*32tos
       switch (node->kind) {
-      case ND_BITAND: opb="andb"; opa="anda"; op="and"; break;
-      case ND_BITOR:  opb="orab"; opa="oraa"; op="or";  break;
-      case ND_BITXOR: opb="eorb"; opa="eora"; op="xor"; break;
+      case ND_BITAND: op="and"; break;
+      case ND_BITOR:  op="or";  break;
+      case ND_BITXOR: op="xor"; break;
       default: assert(0);
       }
       if (is_long_constant(rhs,&val)) {
@@ -5893,13 +5925,13 @@ void gen_expr(Node *node)
         return;
       }
       if (can_direct_long2(node)) {
-        gen_direct_long2(node,opb,opa); // @long = lhs op rhs
+        gen_direct_long2(node);       // @long = lhs op rhs
         return;
       }
       gen_expr(lhs);                  // @long = lhs
       if (!opt('O','s')) {
-        if (can_direct_long(rhs)){
-          gen_direct_long(rhs,opb,opa);   // @long op= rhs
+        if (can_direct_long(node)){
+          gen_direct_long(node);      // @long op= rhs
           return;
         }
       }
