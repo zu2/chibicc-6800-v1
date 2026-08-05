@@ -3202,19 +3202,33 @@ static void gen_direct_32i_carry(char *op, int64_t val)
 }
 
 //
-// @long op= val, one byte at a time.
-// Bytes are free of each other, so clr and com may touch the C flag.
-// CLR and COM have no direct mode, so they are 3 bytes here.
-// IX is not touched. jsr __op32i breaks it.
+// @long op= val
 //
-static void gen_direct_32i_bit(NodeKind kind, int64_t val)
+//  - -O2 does it one byte at a time. Bytes are free of each other, so
+//    clr and com may touch the C flag.
+//  - CLR and COM have no direct mode, so they are 3 bytes here.
+//  - IX is not touched. jsr __op32i breaks it.
+//
+static void gen_direct_long_bitop_imm(Node *node, int64_t val)
 {
   char *opb;
   char *fmt;      // does the whole byte
   uint8_t keep;   // leave this byte alone
   uint8_t whole;  // use fmt for this byte
 
-  switch (kind) {
+  if (!opt('O','2')) {
+    switch (node->kind) {
+    case ND_BITAND: println("\tjsr __and32i"); break;
+    case ND_BITOR:  println("\tjsr __or32i");  break;
+    case ND_BITXOR: println("\tjsr __xor32i"); break;
+    default: assert(0);
+    }
+    word32i(val);
+    IX_invalidate();
+    return;
+  }
+
+  switch (node->kind) {
   case ND_BITAND: opb="andb"; keep=0xFF; whole=0x00; fmt="\tclr @long+%d"; break;
   case ND_BITOR:  opb="orab"; keep=0x00; whole=0xFF; fmt="\tldab #$FF\n\tstab @long+%d"; break;
   case ND_BITXOR: opb="eorb"; keep=0x00; whole=0xFF; fmt="\tcom @long+%d"; break;
@@ -3224,8 +3238,9 @@ static void gen_direct_32i_bit(NodeKind kind, int64_t val)
   for (int nth = 3; nth >= 0; nth--) {
     uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
 
-    if (imm == keep)
+    if (imm == keep) {
       continue;
+    }
     if (imm == whole) {
       println(fmt, nth);
       continue;
@@ -3235,7 +3250,6 @@ static void gen_direct_32i_bit(NodeKind kind, int64_t val)
     println("\tstab @long+%d", nth);
   }
 }
-
 
 // off,x op= val, one byte at a time.
 // add and sub: bytes are tied by the carry, so go LSB to MSB.
@@ -5924,22 +5938,9 @@ void gen_expr(Node *node)
     case ND_BITAND:
     case ND_BITOR:
     case ND_BITXOR: {
-      char *op;   // stem of __*32i / __*32tos
-      switch (node->kind) {
-      case ND_BITAND: op="and"; break;
-      case ND_BITOR:  op="or";  break;
-      case ND_BITXOR: op="xor"; break;
-      default: assert(0);
-      }
       if (is_long_constant(rhs,&val)) {
-        gen_expr(lhs);                // @long = lhs
-        if (opt('O','2')) {
-          gen_direct_32i_bit(node->kind,val);  // @long op= val
-          return;
-        }
-        println("\tjsr __%s32i",op);   // @long op= val
-        word32i(val);
-        IX_invalidate();
+        gen_expr(lhs);                        // @long = lhs
+        gen_direct_long_bitop_imm(node,val);  // @long op= val
         return;
       }
       if (can_direct_long2(node)) {
