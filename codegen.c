@@ -3278,25 +3278,29 @@ static void gen_direct_long_bitop_imm(Node *node, int64_t val)
   }
 }
 
+//
 // off,x op= val, one byte at a time.
 // add and sub: bytes are tied by the carry, so go LSB to MSB.
 // Low bytes of 0 are skipped. The first byte emitted uses AccB.
-static void gen_opeq32_addsub(char *op, int off, int64_t val)
+//
+static void gen_opeq32_addsub(Node *node, int off, int64_t val)
 {
   char *opb;
   char *opa;
   bool emitted = false;
 
-  if      (!strcmp(op,"add")) { opb = "addb"; opa = "adca"; }
-  else if (!strcmp(op,"sub")) { opb = "subb"; opa = "sbca"; }
-  else assert(0);
+  switch (node->kind) {
+  case ND_ADDEQ: opb="addb"; opa="adca"; break;
+  case ND_SUBEQ: opb="subb"; opa="sbca"; break;
+  default: assert(0);
+  }
 
   for (int nth = 3; nth >= 0; nth--) {
     uint8_t imm = (val >> ((3-nth)*8)) & 0xFF;
 
-    if (!emitted && imm == 0)
+    if (!emitted && imm == 0) {
       continue;
-
+    }
     if (!emitted) {
       println("\tldab %d,x", off+nth);
       println("\t%s #%u", opb, imm);
@@ -3735,7 +3739,7 @@ static void opeq(Node *node)
             return;
           }
           if (!opt('O','s')) {
-            gen_opeq32_addsub("add", gen_addr_x(lhs,false), v);
+            gen_opeq32_addsub(node, gen_addr_x(lhs,false), v);
             return;
           }
         }
@@ -3850,7 +3854,7 @@ static void opeq(Node *node)
             return;
           }
           if (!opt('O','s')) {
-            gen_opeq32_addsub("sub", gen_addr_x(lhs,false), v);
+            gen_opeq32_addsub(node, gen_addr_x(lhs,false), v);
             return;
           }
         }
