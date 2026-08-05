@@ -5523,10 +5523,6 @@ void gen_expr(Node *node)
     return;
   }
   case ND_NOT: {
-    int c = count();
-    char *L_not = new_label_count("L_not_%d",c);
-    char *L_end = new_label_count("L_end_%d",c);
-
     if (is_int8(node->lhs->ty)) {
       gen_expr(node->lhs);
       println("\tnegb");
@@ -5547,6 +5543,10 @@ void gen_expr(Node *node)
       println("\tsbcb #0");
       return;
     }
+    int c = count();
+    char *L_not = new_label_count("L_not_%d",c);
+    char *L_end = new_label_count("L_end_%d",c);
+
     if (!gen_jump_if_false(node->lhs,L_not)){
       assert(0);
     }
