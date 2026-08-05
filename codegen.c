@@ -681,12 +681,6 @@ bool gen_shl(Type *ty, uint64_t val)
     case 2: println("\tclrb");
             println("\tclra");
             return true;
-    case 4: println("\tclrb");
-            println("\tstab @long+3");
-            println("\tstab @long+2");
-            println("\tstab @long+1");
-            println("\tstab @long");
-            return true;
     default:assert(0);
     }
   }
@@ -753,12 +747,8 @@ bool gen_shl(Type *ty, uint64_t val)
     } 
     return true;
   }
-  case 4:
-    ldd_i(val);
-    println("\tjsr __shl32");
-    return true;
   }
-  assert(0); // what's?
+  assert(0); // 1 and 2 bytes only. gen_direct_shl_long does long.
 }
 
 bool gen_shr(Type *ty, uint64_t val)
@@ -775,12 +765,6 @@ bool gen_shr(Type *ty, uint64_t val)
       case 2: println("\tclrb");
               println("\tclra");
               return true;
-      case 4: println("\tclrb");
-              println("\tstab @long+3");
-              println("\tstab @long+2");
-              println("\tstab @long+1");
-              println("\tstab @long");
-              return true;
       default:assert(0);
       }
     }else{ // signed
@@ -793,14 +777,6 @@ bool gen_shr(Type *ty, uint64_t val)
               println("\tasla");
               println("\tsbcb #0");
               println("\ttba");
-              return true;
-      case 4: println("\tclrb");
-              println("\tasl @long");
-              println("\tsbcb #0");
-              println("\tstab @long+3");
-              println("\tstab @long+2");
-              println("\tstab @long+1");
-              println("\tstab @long");
               return true;
       default:assert(0);
       }
@@ -928,21 +904,9 @@ bool gen_shr(Type *ty, uint64_t val)
         return true;
       }
     }
-    break;
-  case 4:
-    for (int i=0; i<val; i++) {
-      if (ty->is_unsigned) {
-        println("\tlsr @long");
-      }else{
-        println("\tasr @long");
-      }
-      println("\trol @long+1");
-      println("\trol @long+2");
-      println("\trol @long+3");
-    } 
     return true;
   }
-  assert(0); // what's?
+  assert(0); // 1 and 2 bytes only. gen_direct_shr_long does long.
 }
 
 
