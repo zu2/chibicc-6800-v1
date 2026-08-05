@@ -418,6 +418,7 @@ Node *optimize_expr(Node *node)
   case ND_VAR:
     if (!node->ty) {
       fprintf(stderr,"; need debug %s %d\n",__FILE__,__LINE__);
+      assert(0);
       return node;
     }
     switch (node->ty->kind) {
@@ -910,8 +911,8 @@ Node *optimize_expr(Node *node)
     int64_t val2;
 
     node = optimize_lr_swap(node);
-    if (is_integer_constant(node->lhs,&val)
-    &&  is_integer_constant(node->rhs,&val)) {
+    if (is_integer_constant(node->lhs,NULL)
+    &&  is_integer_constant(node->rhs,NULL)) {
       return optimize_const_expr(node);
     }
     // (x ± c1) * c2 -> x * c2 ± c1 * c2  (arr[i+1] makes this tree)
@@ -932,11 +933,9 @@ Node *optimize_expr(Node *node)
   } // ND_MUL
   case ND_DIV:
   case ND_MOD: {
-    int64_t val;
-
     node = optimize_lr(node);
-    if (is_integer_constant(node->lhs,&val)
-    &&  is_integer_constant(node->rhs,&val)) {
+    if (is_integer_constant(node->lhs,NULL)
+    &&  is_integer_constant(node->rhs,NULL)) {
       return optimize_const_expr(node);
     }
 
