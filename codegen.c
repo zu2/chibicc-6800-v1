@@ -672,8 +672,6 @@ bool gen_shl(Type *ty, uint64_t val)
 {
   if (!is_integer(ty))
     return false;
-  if (val<0)
-    return false;
   if (val==0)
     return true;            // do nothing
   if (val>=ty->size*8){     // TODO: bit field
