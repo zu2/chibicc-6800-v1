@@ -47,7 +47,7 @@ void assign_to_bitfield(Node *node)
 {
   int64_t val;
 
-  if (!node->lhs->kind == ND_MEMBER || !node->lhs->member->is_bitfield) {
+  if (node->lhs->kind != ND_MEMBER || !node->lhs->member->is_bitfield) {
     assert(0);
   }
   gen_addr(node->lhs);

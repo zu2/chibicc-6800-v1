@@ -668,19 +668,18 @@ Type *is_flonum_constant(Node *node, double *val)
 //
 // cf. https://www.zukeran.org/shin/d/2024/12/30/6800-programing-11/
 //
-bool gen_shl(Type *ty, uint64_t val)
+void gen_shl(Type *ty, uint64_t val)
 {
-  if (!is_integer(ty))
-    return false;
-  if (val==0)
-    return true;            // do nothing
+  assert(is_int8(ty)||is_int16(ty));
+  if (val==0) return;
+
   if (val>=ty->size*8){     // TODO: bit field
     switch(ty->size) {
     case 1: println("\tclrb");
-            return true;
+            return;
     case 2: println("\tclrb");
             println("\tclra");
-            return true;
+            return;
     default:assert(0);
     }
   }
@@ -692,18 +691,18 @@ bool gen_shl(Type *ty, uint64_t val)
       println("\trorb");
       println("\trorb");
       println("\tandb #$C0");
-      return true;
+      return;
     case 7:                 // 6cyc, 4bytes
       println("\trorb");
       println("\trorb");
       println("\tandb #$80");
-      return true;
+      return;
     }
     for (int i=0; i<val; i++) {   // 1-5,  2*n cyc, n bytes
       println("\taslb");
     } 
-    return true;
-  case 2: {                 // short and int    // TODO: -Os
+    return;
+  case 2: {                 // short and int
     switch(val) {           // Tricky but fast and compact
     case 6:                 // 22cyc, 10bytes
       println("\tpsha");    // exchange A<->B
@@ -715,14 +714,14 @@ bool gen_shl(Type *ty, uint64_t val)
       println("\trora");
       println("\trorb");
       println("\tandb #$C0");
-      return true;
+      return;
     case 7:                 // 10cyc, 6bytes
       println("\tlsra");
       println("\ttba");
       println("\trora");
       println("\trorb");
       println("\tandb #$80");
-      return true;
+      return;
     case 14:                // 12cyc, 6bytes
     case 15:                // 8cyc,  4bytes
       println("\tclra");
@@ -731,7 +730,7 @@ bool gen_shl(Type *ty, uint64_t val)
         println("\trora");
       }
       println("\tclrb");
-      return true;
+      return;
     }
     if (val>=8) {                 // 8-13, 2*(n-8)+4 cyc, (n-8)+2 bytes
       println("\ttba");
@@ -739,32 +738,31 @@ bool gen_shl(Type *ty, uint64_t val)
       for (int i=0; i<val-8; i++) {
         println("\tasla");
       }
-      return true;
+      return;
     }
     for (int i=0; i<val; i++) {   // 1-5, 4*n cyc, 2*n bytes
       println("\taslb");
       println("\trola");
     } 
-    return true;
+    return;
   }
   }
   assert(0); // 1 and 2 bytes only. gen_direct_shl_long does long.
 }
 
-bool gen_shr(Type *ty, uint64_t val)
+void gen_shr(Type *ty, uint64_t val)
 {
-  if (!is_integer(ty))
-    return false;
-  if (val==0)
-    return true;
+  assert (is_int8(ty)||is_int16(ty));
+  if (val==0) return;
+
   if (val>=ty->size*8) {
     if (ty->is_unsigned) {
       switch(ty->size) {
       case 1: println("\tclrb");
-              return true;
+              return;
       case 2: println("\tclrb");
               println("\tclra");
-              return true;
+              return;
       default:assert(0);
       }
     }else{ // signed
@@ -772,16 +770,16 @@ bool gen_shr(Type *ty, uint64_t val)
       case 1: println("\taslb");
               println("\tldab #0");
               println("\tsbcb #0");
-              return true;
+              return;
       case 2: println("\tclrb");
               println("\tasla");
               println("\tsbcb #0");
               println("\ttba");
-              return true;
+              return;
       default:assert(0);
       }
     }
-    return true;
+    return;
   }
   switch(ty->size){
   case 1:
@@ -792,7 +790,7 @@ bool gen_shr(Type *ty, uint64_t val)
         println("\tasrb");
       } 
     }
-    return true;
+    return;
   case 2:
     if (val>4) {
       println("; %s %ld", ty->is_unsigned? "lsrd": "asrd", val);
@@ -808,7 +806,7 @@ bool gen_shr(Type *ty, uint64_t val)
           println("\tlsra");
           println("\trorb");
         }
-        return true;
+        return;
       case 6:   // 18cyc, 10bytes
         println("\taslb");
         println("\trola");
@@ -819,14 +817,14 @@ bool gen_shr(Type *ty, uint64_t val)
         println("\ttab");
         println("\tpula");
         println("\tanda #$03");
-        return true;
+        return;
       case 7:   // 10cyc, 6bytes
         println("\taslb");
         println("\trola");
         println("\ttab");
         println("\trola");
         println("\tanda #$01");
-        return true;
+        return;
       case 8:   // 4cyc,  4bytes
       case 9:   // 6cyc,  5bytes
       case 10:  // 8cyc,  6bytes
@@ -838,7 +836,7 @@ bool gen_shr(Type *ty, uint64_t val)
           println("\tlsrb");
         }
         println("\tclra");
-        return true;
+        return;
       case 14:  // 12cyc, 6bytes
       case 15:  // 8cyc,  4bytes
         println("\tclrb");
@@ -847,7 +845,7 @@ bool gen_shr(Type *ty, uint64_t val)
           println("\trolb");
         }
         println("\tclra");
-        return true;
+        return;
       }
     } else {
       switch(val) {
@@ -861,14 +859,14 @@ bool gen_shr(Type *ty, uint64_t val)
           println("\tasra");
           println("\trorb");
         }
-        return true;
+        return;
       case 7:   // 10cyc, 6bytes
         println("\taslb");
         println("\trola");
         println("\ttab");
         println("\tsbca #0");
         println("\tsba");
-        return true;
+        return;
       // https://www.zukeran.org/shin/d/2024/12/30/6800-programing-11/
       case 8:   // 10cyc,  5bytes.
       case 9:   // 12cyc,  6bytes
@@ -886,7 +884,7 @@ bool gen_shr(Type *ty, uint64_t val)
         for (int i=8; i<val; i++) {
           println("\tasrb");
         }
-        return true;
+        return;
       }
       case 14:  // 12cyc, 7bytes
         println("\tclrb");
@@ -895,16 +893,16 @@ bool gen_shr(Type *ty, uint64_t val)
         println("\tasla");
         println("\ttba");
         println("\trolb");
-        return true;
+        return;
       case 15:  // 8cyc,  5bytes
         println("\tclrb");
         println("\tasla");
         println("\tsbcb #0");
         println("\ttba");
-        return true;
+        return;
       }
     }
-    return true;
+    return;
   }
   assert(0); // 1 and 2 bytes only. gen_direct_shr_long does long.
 }
@@ -4404,15 +4402,11 @@ static void opeq(Node *node)
             return;
           }
           if (node->kind == ND_SHLEQ) {
-            if (gen_shl(lhs->ty,val)) {
-              println("\tstab _%s",lhs->var->name);
-              return;
-            }
-          }else if (gen_shr(lhs->ty,val)) {
-            println("\tstab _%s",lhs->var->name);
-            return;
+            gen_shl(lhs->ty,val);
+          }else{
+            gen_shr(lhs->ty,val);
           }
-          println("\tclrb ; UB");
+          println("\tstab _%s",lhs->var->name);
           return;
         }
       }else if (test_addr_x(lhs)) {
@@ -4441,15 +4435,11 @@ static void opeq(Node *node)
             return;
           }
           if (node->kind == ND_SHLEQ) {
-            if (gen_shl(lhs->ty,val)) {
-              println("\tstab %d,x",off);
-              return;
-            }
-          }else if (gen_shr(lhs->ty,val)) {
-            println("\tstab %d,x",off);
-            return;
+            gen_shl(lhs->ty,val);
+          }else{
+            gen_shr(lhs->ty,val);
           }
-          println("\tclrb");
+          println("\tstab %d,x",off);
           return;
         }
         gen_expr(rhs);
@@ -4499,20 +4489,12 @@ static void opeq(Node *node)
             return;
           }
           if (node->kind == ND_SHLEQ) {
-            if (gen_shl(node->lhs->ty,val)) {
-              println("\tstab %d,x",off+1);
-              println("\tstaa %d,x",off);
-//            cast(node->lhs->ty, node->ty);
-              return;
-            }
-          }else if (gen_shr(node->lhs->ty,val)) {
-            println("\tstab %d,x",off+1);
-            println("\tstaa %d,x",off);
-//          cast(node->lhs->ty, node->ty);
-            return;
+            gen_shl(node->lhs->ty,val);
+          }else{
+            gen_shr(node->lhs->ty,val);
           }
-          println("\tclrb");
-          println("\tclra");
+          println("\tstab %d,x",off+1);
+          println("\tstaa %d,x",off);
           return;
         }
         gen_expr(node->rhs);
@@ -6493,11 +6475,7 @@ void gen_expr(Node *node)
 
     if (is_integer_constant(node->rhs, &val)){
       gen_expr(node->lhs);
-      if (gen_shl(node->lhs->ty,val)) {
-        return;
-      }
-      println("\tclrb");
-      println("\tclra");
+      gen_shl(node->lhs->ty,val);
       return;
     }
     switch(node->ty->kind) {
@@ -6573,12 +6551,7 @@ void gen_expr(Node *node)
 
     if (is_integer_constant(node->rhs, &val)){
       gen_expr(node->lhs);
-      if (gen_shr(node->lhs->ty,val)) {
-//      cast(node->lhs->ty, node->ty);
-        return;
-      }
-      println("\tclrb");
-      println("\tclra");
+      gen_shr(node->lhs->ty,val);
       return;
     }
     switch (node->lhs->ty->kind) {

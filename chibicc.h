@@ -538,8 +538,8 @@ void store_x(Type *ty,int off);
 void cmp_zero(Type *ty);
 Type *is_integer_constant(Node *node, int64_t *val);
 Type *is_flonum_constant(Node *node, double *val);
-bool gen_shl(Type *ty, uint64_t val);
-bool gen_shr(Type *ty, uint64_t val);
+void gen_shl(Type *ty, uint64_t val);
+void gen_shr(Type *ty, uint64_t val);
 
 
 extern int depth;
