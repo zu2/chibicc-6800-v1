@@ -4702,7 +4702,7 @@ void gen_expr(Node *node)
         break;
       case TY_LONG:
         ldx_IMM_VAR(var);
-        if (1 && node->retval_unused) {
+        if (node->retval_unused) {
           invalidate_EXT(node->lhs);
           if (val==1) {
             println("\tjsr __inc32x");
@@ -5779,7 +5779,6 @@ void gen_expr(Node *node)
         gen_direct_long2(node);     // @long = lhs + rhs
         return;
       }
-      gen_expr(lhs);                // @long = lhs
       if (!opt('O','s')) {
         if (can_direct_long(node)){
           gen_expr(lhs);
@@ -5799,8 +5798,6 @@ void gen_expr(Node *node)
         gen_direct_long2(node);     // @long = lhs - rhs
         return;
       }
-
-      gen_expr(lhs);                // @long = lhs
       if (!opt('O','s')) {
         if (can_direct_long(node)){
           gen_expr(lhs);
@@ -6584,11 +6581,11 @@ void gen_expr(Node *node)
       println("\tclra");
       return;
     }
-    char *skip = new_jump_label();
-    char *loop = new_jump_label();
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
+      char *skip = new_jump_label();
+      char *loop = new_jump_label();
       if (can_direct_char(node->rhs)) {
         gen_expr(node->lhs);
         if(!gen_direct_char(node->rhs,"ldaa",NULL)) {
