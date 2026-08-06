@@ -799,7 +799,7 @@ int can_copt(void)
 
 char *has_copt_rules(char *path, char *file)
 {
-  size_t bufsize = strlen(chibicc_lib_path) + strlen(file) + 1;
+  size_t bufsize = strlen(path) + strlen(file) + 1;
   char *buf = malloc(bufsize);
 
   if (snprintf(buf,bufsize,"%s%s",path,file)>=bufsize) {
