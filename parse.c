@@ -3939,15 +3939,22 @@ static void scan_globals(void) {
       continue;
     }
 
-    // Find another definition of the same identifier.
+    // A tentative definition is redundant if there is a real
+    // definition, or if another tentative one is already kept.
     Obj *var2 = globals;
     for (; var2; var2 = var2->next)
-      if (var != var2 && var2->is_definition && !strcmp(var->name, var2->name))
+      if (var != var2 && var2->is_definition && !var2->is_tentative &&
+          !strcmp(var->name, var2->name))
         break;
 
-    // If there's another definition, the tentative definition
-    // is redundant
-    if (!var2)
+    if (var2)
+      continue;
+
+    for (var2 = globals; var2 != var; var2 = var2->next)
+      if (var2->is_tentative && !strcmp(var->name, var2->name))
+        break;
+
+    if (var2 == var)
       cur = cur->next = var;
   }
 
