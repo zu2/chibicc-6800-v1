@@ -5498,7 +5498,7 @@ void gen_expr(Node *node)
         println("\tbne L_memzero_%d", c);
       }
       if (node->var->ty->size % 2) {
-        println("\tstaa %d,x",node->var->offset);
+        println("\tstaa 0,x",node->var->offset);
       }
       IX_invalidate();
     }
