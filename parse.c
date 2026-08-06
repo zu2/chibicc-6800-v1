@@ -2937,8 +2937,15 @@ static Node *new_pre_inc_dec(Token **rest, Token *tok, int addend) {
 //       | "&&" ident
 //       | postfix
 static Node *unary(Token **rest, Token *tok) {
-  if (equal(tok, "+"))
-    return cast(rest, tok->next);
+  if (equal(tok, "+")) {
+    Node *node = cast(rest, tok->next);
+    add_type(node);
+    if (!is_numeric(node->ty))
+      error_tok(tok, "invalid operand");
+    if (is_integer(node->ty))
+      int_promotion(&node);
+    return node;
+  }
 
   if (equal(tok, "-"))
     return new_unary(ND_NEG, cast(rest, tok->next), tok);
