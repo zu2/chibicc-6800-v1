@@ -3714,15 +3714,19 @@ static void resolve_goto_labels(void) {
   gotos = labels = NULL;
 }
 
-static Obj *find_func(char *name) {
+// Returns a function or a variable; the caller must check which
+static Obj *find_gsym(char *name) {
   Scope *sc = scope;
   while (sc->next)
     sc = sc->next;
 
   VarScope *sc2 = hashmap_get(&sc->vars, name);
-  if (sc2 && sc2->var && sc2->var->is_function)
-    return sc2->var;
-  return NULL;
+  return sc2 ? sc2->var : NULL;
+}
+
+static Obj *find_func(char *name) {
+  Obj *sym = find_gsym(name);
+  return (sym && sym->is_function) ? sym : NULL;
 }
 
 static void mark_live(Obj *var) {
@@ -3762,16 +3766,47 @@ static void optimize_leaf(Obj *fn)
   fn->locals = new_locals;
 }
 
+// An old-style () declaration matches any parameter list
+static bool is_redecl_compatible(Type *t1, Type *t2) {
+  if (t1->kind == TY_FUNC && t2->kind == TY_FUNC) {
+    if (!is_compatible(t1->return_ty, t2->return_ty))
+      return false;
+    if (!t1->params && t1->is_variadic)
+      return true;
+    if (!t2->params && t2->is_variadic)
+      return true;
+    return is_compatible(t1, t2);
+  }
+  if (t1->kind == TY_ARRAY && t2->kind == TY_ARRAY)
+    return is_compatible(t1->base, t2->base) &&
+           (t1->array_len < 0 || t2->array_len < 0 ||
+            t1->array_len == t2->array_len);
+  return is_compatible(t1, t2);
+}
+
+static void check_var_redecl(char *name, Type *ty, Token *tok) {
+  Obj *old = find_gsym(name);
+  if (!old)
+    return;
+  if (old->is_function)
+    error_tok(tok, "redeclared as a different kind of symbol");
+  if (!is_redecl_compatible(old->ty, ty))
+    error_tok(tok, "incompatible redeclaration");
+}
+
 // Handle one function declarator in a global declaration.
 // tok must point just past the declarator.
 static Obj *func_declarator(Type *ty, VarAttr *attr, Token *tok) {
   char *name_str = get_ident(ty->name);
 
-  Obj *fn = find_func(name_str);
+  Obj *sym = find_gsym(name_str);
+  if (sym && !sym->is_function)
+    error_tok(tok, "redeclared as a different kind of symbol");
+  Obj *fn = sym;
   if (fn) {
     // Redeclaration
-    if (!fn->is_function)
-      error_tok(tok, "redeclared as a different kind of symbol");
+    if (!is_redecl_compatible(fn->ty, ty))
+      error_tok(tok, "incompatible redeclaration");
     if (fn->is_definition && equal(tok, "{"))
       error_tok(tok, "redefinition of %s", name_str);
     if (!fn->is_static && attr->is_static)
@@ -3799,6 +3834,7 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
     if (ty->kind != TY_FUNC) {
       if (!ty->name)
         error_tok(ty->name_pos, "variable name omitted");
+      check_var_redecl(get_ident(ty->name), ty, tok);
       Obj *var = new_gvar(get_ident(ty->name), ty);
       var->is_definition = !attr->is_extern;
       var->is_static = attr->is_static;
@@ -3895,6 +3931,7 @@ static Token *global_variable(Token *tok, Type *basety, VarAttr *attr) {
     }
     if (!ty->name)
       error_tok(ty->name_pos, "variable name omitted");
+    check_var_redecl(get_ident(ty->name), ty, tok);
 
     Obj *var = new_gvar(get_ident(ty->name), ty);
     var->is_definition = !attr->is_extern;
