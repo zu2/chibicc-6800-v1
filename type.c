@@ -250,7 +250,7 @@ Type *struct_type(void) {
   return new_type(TY_STRUCT, 0, 1);
 }
 
-static void int_promotion(Node **node) {
+void int_promotion(Node **node) {
   Type *ty = (*node)->ty;
   int bit_width;
 

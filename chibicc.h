@@ -444,6 +444,7 @@ bool is_int16_or_ptr_or_array(Type *ty);
 bool is_flonum(Type *ty);
 bool is_scalar(Type *ty);
 bool is_numeric(Type *ty);
+void int_promotion(Node **node);
 bool is_redundant_cast(Node *expr, Type *ty);
 bool is_compatible(Type *t1, Type *t2);
 Type *copy_type(Type *ty);

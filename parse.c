@@ -3766,6 +3766,33 @@ static void optimize_leaf(Obj *fn)
   fn->locals = new_locals;
 }
 
+// Handle one function declarator in a global declaration.
+// tok must point just past the declarator.
+static Obj *func_declarator(Type *ty, VarAttr *attr, Token *tok) {
+  char *name_str = get_ident(ty->name);
+
+  Obj *fn = find_func(name_str);
+  if (fn) {
+    // Redeclaration
+    if (!fn->is_function)
+      error_tok(tok, "redeclared as a different kind of symbol");
+    if (fn->is_definition && equal(tok, "{"))
+      error_tok(tok, "redefinition of %s", name_str);
+    if (!fn->is_static && attr->is_static)
+      error_tok(tok, "static declaration follows a non-static declaration");
+    fn->is_definition = fn->is_definition || equal(tok, "{");
+  } else {
+    fn = new_gvar(name_str, ty);
+    fn->is_function = true;
+    fn->is_definition = equal(tok, "{");
+    fn->is_static = attr->is_static || (attr->is_inline && !attr->is_extern);
+    fn->is_inline = attr->is_inline;
+  }
+
+  fn->is_root = !(fn->is_static && fn->is_inline);
+  return fn;
+}
+
 static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 
   Obj *fn;
@@ -3773,33 +3800,31 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 
   do {
     ty = declarator(&tok, tok, basety);
+    if (ty->kind != TY_FUNC) {
+      if (!ty->name)
+        error_tok(ty->name_pos, "variable name omitted");
+      Obj *var = new_gvar(get_ident(ty->name), ty);
+      var->is_definition = !attr->is_extern;
+      var->is_static = attr->is_static;
+      if (attr->align)
+        var->align = attr->align;
+      if (equal(tok, "="))
+        gvar_initializer(&tok, tok->next, var);
+      else if (!attr->is_extern)
+        var->is_tentative = true;
+      continue;
+    }
     if (!ty->name)
       error_tok(ty->name_pos, "function name omitted");
-    char *name_str = get_ident(ty->name);
-
-    fn = find_func(name_str);
-    if (fn) {
-      // Redeclaration
-      if (!fn->is_function)
-        error_tok(tok, "redeclared as a different kind of symbol");
-      if (fn->is_definition && equal(tok, "{"))
-        error_tok(tok, "redefinition of %s", name_str);
-      if (!fn->is_static && attr->is_static)
-        error_tok(tok, "static declaration follows a non-static declaration");
-      fn->is_definition = fn->is_definition || equal(tok, "{");
-    } else {
-      fn = new_gvar(name_str, ty);
-      fn->is_function = true;
-      fn->is_definition = equal(tok, "{");
-      fn->is_static = attr->is_static || (attr->is_inline && !attr->is_extern);
-      fn->is_inline = attr->is_inline;
-    }
-
-    fn->is_root = !(fn->is_static && fn->is_inline);
+    fn = func_declarator(ty, attr, tok);
   } while (consume(&tok, tok, ","));
 
   if (consume(&tok, tok, ";"))
     return tok;
+
+  // A function body cannot follow a variable declarator.
+  if (ty->kind != TY_FUNC)
+    tok = skip(tok, ";");
 
   current_fn = fn;
   locals = NULL;
@@ -3866,6 +3891,12 @@ static Token *global_variable(Token *tok, Type *basety, VarAttr *attr) {
     first = false;
 
     Type *ty = declarator(&tok, tok, basety);
+    if (ty->kind == TY_FUNC) {
+      if (!ty->name)
+        error_tok(ty->name_pos, "function name omitted");
+      func_declarator(ty, attr, tok);
+      continue;
+    }
     if (!ty->name)
       error_tok(ty->name_pos, "variable name omitted");
 
