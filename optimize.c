@@ -779,7 +779,7 @@ Node *optimize_expr(Node *node)
         node->ty = ty_int;
         return node;
       }else{
-        // C99 6.5.14p3: && yields int 0 or 1 (6.3.1.2: scalar to _Bool) 
+        // C99 6.5.14p3: || yields int 0 or 1 (6.3.1.2: scalar to _Bool) 
         return new_cast(new_cast(node->rhs,ty_bool),ty_int);
       }
     }
