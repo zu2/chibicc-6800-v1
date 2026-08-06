@@ -1,6 +1,6 @@
 #include "bm-graphics.h"
 
-extern void putchar(int ch);
+extern int putchar(int ch);
 extern void getchar(void);
 
 int sub(int x, int y)

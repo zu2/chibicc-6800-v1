@@ -1,4 +1,4 @@
-extern void putchar(int ch);
+extern int putchar(int ch);
 extern void getchar(void);
 
 void setgr(unsigned char mode)

@@ -1,4 +1,4 @@
-extern void putchar(int ch);
+extern int putchar(int ch);
 
 main()
 {

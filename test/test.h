@@ -15,7 +15,7 @@ void *memcpy(void *dest, void *src, long n);
 void *memset(void *s, int c, long n);
 
 extern	void print(int x);
-extern	void putchar(int ch);
+extern	int putchar(int ch);
 
 void putstr(unsigned char *s)
 {

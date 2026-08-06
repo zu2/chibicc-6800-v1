@@ -23,7 +23,7 @@
 #endif
 #if defined(__CHIBICC_6800__) || defined(__FCC__)
 extern	void print(int i);
-extern	void putchar(int ch);
+extern	int  putchar(int ch);
 extern	void cpu_counter(void);
 extern	void exit(int n);
 #endif

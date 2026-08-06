@@ -1,5 +1,5 @@
 extern	void print(int i);
-extern	void putchar(int ch);
+extern	int putchar(int ch);
 
 void putstr(unsigned char *s)
 {
