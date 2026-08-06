@@ -89,6 +89,7 @@ clean:
 	rm -f *.gcov *.gcda *.gcno
 	(cd libc ; make clean)
 	(cd libm ; make clean)
+	(cd clibs ; make clean)
 	(cd ztest ; make clean)
 
 .PHONY: test clean test-stage2
