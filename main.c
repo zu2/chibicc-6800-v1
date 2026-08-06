@@ -805,7 +805,7 @@ char *has_copt_rules(char *path, char *file)
   if (snprintf(buf,bufsize,"%s%s",path,file)>=bufsize) {
      error("copt path error %s%s",path,file);
   }
-  if (access(buf,F_OK)==0 && access(buf,X_OK) == 0) {
+  if (access(buf,R_OK)==0) {
     return buf;
   }
 

@@ -42,19 +42,19 @@ dirs:
 
 install: all
 	install -c chibicc /opt/chibicc/bin
-	install -c crt0.o /opt/chibicc/lib
-	install -c crt0_mikbug.o /opt/chibicc/lib
-	install -c crt0_bm.o /opt/chibicc/lib
-	install -c crt0_jr100.o /opt/chibicc/lib
-	install -c crt0_jr200.o /opt/chibicc/lib
-	install -c dummyfloat.o /opt/chibicc/lib
-	install -c libc/libc.a /opt/chibicc/lib
-	install -c libm/libm.a /opt/chibicc/lib
-	install -c clibs/clibs.a /opt/chibicc/lib
-	install -c $(INCS)  /opt/chibicc/include
-	install -c copt.rules  /opt/chibicc/lib
-	install -c copt_O2.rules  /opt/chibicc/lib
-	install -c copt_O3.rules  /opt/chibicc/lib
+	install -c -m 644 crt0.o /opt/chibicc/lib
+	install -c -m 644 crt0_mikbug.o /opt/chibicc/lib
+	install -c -m 644 crt0_bm.o /opt/chibicc/lib
+	install -c -m 644 crt0_jr100.o /opt/chibicc/lib
+	install -c -m 644 crt0_jr200.o /opt/chibicc/lib
+	install -c -m 644 dummyfloat.o /opt/chibicc/lib
+	install -c -m 644 libc/libc.a /opt/chibicc/lib
+	install -c -m 644 libm/libm.a /opt/chibicc/lib
+	install -c -m 644 clibs/clibs.a /opt/chibicc/lib
+	install -c -m 644 $(INCS)  /opt/chibicc/include
+	install -c -m 644 copt.rules  /opt/chibicc/lib
+	install -c -m 644 copt_O2.rules  /opt/chibicc/lib
+	install -c -m 644 copt_O3.rules  /opt/chibicc/lib
 
 chibicc: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
