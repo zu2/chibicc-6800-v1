@@ -260,10 +260,12 @@ static void parse_args(int argc, char **argv) {
     }
     if (!strcmp(argv[i], "-fdouble-as-float")) {
       opt_fdouble_as_float = true;
+      define_macro("__CHIBICC_6800_DOUBLE_AS_FLOAT__", "1");
       continue;
     }
     if (!strcmp(argv[i], "-fno-double-as-float")) {
       opt_fdouble_as_float = false;
+      undef_macro("__CHIBICC_6800_DOUBLE_AS_FLOAT__");
       continue;
     }
 

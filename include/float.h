@@ -1,7 +1,6 @@
 //
 //	float.h for chibicc 6800
 //
-#include "__use_float_for_double.h"
 
 #ifndef FLOAT_H
 #define FLOAT_H

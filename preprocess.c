@@ -1096,6 +1096,7 @@ void init_macros(void) {
   define_macro("__LP32__", "1");
 //define_macro("__LP64__", "0");
   define_macro("__SIZEOF_DOUBLE__", "4");
+  define_macro("__CHIBICC_6800_DOUBLE_AS_FLOAT__", "1");
   define_macro("__SIZEOF_FLOAT__", "4");
   define_macro("__SIZEOF_INT__", "2");
   define_macro("__SIZEOF_LONG_DOUBLE__", "4");

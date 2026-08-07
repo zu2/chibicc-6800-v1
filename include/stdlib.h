@@ -16,7 +16,7 @@ int atoi(const char *nptr);
 long atol(const char *nptr);
 
 // Convert string to int (base 10 or autodetect)
-int strtol(const char *nptr, char **endptr, int base);
+long strtol(const char *nptr, char **endptr, int base);
 
 // Convert string to unsigned long
 unsigned long strtoul(const char *nptr, char **endptr, int base);

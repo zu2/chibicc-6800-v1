@@ -152,6 +152,9 @@ bool is_compatible(Type *t1, Type *t2) {
   if (t2->origin)
     return is_compatible(t1, t2->origin);
 
+  if (opt_fdouble_as_float && is_flonum(t1) && is_flonum(t2))
+    return true;
+
   if (t1->kind != t2->kind)
     return false;
 

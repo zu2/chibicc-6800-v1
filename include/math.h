@@ -1,7 +1,6 @@
 //
 //	math.h for chibicc 6800
 //
-#include "__use_float_for_double.h"
 
 #ifndef MATH_H
 #define MATH_H
@@ -64,7 +63,7 @@ float	modff(float x, float *iptr);
 float	frexpf(float x, int *expptr);
 float	ldexpf(float x, int exp);
 
-#ifdef  __USE_FLOAT_FOR_DOUBLE__
+#ifdef  __CHIBICC_6800_DOUBLE_AS_FLOAT__
 #define	sin(x)		sinf(x)
 #define	cos(x)		cosf(x)
 #define	tan(x)		tanf(x)
