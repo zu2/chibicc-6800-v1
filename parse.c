@@ -1708,6 +1708,12 @@ static Node *stmt(Token **rest, Token *tok) {
 
     node->then = stmt(rest, tok);
 
+    // All cases are registered by now, so compare every pair.
+    for (Node *n = node->case_next; n; n = n->case_next)
+      for (Node *m = n->case_next; m; m = m->case_next)
+        if (n->begin <= m->end && m->begin <= n->end)
+          error_tok(n->tok, "duplicate case value");
+
     current_switch = sw;
     brk_label = brk;
     return node;
@@ -1744,11 +1750,14 @@ static Node *stmt(Token **rest, Token *tok) {
     if (!current_switch)
       error_tok(tok, "stray default");
 
+    if (current_switch->default_case)
+      error_tok(tok, "multiple default labels in one switch");
+
     Node *node = new_node(ND_CASE, tok);
     tok = skip(tok->next, ":");
     node->label = new_jump_label();
-    node->lhs = stmt(rest, tok);
     current_switch->default_case = node;
+    node->lhs = stmt(rest, tok);
     return node;
   }
 
