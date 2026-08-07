@@ -394,6 +394,11 @@ void add_type(Node *node) {
   case ND_ASSIGN:
     if (node->lhs->ty->kind == TY_ARRAY)
       error_tok(node->lhs->tok, "not an lvalue");
+    if (node->lhs->ty->kind == TY_PTR && is_integer(node->rhs->ty) &&
+        !(is_const_expr(node->rhs) && eval(node->rhs) == 0))
+      error_tok(node->rhs->tok, "assignment to a pointer from an integer");
+    if (is_integer(node->lhs->ty) && node->rhs->ty->kind == TY_PTR)
+      error_tok(node->rhs->tok, "assignment to an integer from a pointer");
     if (node->lhs->ty->kind != TY_STRUCT)
       node->rhs = new_cast(node->rhs, node->lhs->ty);
     node->ty = node->lhs->ty;
