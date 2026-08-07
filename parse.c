@@ -3952,9 +3952,6 @@ static Token *global_variable(Token *tok, Type *basety, VarAttr *attr) {
       gvar_initializer(&tok, tok->next, var);
     else if (!attr->is_extern)
       var->is_tentative = true;
-
-//    if (var->ty->size < 0)
-//        error_tok(ty->name, "variable has incomplete size");
   }
   return tok;
 }
@@ -4002,6 +3999,15 @@ static void scan_globals(void) {
 
   cur->next = NULL;
   globals = head.next;
+
+  for (Obj *var = globals; var; var = var->next) {
+    if (var->is_function || !var->is_definition || var->ty->size >= 0)
+      continue;
+    // An unknown-size array with external linkage is left to the linker.
+    if (var->ty->kind == TY_ARRAY && !var->is_static)
+      continue;
+    error_tok(var->ty->name, "variable has incomplete type");
+  }
 }
 
 static void declare_builtin_functions(void) {
