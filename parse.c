@@ -1102,7 +1102,7 @@ static void designation(Token **rest, Token *tok, Initializer *init) {
     Token *tok2;
     for (int i = begin; i <= end; i++)
       designation(&tok2, tok, init->children[i]);
-    array_initializer2(rest, tok2, init, begin + 1);
+    array_initializer2(rest, tok2, init, end + 1);
     return;
   }
 
@@ -1133,28 +1133,27 @@ static void designation(Token **rest, Token *tok, Initializer *init) {
 // (e.g. `int x[] = {1,2,3}`). If it's omitted, count the number
 // of initializer elements.
 static int count_array_init_elements(Token *tok, Type *ty) {
-  bool first = true;
   Initializer *dummy = new_initializer(ty->base, true);
 
-  int i = 0, max = 0;
+  int len = 0, max = 0;
 
-  while (!consume_end(&tok, tok)) {
-    if (!first)
+  for (int i = 0; !consume_end(&tok, tok); i++) {
+    if (i > 0)
       tok = skip(tok, ",");
-    first = false;
 
     if (equal(tok, "[")) {
-      i = const_expr(&tok, tok->next);
+      int idx = const_expr(&tok, tok->next);
       if (equal(tok, "..."))
-        i = const_expr(&tok, tok->next);
+        idx = const_expr(&tok, tok->next);
       tok = skip(tok, "]");
       designation(&tok, tok, dummy);
+      len = idx + 1;
     } else {
       initializer2(&tok, tok, dummy);
+      len++;
     }
 
-    i++;
-    max = MAX(max, i);
+    max = MAX(max, len);
   }
   return max;
 }
@@ -1168,17 +1167,11 @@ static void array_initializer1(Token **rest, Token *tok, Initializer *init) {
     *init = *new_initializer(array_of(init->ty->base, len), false);
   }
 
-  bool first = true;
-
-  if (init->is_flexible) {
-    int len = count_array_init_elements(tok, init->ty);
-    *init = *new_initializer(array_of(init->ty->base, len), false);
-  }
+  int idx = 0;
 
   for (int i = 0; !consume_end(rest, tok); i++) {
-    if (!first)
+    if (i > 0)
       tok = skip(tok, ",");
-    first = false;
 
     if (equal(tok, "[")) {
       int begin, end;
@@ -1188,12 +1181,13 @@ static void array_initializer1(Token **rest, Token *tok, Initializer *init) {
       for (int j = begin; j <= end; j++)
         designation(&tok2, tok, init->children[j]);
       tok = tok2;
-      i = end;
+
+      idx = end + 1;
       continue;
     }
 
-    if (i < init->ty->array_len)
-      initializer2(&tok, tok, init->children[i]);
+    if (idx < init->ty->array_len)
+      initializer2(&tok, tok, init->children[idx++]);
     else
       tok = skip_excess_element(tok);
   }
@@ -1226,12 +1220,10 @@ static void struct_initializer1(Token **rest, Token *tok, Initializer *init) {
   tok = skip(tok, "{");
 
   Member *mem = init->ty->members;
-  bool first = true;
 
-  while (!consume_end(rest, tok)) {
-    if (!first)
+  for (int i = 0; !consume_end(rest, tok); i++) {
+    if (i > 0)
       tok = skip(tok, ",");
-    first = false;
 
     if (equal(tok, ".")) {
       mem = struct_designator(&tok, tok, init->ty);
@@ -1251,14 +1243,11 @@ static void struct_initializer1(Token **rest, Token *tok, Initializer *init) {
 
 // struct-initializer2 = initializer ("," initializer)*
 static void struct_initializer2(Token **rest, Token *tok, Initializer *init, Member *mem) {
-  bool first = true;
-
   for (; mem && !is_end(tok); mem = mem->next) {
     Token *start = tok;
 
-    if (!first)
+    if (mem != init->ty->members)
       tok = skip(tok, ",");
-    first = false;
 
     if (equal(tok, "[") || equal(tok, ".")) {
       *rest = start;
@@ -1274,22 +1263,32 @@ static void union_initializer(Token **rest, Token *tok, Initializer *init) {
   // Unlike structs, union initializers take only one initializer,
   // and that initializes the first union member by default.
   // You can initialize other member using a designated initializer.
-  if (equal(tok, "{") && equal(tok->next, ".")) {
-    Member *mem = struct_designator(&tok, tok->next, init->ty);
-    init->mem = mem;
-    designation(&tok, tok, init->children[mem->idx]);
-    *rest = skip(tok, "}");
-    return;
-  }
-
   init->mem = init->ty->members;
 
-  if (equal(tok, "{")) {
-    initializer2(&tok, tok->next, init->children[0]);
-    consume(&tok, tok, ",");
-    *rest = skip(tok, "}");
-  } else {
+  if (!equal(tok, "{")) {
     initializer2(rest, tok, init->children[0]);
+    return;
+  }
+  tok = tok->next;
+
+  for (int i = 0; !consume_end(rest, tok); i++) {
+    if (i > 0)
+      tok = skip(tok, ",");
+
+    if (equal(tok, ".")) {
+      Member *mem = struct_designator(&tok, tok, init->ty);
+      init->mem = mem;
+      designation(&tok, tok, init->children[mem->idx]);
+      continue;
+    }
+
+    // A union takes only one initializer, so the rest is excess
+    if (i == 0) {
+      initializer2(&tok, tok, init->children[0]);
+      continue;
+    }
+
+    tok = skip_excess_element(tok);
   }
 }
 
