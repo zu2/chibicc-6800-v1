@@ -14,7 +14,11 @@ int tarai(int x, int y, int z)
 
 int main(int argc, char **argv)
 {
-	if(tarai(13,7,0)!=13)		// call 91924989 times
+//	if(tarai(13,7,0)!=13)		// call 91924989 times
+//		return 1;
+//	if(tarai(12,6,0)!=12)		// call 12604861 times
+//		return 1;
+	if(tarai(8,4,0)!=8)		// call 12605 times
 		return 1;
 
 	cpu_counter();
