@@ -3796,10 +3796,6 @@ static bool is_redecl_compatible(Type *t1, Type *t2) {
       return true;
     return is_compatible(t1, t2);
   }
-  if (t1->kind == TY_ARRAY && t2->kind == TY_ARRAY)
-    return is_compatible(t1->base, t2->base) &&
-           (t1->array_len < 0 || t2->array_len < 0 ||
-            t1->array_len == t2->array_len);
   return is_compatible(t1, t2);
 }
 
