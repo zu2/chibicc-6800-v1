@@ -3698,7 +3698,13 @@ static Token *parse_typedef(Token *tok, Type *basety) {
     Type *ty = declarator(&tok, tok, basety);
     if (!ty->name)
       error_tok(ty->name_pos, "typedef name omitted");
-    push_scope(get_ident(ty->name))->type_def = ty;
+
+    char *name = get_ident(ty->name);
+    VarScope *sc = hashmap_get(&scope->vars, name);
+    if (sc && sc->type_def && !is_compatible(sc->type_def, ty))
+      error_tok(ty->name, "typedef redefined with a different type");
+
+    push_scope(name)->type_def = ty;
   }
   return tok;
 }
