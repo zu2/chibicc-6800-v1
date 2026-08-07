@@ -83,8 +83,8 @@ int main(int argc, char **argv)
 	if (++sa[1])
 		return 66;
 
-	up = ua[0];
-	sp = sa[0];
+	up = &ua[0];
+	sp = &sa[0];
 	*up++ = *sp++;
 
 	return (sa[1]+=1)-1;
