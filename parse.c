@@ -987,6 +987,7 @@ static Token *skip_excess_element(Token *tok) {
     return skip(tok, "}");
   }
 
+  warn_tok(tok, "excess elements in initializer");
   assign(&tok, tok);
   return tok;
 }
