@@ -664,3 +664,4 @@ bool builtin_strcpy(Node *node);
 bool builtin_signbit(Node *node);
 
 extern bool opt_fwrapv;
+extern bool opt_fdouble_as_float;

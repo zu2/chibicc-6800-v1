@@ -321,6 +321,8 @@ static void ast_dump(Node *node)
       }
       break;
     case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
       printout("%Le", node->fval);
       break;
     case TY_PTR:

@@ -407,6 +407,17 @@ static void push_tag_scope(Token *tok, Type *ty) {
   hashmap_put2(&scope->tags, tok->loc, tok->len, ty);
 }
 
+static void check_double(Token *tok) {
+  static bool warned;
+
+  if (!opt_fdouble_as_float)
+    error_tok(tok, "64-bit double is not implemented on this target");
+  if (!warned) {
+    warn_tok(tok, "double is treated as 32-bit float on this target");
+    warned = true;
+  }
+}
+
 // declspec = ("void" | "_Bool" | "char" | "short" | "int" | "long"
 //             | "typedef" | "static" | "extern" | "inline"
 //             | "_Thread_local" | "__thread"
@@ -608,9 +619,11 @@ static Type *declspec(Token **rest, Token *tok, VarAttr *attr) {
       ty = ty_float;
       break;
     case DOUBLE:
+      check_double(tok);
       ty = ty_double;
       break;
     case LONG + DOUBLE:
+      check_double(tok);
       ty = ty_ldouble;
       break;
     default:
@@ -1556,14 +1569,11 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
   if (!init->expr)
     return cur;
 
-  if (ty->kind == TY_FLOAT) {
+  if (ty->kind == TY_FLOAT || ty->kind == TY_DOUBLE || ty->kind == TY_LDOUBLE) {
     union { float f32; uint32_t u32; } u = { eval_double(init->expr) };
     write_buf(buf+offset, u.u32, ty->size);
     return cur;
   }
-
-  if (ty->kind == TY_DOUBLE)
-    error_tok(init->expr->tok, "double is not supported");
 
   if (ty->kind == TY_BOOL) {
     write_buf(buf + offset, eval_bool(init->expr), ty->size);

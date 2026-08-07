@@ -43,6 +43,7 @@ bool opt_fbuiltin_memset = true;
 bool opt_fbuiltin_strcpy = true;
 bool opt_fbuiltin_signbit = true;
 bool opt_fwrapv = false;
+bool opt_fdouble_as_float = true;
 
 bool opt(char op, char lv)
 {
@@ -255,6 +256,14 @@ static void parse_args(int argc, char **argv) {
     }
     if (!strcmp(argv[i], "-fwrapv")) {
       opt_fwrapv = true;
+      continue;
+    }
+    if (!strcmp(argv[i], "-fdouble-as-float")) {
+      opt_fdouble_as_float = true;
+      continue;
+    }
+    if (!strcmp(argv[i], "-fno-double-as-float")) {
+      opt_fdouble_as_float = false;
       continue;
     }
 

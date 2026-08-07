@@ -409,7 +409,7 @@ Node *optimize_expr(Node *node)
     if (is_integer_constant(node->lhs,&val)) {
       return optimize_const_expr(node);
     }else if (node->lhs->kind==ND_NUM
-    &&  node->lhs->ty->kind == TY_FLOAT){
+    &&  is_flonum(node->lhs->ty)){
       Node *new = new_copy(node->lhs);
       new->fval = -node->lhs->fval;
       return new;

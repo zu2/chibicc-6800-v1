@@ -1733,14 +1733,10 @@ void load(Type *ty) {
     // This is where "an array becomes a pointer to its first element" happens.
     return;
   case TY_FLOAT:
+  case TY_DOUBLE:
+  case TY_LDOUBLE:
     println("\tjsr __load32");		// @long = (AccAB)");
     IX_invalidate();
-    return;
-  case TY_DOUBLE:
-    assert(ty->kind!=TY_DOUBLE);
-    return;
-  case TY_LDOUBLE:
-    assert(ty->kind!=TY_LDOUBLE);
     return;
   }
 
@@ -1807,15 +1803,9 @@ void load_x(Type *ty,int off) {
     return;
   case TY_LONG:
   case TY_FLOAT:
-    load32x(off);
-    return;
   case TY_DOUBLE:
-    assert(ty->kind!=TY_DOUBLE);
-//  println("  movsd (%%rax), %%xmm0");
-    return;
   case TY_LDOUBLE:
-    assert(ty->kind!=TY_LDOUBLE);
-//  println("  fldt (%%rax)");
+    load32x(off);
     return;
   }
 
@@ -1890,14 +1880,10 @@ static void store(Type *ty) {
     IX_invalidate();
     return;
   case TY_FLOAT:
+  case TY_DOUBLE:
+  case TY_LDOUBLE:
     popx();
     store32x(0);                      // store @long to (0-3,x)");
-    return;
-  case TY_DOUBLE:
-    assert(ty->kind!=TY_DOUBLE);
-    return;
-  case TY_LDOUBLE:
-    assert(ty->kind!=TY_LDOUBLE);
     return;
   }
 
@@ -1918,12 +1904,6 @@ static void clr_x(Type *ty,int off) {
   case TY_STRUCT:
   case TY_UNION:
     assert(0);
-    return;
-  case TY_DOUBLE:
-    assert(ty->kind!=TY_DOUBLE);
-    return;
-  case TY_LDOUBLE:
-    assert(ty->kind!=TY_LDOUBLE);
     return;
   }
   switch (ty->size) {
@@ -1969,12 +1949,6 @@ void store_x(Type *ty,int off) {
     depth -= 2; // copy_struct2 remove *TOS
     IX_invalidate();
     return;
-  case TY_DOUBLE:
-    assert(ty->kind!=TY_DOUBLE);
-    return;
-  case TY_LDOUBLE:
-    assert(ty->kind!=TY_LDOUBLE);
-    return;
   }
   switch (ty->size) {
   case 1:
@@ -2011,12 +1985,11 @@ void cmp_zero(Type *ty) {
     IX_invalidate();
     return;
   case TY_FLOAT:
+  case TY_DOUBLE:
+  case TY_LDOUBLE:
     println("\tjsr __f32iszero");
     IX_invalidate();
     return;
-  case TY_DOUBLE:
-  case TY_LDOUBLE:
-    error("; cmp_zero ty: %d DOUBLE/LDOUBLE",ty->kind);
   }
   println("\taba");
   println("\tadca #0");
@@ -2038,10 +2011,8 @@ static int getTypeId(Type *ty) {
   case TY_LONG:
     return ty->is_unsigned ? U32 : I32;
   case TY_FLOAT:
-    return F32;
   case TY_DOUBLE:
   case TY_LDOUBLE:
-    assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
     return F32;
   }
   return U16; // TY_PTR,TY_ENUM
@@ -2329,10 +2300,6 @@ static void push_args2(Node *args,bool is_variadic)
     ast_node_dump(args);
   }
   switch (args->ty->kind) {
-  case TY_DOUBLE:
-  case TY_LDOUBLE: 
-    assert(args->ty->kind!=TY_DOUBLE && args->ty->kind!=TY_LDOUBLE);
-    break;
   case TY_STRUCT:
   case TY_UNION:
     gen_expr(args);
@@ -2363,6 +2330,8 @@ static void push_args2(Node *args,bool is_variadic)
     break;
   } // TY_CHAR,TY_BOOL
   case TY_FLOAT:
+  case TY_DOUBLE:
+  case TY_LDOUBLE:
     if (args->pass_by_stack && args->kind==ND_NUM) {
       union { float f32; uint32_t u32; } u = { args->fval };
       println("; push float %e, 0x%08x",u.f32,u.u32);
@@ -2441,8 +2410,6 @@ static int push_args(Node *node)
     // check first parameter
     switch (arg->ty->kind) {
     case TY_VOID:
-    case TY_DOUBLE:
-    case TY_LDOUBLE:
       assert(0);
     case TY_STRUCT:
     case TY_UNION:
@@ -3567,8 +3534,6 @@ static void gen_funcall(Node *node)
       switch (current_fn->params->ty->kind) {
       case TY_STRUCT:
       case TY_UNION:
-      case TY_DOUBLE:
-      case TY_LDOUBLE:
         passed_by_reg = 0;
       }
       if (current_fn->ty->return_ty->kind == TY_STRUCT
@@ -3614,6 +3579,8 @@ static void gen_funcall(Node *node)
         break;
       case TY_LONG:
       case TY_FLOAT:
+      case TY_DOUBLE:
+      case TY_LDOUBLE:
         println("\tpush32");
         depth+=4;
         break;
@@ -3645,6 +3612,8 @@ static void gen_funcall(Node *node)
         break;
       case TY_LONG:
       case TY_FLOAT:
+      case TY_DOUBLE:
+      case TY_LDOUBLE:
         println("\tpop32");
         depth-=4;
         break;
@@ -3675,6 +3644,8 @@ static void opeq(Node *node)
   case ND_ADDEQ: {
     switch(node->ty->kind) {
     case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
       gen_addr(lhs);
       push();
       println("\ttsx");
@@ -3790,6 +3761,8 @@ static void opeq(Node *node)
   case ND_SUBEQ: {
     switch(node->ty->kind) {
     case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
       gen_addr(lhs);
       push();
       gen_expr(rhs);
@@ -3941,6 +3914,8 @@ static void opeq(Node *node)
   case ND_MULEQ: {
     switch(node->ty->kind) {
     case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
       gen_addr(lhs);
       push();
       println("\ttsx");
@@ -4013,6 +3988,8 @@ static void opeq(Node *node)
   case ND_DIVEQ: {
     switch(node->ty->kind) {
     case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
       gen_addr(node->lhs);
       push();
       gen_expr(node->rhs);
@@ -4559,14 +4536,11 @@ void gen_expr(Node *node)
     return;
   case ND_NUM: {
     switch (node->ty->kind) {
-    case TY_FLOAT: {
-      union { float f32; uint32_t u32; } u = { node->fval };
-      load32i(u.u32);
-      return;
-    }
+    case TY_FLOAT:
     case TY_DOUBLE:
     case TY_LDOUBLE: {
-      error_tok(node->tok, "gen_expr: double not implemented yet");
+      union { float f32; uint32_t u32; } u = { node->fval };
+      load32i(u.u32);
       return;
     }
     case TY_BOOL:
@@ -4995,13 +4969,11 @@ void gen_expr(Node *node)
 
     switch (node->ty->kind) {
     case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
       println("\tldab @long	; negate float");
       println("\teorb #$80");
       println("\tstab @long");
-      return;
-    case TY_DOUBLE:
-    case TY_LDOUBLE:
-      error_tok(node->tok, "gen_expr: double not implemented yet");
       return;
     case TY_LONG:
       println("\tjsr __neg32");
@@ -5229,7 +5201,9 @@ void gen_expr(Node *node)
     } // ND_MEMBER, bit-field
 
     if (node->ty->kind == TY_LONG
-    ||  node->ty->kind == TY_FLOAT) {
+    ||  node->ty->kind == TY_FLOAT
+    ||  node->ty->kind == TY_DOUBLE
+    ||  node->ty->kind == TY_LDOUBLE) {
       if (test_addr_x(node->lhs)) {
         gen_expr(node->rhs);
         off = gen_addr_x(node->lhs,false);
@@ -5659,8 +5633,13 @@ void gen_expr(Node *node)
   //
   // Below is a binary operator
   switch (node->lhs->ty->kind) {
-  case TY_FLOAT: {
-    if (node->rhs->kind == ND_NUM && node->rhs->ty->kind==TY_FLOAT) {
+  case TY_FLOAT:
+  case TY_DOUBLE:
+  case TY_LDOUBLE: {
+    if (node->rhs->kind == ND_NUM
+    && (node->rhs->ty->kind == TY_FLOAT
+    ||  node->rhs->ty->kind == TY_DOUBLE
+    ||  node->rhs->ty->kind == TY_LDOUBLE)) {
       union { float f32; uint32_t u32; } u = { node->rhs->fval };
       println("; push float %e, %08x",u.f32,u.u32);
       gen_direct_pushl(u.u32);
@@ -5745,10 +5724,6 @@ void gen_expr(Node *node)
 
     error_tok(node->tok, "invalid expression");
   } // TY_FLOAT:
-  case TY_DOUBLE:
-  case TY_LDOUBLE: {
-    error_tok(node->tok, "double not implemented");
-  }
   case TY_LONG: {
     switch (node->kind) {
     case ND_ADD:
@@ -7026,10 +7001,6 @@ static void assign_lvar_offsets(Obj *prog) {
         gp++;
         var->offset = -2;	// STRUCT/UNION must pass via stack
         continue;
-      case TY_DOUBLE:
-      case TY_LDOUBLE:
-        assert(ty->kind!=TY_DOUBLE && ty->kind!=TY_LDOUBLE);
-        break;
       default:
         if (gp++<1){		// only one args pass by register
           var->offset = -1;
@@ -7286,6 +7257,8 @@ no_params_locals:
       case TY_VOID:
       case TY_LONG:
       case TY_FLOAT:
+      case TY_DOUBLE:
+      case TY_LDOUBLE:
         break;
       default:
         println("\tclrb");
@@ -7332,6 +7305,8 @@ no_params_locals:
       case TY_VOID:
       case TY_LONG:
       case TY_FLOAT:
+      case TY_DOUBLE:
+      case TY_LDOUBLE:
         break;
       default:
         println("\tpshb");
@@ -7351,6 +7326,8 @@ no_params_locals:
       case TY_VOID:
       case TY_LONG:
       case TY_FLOAT:
+      case TY_DOUBLE:
+      case TY_LDOUBLE:
         break;
       default:
         println("\tpulb");
@@ -7361,6 +7338,8 @@ no_params_locals:
     case TY_VOID:
     case TY_LONG:
     case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
       if (opt('O','s')) {
         println("\tjmp __pulbp_rts");
       }else{
