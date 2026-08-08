@@ -3463,6 +3463,8 @@ static Node *funcall(Token **rest, Token *tok, Node *fn) {
   if (node->ty->kind == TY_STRUCT || node->ty->kind == TY_UNION)
     node->ret_buffer = new_lvar("", node->ty);
 
+  if (!current_fn)
+    return node;
   if (fn->var && fn->var->name && strcmp(fn->var->name,"alloca")==0) {
     current_fn->use_alloca = true;
     return node;
