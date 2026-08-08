@@ -5170,33 +5170,7 @@ void gen_expr(Node *node)
     }
     // bit-field
     if (node->lhs->kind == ND_MEMBER && node->lhs->member->is_bitfield) {
-      gen_addr(node->lhs);
-      push();
-      gen_expr(node->rhs);
-      popx();
-      if (!node->retval_unused){
-        push();
-      }
-
-      // If the lhs is a bitfield, we need to read the current value
-      // from memory and merge it with a new value.
-      Member *mem = node->lhs->member;
-      println("; bitfieled mem->ty->size=%d, mem->bit_width=%d, mem->bit_offset=%d, %s, %s %d",
-		      mem->ty->size,mem->bit_width, mem->bit_offset,
-          (mem->ty? (mem->ty->is_unsigned? "u": "i"):"null"),
-          __FILE__, __LINE__);
-      and_i((unsigned short)(1L << mem->bit_width) - 1);
-      gen_shl(ty_uint,mem->bit_offset);
-      uint16_t mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
-      println("\teorb 1,x");
-      println("\teora 0,x");
-      and_i(mask);
-      println("\teorb 1,x");
-      println("\teora 0,x");
-      store_x(ty_uint,0);
-      if (!node->retval_unused){
-        pop();
-      }
+      assign_to_bitfield(node);
       return;
     } // ND_MEMBER, bit-field
 
