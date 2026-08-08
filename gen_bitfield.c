@@ -40,6 +40,13 @@ void load_bitfield(Node *node)
     }
     println("%s:", label);
   }
+  if (mem->ty->size == 4)
+    // A 4-byte value is passed in @long, not in AccAB.
+    if (mem->ty->is_unsigned) {
+      println("\tjsr __u16to32");
+    } else {
+      println("\tjsr __u16to32");
+    }
   return;
 }
 
@@ -66,6 +73,11 @@ void assign_to_bitfield(Node *node)
           mem->ty->size, mem->bit_width, mem->bit_offset,
           (mem->ty ? (mem->ty->is_unsigned ? "u" : "i") : "null"), __FILE__,
           __LINE__);
+  if (mem->ty->size == 4) {
+    // A 4-byte value is passed in @long, and @long survives the merge below.
+    println("\tldab @long+3");
+    println("\tldaa @long+2");
+  }
   and_i((unsigned short)(1L << mem->bit_width) - 1);
   gen_shl(ty_uint, mem->bit_offset);
   uint16_t mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
