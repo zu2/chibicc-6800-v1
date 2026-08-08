@@ -1412,7 +1412,8 @@ static Node *init_desg_expr(InitDesg *desg, Token *tok) {
 
 static Node *create_lvar_init(Initializer *init, Type *ty, InitDesg *desg, Token *tok) {
 
-  if (ty->kind == TY_ARRAY && init->is_bulk_init) {
+  // ND_BULKINIT copies to bp + var->offset, so it cannot reach a subobject.
+  if (ty->kind == TY_ARRAY && init->is_bulk_init && desg->var) {
     Obj *bulk_data = new_string_literal(init->bulk_data,desg->var->ty);
 
     Node *node = new_node(ND_BULKINIT, tok);
