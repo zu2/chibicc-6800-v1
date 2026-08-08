@@ -84,7 +84,7 @@ test: install wtests ctests ztests rtests btests
 # Misc.
 
 clean:
-	rm -rf chibicc tmp* $(TESTS) test/*.s test/*.exe stage2
+	rm -rf chibicc tmp* $(TESTS) test/*.s test/*.exe 
 	find * -type f '(' -name '*~' -o -name '*.o' ')' -exec rm {} ';'
 	rm -f *.gcov *.gcda *.gcno
 	(cd libc ; make clean)
@@ -92,4 +92,4 @@ clean:
 	(cd clibs ; make clean)
 	(cd ztest ; make clean)
 
-.PHONY: test clean test-stage2
+.PHONY: test clean

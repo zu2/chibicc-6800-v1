@@ -2175,7 +2175,7 @@ int64_t eval2(Node *node, char ***label) {
 static int64_t eval_rval(Node *node, char ***label) {
   switch (node->kind) {
   case ND_VAR:
-    if (node->var->is_local)
+    if (!label || node->var->is_local)
       error_tok(node->tok, "not a compile-time constant");
     *label = &node->var->name;
     return 0;
