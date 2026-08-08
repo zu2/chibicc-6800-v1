@@ -1548,14 +1548,15 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
         if (!expr)
           break;
 
+        // mem->bit_offset counts from the LSB of the 16-bit packing unit.
         char *loc = buf + offset + mem->offset;
-        uint64_t oldval = read_buf(loc, mem->ty->size);
+        uint64_t oldval = read_buf(loc, 2);
         // C99 6.3.1.2: a value becomes 1 if it is not 0.
         uint64_t newval = (mem->ty->kind == TY_BOOL) ? eval_bool(expr)
                                                      : eval(expr);
         uint64_t mask = (1L << mem->bit_width) - 1;
         uint64_t combined = oldval | ((newval & mask) << mem->bit_offset);
-        write_buf(loc, combined, mem->ty->size);
+        write_buf(loc, combined, 2);
       } else {
         cur = write_gvar_data(cur, init->children[mem->idx], mem->ty, buf,
                               offset + mem->offset);
