@@ -2089,8 +2089,12 @@ int64_t eval2(Node *node, char ***label) {
     return eval_double(node);
 
   switch (node->kind) {
-  case ND_ADD:
-    return fit_to_type(eval2(node->lhs, label) + eval(node->rhs),node->ty);
+  case ND_ADD: {
+    int64_t lval = eval2(node->lhs, label);
+    // C11 6.6p9: an address constant can appear on only one side of the +.
+    int64_t rval = (label && *label) ? eval(node->rhs) : eval2(node->rhs, label);
+    return fit_to_type(lval + rval,node->ty);
+  }
   case ND_SUB:
     return fit_to_type(eval2(node->lhs, label) - eval(node->rhs),node->ty);
   case ND_MUL:
