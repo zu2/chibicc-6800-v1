@@ -2053,7 +2053,13 @@ static int64_t eval_bool(Node *expr) {
   add_type(expr);
   if (is_flonum(expr->ty))
     return eval_double(expr) != 0;
-  return eval(expr) != 0;
+
+  char **label = NULL;
+  int64_t val = eval2(expr, &label);
+  // C11 6.5.3.2p3: the address of an object is never a null pointer.
+  if (label)
+    return 1;
+  return val != 0;
 }
 
 // Evaluate a given node as a constant expression.
