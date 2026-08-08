@@ -1,24 +1,7 @@
 #include "chibicc.h"
 
-void load_bitfield(Node *node)
+static void extract_bitfield(Member *mem)
 {
-  int off;
-  Member *mem = node->member;
-
-  if (!mem->is_bitfield) {
-    assert(0);
-  }
-  if (can_load_x(node->ty) && test_addr_x(node)) {
-    off = gen_addr_x(node, false);
-    load_x(ty_uint, off);
-  } else {
-    gen_addr(node);
-    load(ty_uint);
-  }
-  println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s, %s %d",
-          mem->bit_width, mem->bit_offset, (mem->ty->is_unsigned ? "u" : "i"),
-          __FILE__, __LINE__);
-  //    println(";  shl $%d, %%rax", 64 - mem->bit_width - mem->bit_offset);
   gen_shr(ty_uint, mem->bit_offset);
   unsigned int mask = (unsigned int)(1L << mem->bit_width) - 1;
   and_i(mask & 0xffff);
@@ -40,13 +23,34 @@ void load_bitfield(Node *node)
     }
     println("%s:", label);
   }
-  if (mem->ty->size == 4)
-    // A 4-byte value is passed in @long, not in AccAB.
+  if (mem->ty->size == 4) {
     if (mem->ty->is_unsigned) {
       println("\tjsr __u16to32");
     } else {
-      println("\tjsr __u16to32");
+      println("\tjsr __s16to32");
     }
+  }
+}
+
+void load_bitfield(Node *node)
+{
+  int off;
+  Member *mem = node->member;
+
+  if (!mem->is_bitfield) {
+    assert(0);
+  }
+  if (can_load_x(node->ty) && test_addr_x(node)) {
+    off = gen_addr_x(node, false);
+    load_x(ty_uint, off);
+  } else {
+    gen_addr(node);
+    load(ty_uint);
+  }
+  println("; bitfield mem->bit_width=%d, mem->bit_offset=%d, %s, %s %d",
+          mem->bit_width, mem->bit_offset, (mem->ty->is_unsigned ? "u" : "i"),
+          __FILE__, __LINE__);
+  extract_bitfield(mem);
   return;
 }
 
@@ -61,9 +65,6 @@ void assign_to_bitfield(Node *node)
   push();
   gen_expr(node->rhs);
   popx();
-  if (!node->retval_unused) {
-    push();
-  }
 
   // If the lhs is a bitfield, we need to read the current value
   // from memory and merge it with a new value.
@@ -74,21 +75,24 @@ void assign_to_bitfield(Node *node)
           (mem->ty ? (mem->ty->is_unsigned ? "u" : "i") : "null"), __FILE__,
           __LINE__);
   if (mem->ty->size == 4) {
-    // A 4-byte value is passed in @long, and @long survives the merge below.
     println("\tldab @long+3");
     println("\tldaa @long+2");
   }
   and_i((unsigned short)(1L << mem->bit_width) - 1);
   gen_shl(ty_uint, mem->bit_offset);
+
   uint16_t mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
+
   println("\teorb 1,x");
   println("\teora 0,x");
   and_i(mask);
   println("\teorb 1,x");
   println("\teora 0,x");
+
   store_x(ty_uint, 0);
+
   if (!node->retval_unused) {
-    pop();
+    extract_bitfield(mem);
   }
   return;
 }
