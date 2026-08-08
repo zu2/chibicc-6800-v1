@@ -2071,7 +2071,7 @@ static int64_t eval_bool(Node *expr) {
 
   char **label = NULL;
   int64_t val = eval2(expr, &label);
-  // C11 6.5.3.2p3: the address of an object is never a null pointer.
+
   if (label)
     return 1;
   return val != 0;
@@ -2157,17 +2157,17 @@ int64_t eval2(Node *node, char ***label) {
       return (uint64_t)eval(node->lhs) >= eval(node->rhs);
     return eval(node->lhs) >= eval(node->rhs);
   case ND_COND:
-    return eval(node->cond) ? eval2(node->then, label) : eval2(node->els, label);
+    return eval_bool(node->cond) ? eval2(node->then, label) : eval2(node->els, label);
   case ND_COMMA:
     return eval2(node->rhs, label);
   case ND_NOT:
-    return !eval(node->lhs);
+    return !eval_bool(node->lhs);
   case ND_BITNOT:
     return fit_to_type(~eval(node->lhs),node->ty);
   case ND_LOGAND:
-    return eval(node->lhs) && eval(node->rhs);
+    return eval_bool(node->lhs) && eval_bool(node->rhs);
   case ND_LOGOR:
-    return eval(node->lhs) || eval(node->rhs);
+    return eval_bool(node->lhs) || eval_bool(node->rhs);
   case ND_CAST: {
     if (node->ty->kind == TY_BOOL) return eval_bool(node->lhs);
     return fit_to_type(eval2(node->lhs, label),node->ty);
