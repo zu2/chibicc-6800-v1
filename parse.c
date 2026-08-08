@@ -1539,6 +1539,9 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
   }
 
   if (ty->kind == TY_STRUCT) {
+    if (init->expr)
+      error_tok(init->expr->tok, "not a compile-time constant");
+
     for (Member *mem = ty->members; mem; mem = mem->next) {
       if (mem->is_bitfield) {
         Node *expr = init->children[mem->idx]->expr;
