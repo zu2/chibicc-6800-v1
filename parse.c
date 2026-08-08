@@ -1581,6 +1581,16 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
     return cur;
   }
 
+  // C11 6.7.9p11: an initializer follows the rules of a simple assignment.
+  add_type(init->expr);
+  if (ty->kind == TY_PTR && is_flonum(init->expr->ty))
+    error_tok(init->expr->tok, "initialization of a pointer from a floating point number");
+  if (ty->kind == TY_PTR && is_integer(init->expr->ty) &&
+      !is_null_ptr_constant(init->expr))
+    error_tok(init->expr->tok, "initialization of a pointer from an integer");
+  if (init->expr->ty->kind == TY_PTR && is_integer(ty))
+    error_tok(init->expr->tok, "initialization of an integer from a pointer");
+
   char **label = NULL;
   uint64_t val = eval2(init->expr, &label);
 
