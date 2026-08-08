@@ -1329,6 +1329,16 @@ static void initializer2(Token **rest, Token *tok, Initializer *init) {
       return;
     }
 
+    // A compound literal is written straight into the parent initializer.
+    if (equal(tok, "(") && is_typename(tok->next)) {
+      Token *tok2;
+      Type *ty2 = typename(&tok2, tok->next);
+      if (equal(tok2, ")") && equal(tok2->next, "{") && is_compatible(init->ty, ty2)) {
+        struct_initializer1(rest, tok2->next, init);
+        return;
+      }
+    }
+
     // A struct can be initialized with another struct. E.g.
     // `struct T x = y;` where y is a variable of type `struct T`.
     // Handle that case first.
