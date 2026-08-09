@@ -72,7 +72,7 @@ void _float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf);
 void _float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf);
 
 // printf-like function (float only, no double, + and - flags as bool)
-int vsnprintf_core(const uint8_t *fmt, va_list args)
+static int vsnprintf_core(const uint8_t *fmt, va_list args)
 {
   uint8_t buf[128];  // Main buffer for conversions
 
