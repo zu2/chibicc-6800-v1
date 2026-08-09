@@ -5364,6 +5364,7 @@ void gen_expr(Node *node)
     return;
   case ND_COMMA:
     gen_expr(node->lhs);
+    node->rhs->retval_unused = node->retval_unused;
     gen_expr(node->rhs);
     return;
   case ND_CAST:
