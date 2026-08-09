@@ -69,7 +69,7 @@ static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_p
 }
 
 // Check if float is NaN or Inf, print and return 1 if true
-static uint8_t *check_nan(float val,bool add_plus)
+static uint8_t *_check_nan(float val,bool add_plus)
 {
   if (isnan(val)) {
     if (my_signbit(val)) {
@@ -123,7 +123,7 @@ static float get_round_add(int precision)
   return r;
 }
 
-static void float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf)
+static void _float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf)
 {
   uint8_t *p = buf;
   if (my_signbit(val)) { *p++ = '-'; val = fabsf(val); }
@@ -154,7 +154,7 @@ static void float_to_exp_str(float val, int precision, bool add_plus, uint8_t *b
 //
 // For exact printf-like rounding, a full Ryu/Dragon4-style algorithm is required.
 //
-static void float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
+static void _float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
 {
   uint8_t *p = buf;
   float int_part, frac_part;
@@ -169,7 +169,7 @@ static void float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
 
     p = format_float_core(p, val, precision);
   }else{
-    float_to_exp_str(val, precision, add_plus, p);
+    _float_to_exp_str(val, precision, add_plus, p);
     return;
   }
   *p = '\0';
@@ -177,7 +177,7 @@ static void float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
 
 
 // Convert float to hex float string for %a (add sign if needed)
-static void float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf)
+static void _float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf)
 {
   uint8_t *p = buf;
 
@@ -350,7 +350,7 @@ end_flags:
     case 'a': {
       float val = (float)va_arg(args, float);
       uint8_t *p;
-      if ((p = check_nan(val,add_plus)) != NULL) {
+      if ((p = _check_nan(val,add_plus)) != NULL) {
         justify_mem(p, strlen(p),left_justify, false, width);
         break;
       }
@@ -363,13 +363,13 @@ end_flags:
       }
       switch(*fmt) {
       case 'f':
-        float_to_str(val, precision, add_plus, buf);
+        _float_to_str(val, precision, add_plus, buf);
         break;
       case 'e':
-        float_to_exp_str(val, precision, add_plus, buf);
+        _float_to_exp_str(val, precision, add_plus, buf);
         break;
       case 'a':
-        float_to_hex_str(val, precision, add_plus, buf);
+        _float_to_hex_str(val, precision, add_plus, buf);
         break;
       }
       justify_mem(buf, strlen(buf), left_justify, zero_pad, width);
