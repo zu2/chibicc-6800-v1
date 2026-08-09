@@ -942,6 +942,16 @@ Node *optimize_expr(Node *node)
     &&  is_integer_constant(node->rhs,NULL)) {
       return optimize_const_expr(node);
     }
+    // (x * c1) * c2 -> x * (c1 * c2)
+    if (is_integer_constant(node->rhs,&val)
+    &&  node->lhs->kind == ND_MUL
+    &&  is_integer_constant(node->lhs->rhs,&val2)) {
+      Node *new = new_copy(node->lhs);
+      new->ty  = node->ty;
+      new->rhs = new_num(fit_to_type((uint64_t)val*val2,node->ty), node->tok);
+      new->rhs->ty = node->ty;
+      return optimize_expr(new);
+    }
     // (x ± c1) * c2 -> x * c2 ± c1 * c2  (arr[i+1] makes this tree)
     if (is_integer_constant(node->rhs,&val)
     && (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
@@ -951,7 +961,7 @@ Node *optimize_expr(Node *node)
       new->lhs = new_copy(node);
       new->lhs->lhs = node->lhs->lhs;
       new->lhs->rhs = node->rhs;
-      new->rhs = new_num(val*val2, node->tok);
+      new->rhs = new_num(fit_to_type((uint64_t)val*val2,node->ty), node->tok);
       new->rhs->ty = node->ty;
       return optimize_const_expr(new);
     }
