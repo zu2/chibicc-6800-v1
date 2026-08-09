@@ -144,24 +144,19 @@ void _float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf)
   uint32_t mant = (*(uint32_t *)&frac) & 0x007fffff;
   mant <<= 1;
 
+  int len = precision;
   if (precision < 0) {
-    if (mant != 0) {
-      *p++ = '.';
-      int len = 6;
-      uint32_t temp = mant;
-      while (len > 0 && (temp & 0xF) == 0) {
-        len--;
-        temp >>= 4;
-      }
-      for (int i = 0; i < len; i++) {
-        uint8_t d = (mant >> 20) & 0xF;
-        *p++ = d < 10 ? d+'0' : d+'a'-10;
-        mant <<= 4;
-      }
+    len = 6;
+    uint32_t temp = mant;
+    while (len > 0 && (temp & 0xF) == 0) {
+      len--;
+      temp >>= 4;
     }
-  } else if (precision > 0) {
+  }
+
+  if (len > 0) {
     *p++ = '.';
-    for (int i = 0; i < precision; i++) {
+    for (int i = 0; i < len; i++) {
       uint8_t d = (mant >> 20) & 0xF;
       *p++ = d < 10 ? d+'0' : d+'a'-10;
       mant <<= 4;

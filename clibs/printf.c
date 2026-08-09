@@ -180,12 +180,12 @@ end_flags:
         justify_mem(p, strlen(p),left_justify, false, width);
         break;
       }
-      if (*fmt == 'a') {
-        precision = -1;
-      }else if (precision < 0){
-        precision = 6;
-      } else if (precision > 9){
-        precision = 9;
+      if (*fmt != 'a') {
+        if (precision < 0){
+          precision = 6;
+        } else if (precision > 9){
+          precision = 9;
+        }
       }
       switch(*fmt) {
       case 'f':
