@@ -29,7 +29,8 @@ gen_mul8u(Node *node)
       case 32:
       case 64:
         println("\tclra");
-        for(int i=2; i<=val; i*=2) {
+        int n = exact_log2(val);
+        for(int i=0; i<n; i++) {
           println("\taslb");
           println("\trola");
         }
@@ -134,7 +135,8 @@ gen_mul8s(Node *node)
       case 32:
       case 64:
         sign_extend();
-        for(int i=2; i<=val; i*=2) {
+        int n = exact_log2(val);
+        for(int i=0; i<n; i++) {
           println("\taslb");
           println("\trola");
         }

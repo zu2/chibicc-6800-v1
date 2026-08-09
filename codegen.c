@@ -4047,18 +4047,18 @@ static void opeq(Node *node)
           case 4:
           case 2:
             if (is_global_var(node->lhs)) {
-              while(val>1) {
+              int n = exact_log2(val);
+              for (int i=0; i<n; i++) {
                 println("\tlsr _%s",  node->lhs->var->name);
                 println("\tror _%s+1",node->lhs->var->name);
-                val /= 2;
               }
               invalidate_EXT(node->lhs);
             }else{
               int off = gen_addr_x(node->lhs,false);
-              while(val>1) {
+              int n = exact_log2(val);
+              for (int i=0; i<n; i++) {
                 println("\tlsr %d,x",off);
                 println("\tror %d,x",off+1);
-                val /= 2;
               }
               IX_invalidate();
             }
@@ -6180,7 +6180,8 @@ void gen_expr(Node *node)
             case 8:
             case 16:
               gen_expr(node->lhs);
-              for (int i=node->rhs->val; i>1; i/=2) {
+              int n = exact_log2(node->rhs->val);
+              for (int i=0; i<n; i++) {
                 println("\tlsra");
                 println("\trorb");
               }

@@ -113,6 +113,20 @@ bool is_schar_or_s8num(Node *node)
   return false;
 }
 
+// for a power of 2, return the shift count. -1 for any other value
+int exact_log2(int64_t val)
+{
+  int n = 0;
+
+  if (val <= 0 || (val & (val-1)) != 0) {
+    return -1;
+  }
+  while ((val >>= 1) > 0) {
+    n++;
+  }
+  return n;
+}
+
 static bool can_negate_compare(Node *node)
 {
   switch(node->kind) {
@@ -945,7 +959,7 @@ Node *optimize_expr(Node *node)
     &&  (node->ty->is_unsigned
       || skip_byte_to_int(node->lhs)->ty->is_unsigned)
     &&  is_integer_constant(node->rhs,&val)
-    &&  val > 0 && (val & (val-1)) == 0) {
+    &&  exact_log2(val) >= 0) {
       Node *new = new_copy(node);
       new->kind = ND_BITAND;
       new->rhs  = new_num(val-1,node->rhs->tok);
