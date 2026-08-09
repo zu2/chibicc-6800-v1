@@ -155,12 +155,7 @@ end_flags:
       uint32_t val = is_long? va_arg(args, uint32_t) : va_arg(args, uint16_t);
       int base = (*fmt=='u')? 10:16;
 
-      if (add_plus) {
-        buf[0] = '+';
-        ultoa(val, (char *)(buf+1), base);
-      }else{
-        ultoa(val, (char *)(buf), base);
-      }
+      ultoa(val, (char *)(buf), base);
       if (*fmt == 'X') {
         char *p = buf;
         while (*p) { *p = (uint8_t)toupper(*p); p++; }
