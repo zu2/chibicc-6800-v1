@@ -8,7 +8,6 @@ int main(int argc, char **argv)
 
 	for (i=0; i<100; i++)
 	  a[i] = 0;
-	int	i;
 
 	for (i=0; i<100; i++)
 	  a[i] = 0;
