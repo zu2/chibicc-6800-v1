@@ -126,23 +126,25 @@ void _float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf)
   } else if (add_plus) {
     *p++ = '+';
   }
-  if (val==0.0f) {
-    strcpy(p, "0x0.000000p+0");
-    return;
-  }
-  int exp;
-  float frac = frexpf(val,&exp);
+  int exp = 0;
+  uint32_t mant = 0;
+  uint8_t lead = '0';
 
-  // Normalize value to [1.0, 2.0)
-  frac = frac * 2.0f;
-  exp -= 1;
+  if (val != 0.0f) {
+    float frac = frexpf(val,&exp);
+
+    // Normalize value to [1.0, 2.0)
+    frac = frac * 2.0f;
+    exp -= 1;
+
+    mant = (*(uint32_t *)&frac) & 0x007fffff;
+    mant <<= 1;
+    lead = '1';
+  }
 
   *p++ = '0';
   *p++ = 'x';
-  *p++ = '1';
-
-  uint32_t mant = (*(uint32_t *)&frac) & 0x007fffff;
-  mant <<= 1;
+  *p++ = lead;
 
   int len = precision;
   if (precision < 0) {
