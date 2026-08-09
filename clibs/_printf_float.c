@@ -79,9 +79,10 @@ void _float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf)
   *p++ = 'e';
   if (exp < 0) { *p++ = '-'; exp = -exp; }
   else { *p++ = '+'; }
-  *p++ = (exp / 10) + '0';
-  *p++ = (exp % 10) + '0';
-  *p = '\0';
+  if (exp < 10) {
+    *p++ = '0';
+  }
+  uitoa((uint16_t)exp, (char *)p, 10);
 }
 
 //
