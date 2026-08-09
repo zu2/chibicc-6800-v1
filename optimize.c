@@ -954,6 +954,19 @@ Node *optimize_expr(Node *node)
     &&  is_integer_constant(node->rhs,NULL)) {
       return optimize_const_expr(node);
     }
+    // unsigned x / 2**n -> x >> n
+    if (node->kind == ND_DIV
+    &&  is_int16(node->ty)
+    &&  (node->ty->is_unsigned
+      || skip_byte_to_int(node->lhs)->ty->is_unsigned)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  exact_log2(val) > 0) {
+      Node *new = new_copy(node);
+      new->kind = ND_SHR;
+      new->rhs  = new_num(exact_log2(val),node->rhs->tok);
+      new->rhs->ty = node->rhs->ty;
+      return optimize_expr(new);
+    }
     // unsigned x % 2**n -> x & (2**n -1)
     if (node->kind == ND_MOD
     &&  (node->ty->is_unsigned
