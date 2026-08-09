@@ -3122,6 +3122,9 @@ static void struct_members(Token **rest, Token *tok, Type *ty) {
       mem->idx = idx++;
       mem->align = attr.align ? attr.align : mem->ty->align;
 
+      if (mem->ty->kind == TY_VLA)
+        error_tok(mem->name, "variable length array cannot be a member");
+
       if (consume(&tok, tok, ":")) {
         Token *start = tok;
         mem->is_bitfield = true;
