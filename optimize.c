@@ -933,10 +933,24 @@ Node *optimize_expr(Node *node)
   } // ND_MUL
   case ND_DIV:
   case ND_MOD: {
+    int64_t val;
+
     node = optimize_lr(node);
     if (is_integer_constant(node->lhs,NULL)
     &&  is_integer_constant(node->rhs,NULL)) {
       return optimize_const_expr(node);
+    }
+    // unsigned x % 2**n -> x & (2**n -1)
+    if (node->kind == ND_MOD
+    &&  (node->ty->is_unsigned
+      || skip_byte_to_int(node->lhs)->ty->is_unsigned)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  val > 0 && (val & (val-1)) == 0) {
+      Node *new = new_copy(node);
+      new->kind = ND_BITAND;
+      new->rhs  = new_num(val-1,node->rhs->tok);
+      new->rhs->ty = node->rhs->ty;
+      return optimize_expr(new);
     }
 
     return node;
