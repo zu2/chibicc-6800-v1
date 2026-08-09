@@ -6180,7 +6180,7 @@ void gen_expr(Node *node)
             case 8:
             case 16:
               gen_expr(node->lhs);
-              for (int i=node->rhs->val; i>0; i-=2) {
+              for (int i=node->rhs->val; i>1; i/=2) {
                 println("\tlsra");
                 println("\trorb");
               }
