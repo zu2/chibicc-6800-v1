@@ -2066,7 +2066,7 @@ int64_t eval(Node *node) {
 }
 
 
-static int64_t fit_to_type(int64_t val, Type *ty)
+int64_t fit_to_type(int64_t val, Type *ty)
 {
   if (!ty || !is_integer(ty))
     return val;

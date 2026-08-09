@@ -123,6 +123,7 @@ Token *preprocess(Token *tok);
 // parse.c
 //
 double eval_double(Node *node);
+int64_t fit_to_type(int64_t val, Type *ty);
 int64_t eval2(Node *node, char ***label);
 int64_t eval(Node *node);
 Node *new_copy(Node *node);
