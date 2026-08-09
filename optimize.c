@@ -142,6 +142,19 @@ static bool can_negate_compare(Node *node)
   return false;
 }
 
+static int64_t ty_max_value(Type *ty)
+{
+  switch(ty->kind){
+  case TY_BOOL: return 1;
+  case TY_CHAR: return ty->is_unsigned? UINT8_MAX: INT8_MAX;
+  case TY_SHORT:
+  case TY_INT:
+  case TY_ENUM: return ty->is_unsigned? UINT16_MAX: INT16_MAX;
+  case TY_LONG: return ty->is_unsigned? UINT32_MAX: INT32_MAX;
+  }
+  return 0;
+}
+
 static NodeKind negate_kind(NodeKind kind)
 {
   switch(kind){
@@ -1098,60 +1111,15 @@ Node *optimize_expr(Node *node)
         node->rhs->ty = ty_uchar;
       }
     }
-    if ( is_integer(node->lhs->ty)
-    &&  node->kind==ND_LE
-    && is_integer_constant(node->rhs,&val)) {
-      switch(node->lhs->ty->kind){
-      case TY_CHAR:
-        break;
-      case TY_SHORT:
-      case TY_INT:
-        if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT16_MAX)
-        ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
-          if (node->rhs->val!=0) {
-            node->rhs->val++;
-            node->kind = ND_LT;
-          }
-        }
-        break;
-      case TY_LONG:
-        if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT32_MAX)
-        ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
-          if (node->rhs->val != 0) {
-            node->rhs->val++;
-            node->kind = ND_LT;
-          }
-        }
-        break;
-      }
+    //  x <= C -> x <  C+1
+    //  x >  C -> x >= C+1
+    if ((node->kind==ND_LE || node->kind==ND_GT)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  val != 0
+    &&  val < ty_max_value(node->lhs->ty)) {
+      node->rhs->val++;
+      node->kind = (node->kind==ND_LE)? ND_LT: ND_GE;
     }
-    if ( is_integer(node->lhs->ty)
-    &&  node->kind==ND_GT
-    && is_integer_constant(node->rhs,&val)) {
-      switch(node->lhs->ty->kind){
-      case TY_CHAR:
-        break;
-      case TY_SHORT:
-      case TY_INT:
-        if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT16_MAX)
-        ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT16_MAX)) {
-          if (node->rhs->val!=0) {
-            node->rhs->val++;
-            node->kind = ND_GE;
-          }
-        }
-        break;
-      case TY_LONG:
-        if (( node->lhs->ty->is_unsigned && node->rhs->val < UINT32_MAX)
-        ||  (!node->lhs->ty->is_unsigned && node->rhs->val < INT32_MAX)) {
-          if (node->rhs->val != 0) {
-            node->rhs->val++;
-            node->kind = ND_GE;
-          }
-        }
-        break;
-      }
-    }  
 
     if (node->kind == ND_LE || node->kind == ND_GT) {
       if (node->lhs->ty->kind != TY_CHAR
