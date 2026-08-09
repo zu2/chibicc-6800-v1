@@ -930,6 +930,8 @@ static Node *declaration(Token **rest, Token *tok, Type *basety, VarAttr *attr) 
 
     if (attr && attr->is_static) {
       // static local variable
+      if (ty->kind == TY_VLA)
+        error_tok(ty->name, "variable length array cannot have static storage duration");
       Obj *var = new_anon_gvar(ty);
       push_scope(get_ident(ty->name))->var = var;
       if (equal(tok, "="))
@@ -4035,6 +4037,8 @@ static Token *global_variable(Token *tok, Type *basety, VarAttr *attr) {
     }
     if (!ty->name)
       error_tok(ty->name_pos, "variable name omitted");
+    if (ty->kind == TY_VLA)
+      error_tok(ty->name, "variable length array cannot have static storage duration");
     check_var_redecl(get_ident(ty->name), ty, tok);
 
     Obj *var = new_gvar(get_ident(ty->name), ty);
