@@ -394,6 +394,12 @@ static char *get_ident(Token *tok) {
   return strndup(tok->loc, tok->len);
 }
 
+static void check_lvar_redecl(Type *ty) {
+  VarScope *sc = hashmap_get(&scope->vars, get_ident(ty->name));
+  if (sc && sc->var)
+    error_tok(ty->name, "redeclaration of a local variable");
+}
+
 static Type *find_typedef(Token *tok) {
   if (tok->kind == TK_IDENT) {
     VarScope *sc = find_var(tok);
@@ -927,6 +933,8 @@ static Node *declaration(Token **rest, Token *tok, Type *basety, VarAttr *attr) 
       error_tok(tok, "variable declared void");
     if (!ty->name)
       error_tok(ty->name_pos, "variable name omitted");
+
+    check_lvar_redecl(ty);
 
     if (attr && attr->is_static) {
       // static local variable
@@ -3802,6 +3810,7 @@ static void create_param_lvars(Type *param) {
     create_param_lvars(param->next);
     if (!param->name)
       error_tok(param->name_pos, "parameter name omitted");
+    check_lvar_redecl(param);
     new_lvar(get_ident(param->name), param);
   }
 }
