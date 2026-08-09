@@ -3088,10 +3088,13 @@ static void struct_members(Token **rest, Token *tok, Type *ty) {
         Token *start = tok;
         mem->is_bitfield = true;
         mem->bit_width = const_expr(&tok, tok);
-        // A _Bool object holds 0 or 1, so its width is 1 bit, not 8.
-        int width = mem->ty->kind == TY_BOOL ? 1 : mem->ty->size * 8;
-        if (mem->bit_width < 0 || mem->bit_width > width)
-          error_tok(start, "width of bit-field is wider than its type");
+        int max_width = mem->ty->kind == TY_BOOL ? 1 : mem->ty->size * 8;
+
+        if (mem->bit_width < 0
+        ||  mem->bit_width > max_width
+        ||  (mem->bit_width == 0 && mem->name)) {
+          error_tok(start, "invalid width for bit-field");
+        }
       }
 
       cur = cur->next = mem;
