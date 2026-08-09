@@ -2419,6 +2419,11 @@ static Node *to_assign(Node *binary) {
   return new_binary(ND_COMMA, expr1, expr2, tok);
 }
 
+static bool is_bitfield_member(Node *node)
+{
+  return node->kind == ND_MEMBER && node->member->is_bitfield;
+}
+
 //
 // For simple x, x op=y can be rewritten as x =x op y (e.g., a local variable).
 //
@@ -2478,6 +2483,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_add(node, rhs, tok));
+    }
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_add(node,rhs,tok),tok);
     }
@@ -2497,6 +2505,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_sub(node, rhs, tok));
+    }
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_sub(node,rhs,tok),tok);
     }
@@ -2516,6 +2527,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_binary(ND_MUL, node, rhs, tok));
+    }
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_MUL,node,rhs,tok),tok);
     }
@@ -2529,6 +2543,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_binary(ND_DIV, node, rhs, tok));
+    }
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_DIV,node,rhs,tok),tok);
     }
@@ -2542,6 +2559,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_binary(ND_MOD, node, rhs, tok));
+    }
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_MOD,node,rhs,tok),tok);
     }
@@ -2555,6 +2575,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_binary(ND_BITAND, node, rhs, tok));
+    }
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITAND,node,rhs,tok),tok);
     }
@@ -2569,6 +2592,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_binary(ND_BITOR, node, rhs, tok));
+    }
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITOR,node,rhs,tok),tok);
     }
@@ -2582,6 +2608,9 @@ static Node *assign(Token **rest, Token *tok) {
     Node *rhs = assign(rest, tok->next);
     add_type(node);
     add_type(rhs);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_binary(ND_BITXOR, node, rhs, tok));
+    }
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITXOR,node,rhs,tok),tok);
     }
@@ -2594,12 +2623,18 @@ static Node *assign(Token **rest, Token *tok) {
   if (equal(tok, "<<=")) {
     add_type(node);
     Node *rhs = assign(rest, tok->next);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_binary(ND_SHL, node, rhs, tok));
+    }
     return new_binary(ND_SHLEQ, node, rhs, tok);
   }
 
   if (equal(tok, ">>=")) {
     add_type(node);
     Node *rhs = assign(rest, tok->next);
+    if (is_bitfield_member(node)) {
+      return to_assign(new_binary(ND_SHR, node, rhs, tok));
+    }
     return new_binary(ND_SHREQ, node, rhs, tok);
   }
 
@@ -2968,6 +3003,7 @@ static Node *new_pre_inc_dec(Token **rest, Token *tok, int addend) {
   Node *node = unary(rest, tok->next);
   add_type(node);
   if (!node->ty->is_atomic
+  &&  !is_bitfield_member(node)
   &&  (node->ty->kind == TY_CHAR
     || node->ty->kind == TY_SHORT
     || node->ty->kind == TY_INT
@@ -3329,7 +3365,8 @@ static Node *new_post_inc_dec(Node *node, Token *tok, int addend) {
 
   add_type(node);
   ty = node->ty;
-  if (!ty->is_atomic) {
+  if (!ty->is_atomic
+  &&  !is_bitfield_member(node)) {
     if (ty->kind == TY_CHAR
     ||  ty->kind == TY_SHORT
     ||  ty->kind == TY_INT
