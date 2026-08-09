@@ -392,15 +392,34 @@ void add_type(Node *node) {
     return;
   }
   case ND_ASSIGN:
-    if (node->lhs->ty->kind == TY_ARRAY)
+    // check error.
+    // int a[3]; a = 0;
+    if (node->lhs->ty->kind == TY_ARRAY) {
       error_tok(node->lhs->tok, "not an lvalue");
-    if (node->lhs->ty->kind == TY_PTR && is_integer(node->rhs->ty) &&
-        !(is_const_expr(node->rhs) && eval(node->rhs) == 0))
+    }
+    // char *p; p = 1;
+    if (node->lhs->ty->kind == TY_PTR
+    &&  is_integer(node->rhs->ty)
+    && !(is_const_expr(node->rhs)
+    &&  eval(node->rhs) == 0)) {
       error_tok(node->rhs->tok, "assignment to a pointer from an integer");
-    // C11 6.5.16.1p1 allows a pointer on the right when the left is _Bool.
-    if (node->rhs->ty->kind == TY_PTR && is_integer(node->lhs->ty) &&
-        node->lhs->ty->kind != TY_BOOL)
+    }
+    // char *p; int x; x = p;
+    if (node->rhs->ty->kind == TY_PTR
+    &&  is_integer(node->lhs->ty)
+    &&  node->lhs->ty->kind != TY_BOOL) {
       error_tok(node->rhs->tok, "assignment to an integer from a pointer");
+    }
+    // char *p; p = 1.0;
+    if (node->lhs->ty->kind == TY_PTR
+    &&  is_flonum(node->rhs->ty)) {
+      error_tok(node->rhs->tok, "assignment to a pointer from a floating point number");
+    }
+    // char *p ; double d; d = p
+    if (node->rhs->ty->kind == TY_PTR
+    &&  is_flonum(node->lhs->ty)) {
+      error_tok(node->rhs->tok, "assignment to a floating point number from a pointer");
+    }
     if (node->lhs->ty->kind != TY_STRUCT)
       node->rhs = new_cast(node->rhs, node->lhs->ty);
     node->ty = node->lhs->ty;
