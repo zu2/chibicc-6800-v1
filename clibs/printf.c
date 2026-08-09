@@ -132,6 +132,7 @@ end_flags:
       justify_mem(&val,1,left_justify, zero_pad, width);
       break;
     }
+    case 'i':
     case 'd': {
       long val = is_long? va_arg(args, int32_t): va_arg(args, int16_t);
 
@@ -149,11 +150,12 @@ end_flags:
       justify_mem(buf,strlen(buf),left_justify, zero_pad, width);
       break;
     }
+    case 'o':
     case 'x':
     case 'X':
     case 'u': {
       uint32_t val = is_long? va_arg(args, uint32_t) : va_arg(args, uint16_t);
-      int base = (*fmt=='u')? 10:16;
+      int base = (*fmt=='u')? 10: (*fmt=='o')? 8: 16;
 
       ultoa(val, (char *)(buf), base);
       if (*fmt == 'X') {
