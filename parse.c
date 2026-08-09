@@ -1933,8 +1933,12 @@ static Node *stmt(Token **rest, Token *tok) {
     return node;
   }
 
-  if (equal(tok, "{"))
-    return compound_stmt(rest, tok->next);
+  if (equal(tok, "{")) {
+    enter_scope();
+    Node *node = compound_stmt(rest, tok->next);
+    leave_scope();
+    return node;
+  }
 
   return expr_stmt(rest, tok);
 }
@@ -1986,8 +1990,6 @@ static Node *compound_stmt(Token **rest, Token *tok) {
 
   Obj *locals_before = locals;
 
-  enter_scope();
-
   while (!equal(tok, "}")) {
     if (is_typename(tok) && !equal(tok->next, ":")) {
       VarAttr attr = {};
@@ -2014,8 +2016,6 @@ static Node *compound_stmt(Token **rest, Token *tok) {
     }
     add_type(cur);
   }
-
-  leave_scope();
 
   node->body = head.next;
   *rest = tok->next;
@@ -3621,7 +3621,9 @@ static Node *primary(Token **rest, Token *tok) {
   if (equal(tok, "(") && equal(tok->next, "{")) {
     // This is a GNU statement expresssion.
     Node *node = new_node(ND_STMT_EXPR, tok);
+    enter_scope();
     node->body = compound_stmt(&tok, tok->next->next)->body;
+    leave_scope();
     *rest = skip(tok, ")");
     return node;
   }
