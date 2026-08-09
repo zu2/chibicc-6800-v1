@@ -54,6 +54,11 @@
         .export _frexpf
         .export _modff
 ;
+	.export	__check_nan
+	.export	__float_to_str
+	.export	__float_to_exp_str
+	.export	__float_to_hex_str
+;
 __i16tof32:
 __u16tof32:
 __i32tof32:
@@ -99,6 +104,11 @@ _isfinite:
 _signbit:
 _frexpf:
 _modff:
+;
+__check_nan:
+__float_to_str:
+__float_to_exp_str:
+__float_to_hex_str:
 ;
         ldx #dummy_mes
         bra mes_start
