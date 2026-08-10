@@ -89,6 +89,9 @@ bool opt(char op, char lv)
 #define copt_O2_rules "copt_O2.rules"
 #define copt_O3_rules "copt_O3.rules"
 
+// -B: where to look for the copt rules
+static char *copt_rules_path;
+
 static StringArray ld_extra_args;
 static StringArray std_include_paths;
 
@@ -99,7 +102,7 @@ static StringArray input_paths;
 static StringArray tmpfiles;
 
 static void usage(int status) {
-  fprintf(stderr, "chibicc [-v[vv]][-g[01234]][-O[123s]][-S][-c][-D name][-U name][-o <path>][-I dir][-Zaddr][-Caddr][-nostartfiles][-nostartfiles][-[no]static-locals][-t<machine>]  <file> [-lxx]\n");
+  fprintf(stderr, "chibicc [-v[vv]][-g[01234]][-O[123s]][-S][-c][-D name][-U name][-o <path>][-I dir][-B dir][-Zaddr][-Caddr][-nostartfiles][-nostartfiles][-[no]static-locals][-t<machine>]  <file> [-lxx]\n");
   fprintf(stderr,"machine: emu6800(default),mikbug,bm,jr100,jr200\n");
   exit(status);
 }
@@ -116,10 +119,8 @@ static bool take_arg(char *arg) {
   return false;
 }
 
-static void add_default_include_paths(char *argv0) {
-  // We expect that chibicc-specific include files are installed
-  // to ./include relative to argv[0].
-  strarray_push(&include_paths, format("%s/include", dirname(strdup(argv0))));
+static void add_default_include_paths(void) {
+  // in the source tree the sub Makefiles pass -I../include instead
   strarray_push(&include_paths, "/opt/chibicc/include");
 
   // Add standard include paths.
@@ -276,6 +277,11 @@ static void parse_args(int argc, char **argv) {
 
     if (!strcmp(argv[i], "-E")) {
       opt_E = true;
+      continue;
+    }
+
+    if (!strncmp(argv[i], "-B", 2)) {
+      copt_rules_path = format("%s/",argv[i]+2);
       continue;
     }
 
@@ -834,7 +840,7 @@ static void run_copt(char *input, char *output, char *copt_file) {
 
   args[argc++] = copt_path;
 
-  if ((path=has_copt_rules("./",copt_file))) {
+  if (copt_rules_path && (path=has_copt_rules(copt_rules_path,copt_file))) {
     args[argc++] = path;
   }else if ((path=has_copt_rules(chibicc_lib_path,copt_file))) {
     args[argc++] = path;
@@ -994,7 +1000,7 @@ int main(int argc, char **argv) {
   parse_args(argc, argv);
 
   if (opt_cc1) {
-    add_default_include_paths(argv[0]);
+    add_default_include_paths();
     cc1();
     return 0;
   }
