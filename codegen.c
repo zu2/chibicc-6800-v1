@@ -6103,24 +6103,16 @@ void gen_expr(Node *node)
     if (test_addr_x(node->rhs)){
       gen_expr(node->lhs);
       int off = gen_addr_x(node->rhs);
-      if ( node->ty->size == 1) {
-        println("\tsubb %d,x",off);
-      }else{
-        println("\tsubb %d+1,x",off);
-        println("\tsbca %d,x",off);
-      }
+      println("\tsubb %d+1,x",off);
+      println("\tsbca %d,x",off);
       return;
     }
     if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       negd();
       int off = gen_addr_x(node->lhs);
-      if ( node->ty->size == 1) {
-        println("\taddb %d+1,x",off);
-      }else{
-        println("\taddb %d+1,x",off);
-        println("\tadca %d,x",off);
-      }
+      println("\taddb %d+1,x",off);
+      println("\tadca %d,x",off);
       return;
     }
     if (node->lhs->kind == ND_CAST
