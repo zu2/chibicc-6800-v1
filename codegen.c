@@ -1564,7 +1564,13 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       &&  is_integer_constant(node->lhs->rhs,&val)
       &&  (0<=val && val<=252)
       &&  test_addr_x(node->lhs->lhs)) {
-        if (test) return true;
+        if (test) {
+          if (is_global_array(node->lhs->lhs)) {
+            return true;
+          }
+          off = addr_x_offset(node->lhs->lhs);
+          return (0 <= off) && (off + val <= 252);
+        }
         if (is_global_array(node->lhs->lhs)) {
           println("\tldx #_%s+%ld",node->lhs->lhs->var->name,val);
           IX_invalidate();
