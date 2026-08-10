@@ -10,7 +10,7 @@ TEST_SRCS=$(wildcard test/*.c)
 TESTS=$(TEST_SRCS:.c=.bin)
 
 
-all: check dirs chibicc lib crt0.o dummyfloat.o crt0_mikbug.o crt0_bm.o crt0_jr100.o crt0_jr200.o
+all: check chibicc lib crt0.o dummyfloat.o crt0_mikbug.o crt0_bm.o crt0_jr100.o crt0_jr200.o
 
 # lorder6800 runs nm6809
 FUZIXBIN = as6800 ld6800 nm6809
@@ -55,7 +55,7 @@ dirs:
 	mkdir -p /opt/chibicc/lib
 	mkdir -p /opt/chibicc/include
 
-install: all
+install: all dirs
 	install -c chibicc /opt/chibicc/bin
 	install -c -m 644 crt0.o /opt/chibicc/lib
 	install -c -m 644 crt0_mikbug.o /opt/chibicc/lib

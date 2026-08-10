@@ -41,7 +41,12 @@ Follow the steps below to set up the environment for chibicc-6800.
 First, install [Fuzix-Bintools](https://github.com/EtchedPixels/Fuzix-Bintools).  
 Please refer to the instructions in the Fuzix-Bintools repository's README.md for details.
 
-Make sure these binaries are available in your `$PATH`:
+```sh
+make
+sudo make install
+```
+
+`make install` copies the binaries to `/opt/fcc/bin`. Make sure these are in your `$PATH`:
 
 | Binary | Used by |
 |---|---|
@@ -62,17 +67,19 @@ Make sure these are installed as well:
 | `lorder6800` | the library Makefiles, to order objects for `ar` |
 | `emu6800` | `ztest`, to run compiled programs |
 
+`copt` and `lorder6800` are installed by the Fuzix-Compiler-Kit `make install`.
+Keep the default `CCROOT`, because chibicc looks for `copt` in `/opt/fcc/lib`.
+
 > **Note:** If `copt` is missing, chibicc still compiles without reporting an error,
 > but no peephole optimization is applied and the generated code becomes larger.
 
 ## 3. Install `emu6800` Emulator
 
-After installing the Fuzix-Compiler-Kit, you need to install the `emu6800` emulator for testing.
-
-Copy the emulator binary to the appropriate directory:
+The Fuzix-Compiler-Kit `make` builds `emu6800`, but `make install` does not copy
+`emu6800`. Install the emulator by hand:
 
 ```sh
-cp test/emu6800 /opt/fcc/bin/
+sudo install -c test/emu6800 /opt/fcc/bin
 ```
 
 > **Note:**  
