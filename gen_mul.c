@@ -95,7 +95,7 @@ gen_mul8u(Node *node)
     if (can_direct_char(node->rhs)) {
       gen_direct_char(rhs,"ldaa",NULL);
     }else if (test_addr_x(rhs)) {
-      int off = gen_addr_x(rhs,false);
+      int off = gen_addr_x(rhs);
       println("\tldaa %d,x",off);
     }else{
       push1();
@@ -186,7 +186,7 @@ gen_mul8s(Node *node)
     if (can_direct_char(node->rhs)) {
       gen_direct_char(rhs,"ldaa",NULL);
     }else if (test_addr_x(rhs)) {
-      int off = gen_addr_x(rhs,false);
+      int off = gen_addr_x(rhs);
       println("\tldaa %d,x",off);
     }else{
       push1();
@@ -228,7 +228,7 @@ gen_mul16(Node *node)
     println("\tldab %s",tb);
     println("\tldaa %s",ta);
   } else if ((addr_x = test_addr_x(lhs))) {
-    off = gen_addr_x(lhs,false);
+    off = gen_addr_x(lhs);
     sprintf(tb,"%d,x",off+1);
     sprintf(ta,"%d,x",off);
     println("\tldab %s",tb);

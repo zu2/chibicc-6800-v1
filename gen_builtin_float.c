@@ -39,7 +39,7 @@ bool builtin_signbit(Node *node)
       return true;
     }
     if (test_addr_x(node->args)) {
-      int off = gen_addr_x(node->args,false);
+      int off = gen_addr_x(node->args);
       println("\tclra");
       println("\tldab %d,x",off);
       println("\tandb #$80");

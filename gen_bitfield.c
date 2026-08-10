@@ -41,7 +41,7 @@ void load_bitfield(Node *node)
     assert(0);
   }
   if (can_load_x(node->ty) && test_addr_x(node)) {
-    off = gen_addr_x(node, false);
+    off = gen_addr_x(node);
     load_x(ty_uint, off);
   } else {
     gen_addr(node);

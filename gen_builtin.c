@@ -137,7 +137,7 @@ bool builtin_strcpy(Node *node)
     IX_invalidate();
     int off = 0;
     if (test_expr_x(arg1)) {
-      off = gen_expr_x(arg1,false);
+      off = gen_expr_x(arg1);
     }else{
       gen_expr(arg1);
       tfr_dx();

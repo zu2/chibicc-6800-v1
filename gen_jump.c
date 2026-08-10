@@ -225,7 +225,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     }
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
-    int off = gen_addr_x(rhs,false);
+    int off = gen_addr_x(rhs);
     println("\tcmpb %d,x",off);
   }else{
     gen_expr(lhs);
@@ -309,13 +309,13 @@ bool gen_jump_if_false(Node *node, char *if_false)
 
   if (is_int16_or_ptr(node->ty)) {
     if (test_expr_x(node)) {
-      gen_expr_x(node,false);
+      gen_expr_x(node);
       println("\tcpx #0");
       println("\tjeq %s", if_false);
       return true;
     }
     if (test_addr_x(node)) {
-      int off = gen_addr_x(node,false);
+      int off = gen_addr_x(node);
       ldx_nX(off);
       println("\tcpx #0");
       println("\tjeq %s", if_false);
@@ -375,7 +375,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         println("; ulong < 0 is always false");
         println("\tjmp %s",if_false);
       }else{
-        int off = gen_addr_x(lhs,false);
+        int off = gen_addr_x(lhs);
         println("\tldab %d,x",off);
         println("\tjpl %s", if_false);
       }
@@ -384,7 +384,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
       if (lhs->ty->is_unsigned) {
         println("; ulong >= 0 is always true");
       }else{
-        int off = gen_addr_x(lhs,false);
+        int off = gen_addr_x(lhs);
         println("\tldab %d,x",off);
         println("\tjmi %s", if_false);
       }
@@ -402,7 +402,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   // if (expr op 0)
   if (is_integer_constant(rhs,&val) && val==0) {
     if (test_expr_x(lhs)) {
-      gen_expr_x(lhs,false); // Evaluate LHS anyway; no side-effect check yet.
+      gen_expr_x(lhs); // Evaluate LHS anyway; no side-effect check yet.
       println("\tcpx #0");
       switch (node->kind) {
       case ND_EQ:
@@ -503,7 +503,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs,false);
+      int off = gen_expr_x(lhs);
       println("\tcpx #%ld",val);
       switch(node->kind) {
       case ND_EQ:
@@ -518,7 +518,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_addr_x(lhs))) {
-      int off = gen_addr_x(lhs,false);
+      int off = gen_addr_x(lhs);
       ldx_nX(off);
       println("\tcpx #%ld",val);
       switch(node->kind) {
@@ -534,7 +534,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   } else if (is_global_var_with_cast(rhs)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs,false);
+      int off = gen_expr_x(lhs);
       cpx_EXT(skip_redundant_ptr_cast(rhs));
       switch(node->kind) {
       case ND_EQ:
@@ -550,7 +550,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   } else if ((addr=is_addr_constant(rhs))    // rhs == addr const
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs,false);
+      int off = gen_expr_x(lhs);
       println("\tcpx #%s",addr);
       switch(node->kind) {
       case ND_EQ:
@@ -744,7 +744,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     }
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
-    int off = gen_addr_x(rhs,false);
+    int off = gen_addr_x(rhs);
     println("\tcmpb %d,x",off);
   }else{
     gen_expr(lhs);
@@ -828,13 +828,13 @@ bool gen_jump_if_true(Node *node, char *if_true)
 
   if (is_int16_or_ptr(node->ty)) {
     if (test_expr_x(node)) {
-      gen_expr_x(node,false);
+      gen_expr_x(node);
       println("\tcpx #0");
       println("\tjne %s", if_true);
       return true;
     }
     if (test_addr_x(node)) {
-      int off = gen_addr_x(node,false);
+      int off = gen_addr_x(node);
       ldx_nX(off);
       println("\tcpx #0");
       println("\tjne %s", if_true);
@@ -894,7 +894,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
         println("; ulong >= 0 is always true");
         println("\tjmp %s",if_true);
       }else{
-        int off = gen_addr_x(lhs,false);
+        int off = gen_addr_x(lhs);
         println("\tldab %d,x",off);
         println("\tjpl %s", if_true);
       }
@@ -903,7 +903,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
       if (lhs->ty->is_unsigned) {
         println("; ulong < 0 is always false");
       }else{
-        int off = gen_addr_x(lhs,false);
+        int off = gen_addr_x(lhs);
         println("\tldab %d,x",off);
         println("\tjmi %s", if_true);
       }
@@ -922,7 +922,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
  // if (expr op 0)
   if (is_integer_constant(rhs,&val) && val==0) {
     if (test_expr_x(lhs)) {
-      gen_expr_x(lhs,false); // Evaluate LHS anyway; no side-effect check yet.
+      gen_expr_x(lhs); // Evaluate LHS anyway; no side-effect check yet.
       println("\tcpx #0");
       switch (node->kind) {
       case ND_EQ:
@@ -1023,7 +1023,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs,false);
+      int off = gen_expr_x(lhs);
       println("\tcpx #%ld",val);
       switch(node->kind) {
       case ND_EQ:
@@ -1038,7 +1038,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_addr_x(lhs))) {
-      int off = gen_addr_x(lhs,false);
+      int off = gen_addr_x(lhs);
       ldx_nX(off);
       println("\tcpx #%ld",val);
       switch(node->kind) {
@@ -1054,7 +1054,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   } else if (is_global_var_with_cast(rhs)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs,false);
+      int off = gen_expr_x(lhs);
       cpx_EXT(skip_redundant_ptr_cast(rhs));
       switch(node->kind) {
       case ND_EQ:
@@ -1070,7 +1070,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   } else if ((addr=is_addr_constant(rhs))    // rhs == addr const
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs,false);
+      int off = gen_expr_x(lhs);
       println("\tcpx #%s",addr);
       switch(node->kind) {
       case ND_EQ:
