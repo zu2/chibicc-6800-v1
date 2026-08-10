@@ -6004,7 +6004,7 @@ void gen_expr(Node *node)
       println("\tclra");
       println("\ttsx");
       println("\taddb 0,x");
-      println("\tbvc %s",label);
+      println("\tbge %s",label);
       println("\tdeca");
       println("%s:",label);
       IX_invalidate();
