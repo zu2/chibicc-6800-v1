@@ -1439,6 +1439,47 @@ bool test_expr_x(Node *node)
 }
 
 
+// Offset from the base address that gen_addr_x() loads into IX, or -1 if unknown.
+static int addr_x_offset(Node *node)
+{
+  int64_t val;
+  int off;
+
+  if (is_global_var(node) || is_global_array(node)) {
+    return 0;
+  }
+  if (is_local_var(node)) {
+    return node->var->offset;
+  }
+  if (node->kind == ND_MEMBER && !node->member->is_bitfield) {
+    off = addr_x_offset(node->lhs);
+    return (off < 0) ? -1 : off + node->member->offset;
+  }
+  if (node->kind == ND_DEREF) {
+    if (node->lhs->kind == ND_ADD
+    &&  is_integer_constant(node->lhs->rhs,&val)
+    &&  (0<=val && val<=252)) {
+      if (node->lhs->ty->kind == TY_PTR
+      &&  is_local_var(node->lhs->lhs)
+      &&  node->lhs->lhs->var->offset<=252) {
+        return val;
+      }
+      if (node->lhs->ty->kind == TY_ARRAY) {
+        if (is_global_array(node->lhs->lhs)) {
+          return 0;
+        }
+        off = addr_x_offset(node->lhs->lhs);
+        return (off < 0) ? -1 : off + val;
+      }
+    }
+    // gen_expr_x() loads the pointer itself into IX and returns 0
+    if (can_load_x(node->lhs->ty) && test_expr_x(node->lhs)) {
+      return 0;
+    }
+  }
+  return -1;
+}
+
 // Compute the absolute address of a given node in IX.
 // It's an error if a given node does not reside in memory.
 int gen_addr_x_sub(Node *node,bool save_d,bool test)
@@ -1570,7 +1611,12 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
       return 0;
     }
     if (test) {
-      return true;
+      int off;
+      if (is_global_var(lhs)) {
+        return true;
+      }
+      off = addr_x_offset(lhs);
+      return (0 <= off) && (off + node->member->offset <= 252);
     }
     if (is_global_var(node->lhs)
     &&  node->member->offset > 252) {
