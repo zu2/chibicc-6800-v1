@@ -869,6 +869,33 @@ Node *optimize_expr(Node *node)
         return new;
       }
     }
+    // (+ arr (- V C)) -> (+ arr (+ V -C))
+    if (is_global_array(node->rhs)
+    &&  node->lhs->kind == ND_SUB
+    &&  is_int16(node->lhs->ty)
+    &&  is_integer_constant(node->lhs->rhs,&val)) {
+      new = new_copy(node);
+      new->lhs = new_copy(node->lhs);
+      new->lhs->kind = ND_ADD;
+      new->lhs->rhs = new_num(-val,node->tok);
+      new->lhs->rhs->ty = node->lhs->rhs->ty;
+      return optimize_expr(new);
+    }
+    // (+ arr (ND_CAST int (- V C))) -> (+ arr (ND_CAST int (+ V -C)))
+    if (is_global_array(node->rhs)
+    &&  node->lhs->kind == ND_CAST
+    &&  is_int16(node->lhs->ty)
+    &&  is_int16(node->lhs->lhs->ty)
+    &&  node->lhs->lhs->kind == ND_SUB
+    &&  is_integer_constant(node->lhs->lhs->rhs,&val)) {
+      new = new_copy(node);
+      new->lhs = new_copy(node->lhs);
+      new->lhs->lhs = new_copy(node->lhs->lhs);
+      new->lhs->lhs->kind = ND_ADD;
+      new->lhs->lhs->rhs = new_num(-val,node->tok);
+      new->lhs->lhs->rhs->ty = node->lhs->lhs->rhs->ty;
+      return optimize_expr(new);
+    }
     // (+ (ND_CAST TY_PTR (+ arr V)) C) -> (+ (ND_CAST TY_PTR (+ arr C)) V)
     if (is_integer_constant(node->rhs,&val)
     &&  (base = is_array_base(node->lhs))) {
