@@ -10,7 +10,22 @@ TEST_SRCS=$(wildcard test/*.c)
 TESTS=$(TEST_SRCS:.c=.bin)
 
 
-all: dirs chibicc lib crt0.o dummyfloat.o crt0_mikbug.o crt0_bm.o crt0_jr100.o crt0_jr200.o
+all: check dirs chibicc lib crt0.o dummyfloat.o crt0_mikbug.o crt0_bm.o crt0_jr100.o crt0_jr200.o
+
+# nmz80 is a copy of nm6800
+FUZIXBIN = as6800 ld6800 nmz80
+FUZIXCC  = lorderz80 emu6800 /opt/fcc/lib/copt
+
+.PHONY: check
+check:
+	@fail=; \
+	for t in $(FUZIXBIN); do \
+	  command -v $$t >/dev/null 2>&1 || { echo "Fuzix-Bintools: $$t not found"; fail=1; }; \
+	done; \
+	for t in $(FUZIXCC); do \
+	  command -v $$t >/dev/null 2>&1 || { echo "Fuzix-Compiler-Kit: $$t not found"; fail=1; }; \
+	done; \
+	test -z "$$fail"
 
 lib:
 	(cd libc ; make)
