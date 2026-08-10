@@ -5071,7 +5071,7 @@ void gen_expr(Node *node)
         ldx_EXT(node->lhs->lhs);
         if (is_int8(node->ty)) {
           println("\tldab 0,x");
-        }else if (is_int16(node->ty)) {
+        }else if (is_int16_or_ptr(node->ty)) {
           println("\tldab 1,x");
           println("\tldaa 0,x");
         }else{
@@ -5099,7 +5099,7 @@ void gen_expr(Node *node)
         println("\tdex");
         if (is_int8(node->ty)) {
           println("\tldab 0,x");
-        }else if (is_int16(node->ty)) {
+        }else if (is_int16_or_ptr(node->ty)) {
           println("\tldab 1,x");
           println("\tldaa 0,x");
         }else{
@@ -5129,7 +5129,7 @@ void gen_expr(Node *node)
         stx_EXT(node->lhs->lhs);
         if (is_int8(node->ty)) {
           println("\tldab 0,x");
-        }else if (is_int16(node->ty)) {
+        }else if (is_int16_or_ptr(node->ty)) {
           println("\tldab 1,x");
           println("\tldaa 0,x");
         }else{
