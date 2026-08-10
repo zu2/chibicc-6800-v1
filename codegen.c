@@ -990,6 +990,7 @@ int ldx_x(Type *ty,int off);
 
 int gen_expr_x(Node *node,bool save_d);
 bool test_expr_x(Node *node);
+static int addr_x_offset(Node *node);
 
 int gen_expr_x_sub(Node *node,bool save_d,bool test)
 {
@@ -1326,27 +1327,17 @@ int gen_expr_x_sub(Node *node,bool save_d,bool test)
     &&  rhs->ty->kind  == TY_PTR
     &&  rhs->lhs->kind == ND_NUM
     &&  is_integer(rhs->lhs->ty)) {
-      if (is_local_var(lhs->lhs)) {
-        off = lhs->lhs->var->offset + rhs->lhs->val;
-        if (off<=252) {
-          if (test) return true;
-          off = gen_addr_x(lhs->lhs,true) + rhs->lhs->val;
-          return off;
-        }
+      off = addr_x_offset(lhs->lhs);
+      if (0 <= off && off + rhs->lhs->val <= 252) {
+        if (test) return true;
+        return gen_addr_x(lhs->lhs,true) + rhs->lhs->val;
       }
     }
     //(+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +0 ) 6)
-    if (is_local_array(lhs)
+    if (lhs->ty->kind == TY_ARRAY
     &&  is_integer_constant(rhs,&val)) {
-      off = lhs->var->offset + val;
-      if (off <= 252) {
-        if (test) return true;
-        return gen_addr_x(lhs,true) + val;
-      }
-    }
-    if (is_global_array(lhs)
-    &&  is_integer_constant(rhs,&val)) {
-      if (val <= 252) { // TODO: Preferably, use label + constant instead of IX.
+      off = addr_x_offset(lhs);
+      if (0 <= off && off + val <= 252) {
         if (test) return true;
         return gen_addr_x(lhs,true) + val;
       }
