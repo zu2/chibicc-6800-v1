@@ -18,7 +18,7 @@ OBJ =	__float.o __floatlib.o __floatconst.o \
 	as6800 $<
 
 .c.o:
-	../chibicc -O2 -B.. -I../include -c $<
+	../chibicc -O2 -B../ -I../include -c $<
 
 libm.a: $(OBJ)
 	rm -f libm.a
