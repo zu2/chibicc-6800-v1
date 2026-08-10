@@ -1059,6 +1059,18 @@ Node *optimize_expr(Node *node)
       new->rhs->ty = node->rhs->ty;
       return optimize_expr(new);
     }
+    // both sides are 0..255, so the quotient fits in a uchar
+    if (node->kind == ND_DIV
+    &&  is_int16(node->ty)
+    &&  can_op_uchar(node->lhs)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  1 <= val && val <= 255) {
+      Node *new = new_copy(node);
+      new->ty  = ty_uchar;
+      new->lhs = new_cast(node->lhs,ty_uchar);
+      new->rhs = new_cast(node->rhs,ty_uchar);
+      return optimize_expr(new_cast(new,node->ty));
+    }
 
     return node;
   } // ND_SUB,MUL,DIV,MOD

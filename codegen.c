@@ -6203,6 +6203,17 @@ void gen_expr(Node *node)
         }
       }
     }
+    if (node->ty->kind == TY_CHAR && node->ty->is_unsigned
+    &&  node->lhs->ty->kind == TY_CHAR && node->lhs->ty->is_unsigned
+    &&  node->rhs->ty->kind == TY_CHAR && node->rhs->ty->is_unsigned) {
+      gen_expr(node->rhs);
+      push1();
+      gen_expr(node->lhs);
+      println("\tjsr __div8x8u");
+      IX_invalidate();
+      ins(1);
+      return;
+    }
     // 16bit / 16bit
     gen_expr(node->rhs);
     push();
