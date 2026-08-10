@@ -1572,6 +1572,12 @@ int gen_addr_x_sub(Node *node,bool save_d,bool test)
     if (test) {
       return true;
     }
+    if (is_global_var(node->lhs)
+    &&  node->member->offset > 252) {
+      println("\tldx #_%s+%d",node->lhs->var->name,node->member->offset);
+      IX_invalidate();
+      return 0;
+    }
     off = gen_addr_x(node->lhs,save_d) + node->member->offset;
     if (off<=252) {
       return off;
