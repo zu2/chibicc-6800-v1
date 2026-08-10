@@ -5433,6 +5433,21 @@ void gen_expr(Node *node)
       for (int i=0; i<node->var->ty->size; i++){
         println("\tstab %d,x",node->var->offset+i);
       }
+    } else if (node->var->ty->size/2 > 255) {
+      // decb cannot count more than 255 rounds
+      ldd_i(node->var->ty->size);
+      push();
+      ldd_i(0);
+      push();
+      println("\tldab @bp+1");
+      println("\tldaa @bp");
+      if (node->var->offset) {
+        println("\taddb #<%d",node->var->offset);
+        println("\tadca #>%d",node->var->offset);
+      }
+      println("\tjsr _memset");
+      IX_invalidate();
+      remove_args(4);
     } else if (node->var->offset < 255) {
       ldx_bp();
       println("\tclra");
