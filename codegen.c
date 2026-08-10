@@ -1571,12 +1571,7 @@ int gen_addr_x_sub(Node *node,bool test)
         if (off+val <= 252) {
           return  off + val;
         }
-        // OOPS! too large array
-        push();
-        ldd_i(off+val);
-        adx();
-        pop();
-        return 0;
+        assert(0); // gen_addr_x() must not be called when the offset is over 252
       }
     }
     // *p[1] = 22;
@@ -1623,15 +1618,7 @@ int gen_addr_x_sub(Node *node,bool test)
     if (off<=252) {
       return off;
     }
-    // fall back
-    push();
-    ldd_i(off);
-    adx();
-    if (off == 0) {
-      return off;
-    }
-    pop();
-    return 0;
+    assert(0); // gen_addr_x() must not be called when the offset is over 252
   case ND_FUNCALL:
     return false;
     // TODO: Consider the correct address generation method
@@ -1646,12 +1633,7 @@ int gen_addr_x_sub(Node *node,bool test)
   // fallback to gen_addr()
 fallback:
   if (test) return 0;
-  println("; fall back to gen_addr()");
-  push();
-  gen_addr(node);
-  tfr_dx();
-  pop();
-  return 0;
+  assert(0); // test_addr_x() must have returned false
 }
 
 int gen_addr_x(Node *node)
