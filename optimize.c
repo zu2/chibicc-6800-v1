@@ -69,6 +69,26 @@ Node *skip_byte_to_int(Node *node)
 }
 
 
+// the value is 0..255, so "op uchar" is enough: a comparison, or a cast up from uchar
+static bool can_op_uchar(Node *node)
+{
+  if (is_compare_or_not(node)) {
+    return true;
+  }
+  if (node->kind == ND_CAST
+  &&  is_int16(node->ty)
+  &&  node->lhs->ty->kind == TY_CHAR
+  &&  node->lhs->ty->is_unsigned) {
+    return true;
+  }
+  if (node->kind == ND_CAST
+  &&  is_int16(node->ty)
+  &&  node->lhs->ty->kind == TY_BOOL) {
+    return true;
+  }
+  return false;
+}
+
 bool is_u8num(Node *node)
 {
   int64_t val;
@@ -818,6 +838,16 @@ Node *optimize_expr(Node *node)
     Node *base;
 
     node = optimize_lr_swap(node);
+    // a comparison gives 0 or 1, so the operation fits in a uchar
+    if (is_int16(node->ty)
+    &&  is_compare_or_not(node->lhs)
+    &&  is_compare_or_not(node->rhs)) {
+      Node *new = new_copy(node);
+      new->ty  = ty_uchar;
+      new->lhs->ty = ty_uchar;
+      new->rhs->ty = ty_uchar;
+      return optimize_expr(new_cast(new,node->ty));
+    }
     if (is_integer_constant(node->lhs,&val)
     &&  is_integer_constant(node->rhs,&val2)) {
       return optimize_const_expr(node);
@@ -1009,6 +1039,16 @@ Node *optimize_expr(Node *node)
     int64_t val;
 
     node = optimize_lr_swap(node);
+    // both sides are 0..255, so the bit operation fits in a uchar
+    if (is_int16(node->ty)
+    &&  can_op_uchar(node->lhs)
+    &&  can_op_uchar(node->rhs)) {
+      Node *new = new_copy(node);
+      new->ty  = ty_uchar;
+      new->lhs = new_cast(node->lhs,ty_uchar);
+      new->rhs = new_cast(node->rhs,ty_uchar);
+      return optimize_expr(new_cast(new,node->ty));
+    }
     node = optimize_bitop_integral_promotion(node);
 
     // x & 0..255 -> (T)((uchar)x & 0..255)
@@ -1026,6 +1066,16 @@ Node *optimize_expr(Node *node)
   case ND_BITOR:
   case ND_BITXOR:
     node = optimize_lr_swap(node);
+    // both sides are 0..255, so the bit operation fits in a uchar
+    if (is_int16(node->ty)
+    &&  can_op_uchar(node->lhs)
+    &&  can_op_uchar(node->rhs)) {
+      Node *new = new_copy(node);
+      new->ty  = ty_uchar;
+      new->lhs = new_cast(node->lhs,ty_uchar);
+      new->rhs = new_cast(node->rhs,ty_uchar);
+      return optimize_expr(new_cast(new,node->ty));
+    }
     return optimize_bitop_integral_promotion(node);
   case ND_EQ:
   case ND_NE:
@@ -1157,6 +1207,17 @@ Node *optimize_expr(Node *node)
         new->ty   = node->ty;
         return new;
       }
+    }
+    // (cmp) << 0..7 -> (T)((uchar)cmp << 0..7)
+    if (node->kind == ND_SHL
+    &&  is_int16(node->ty)
+    &&  is_compare_or_not(node->lhs)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  0 <= val && val <= 7) {
+      Node *new = new_copy(node);
+      new->ty  = ty_uchar;
+      new->lhs->ty = ty_uchar;
+      return optimize_expr(new_cast(new,node->ty));
     }
 // (>> TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR ty_uchar _L_1 global)) (ND_CAST TY_CHAR(2) (ND_VAR ty_int _L_5 global)))
     if (node->kind == ND_SHR
