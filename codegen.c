@@ -1365,7 +1365,7 @@ int gen_expr_x_sub(Node *node,bool test)
       case -2:
         if (test) return true;
         gen_expr_x(lhs);
-        for(int i=0; i<val; i++) {
+        for(int i=0; i< -val; i++) {
           println("\tdex");
           IX_invalidate();
         }
@@ -1396,7 +1396,7 @@ int gen_expr_x_sub(Node *node,bool test)
       case -2:
         if (test) return true;
         gen_expr_x(lhs);
-        for(int i=0; i<val; i++) {
+        for(int i=0; i< -val; i++) {
           println("\tinx");
           IX_invalidate();
         }
