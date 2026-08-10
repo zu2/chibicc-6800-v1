@@ -14,7 +14,7 @@ OBJ =	qsort.o printf.o _printf_float.o assert.o malloc.o
 
 clibs.a: $(OBJ)
 	rm -f clibs.a
-	ar qc clibs.a `lorderz80 $(OBJ) | tsort`
+	ar qc clibs.a `lorder6800 $(OBJ) | tsort`
 
 
 clean:

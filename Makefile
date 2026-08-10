@@ -12,9 +12,9 @@ TESTS=$(TEST_SRCS:.c=.bin)
 
 all: check dirs chibicc lib crt0.o dummyfloat.o crt0_mikbug.o crt0_bm.o crt0_jr100.o crt0_jr200.o
 
-# nmz80 is a copy of nm6800
-FUZIXBIN = as6800 ld6800 nmz80
-FUZIXCC  = lorderz80 emu6800 /opt/fcc/lib/copt
+# lorder6800 runs nm6809
+FUZIXBIN = as6800 ld6800 nm6809
+FUZIXCC  = lorder6800 emu6800 /opt/fcc/lib/copt
 
 .PHONY: check
 check:

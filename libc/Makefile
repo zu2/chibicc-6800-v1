@@ -42,7 +42,7 @@ OBJ =	__mul16x16.o __div16x16s.o __div16x16u.o __div16x16.o __mul8x8u.o __mul8x8
 
 libc.a: $(OBJ)
 	rm -f libc.a
-	ar qc libc.a `lorderz80 $(OBJ) | tsort`
+	ar qc libc.a `lorder6800 $(OBJ) | tsort`
 
 clean:
 	rm -f *.o *.a *~ makeops libc.a

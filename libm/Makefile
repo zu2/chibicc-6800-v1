@@ -22,7 +22,7 @@ OBJ =	__float.o __floatlib.o __floatconst.o \
 
 libm.a: $(OBJ)
 	rm -f libm.a
-	ar qc libm.a `lorderz80 $(OBJ) | tsort`
+	ar qc libm.a `lorder6800 $(OBJ) | tsort`
 
 clean:
 	rm -f *.o *.a *~ makeops libm.a
