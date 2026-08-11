@@ -3659,31 +3659,56 @@ static void gen_funcall(Node *node)
   return;
 }
 
+static void opeq_float(Node *node)
+{
+  char *op;
+
+  switch (node->kind) {
+  case ND_ADDEQ: op="__addf32tos"; break;
+  case ND_SUBEQ: op="__subf32tos"; break;
+  case ND_MULEQ: op="__mulf32tos"; break;
+  case ND_DIVEQ: op="__divf32tos"; break;
+  default: assert(0);
+  }
+
+  gen_addr(node->lhs);
+  push();
+
+  if (node->kind==ND_ADDEQ || node->kind==ND_MULEQ) {
+    println("\ttsx");
+    println("\tldx 0,x");
+    println("\tjsr __push32x");
+    IX_invalidate();
+    depth += 4;
+    gen_expr(node->rhs);
+  }else{
+    // sub and div need the left side in @long and the right side on the stack
+    gen_expr(node->rhs);
+    pushl();
+    println("\ttsx");
+    println("\tldx 4,x");
+    load32x(0);
+  }
+  println("\tjsr %s",op);
+  IX_invalidate();
+  depth -= 4;
+  store(node->ty);
+}
+
 static void opeq(Node *node)
 {
   int64_t val;
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
+  if (is_flonum(node->ty)) {
+    opeq_float(node);
+    return;
+  }
+
   switch(node->kind){
   case ND_ADDEQ: {
     switch(node->ty->kind) {
-    case TY_FLOAT:
-    case TY_DOUBLE:
-    case TY_LDOUBLE:
-      gen_addr(lhs);
-      push();
-      println("\ttsx");
-      println("\tldx 0,x");
-      println("\tjsr __push32x");
-      IX_invalidate();
-      depth+=4;
-      gen_expr(rhs);
-      println("\tjsr __addf32tos");
-      IX_invalidate();
-      depth-=4;
-      store(node->ty);
-      return;
     case TY_LONG:
       if (test_addr_x(lhs)) {
         int64_t v;
@@ -3785,22 +3810,6 @@ static void opeq(Node *node)
   }
   case ND_SUBEQ: {
     switch(node->ty->kind) {
-    case TY_FLOAT:
-    case TY_DOUBLE:
-    case TY_LDOUBLE:
-      gen_addr(lhs);
-      push();
-      gen_expr(rhs);
-      println("\tjsr __push32");
-      depth+=4;
-      println("\ttsx");
-      println("\tldx 4,x");
-      load32x(0);
-      println("\tjsr __subf32tos");
-      IX_invalidate();
-      depth-=4;
-      store(node->ty);
-      return;
     case TY_LONG:
       if (test_addr_x(lhs)) {
         int64_t v;
@@ -3938,22 +3947,6 @@ static void opeq(Node *node)
   }
   case ND_MULEQ: {
     switch(node->ty->kind) {
-    case TY_FLOAT:
-    case TY_DOUBLE:
-    case TY_LDOUBLE:
-      gen_addr(lhs);
-      push();
-      println("\ttsx");
-      println("\tldx 0,x");
-      println("\tjsr __push32x");
-      IX_invalidate();
-      depth+=4;
-      gen_expr(node->rhs);
-      println("\tjsr __mulf32tos");
-      IX_invalidate();
-      depth-=4;
-      store(node->ty);
-      return;
     case TY_LONG:
       gen_addr(lhs);
       push();
@@ -4012,20 +4005,6 @@ static void opeq(Node *node)
   }
   case ND_DIVEQ: {
     switch(node->ty->kind) {
-    case TY_FLOAT:
-    case TY_DOUBLE:
-    case TY_LDOUBLE:
-      gen_addr(node->lhs);
-      push();
-      gen_expr(node->rhs);
-      pushl();
-      println("\ttsx");
-      println("\tldx 4,x");
-      load32x(0);
-      println("\tjsr __divf32tos");
-      depth -= 4;
-      IX_invalidate();
-      break;
     case TY_LONG:
       gen_addr(node->lhs);
       push();
