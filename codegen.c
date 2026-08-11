@@ -4589,13 +4589,16 @@ static void opeq(Node *node)
       println("\ttsx");
       println("\tldx 1,x");
       println("\tldab 0,x");
-      println("\tclra");
       if (node->kind == ND_SHLEQ) {
+        println("\tclra");
         println("\tjsr __shl16");
-      }else if (lhs->ty->is_unsigned) {
-        println("\tjsr __shr16u");
       }else{
-        println("\tjsr __shr16s");
+        cast(lhs->ty,ty_int);
+        if (lhs->ty->is_unsigned) {
+          println("\tjsr __shr16u");
+        }else{
+          println("\tjsr __shr16s");
+        }
       }
       println("\tstab 0,x");
       IX_invalidate();
