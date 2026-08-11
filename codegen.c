@@ -4152,18 +4152,44 @@ static void opeq(Node *node)
       gen_addr(node->lhs);
       push();
       gen_expr(node->rhs);
-      push();
-      println("\ttsx");
-      println("\tldx 2,x");
-      println("\tldab 1,x");
-      println("\tldaa 0,x");
-      if (rhs->ty->is_unsigned) {
-        println("\tjsr __div16x16u");
-      }else{
-        println("\tjsr __div16x16s");
+      switch (rhs->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+        push();
+        println("\ttsx");
+        println("\tldx 2,x");
+        println("\tldab 1,x");
+        println("\tldaa 0,x");
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __div16x16u");
+        }else{
+          println("\tjsr __div16x16s");
+        }
+        IX_invalidate();
+        ins(2);
+        break;
+      case TY_LONG:
+        pushl();
+        println("\ttsx");
+        println("\tldx 4,x");
+        println("\tldab 1,x");
+        println("\tldaa 0,x");
+        cast(node->ty,ty_long);
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __div32x32u");
+        }else{
+          println("\tjsr __div32x32s");
+        }
+        depth -= 4;
+        IX_invalidate();
+        cast(ty_long,node->ty);
+        break;
+      case TY_PTR:
+      default:assert(0);
       }
-      IX_invalidate();
-      ins(2);
       break;
     case TY_PTR:
     default:
@@ -4250,18 +4276,44 @@ static void opeq(Node *node)
     case TY_INT:
     case TY_ENUM:
       gen_expr(node->rhs);
-      push();
-      println("\ttsx");
-      println("\tldx 2,x");
-      println("\tldab 1,x");
-      println("\tldaa 0,x");
-      if (rhs->ty->is_unsigned) {
-        println("\tjsr __rem16x16u");
-      }else{
-        println("\tjsr __rem16x16s");
+      switch (rhs->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+        push();
+        println("\ttsx");
+        println("\tldx 2,x");
+        println("\tldab 1,x");
+        println("\tldaa 0,x");
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __rem16x16u");
+        }else{
+          println("\tjsr __rem16x16s");
+        }
+        IX_invalidate();
+        ins(2);
+        break;
+      case TY_LONG:
+        pushl();
+        println("\ttsx");
+        println("\tldx 4,x");
+        println("\tldab 1,x");
+        println("\tldaa 0,x");
+        cast(node->ty,ty_long);
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __rem32x32u");
+        }else{
+          println("\tjsr __rem32x32s");
+        }
+        depth -= 4;
+        IX_invalidate();
+        cast(ty_long,node->ty);
+        break;
+      case TY_PTR:
+      default:assert(0);
       }
-      IX_invalidate();
-      ins(2);
       break;
     case TY_PTR:
     default:
