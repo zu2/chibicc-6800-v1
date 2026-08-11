@@ -3659,6 +3659,41 @@ static void gen_funcall(Node *node)
   return;
 }
 
+static void opeq_setup_operands(Node *node)
+{
+  gen_addr(node->lhs);
+  push();
+  gen_expr(node->rhs);
+  int rhs_size = node->rhs->ty->size;
+  switch (rhs_size) {
+  case 1: push1(); break;
+  case 2: push();  break;
+  case 4: pushl(); break;
+  default: assert(0);
+  }
+  println("\ttsx");
+  println("\tldx %d,x",rhs_size);
+  IX_invalidate();
+  switch (node->ty->kind) {
+  case TY_BOOL:
+  case TY_CHAR:
+    println("\tldab 0,x");
+    break;
+  case TY_SHORT:
+  case TY_INT:
+  case TY_ENUM:
+    println("\tldab 1,x");
+    println("\tldaa 0,x");
+    break;
+  case TY_LONG:
+  case TY_FLOAT:
+    load32x(0);
+    break;
+  case TY_PTR:
+  default: assert(0);
+  }
+}
+
 static void opeq_float(Node *node)
 {
   char *op;
@@ -3671,10 +3706,9 @@ static void opeq_float(Node *node)
   default: assert(0);
   }
 
-  gen_addr(node->lhs);
-  push();
-
   if (node->kind==ND_ADDEQ || node->kind==ND_MULEQ) {
+    gen_addr(node->lhs);
+    push();
     println("\ttsx");
     println("\tldx 0,x");
     println("\tjsr __push32x");
@@ -3683,11 +3717,7 @@ static void opeq_float(Node *node)
     gen_expr(node->rhs);
   }else{
     // sub and div need the left side in @long and the right side on the stack
-    gen_expr(node->rhs);
-    pushl();
-    println("\ttsx");
-    println("\tldx 4,x");
-    load32x(0);
+    opeq_setup_operands(node);
   }
   println("\tjsr %s",op);
   IX_invalidate();
@@ -4017,13 +4047,7 @@ static void opeq(Node *node)
   case ND_DIVEQ: {
     switch(node->ty->kind) {
     case TY_LONG:
-      gen_addr(node->lhs);
-      push();
-      gen_expr(node->rhs);
-      pushl();
-      println("\ttsx");
-      println("\tldx 4,x");
-      load32x(0);
+      opeq_setup_operands(node);
       if (rhs->ty->is_unsigned) {
         println("\tjsr __div32x32u");
       }else{
@@ -4034,16 +4058,10 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
-      gen_addr(lhs);
-      push();
-      gen_expr(rhs);
       switch (rhs->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
-        push1();
-        println("\ttsx");
-        println("\tldx 1,x");
-        println("\tldab 0,x");
+        opeq_setup_operands(node);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __div8x8u");
         }else{
@@ -4056,10 +4074,7 @@ static void opeq(Node *node)
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
-        push();
-        println("\ttsx");
-        println("\tldx 2,x");
-        println("\tldab 0,x");
+        opeq_setup_operands(node);
         cast(node->ty,ty_int);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __div16x16u");
@@ -4071,10 +4086,7 @@ static void opeq(Node *node)
         cast(ty_int,node->ty);
         break;
       case TY_LONG:
-        pushl();
-        println("\ttsx");
-        println("\tldx 4,x");
-        println("\tldab 0,x");
+        opeq_setup_operands(node);
         cast(node->ty,ty_long);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __div32x32u");
@@ -4149,20 +4161,13 @@ static void opeq(Node *node)
           }
         }
       }
-      gen_addr(node->lhs);
-      push();
-      gen_expr(node->rhs);
       switch (rhs->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
-        push();
-        println("\ttsx");
-        println("\tldx 2,x");
-        println("\tldab 1,x");
-        println("\tldaa 0,x");
+        opeq_setup_operands(node);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __div16x16u");
         }else{
@@ -4172,11 +4177,7 @@ static void opeq(Node *node)
         ins(2);
         break;
       case TY_LONG:
-        pushl();
-        println("\ttsx");
-        println("\tldx 4,x");
-        println("\tldab 1,x");
-        println("\tldaa 0,x");
+        opeq_setup_operands(node);
         cast(node->ty,ty_long);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __div32x32u");
@@ -4200,15 +4201,9 @@ static void opeq(Node *node)
     return;
   }
   case ND_MODEQ: {
-    gen_addr(node->lhs);
-    push();
     switch(node->ty->kind) {
     case TY_LONG:
-      gen_expr(node->rhs);
-      pushl();
-      println("\ttsx");
-      println("\tldx 4,x");
-      load32x(0);
+      opeq_setup_operands(node);
       if (rhs->ty->is_unsigned) {
         println("\tjsr __rem32x32u");
       }else{
@@ -4219,14 +4214,10 @@ static void opeq(Node *node)
       break;
     case TY_BOOL:
     case TY_CHAR: 
-      gen_expr(node->rhs);
       switch (rhs->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
-        push1();
-        println("\ttsx");
-        println("\tldx 1,x");
-        println("\tldab 0,x");
+        opeq_setup_operands(node);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __mod8x8u");
         }else{
@@ -4239,10 +4230,7 @@ static void opeq(Node *node)
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
-        push();
-        println("\ttsx");
-        println("\tldx 2,x");
-        println("\tldab 0,x");
+        opeq_setup_operands(node);
         cast(node->ty,ty_int);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __rem16x16u");
@@ -4254,10 +4242,7 @@ static void opeq(Node *node)
         cast(ty_int,node->ty);
         break;
       case TY_LONG:
-        pushl();
-        println("\ttsx");
-        println("\tldx 4,x");
-        println("\tldab 0,x");
+        opeq_setup_operands(node);
         cast(node->ty,ty_long);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __rem32x32u");
@@ -4275,18 +4260,13 @@ static void opeq(Node *node)
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
-      gen_expr(node->rhs);
       switch (rhs->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
-        push();
-        println("\ttsx");
-        println("\tldx 2,x");
-        println("\tldab 1,x");
-        println("\tldaa 0,x");
+        opeq_setup_operands(node);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __rem16x16u");
         }else{
@@ -4296,11 +4276,7 @@ static void opeq(Node *node)
         ins(2);
         break;
       case TY_LONG:
-        pushl();
-        println("\ttsx");
-        println("\tldx 4,x");
-        println("\tldab 1,x");
-        println("\tldaa 0,x");
+        opeq_setup_operands(node);
         cast(node->ty,ty_long);
         if (rhs->ty->is_unsigned) {
           println("\tjsr __rem32x32u");
@@ -4480,14 +4456,7 @@ static void opeq(Node *node)
         store_x(node->ty,0);
         return;
       }
-      gen_addr(node->lhs);
-      push();
-      gen_expr(node->rhs);
-      push1();
-      println("\ttsx");
-      println("\tldx 1,x");
-      IX_invalidate();
-      load32x(0);
+      opeq_setup_operands(node);
       pop1();
       if (node->kind == ND_SHLEQ) {
         println("\tjsr __shl32");
@@ -4582,13 +4551,7 @@ static void opeq(Node *node)
         ins(1);
         return;
       } // TY_BOOL, TY_CHAR
-      gen_addr(lhs); 
-      push();
-      gen_expr(rhs);
-      push1();
-      println("\ttsx");
-      println("\tldx 1,x");
-      println("\tldab 0,x");
+      opeq_setup_operands(node);
       if (node->kind == ND_SHLEQ) {
         println("\tclra");
         println("\tjsr __shl16");
@@ -4642,14 +4605,7 @@ static void opeq(Node *node)
         ins(1);
         return;
       }
-      gen_addr(node->lhs); 
-      push();
-      gen_expr(node->rhs);
-      push1();
-      println("\ttsx");
-      println("\tldx 1,x");
-      println("\tldab 1,x");
-      println("\tldaa 0,x");
+      opeq_setup_operands(node);
       if (node->kind == ND_SHLEQ) {
         println("\tjsr __shl16");
       }else if (node->lhs->ty->is_unsigned) {
