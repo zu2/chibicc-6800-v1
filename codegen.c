@@ -4120,7 +4120,7 @@ static void opeq(Node *node)
       println("\tldx 2,x");
       println("\tldab 1,x");
       println("\tldaa 0,x");
-      if (node->ty->is_unsigned) {
+      if (rhs->ty->is_unsigned) {
         println("\tjsr __div16x16u");
       }else{
         println("\tjsr __div16x16s");
@@ -4161,7 +4161,7 @@ static void opeq(Node *node)
       println("\tldx 2,x");
       println("\tldab 0,x");
       println("\tclra");
-      if (node->ty->is_unsigned) {
+      if (rhs->ty->is_unsigned) {
         println("\tjsr __rem16x16u");
       }else{
         println("\tjsr __rem16x16s");
@@ -4181,7 +4181,7 @@ static void opeq(Node *node)
       println("\tldx 2,x");
       println("\tldab 1,x");
       println("\tldaa 0,x");
-      if (node->ty->is_unsigned) {
+      if (rhs->ty->is_unsigned) {
         println("\tjsr __rem16x16u");
       }else{
         println("\tjsr __rem16x16s");
