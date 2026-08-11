@@ -2471,6 +2471,8 @@ static bool opeq_ok(Type *lty,Type *rty)
     case TY_CHAR:
     case TY_SHORT:
     case TY_INT:
+    case TY_ENUM:
+    case TY_BOOL:
     case TY_LONG:
       return true;
     }
