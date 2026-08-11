@@ -3697,26 +3697,25 @@ static void opeq_setup_operands(Node *node)
 static void opeq_cleanup_operands(Node *node)
 {
   IX_invalidate();
-  switch (node->rhs->ty->kind) {
-  case TY_BOOL:
-  case TY_CHAR:
+  switch (node->rhs->ty->size) {
+  case 1:
     ins(1);
-    cast(ty_char,node->ty);
     break;
-  case TY_SHORT:
-  case TY_INT:
-  case TY_ENUM:
+  case 2:
     ins(2);
-    cast(ty_int,node->ty);
     break;
-  case TY_LONG:
-    depth -= 4;
-    cast(ty_long,node->ty);
-    break;
-  case TY_FLOAT:
+  case 4:
     depth -= 4;
     break;
   default: assert(0);
+  }
+  switch (node->kind) {
+  case ND_SHLEQ:
+  case ND_SHREQ:
+    // the right side is the shift count, not the width of the operation
+    break;
+  default:
+    cast(node->rhs->ty,node->ty);
   }
   IX_invalidate();
   store(node->ty);
@@ -4615,9 +4614,7 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __shr16s");
       }
-      IX_invalidate();
-      ins(1);
-      store(node->ty);
+      opeq_cleanup_operands(node);
       return;
     default:
       assert(0);
