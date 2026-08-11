@@ -3742,6 +3742,7 @@ static void opeq(Node *node)
     case TY_CHAR:
       if (is_global_var(lhs)) {
         gen_expr(rhs);
+        cast(rhs->ty,ty_int);
         println("\taddb _%s",lhs->var->name);
         println("\tstab _%s",lhs->var->name);
         invalidate_EXT(lhs);
@@ -3749,6 +3750,7 @@ static void opeq(Node *node)
       }
       if (test_addr_x(lhs)) {
         gen_expr(rhs);
+        cast(rhs->ty,ty_int);
         int off = gen_addr_x(lhs);
         println("\taddb %d,x",off);
         println("\tstab %d,x",off);
@@ -3757,6 +3759,7 @@ static void opeq(Node *node)
       gen_addr(lhs);
       push();
       gen_expr(rhs);
+      cast(rhs->ty,ty_int);
       popx();
       println("\taddb 0,x");
       println("\tstab 0,x");
@@ -3767,6 +3770,7 @@ static void opeq(Node *node)
     case TY_PTR:
       if (is_global_var(lhs)) {
         gen_expr(rhs);
+        cast(rhs->ty,ty_int);
         println("\taddb _%s+1",lhs->var->name);
         println("\tadca _%s",lhs->var->name);
         println("\tstab _%s+1",lhs->var->name);
@@ -3776,6 +3780,7 @@ static void opeq(Node *node)
       }
       if (test_addr_x(lhs)) {
         gen_expr(rhs);
+        cast(rhs->ty,ty_int);
         int off = gen_addr_x(lhs);
         println("\taddb %d,x",off+1);
         println("\tadca %d,x",off);
@@ -3797,6 +3802,7 @@ static void opeq(Node *node)
       gen_addr(lhs);
       push();
       gen_expr(rhs);
+      cast(rhs->ty,ty_int);
       popx();
       println("\taddb 1,x");
       println("\tadca 0,x");
@@ -3873,6 +3879,7 @@ static void opeq(Node *node)
             return;
           }
           gen_expr(rhs);
+          cast(rhs->ty,ty_int);
           println("\tnegb");
           int off = gen_addr_x(lhs);
           println("\taddb %d,x",off);
@@ -3882,6 +3889,7 @@ static void opeq(Node *node)
         gen_addr(lhs);
         push();
         gen_expr(rhs);
+        cast(rhs->ty,ty_int);
         println("\tnegb");
         popx();
         println("\taddb 0,x");
@@ -3910,6 +3918,7 @@ static void opeq(Node *node)
           return;
         }
         gen_expr(rhs);
+        cast(rhs->ty,ty_int);
         negd();
         int off = gen_addr_x(lhs);
         println("\taddb %d,x",off+1);
@@ -3933,6 +3942,7 @@ static void opeq(Node *node)
       gen_addr(lhs);
       push();
       gen_expr(rhs);
+      cast(rhs->ty,ty_int);
       negd();
       popx();
       println("\taddb 1,x");
@@ -3993,6 +4003,7 @@ static void opeq(Node *node)
       IX_invalidate();
       push();
       gen_expr(node->rhs);
+      cast(node->rhs->ty,ty_int);
       println("\tjsr __mul16x16");
       IX_invalidate();
       ins(2);
@@ -4206,6 +4217,7 @@ static void opeq(Node *node)
       if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
         if (is_global_var(node->lhs)) {
           gen_expr(node->rhs);
+          cast(node->rhs->ty,ty_int);
           switch(node->kind) {
           case ND_ANDEQ:
             println("\tandb _%s",node->lhs->var->name);
@@ -4224,6 +4236,7 @@ static void opeq(Node *node)
           return;
         }
         gen_expr(node->rhs);
+        cast(node->rhs->ty,ty_int);
         int off = gen_addr_x(node->lhs);
         switch(node->kind) {
         case ND_ANDEQ:
@@ -4244,6 +4257,7 @@ static void opeq(Node *node)
       gen_addr(node->lhs);
       push();
       gen_expr(node->rhs);
+      cast(node->rhs->ty,ty_int);
       println("\ttsx");
       println("\tldx 0,x");
       IX_invalidate();
@@ -4265,6 +4279,7 @@ static void opeq(Node *node)
     case TY_ENUM:
       if (test_addr_x(node->lhs)) {
         gen_expr(node->rhs);
+        cast(node->rhs->ty,ty_int);
         int off = gen_addr_x(node->lhs);
         switch(node->kind) {
         case ND_ANDEQ:
@@ -4290,6 +4305,7 @@ static void opeq(Node *node)
       gen_addr(node->lhs);
       push();
       gen_expr(node->rhs);
+      cast(node->rhs->ty,ty_int);
       println("\ttsx");
       println("\tldx 0,x");
       IX_invalidate();
