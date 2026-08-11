@@ -3694,6 +3694,34 @@ static void opeq_setup_operands(Node *node)
   }
 }
 
+static void opeq_cleanup_operands(Node *node)
+{
+  IX_invalidate();
+  switch (node->rhs->ty->kind) {
+  case TY_BOOL:
+  case TY_CHAR:
+    ins(1);
+    cast(ty_char,node->ty);
+    break;
+  case TY_SHORT:
+  case TY_INT:
+  case TY_ENUM:
+    ins(2);
+    cast(ty_int,node->ty);
+    break;
+  case TY_LONG:
+    depth -= 4;
+    cast(ty_long,node->ty);
+    break;
+  case TY_FLOAT:
+    depth -= 4;
+    break;
+  default: assert(0);
+  }
+  IX_invalidate();
+  store(node->ty);
+}
+
 static void opeq_float(Node *node)
 {
   char *op;
@@ -3720,9 +3748,7 @@ static void opeq_float(Node *node)
     opeq_setup_operands(node);
   }
   println("\tjsr %s",op);
-  IX_invalidate();
-  depth -= 4;
-  store(node->ty);
+  opeq_cleanup_operands(node);
 }
 
 static void opeq(Node *node)
@@ -4053,8 +4079,7 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __div32x32s");
       }
-      depth -= 4;
-      IX_invalidate();
+      opeq_cleanup_operands(node);
       break;
     case TY_BOOL:
     case TY_CHAR: 
@@ -4067,9 +4092,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __div8x8s");
         }
-        IX_invalidate();
-        ins(1);
-        cast(ty_char,node->ty);
+        opeq_cleanup_operands(node);
         break;
       case TY_SHORT:
       case TY_INT:
@@ -4081,9 +4104,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __div16x16s");
         }
-        IX_invalidate();
-        ins(2);
-        cast(ty_int,node->ty);
+        opeq_cleanup_operands(node);
         break;
       case TY_LONG:
         opeq_setup_operands(node);
@@ -4093,9 +4114,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __div32x32s");
         }
-        depth -= 4;
-        IX_invalidate();
-        cast(ty_long,node->ty);
+        opeq_cleanup_operands(node);
         break;
       case TY_PTR:
       default:assert(0);
@@ -4173,8 +4192,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __div16x16s");
         }
-        IX_invalidate();
-        ins(2);
+        opeq_cleanup_operands(node);
         break;
       case TY_LONG:
         opeq_setup_operands(node);
@@ -4184,9 +4202,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __div32x32s");
         }
-        depth -= 4;
-        IX_invalidate();
-        cast(ty_long,node->ty);
+        opeq_cleanup_operands(node);
         break;
       case TY_PTR:
       default:assert(0);
@@ -4196,8 +4212,6 @@ static void opeq(Node *node)
     default:
       assert(0);
     }
-    IX_invalidate();
-    store(node->ty);
     return;
   }
   case ND_MODEQ: {
@@ -4209,8 +4223,7 @@ static void opeq(Node *node)
       }else{
         println("\tjsr __rem32x32s");
       }
-      depth -= 4;
-      IX_invalidate();
+      opeq_cleanup_operands(node);
       break;
     case TY_BOOL:
     case TY_CHAR: 
@@ -4223,9 +4236,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __mod8x8s");
         }
-        IX_invalidate();
-        ins(1);
-        cast(ty_char,node->ty);
+        opeq_cleanup_operands(node);
         break;
       case TY_SHORT:
       case TY_INT:
@@ -4237,9 +4248,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __rem16x16s");
         }
-        IX_invalidate();
-        ins(2);
-        cast(ty_int,node->ty);
+        opeq_cleanup_operands(node);
         break;
       case TY_LONG:
         opeq_setup_operands(node);
@@ -4249,9 +4258,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __rem32x32s");
         }
-        depth -= 4;
-        IX_invalidate();
-        cast(ty_long,node->ty);
+        opeq_cleanup_operands(node);
         break;
       case TY_PTR:
       default:assert(0);
@@ -4272,8 +4279,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __rem16x16s");
         }
-        IX_invalidate();
-        ins(2);
+        opeq_cleanup_operands(node);
         break;
       case TY_LONG:
         opeq_setup_operands(node);
@@ -4283,9 +4289,7 @@ static void opeq(Node *node)
         }else{
           println("\tjsr __rem32x32s");
         }
-        depth -= 4;
-        IX_invalidate();
-        cast(ty_long,node->ty);
+        opeq_cleanup_operands(node);
         break;
       case TY_PTR:
       default:assert(0);
@@ -4295,8 +4299,6 @@ static void opeq(Node *node)
     default:
       assert(0);
     }
-    IX_invalidate();
-    store(node->ty);
     return;
   }
   case ND_ANDEQ:
