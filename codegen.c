@@ -4024,7 +4024,7 @@ static void opeq(Node *node)
       println("\ttsx");
       println("\tldx 4,x");
       load32x(0);
-      if (node->ty->is_unsigned) {
+      if (rhs->ty->is_unsigned) {
         println("\tjsr __div32x32u");
       }else{
         println("\tjsr __div32x32s");
@@ -4145,7 +4145,7 @@ static void opeq(Node *node)
       println("\ttsx");
       println("\tldx 4,x");
       load32x(0);
-      if (node->ty->is_unsigned) {
+      if (rhs->ty->is_unsigned) {
         println("\tjsr __rem32x32u");
       }else{
         println("\tjsr __rem32x32s");
