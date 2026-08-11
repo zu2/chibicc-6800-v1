@@ -4037,20 +4037,57 @@ static void opeq(Node *node)
       gen_addr(lhs);
       push();
       gen_expr(rhs);
-      push1();
-      println("\ttsx");
-      println("\tldx 1,x");
-      println("\tldab 0,x");
-      if (node->ty->is_unsigned) {
-        println("\tjsr __div8x8u");
-      }else{
-        println("\tjsr __div8x8s");
+      switch (rhs->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        push1();
+        println("\ttsx");
+        println("\tldx 1,x");
+        println("\tldab 0,x");
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __div8x8u");
+        }else{
+          println("\tjsr __div8x8s");
+        }
+        IX_invalidate();
+        ins(1);
+        cast(ty_char,node->ty);
+        break;
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+        push();
+        println("\ttsx");
+        println("\tldx 2,x");
+        println("\tldab 0,x");
+        cast(node->ty,ty_int);
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __div16x16u");
+        }else{
+          println("\tjsr __div16x16s");
+        }
+        IX_invalidate();
+        ins(2);
+        cast(ty_int,node->ty);
+        break;
+      case TY_LONG:
+        pushl();
+        println("\ttsx");
+        println("\tldx 4,x");
+        println("\tldab 0,x");
+        cast(node->ty,ty_long);
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __div32x32u");
+        }else{
+          println("\tjsr __div32x32s");
+        }
+        depth -= 4;
+        IX_invalidate();
+        cast(ty_long,node->ty);
+        break;
+      case TY_PTR:
+      default:assert(0);
       }
-      IX_invalidate();
-      if (node->ty->kind==TY_BOOL) {
-        cast(ty_char,ty_bool);
-      }
-      ins(1);
       break;
     case TY_SHORT:
     case TY_INT:
@@ -4128,6 +4165,7 @@ static void opeq(Node *node)
       IX_invalidate();
       ins(2);
       break;
+    case TY_PTR:
     default:
       assert(0);
     }
