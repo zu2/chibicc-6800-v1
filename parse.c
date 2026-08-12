@@ -2635,7 +2635,8 @@ static Node *assign(Token **rest, Token *tok) {
   if (equal(tok, "<<=")) {
     add_type(node);
     Node *rhs = assign(rest, tok->next);
-    if (is_bitfield_member(node)) {
+    if (node->ty->kind == TY_BOOL
+    ||  is_bitfield_member(node)) {
       return to_assign(new_binary(ND_SHL, node, rhs, tok));
     }
     return new_binary(ND_SHLEQ, node, rhs, tok);
@@ -2644,7 +2645,8 @@ static Node *assign(Token **rest, Token *tok) {
   if (equal(tok, ">>=")) {
     add_type(node);
     Node *rhs = assign(rest, tok->next);
-    if (is_bitfield_member(node)) {
+    if (node->ty->kind == TY_BOOL
+    ||  is_bitfield_member(node)) {
       return to_assign(new_binary(ND_SHR, node, rhs, tok));
     }
     return new_binary(ND_SHREQ, node, rhs, tok);
