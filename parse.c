@@ -2594,7 +2594,8 @@ static Node *assign(Token **rest, Token *tok) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITAND,node,rhs,tok),tok);
     }
     if (opeq_ok(node->ty,rhs->ty)
-    ||  rhs->kind==ND_NUM) {
+    ||  rhs->kind==ND_NUM
+    ||  node->ty->kind == TY_BOOL) { // Allow non-constant RHS for bool
       return new_binary(ND_ANDEQ, node, rhs, tok);
     }
     return to_assign(new_binary(ND_BITAND, node, rhs, tok));
