@@ -3894,8 +3894,8 @@ static void opeq(Node *node)
       gen_addr(lhs);
       push();
       gen_expr(rhs);
-      negd();
       cast(rhs->ty,ty_int);
+      negd();
       popx();
       println("\taddb 0,x");
       println("\tadca #0");
