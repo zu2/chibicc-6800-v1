@@ -4318,27 +4318,8 @@ static void opeq(Node *node)
       return;
     case TY_BOOL:
     case TY_CHAR: 
+      // is_simple_var() sends a global var lhs to x = x op y, so it never gets here
       if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
-        if (is_global_var(node->lhs)) {
-          gen_expr(node->rhs);
-          cast(node->rhs->ty,ty_int);
-          switch(node->kind) {
-          case ND_ANDEQ:
-            println("\tandb _%s",node->lhs->var->name);
-            break;
-          case ND_OREQ:
-            println("\torab _%s",node->lhs->var->name);
-            break;
-          case ND_XOREQ:
-            println("\teorb _%s",node->lhs->var->name);
-            break;
-          default:
-            assert(0);
-          }
-          println("\tstab _%s",node->lhs->var->name);
-          invalidate_EXT(node->lhs);
-          return;
-        }
         gen_expr(node->rhs);
         cast(node->rhs->ty,ty_int);
         int off = gen_addr_x(node->lhs);
