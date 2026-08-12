@@ -647,10 +647,12 @@ static void run_subprocess(char **argv, char *redirect_in, char *redirect_out) {
 
   // Wait for the child process to finish.
   int status;
-  if (wait(&status) <=0 ||status != 0){
-    fprintf(stderr,"Wait for the child process to finish. status=%d\n",status);
+  if (wait(&status) <= 0)
+    error("wait failed for %s", argv[0]);
+  if (WIFSIGNALED(status))
+    fprintf(stderr, "%s died with signal %d\n", argv[0], WTERMSIG(status));
+  if (status != 0)
     exit(1);
-  }
 }
 
 static void run_cc1(int argc, char **argv, char *input, char *output) {
