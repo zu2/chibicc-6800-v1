@@ -4687,6 +4687,22 @@ static void opeq(Node *node)
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
+      if (is_global_var(lhs) && is_integer_constant(rhs, &val)) {
+        invalidate_EXT(lhs);
+        println("\tldab _%s+1",lhs->var->name);
+        println("\tldaa _%s",lhs->var->name);
+        if (val==0) {
+          return;
+        }
+        if (node->kind == ND_SHLEQ) {
+          gen_shl(lhs->ty,val);
+        }else{
+          gen_shr(lhs->ty,val);
+        }
+        println("\tstab _%s+1",lhs->var->name);
+        println("\tstaa _%s",lhs->var->name);
+        return;
+      }
       if (test_addr_x(node->lhs)) {
         if (is_integer_constant(node->rhs, &val)){
           int off = gen_addr_x(node->lhs);
