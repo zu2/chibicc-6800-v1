@@ -4353,7 +4353,7 @@ static void opeq(Node *node)
   case ND_OREQ:
   case ND_XOREQ:
     switch(node->ty->kind) {
-    case TY_LONG:
+    case TY_LONG: // long op= rhs
       if (test_addr_x(lhs)) {
         int64_t v;
         if (!opt('O','s')
@@ -4367,24 +4367,7 @@ static void opeq(Node *node)
       return;
     case TY_BOOL:
       switch (node->kind) {
-      case ND_OREQ:
-        if (test_addr_x(node->lhs)) {
-          gen_expr(node->rhs);
-          cast(node->rhs->ty,ty_bool);
-          int off = gen_addr_x(node->lhs);
-          println("\torab %d,x",off);
-          println("\tstab %d,x",off);
-          return;
-        }
-        gen_addr(node->lhs);
-        push();
-        gen_expr(node->rhs);
-        cast(node->rhs->ty,ty_bool);
-        popx();
-        println("\torab 0,x");
-        println("\tstab 0,x");
-        return;
-      case ND_ANDEQ:
+      case ND_ANDEQ:  // bool &= rhs
         if (test_addr_x(node->lhs)) {
           gen_expr(node->rhs);
           cast(node->rhs->ty,ty_uchar);
@@ -4401,27 +4384,48 @@ static void opeq(Node *node)
         println("\tandb 0,x");
         println("\tstab 0,x");
         return;
-      case ND_XOREQ:
-        // b ^= rhs is a byte op today, still wrong for wide rhs, fixed separately
-        if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
+      case ND_OREQ: // bool |= rhs
+        if (test_addr_x(node->lhs)) {
           gen_expr(node->rhs);
-          cast(node->rhs->ty,ty_int);
+          cast(node->rhs->ty,ty_bool);
           int off = gen_addr_x(node->lhs);
-          println("\teorb %d,x",off);
+          println("\torab %d,x",off);
           println("\tstab %d,x",off);
           return;
         }
         gen_addr(node->lhs);
         push();
         gen_expr(node->rhs);
-        cast(node->rhs->ty,ty_int);
-        println("\ttsx");
-        println("\tldx 0,x");
-        IX_invalidate();
-        println("\teorb 0,x");
-        store(node->ty);
+        cast(node->rhs->ty,ty_bool);
+        popx();
+        println("\torab 0,x");
+        println("\tstab 0,x");
         return;
-      }
+      case ND_XOREQ:  // bool ^= rhs
+        gen_addr(node->lhs);
+        push();
+        gen_expr(node->rhs);
+        popx();
+        switch(node->rhs->ty->kind) {
+        case TY_BOOL:
+        case TY_CHAR:
+        case TY_SHORT:
+        case TY_INT:
+        case TY_ENUM:
+          println("\teorb 0,x");
+          break;
+        case TY_LONG:
+          println("\tldab @long+3");
+          println("\teorb 0,x");
+          println("\tstab @long+3");
+          break;
+        default:
+          assert(0);
+        }
+        cast(node->rhs->ty,ty_bool);
+        println("\tstab 0,x");
+        return;
+      } // bool ^= rhs
     case TY_CHAR: 
       // is_simple_var() sends a global var lhs to x = x op y, so it never gets here
       if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
