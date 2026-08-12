@@ -29,7 +29,6 @@ void error(char *fmt, ...) {
 static void verror_at(char *filename, char *input, int line_no,
                       char *loc, char *fmt, va_list ap) {
   // Find a line containing `loc`.
-  fprintf(stderr, "; verror at!\n"); fflush(stderr);// XXX
   char *line = loc;
   while (input < line && line[-1] != '\n')
     line--;
