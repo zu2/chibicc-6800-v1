@@ -4402,6 +4402,29 @@ static void opeq(Node *node)
         println("\tstab 0,x");
         return;
       case ND_XOREQ:  // bool ^= rhs
+        if (test_addr_x(node->lhs)) {
+          gen_expr(node->rhs);
+          int off = gen_addr_x(node->lhs);
+          switch(node->rhs->ty->kind) {
+          case TY_BOOL:
+          case TY_CHAR:
+          case TY_SHORT:
+          case TY_INT:
+          case TY_ENUM:
+            println("\teorb %d,x",off);
+            break;
+          case TY_LONG:
+            println("\tldab @long+3");
+            println("\teorb %d,x",off);
+            println("\tstab @long+3");
+            break;
+          default:
+            assert(0);
+          }
+          cast(node->rhs->ty,ty_bool);
+          println("\tstab %d,x",off);
+          return;
+        }
         gen_addr(node->lhs);
         push();
         gen_expr(node->rhs);
