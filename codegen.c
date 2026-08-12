@@ -2007,13 +2007,11 @@ void cmp_zero(Type *ty) {
     return;
   case TY_LONG:
     println("\tjsr __iszero32");
-    IX_invalidate();
     return;
   case TY_FLOAT:
   case TY_DOUBLE:
   case TY_LDOUBLE:
     println("\tjsr __f32iszero");
-    IX_invalidate();
     return;
   }
   println("\taba");

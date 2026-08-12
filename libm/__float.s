@@ -113,7 +113,15 @@ __f32isNaN_1:			; Z=0, C=0 not NaN,Inf
 ;	if 0.0 then Z=1 else Z=0
 ;
 __f32iszero:
-	ldx	#long
+	ldab	@long
+	andb	#$7F
+	bne	iszero_ret
+	orab	@long+1
+	orab	@long+2
+	orab	@long+3
+iszero_ret:
+	rts
+
 __f32iszerox:
 	ldab	0,x		; exponent on the MSB side, to check from the top is faster
 	andb	#$7F
