@@ -24,9 +24,10 @@ void error(char *fmt, ...) {
 
 // Reports an error message in the following format.
 //
-// foo.c:10: x = y + 1;
-//               ^ <error message here>
-static void verror_at(char *filename, char *input, int line_no,
+// foo.c:10:5: error: <error message here>
+// x = y + 1;
+//     ^
+static void verror_at(char *kind, char *filename, char *input, int line_no,
                       char *loc, char *fmt, va_list ap) {
   // Find a line containing `loc`.
   char *line = loc;
@@ -37,17 +38,14 @@ static void verror_at(char *filename, char *input, int line_no,
   while (*end && *end != '\n')
     end++;
 
-  // Print out the line.
-  int indent = fprintf(stderr, "%s:%d: ", filename, line_no);
-  fprintf(stderr, "%.*s\n", (int)(end - line), line);
+  int pos = display_width(line, loc - line);
 
-  // Show the error message.
-  int pos = display_width(line, loc - line) + indent;
-
-  fprintf(stderr, "%*s", pos, ""); // print pos spaces.
-  fprintf(stderr, "^ ");
+  fprintf(stderr, "%s:%d:%d: %s: ", filename, line_no, pos + 1, kind);
   vfprintf(stderr, fmt, ap);
   fprintf(stderr, "\n");
+
+  fprintf(stderr, "%.*s\n", (int)(end - line), line);
+  fprintf(stderr, "%*s^\n", pos, ""); // print pos spaces.
 }
 
 void error_at(char *loc, char *fmt, ...) {
@@ -58,21 +56,21 @@ void error_at(char *loc, char *fmt, ...) {
 
   va_list ap;
   va_start(ap, fmt);
-  verror_at(current_file->name, current_file->contents, line_no, loc, fmt, ap);
+  verror_at("error", current_file->name, current_file->contents, line_no, loc, fmt, ap);
   exit(1);
 }
 
 void error_tok(Token *tok, char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  verror_at(tok->file->name, tok->file->contents, tok->line_no, tok->loc, fmt, ap);
+  verror_at("error", tok->file->name, tok->file->contents, tok->line_no, tok->loc, fmt, ap);
   exit(1);
 }
 
 void warn_tok(Token *tok, char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  verror_at(tok->file->name, tok->file->contents, tok->line_no, tok->loc, fmt, ap);
+  verror_at("warning", tok->file->name, tok->file->contents, tok->line_no, tok->loc, fmt, ap);
   va_end(ap);
 }
 
