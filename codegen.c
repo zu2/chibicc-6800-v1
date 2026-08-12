@@ -4368,8 +4368,14 @@ static void opeq(Node *node)
     case TY_BOOL:
       switch (node->kind) {
       case ND_OREQ:
-        // b |= rhs is (_Bool)(b | rhs) = b | (rhs != 0). Turn rhs into 0 or 1
-        // over its whole width, then or it with b. Both are 0/1, so is the result.
+        if (test_addr_x(node->lhs)) {
+          gen_expr(node->rhs);
+          cast(node->rhs->ty,ty_bool);
+          int off = gen_addr_x(node->lhs);
+          println("\torab %d,x",off);
+          println("\tstab %d,x",off);
+          return;
+        }
         gen_addr(node->lhs);
         push();
         gen_expr(node->rhs);
@@ -4379,10 +4385,9 @@ static void opeq(Node *node)
         println("\tstab 0,x");
         return;
       case ND_ANDEQ:
-        // b &= rhs stays 0 or 1 because b masks the result, so a byte and is enough
-        if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
+        if (test_addr_x(node->lhs)) {
           gen_expr(node->rhs);
-          cast(node->rhs->ty,ty_int);
+          cast(node->rhs->ty,ty_uchar);
           int off = gen_addr_x(node->lhs);
           println("\tandb %d,x",off);
           println("\tstab %d,x",off);
@@ -4392,11 +4397,9 @@ static void opeq(Node *node)
         push();
         gen_expr(node->rhs);
         cast(node->rhs->ty,ty_int);
-        println("\ttsx");
-        println("\tldx 0,x");
-        IX_invalidate();
+        popx();
         println("\tandb 0,x");
-        store(node->ty);
+        println("\tstab 0,x");
         return;
       case ND_XOREQ:
         // b ^= rhs is a byte op today, still wrong for wide rhs, fixed separately
