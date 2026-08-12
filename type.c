@@ -402,7 +402,7 @@ void add_type(Node *node) {
     &&  is_integer(node->rhs->ty)
     && !(is_const_expr(node->rhs)
     &&  eval(node->rhs) == 0)) {
-      error_tok(node->rhs->tok, "assignment to a pointer from an integer");
+      warn_tok(node->rhs->tok, "assignment to a pointer from an integer");
     }
     // char *p; int x; x = p;
     if (node->rhs->ty->kind == TY_PTR
@@ -520,11 +520,11 @@ void add_type(Node *node) {
     }
     if (is_ptr_or_array(node->lhs->ty)
     && !is_null_ptr_constant(node->rhs)) {
-      error_tok(node->rhs->tok, "invalid operand (expected pointer or 0)");
+      warn_tok(node->rhs->tok, "invalid operand (expected pointer or 0)");
     }
     if (is_ptr_or_array(node->rhs->ty)
     && !is_null_ptr_constant(node->lhs)) {
-      error_tok(node->lhs->tok, "invalid operand (expected pointer or 0)");
+      warn_tok(node->lhs->tok, "invalid operand (expected pointer or 0)");
       return;
     }
     usual_arith_conv(&node->lhs, &node->rhs);

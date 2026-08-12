@@ -2,13 +2,13 @@
 
 static uint8_t x2bw[] = {0x80, 0x40, 0x20, 0x10, 8, 4, 2, 1};
 static uint8_t x2bb[] = {0x7f, 0xbf, 0xdf, 0xef, 0xf7, 0xfb, 0xfd, 0xfe};
-static uint8_t *p = 0x2100;
-static uint8_t *base = 0x2100;
+static uint8_t *p = (uint8_t *)0x2100;
+static uint8_t *base = (uint8_t *)0x2100;
 
 void setgr(uint8_t mode)
 {
   *((uint8_t *)0xefe0) = mode;
-  base = 0x0900 + (mode & 0x0f) * 0x200;
+  base = (uint8_t *)(0x0900 + (mode & 0x0f) * 0x200);
 }
 
 #define set_pat(x) (x2bw[(x) & 7])
@@ -21,7 +21,7 @@ void plot(uint8_t x, uint8_t y, uint8_t z)
     return;
   }
 
-  p = (y << 5) + (x >> 3) + base;
+  p = base + (y << 5) + (x >> 3);
 
   if (z) {
     *p |= set_pat(x);
@@ -33,7 +33,7 @@ void plot(uint8_t x, uint8_t y, uint8_t z)
 void cls()
 {
 #if 1
-  if (base == 0x0900) {
+  if (base == (uint8_t *)0x0900) {
     asm(" clrb");
     asm(" ldx #$0900");
     asm("CLS09:");
@@ -41,7 +41,7 @@ void cls()
     asm(" inx");
     asm(" cpx #$2100");
     asm(" bne CLS09");
-  } else if (base == 0x2100) {
+  } else if (base == (uint8_t *)0x2100) {
     asm(" clrb");
     asm(" ldx #$2100");
     asm("CLS21:");
@@ -75,7 +75,7 @@ void vline(uint8_t x, uint8_t y1, uint8_t y2, uint8_t z)
     y1 ^= y2;
   }
   y2 = (y2 > 191) ? 192 : y2 + 1;
-  p = (y1 << 5) + (x >> 3) + 0x2100;
+  p = (uint8_t *)0x2100 + (y1 << 5) + (x >> 3);
   y2++;
   if (z) {
     pat = set_pat(x);

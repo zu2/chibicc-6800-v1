@@ -10,7 +10,7 @@ void plot(unsigned char x, unsigned char y, unsigned char z)
 {
   static unsigned char *p;
 
-  p = (y<<5) + (x>>3) + 0x2100;
+  p = (unsigned char *)0x2100 + (y<<5) + (x>>3);
   x = 7 - (x&7);
 
   if (z) {

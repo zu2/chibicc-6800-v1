@@ -1612,7 +1612,7 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
     error_tok(init->expr->tok, "initialization of a pointer from a floating point number");
   if (ty->kind == TY_PTR && is_integer(init->expr->ty) &&
       !is_null_ptr_constant(init->expr))
-    error_tok(init->expr->tok, "initialization of a pointer from an integer");
+    warn_tok(init->expr->tok, "initialization of a pointer from an integer");
   if (init->expr->ty->kind == TY_PTR && is_integer(ty))
     error_tok(init->expr->tok, "initialization of an integer from a pointer");
 
