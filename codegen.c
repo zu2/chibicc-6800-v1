@@ -3784,16 +3784,44 @@ static void opeq(Node *node)
       return;
     // Handle non-char/int RHS case? XXX
     case TY_BOOL:
-      gen_addr(lhs);
-      push();
-      gen_expr(rhs);
-      cast(rhs->ty,ty_int);
-      popx();
-      println("\taddb 0,x");
-      println("\tadca #0");
-      cast(ty_int,ty_bool);
-      println("\tstab 0,x");
-      return;
+      switch (rhs->ty->kind) {
+      case TY_LONG: {
+        // walk b + rhs one byte at a time; leave as soon as a byte is not zero
+        char *label = new_label("L_%d");
+        gen_addr(lhs);
+        push();
+        gen_expr(rhs);
+        popx();
+        println("\tldab 0,x");
+        println("\taddb @long+3");
+        println("\tbne %s", label);
+        println("\tadcb @long+2");
+        println("\tbne %s", label);
+        println("\tadcb @long+1");
+        println("\tbne %s", label);
+        println("\tadcb @long");
+        println("%s:", label);
+        cast(ty_char,ty_bool);
+        println("\tstab 0,x");
+        return;
+      }
+      case TY_BOOL:
+      case TY_CHAR:
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+        gen_addr(lhs);
+        push();
+        gen_expr(rhs);
+        cast(rhs->ty,ty_int);
+        popx();
+        println("\taddb 0,x");
+        println("\tadca #0");
+        cast(ty_int,ty_bool);
+        println("\tstab 0,x");
+        return;
+      }
+      error_tok(node->tok, "opeq: bad rhs type for _Bool +=");
     case TY_CHAR:
       if (is_global_var(lhs)) {
         gen_expr(rhs);
@@ -3890,18 +3918,41 @@ static void opeq(Node *node)
       gen_opeq32(node);
       return;
     case TY_BOOL:
-      // Handle non-char/int RHS case?
-      gen_addr(lhs);
-      push();
-      gen_expr(rhs);
-      cast(rhs->ty,ty_int);
-      negd();
-      popx();
-      println("\taddb 0,x");
-      println("\tadca #0");
-      cast(ty_int,ty_bool);
-      println("\tstab 0,x");
-      return;
+      switch (rhs->ty->kind) {
+      case TY_LONG:
+        // bool(b - rhs) == bool(rhs - b); a borrow leaves D != 0,
+        // so the upper 16 bits can be ORed in as they are
+        gen_addr(lhs);
+        push();
+        gen_expr(rhs);
+        println("\tldab @long+3");
+        println("\tldaa @long+2");
+        popx();
+        println("\tsubb 0,x");
+        println("\tsbca #0");
+        println("\torab @long+1");
+        println("\toraa @long");
+        cast(ty_int,ty_bool);
+        println("\tstab 0,x");
+        return;
+      case TY_BOOL:
+      case TY_CHAR:
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+        gen_addr(lhs);
+        push();
+        gen_expr(rhs);
+        cast(rhs->ty,ty_int);
+        negd();
+        popx();
+        println("\taddb 0,x");
+        println("\tadca #0");
+        cast(ty_int,ty_bool);
+        println("\tstab 0,x");
+        return;
+      }
+      error_tok(node->tok, "opeq: bad rhs type for _Bool -=");
     case TY_CHAR: {
         if (test_addr_x(lhs)) {
           if (is_integer_constant(rhs,&val)) {
