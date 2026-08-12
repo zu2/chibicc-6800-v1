@@ -525,7 +525,6 @@ void add_type(Node *node) {
     if (is_ptr_or_array(node->rhs->ty)
     && !is_null_ptr_constant(node->lhs)) {
       warn_tok(node->lhs->tok, "invalid operand (expected pointer or 0)");
-      return;
     }
     usual_arith_conv(&node->lhs, &node->rhs);
     node->ty = ty_int;
