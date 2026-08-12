@@ -4489,7 +4489,8 @@ static void opeq(Node *node)
         println("\teorb 0,x");
         break;
       }
-      store(node->ty);
+      println("\tstab 0,x");
+      ins(2);
       return;
     case TY_SHORT:
     case TY_INT:
@@ -4540,7 +4541,9 @@ static void opeq(Node *node)
         println("\teora 0,x");
         break;
       }
-      store(node->ty);
+      println("\tstab 1,x");
+      println("\tstaa 0,x");
+      ins(2);
       return;
     default:
       error_tok(node->tok,"invalid operand &,|,^");
