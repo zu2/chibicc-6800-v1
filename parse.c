@@ -1825,7 +1825,8 @@ static Node *stmt(Token **rest, Token *tok) {
 
     node->then = stmt(rest, tok);
 
-    if (opt('O','2') && !opt_nostatic_locals) {
+    if (!opt_nostatic_locals
+    &&  (opt('O','s') || opt('O','2'))) {
       if (current_fn
       &&  (current_fn->ty->return_ty->kind != TY_STRUCT)
       &&  (current_fn->ty->return_ty->kind != TY_UNION)
