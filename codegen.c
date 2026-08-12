@@ -4368,6 +4368,59 @@ static void opeq(Node *node)
       gen_opeq32(node); // @long = lhs opeq rhs
       return;
     case TY_BOOL:
+      switch (node->kind) {
+      case ND_OREQ:
+        // b |= rhs is (_Bool)(b | rhs) = b | (rhs != 0). Turn rhs into 0 or 1
+        // over its whole width, then or it with b. Both are 0/1, so is the result.
+        gen_addr(node->lhs);
+        push();
+        gen_expr(node->rhs);
+        cast(node->rhs->ty,ty_bool);
+        popx();
+        println("\torab 0,x");
+        println("\tstab 0,x");
+        return;
+      case ND_ANDEQ:
+        // b &= rhs stays 0 or 1 because b masks the result, so a byte and is enough
+        if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
+          gen_expr(node->rhs);
+          cast(node->rhs->ty,ty_int);
+          int off = gen_addr_x(node->lhs);
+          println("\tandb %d,x",off);
+          println("\tstab %d,x",off);
+          return;
+        }
+        gen_addr(node->lhs);
+        push();
+        gen_expr(node->rhs);
+        cast(node->rhs->ty,ty_int);
+        println("\ttsx");
+        println("\tldx 0,x");
+        IX_invalidate();
+        println("\tandb 0,x");
+        store(node->ty);
+        return;
+      case ND_XOREQ:
+        // b ^= rhs is a byte op today, still wrong for wide rhs, fixed separately
+        if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
+          gen_expr(node->rhs);
+          cast(node->rhs->ty,ty_int);
+          int off = gen_addr_x(node->lhs);
+          println("\teorb %d,x",off);
+          println("\tstab %d,x",off);
+          return;
+        }
+        gen_addr(node->lhs);
+        push();
+        gen_expr(node->rhs);
+        cast(node->rhs->ty,ty_int);
+        println("\ttsx");
+        println("\tldx 0,x");
+        IX_invalidate();
+        println("\teorb 0,x");
+        store(node->ty);
+        return;
+      }
     case TY_CHAR: 
       // is_simple_var() sends a global var lhs to x = x op y, so it never gets here
       if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
