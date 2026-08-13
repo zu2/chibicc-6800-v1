@@ -5473,7 +5473,9 @@ void gen_expr(Node *node)
         stx_EXT(node->lhs);
         return;
       }
-      if ((addr=is_addr_constant(node->lhs))!=NULL) {
+      if (node->lhs->kind == ND_DEREF
+      &&  test_expr_x(node->rhs)
+      &&  (addr=is_addr_constant(node->lhs->lhs))!=NULL) {
         gen_expr_x(node->rhs);
         println("\tstx %s",addr);
         return;
