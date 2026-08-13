@@ -95,6 +95,12 @@ char *is_addr_constant(Node *node)
     sprintf(p,"_%s",node->var->name);
     return p;
   }
+  if (node->kind == ND_ADDR
+  &&  is_global_var(node->lhs)) {
+    char *p = calloc(1,strlen(node->lhs->var->name)+2);
+    sprintf(p,"_%s",node->lhs->var->name);
+    return p;
+  }
   if (node->kind == ND_ADD
   &&  node->ty->kind == TY_ARRAY
   &&  is_integer_constant(node->rhs,&val)) {

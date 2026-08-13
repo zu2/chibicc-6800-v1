@@ -1219,11 +1219,6 @@ int gen_expr_x_sub(Node *node,bool test)
       if (test) return test_expr_x(node->lhs->lhs);
       return gen_expr_x(node->lhs->lhs);
     }
-    if (is_global_var(lhs)) {
-      if (test) return true;
-      ldx_IMM_VAR(lhs->var->name);
-      return 0;
-    }
     if (is_local_var(lhs)) {
       if (test)
         return (abs(lhs->var->offset)<=2);
