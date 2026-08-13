@@ -2440,11 +2440,6 @@ static bool is_bitfield_member(Node *node)
 //
 static bool is_simple_var(Node *node)
 {
-  // 32 bit work goes through @long, so x = x op y needs one more
-  // load than x op= y. Do not split it.
-  if (node->ty->kind == TY_LONG)
-    return false;
-
   if (is_local_var(node)
   ||  is_global_var(node)
   ||  is_local_array_with_constant(node)
@@ -2499,7 +2494,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_bitfield_member(node)) {
       return to_assign(new_add(node, rhs, tok));
     }
-    if (is_simple_var(node)) {
+    if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_add(node,rhs,tok),tok);
     }
     if (!opeq_ok(node->ty,rhs->ty)
@@ -2521,7 +2516,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_bitfield_member(node)) {
       return to_assign(new_sub(node, rhs, tok));
     }
-    if (is_simple_var(node)) {
+    if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_sub(node,rhs,tok),tok);
     }
     if (!opeq_ok(node->ty,rhs->ty)
@@ -2543,7 +2538,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_bitfield_member(node)) {
       return to_assign(new_binary(ND_MUL, node, rhs, tok));
     }
-    if (is_simple_var(node)) {
+    if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_MUL,node,rhs,tok),tok);
     }
     if (opeq_ok(node->ty,rhs->ty)) {
@@ -2559,7 +2554,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_bitfield_member(node)) {
       return to_assign(new_binary(ND_DIV, node, rhs, tok));
     }
-    if (is_simple_var(node)) {
+    if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_DIV,node,rhs,tok),tok);
     }
     if (opeq_ok(node->ty,rhs->ty)) {
@@ -2575,7 +2570,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_bitfield_member(node)) {
       return to_assign(new_binary(ND_MOD, node, rhs, tok));
     }
-    if (is_simple_var(node)) {
+    if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_MOD,node,rhs,tok),tok);
     }
     if (opeq_ok(node->ty,rhs->ty)) {
@@ -2591,7 +2586,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_bitfield_member(node)) {
       return to_assign(new_binary(ND_BITAND, node, rhs, tok));
     }
-    if (is_simple_var(node)) {
+    if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITAND,node,rhs,tok),tok);
     }
     if (opeq_ok(node->ty,rhs->ty)
@@ -2609,7 +2604,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_bitfield_member(node)) {
       return to_assign(new_binary(ND_BITOR, node, rhs, tok));
     }
-    if (is_simple_var(node)) {
+    if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITOR,node,rhs,tok),tok);
     }
     if (opeq_ok(node->ty,rhs->ty)
@@ -2626,7 +2621,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_bitfield_member(node)) {
       return to_assign(new_binary(ND_BITXOR, node, rhs, tok));
     }
-    if (is_simple_var(node)) {
+    if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_BITXOR,node,rhs,tok),tok);
     }
     if (opeq_ok(node->ty,rhs->ty)
