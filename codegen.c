@@ -2371,36 +2371,13 @@ static void push_args2(Node *args,bool is_variadic)
       gen_expr(args);
       break;
     }
-    int64_t val = args->val;
-    switch(args->kind){
-    case ND_CAST:
-      if (is_empty_cast(args->lhs->ty, args->ty)
-      &&  args->lhs->kind == ND_NUM){
-        gen_direct_pushl(args->lhs->val);
-        break;
-      }
-      if (is_int16(args->lhs->ty)
-      &&  args->lhs->kind==ND_NUM
-      &&  args->lhs->val>=0) {
-        gen_direct_pushl(args->lhs->val);
-        break;
-      }
-      gen_expr(args);
-      pushl();
-      break;
-    case ND_NUM:
+    int64_t val;
+    if (is_long_constant(args,&val)) {
       gen_direct_pushl(val);
-      break;
-    case ND_VAR:
-      if (test_addr_x(args)){
-        int off = gen_addr_x(args);
-        pushlx(off);
-      }else{
-        gen_expr(args);
-        pushl();
-      }
-      break;
-    default:
+    }else if (test_addr_x(args)){
+      int off = gen_addr_x(args);
+      pushlx(off);
+    }else{
       gen_expr(args);
       pushl();
     }
