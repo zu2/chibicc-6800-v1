@@ -1402,13 +1402,6 @@ int gen_expr_x_sub(Node *node,bool test)
     return false;
   default:
   }
-fallback:
-  if (test_addr_x(node)) {
-    if (test) return true;
-    off = gen_addr_x(node);
-    off = ldx_x(node->ty,off);
-    return off;
-  }
   if (test) {
     return false;
   }
