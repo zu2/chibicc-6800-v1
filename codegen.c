@@ -1583,17 +1583,6 @@ int gen_addr_x_sub(Node *node,bool test)
         assert(0); // gen_addr_x() must not be called when the offset is over 252
       }
     }
-    // *p[1] = 22;
-    // (ND_DEREF ty_ushort
-    //   (ND_DEREF TY_PTR(10) (+ TY_PTR(10) (ND_VAR TY_PTR(10) p +0 ) 2)))
-    if (node->lhs->kind == ND_DEREF
-    &&  node->lhs->ty
-    &&  is_int16_or_ptr(node->lhs->ty)
-    &&  test_expr_x(node->lhs)) {
-      if (test) return true;
-      off = gen_expr_x(node->lhs);
-      return off;
-    }
     if (test_expr_x(node->lhs)) {
       if (test) return true;
       off = gen_expr_x(node->lhs);
