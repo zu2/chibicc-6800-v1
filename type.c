@@ -420,7 +420,7 @@ void add_type(Node *node) {
     &&  is_flonum(node->lhs->ty)) {
       error_tok(node->rhs->tok, "assignment to a floating point number from a pointer");
     }
-    if (node->lhs->ty->kind != TY_STRUCT)
+    if (node->lhs->ty->kind != TY_STRUCT && node->lhs->ty->kind != TY_UNION)
       node->rhs = new_cast(node->rhs, node->lhs->ty);
     node->ty = node->lhs->ty;
     return;
