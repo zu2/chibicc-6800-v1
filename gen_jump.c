@@ -101,6 +101,20 @@ char *is_addr_constant(Node *node)
     sprintf(p,"_%s",node->lhs->var->name);
     return p;
   }
+  if (node->kind == ND_ADDR
+  &&  node->lhs->kind == ND_MEMBER
+  &&  !node->lhs->member->is_bitfield
+  &&  is_global_var(node->lhs->lhs)) {
+    Obj *var = node->lhs->lhs->var;
+    val = node->lhs->member->offset;
+    char *p = calloc(1,strlen(var->name)+32);
+    if (val==0) {
+      sprintf(p,"_%s",var->name);
+    }else{
+      sprintf(p,"_%s%+ld",var->name,val);
+    }
+    return p;
+  }
   if (node->kind == ND_ADD
   &&  node->ty->kind == TY_ARRAY
   &&  is_integer_constant(node->rhs,&val)) {
