@@ -95,6 +95,19 @@ char *is_addr_constant(Node *node)
     sprintf(p,"_%s",node->var->name);
     return p;
   }
+  if (node->kind == ND_VAR
+  &&  node->ty->kind == TY_FUNC) {
+    char *p = calloc(1,strlen(node->var->name)+2);
+    sprintf(p,"_%s",node->var->name);
+    return p;
+  }
+  if (node->kind == ND_ADDR
+  &&  node->lhs->kind == ND_VAR
+  &&  node->lhs->ty->kind == TY_FUNC) {
+    char *p = calloc(1,strlen(node->lhs->var->name)+2);
+    sprintf(p,"_%s",node->lhs->var->name);
+    return p;
+  }
   if (node->kind == ND_ADDR
   &&  is_global_var(node->lhs)) {
     char *p = calloc(1,strlen(node->lhs->var->name)+2);
