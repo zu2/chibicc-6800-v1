@@ -504,7 +504,6 @@ void negd(void);
 void ldx_bp(void);
 void ldx_bp_nX(int off);
 void ldx_nX(int off);
-int ldx_x(Type *ty,int off);
 void ldx_EXT(Node *node);
 void cpx_EXT(Node *node);
 void stx_EXT(Node *node);

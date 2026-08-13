@@ -381,6 +381,18 @@ void ldx_nX(int off)
   IX_PTR_off = off;
 }
 
+// C11 6.3.2.1p3,p4: an array or a function is converted to a pointer, so the value is the address
+bool is_decay_type(Type *ty)
+{
+  switch (ty->kind) {
+  case TY_ARRAY:
+  case TY_FUNC:
+  case TY_VLA:
+    return true;
+  }
+  return false;
+}
+
 void ldx_bp_nX(int off)
 {
   if (IX_Dest == IX_PTR && IX_PTR_off == off){
@@ -986,8 +998,6 @@ void gen_addr(Node *node)
   error_tok(node->tok, "not an lvalue");
 }
 
-int ldx_x(Type *ty,int off);
-
 int gen_expr_x(Node *node);
 bool test_expr_x(Node *node);
 static int addr_x_offset(Node *node);
@@ -1067,7 +1077,10 @@ int gen_expr_x_sub(Node *node,bool test)
     if (test_addr_x(node)) {
       if (test) return true;
       off = gen_addr_x(node);
-      off = ldx_x(node->ty,off);
+      if (!is_decay_type(node->ty)) {
+        ldx_nX(off);
+        off = 0;
+      }
       return off;
     }
     return 0;
@@ -1075,7 +1088,10 @@ int gen_expr_x_sub(Node *node,bool test)
     if (test_addr_x(node)) {
       if (test) return true;
       off = gen_addr_x(node);
-      off = ldx_x(node->ty,off);
+      if (!is_decay_type(node->ty)) {
+        ldx_nX(off);
+        off = 0;
+      }
       return off;
     }
     return false;
@@ -1108,7 +1124,10 @@ int gen_expr_x_sub(Node *node,bool test)
     if (test_expr_x(node->lhs)) {
       if (test) return true;
       off = gen_expr_x(lhs);
-      off = ldx_x(node->ty,off);
+      if (!is_decay_type(node->ty)) {
+        ldx_nX(off);
+        off = 0;
+      }
       return off;
     }
     return 0;
@@ -1803,15 +1822,6 @@ bool can_load_x(Type *ty)
     return true;
   }
   return is_integer(ty);
-}
-
-int ldx_x(Type *ty,int off)
-{
-  if (can_load_x(ty)) {
-    ldx_nX(off);
-    return 0;
-  }
-  return off;
 }
 
 void load_x(Type *ty,int off) {
