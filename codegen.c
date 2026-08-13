@@ -5267,6 +5267,20 @@ void gen_expr(Node *node)
       load_bitfield(node);
       return;
     }
+    if (is_global_var(node->lhs)
+    &&  is_integer_or_ptr(node->ty)) {
+      char *name = node->lhs->var->name;
+      int moff = mem->offset;
+      if (node->ty->size == 1) {
+        println("\tldab _%s+%d",name,moff);
+        return;
+      }
+      if (node->ty->size == 2) {
+        println("\tldab _%s+%d",name,moff+1);
+        println("\tldaa _%s+%d",name,moff);
+        return;
+      }
+    }
     if (can_load_x(node->ty) && test_addr_x(node)) {
       off = gen_addr_x(node);
       load_x(node->ty,off);
