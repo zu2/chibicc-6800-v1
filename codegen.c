@@ -2876,6 +2876,37 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     return 0;
   default:
     if (test_addr_x(node)) {
+      if (node->kind == ND_MEMBER
+      &&  !node->member->is_bitfield
+      &&  is_global_var(node->lhs)) {
+        char *name = node->lhs->var->name;
+        int moff = node->member->offset;
+        switch(node->ty->kind) {
+        case TY_BOOL:
+        case TY_CHAR:
+          if (test) {
+            return is_char || node->ty->is_unsigned;
+          }
+          println("\t%s _%s+%d",opb,name,moff);
+          if (is_store) {
+            invalidate_EXT(node->lhs);
+          }else if (opa) {
+            println("\t%s #0",opa);
+          }
+          return 1;
+        case TY_INT:
+        case TY_SHORT:
+        case TY_ENUM:
+          if (test) return 1;
+          println("\t%s _%s+%d",opb,name,moff+1);
+          if (opa)
+            println("\t%s _%s+%d",opa,name,moff);
+          if (is_store) {
+            invalidate_EXT(node->lhs);
+          }
+          return 1;
+        }
+      }
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
