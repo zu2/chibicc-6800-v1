@@ -95,13 +95,30 @@ char *is_addr_constant(Node *node)
   }
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_PTR
-  &&  node->lhs->kind == ND_ADD
-  &&  node->lhs->ty->kind == TY_ARRAY
-  &&  is_global_array(node->lhs->lhs)
-  &&  is_integer_constant(node->lhs->rhs,&val)) {
-    char *p = calloc(1,strlen(node->lhs->lhs->var->name)+32);
-    sprintf(p,"_%s%+ld",node->lhs->lhs->var->name,val);
-    return p;
+  &&  node->lhs->kind == ND_ADD) {
+    node = node->lhs;
+  }
+  if (node->kind == ND_ADD
+  &&  node->ty->kind == TY_ARRAY
+  &&  is_integer_constant(node->rhs,&val)) {
+    Obj *var = NULL;
+    if (is_global_array(node->lhs)) {
+      var = node->lhs->var;
+    }else if (node->lhs->kind == ND_MEMBER
+          &&  !node->lhs->member->is_bitfield
+          &&  is_global_var(node->lhs->lhs)) {
+      var = node->lhs->lhs->var;
+      val += node->lhs->member->offset;
+    }
+    if (var) {
+      char *p = calloc(1,strlen(var->name)+32);
+      if (val==0) {
+        sprintf(p,"_%s",var->name);
+      }else{
+        sprintf(p,"_%s%+ld",var->name,val);
+      }
+      return p;
+    }
   }
   return NULL;
 }
