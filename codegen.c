@@ -1094,15 +1094,15 @@ int gen_expr_x_sub(Node *node,bool test)
         if (test) return true;
         ldx_bp();
         ldx_nX(vp->var->offset);
-        off = ldx_x(node->lhs->ty,val);
-        return off;
+        ldx_nX(val);
+        return 0;
       }
       if (is_global_var(vp)
       &&  (0 <= val && val<256)) {
         if (test) return true;
         ldx_EXT(vp);
-        off = ldx_x(node->lhs->ty,val);
-        return off;
+        ldx_nX(val);
+        return 0;
       }
     }
     if (test_expr_x(node->lhs)) {
