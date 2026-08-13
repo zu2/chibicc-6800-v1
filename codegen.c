@@ -1004,14 +1004,25 @@ int gen_expr_x_sub(Node *node,bool test)
   &&  node->member->is_bitfield) {
     return false;
   }
+  switch (node->ty->kind) {
+  case TY_SHORT:
+  case TY_INT:
+  case TY_ENUM:
+  case TY_PTR:
+  case TY_ARRAY:
+  case TY_FUNC:
+  case TY_VLA:
+    break;
+  default:
+    if (test) return false;
+    assert(0);
+  }
   if ((addr=is_addr_constant(node))) {
     if (test) return true;
     ldx_IMM_STR(addr);
     return 0;
   }
   switch(node->kind) {
-  case ND_NULL_EXPR:
-    return false;
   case ND_NUM: {
     switch (node->ty->kind) {
     case TY_FLOAT:
