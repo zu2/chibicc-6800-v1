@@ -110,6 +110,33 @@ static Obj *find_base_var(Node *node, int64_t *ofs)
   return node->var;
 }
 
+// Find the global variable under an expression whose value is an address.
+// garr + 1     -> the array itself is an address
+// &gd.in.x + 1 -> the operand of '&' is an object, so find_base_var() takes over
+static Obj *find_base_addr(Node *node, int64_t *ofs)
+{
+  int64_t val;
+
+  if (node->kind == ND_ADDR)
+    return find_base_var(node->lhs,ofs);
+  if (node->kind == ND_ADD
+  &&  node->ty->kind == TY_PTR
+  &&  is_integer_constant(node->rhs,&val)) {
+    *ofs += val;
+    return find_base_addr(node->lhs,ofs);
+  }
+  if (node->kind == ND_SUB
+  &&  node->ty->kind == TY_PTR
+  &&  is_integer_constant(node->rhs,&val)) {
+    *ofs -= val;
+    return find_base_addr(node->lhs,ofs);
+  }
+  if (node->ty
+  &&  node->ty->kind == TY_ARRAY)
+    return find_base_var(node,ofs);
+  return NULL;
+}
+
 // Return a constant expression usable after '#', or NULL.
 // The value must be an address, not the contents of one.
 // (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
@@ -137,11 +164,7 @@ char *is_addr_constant(Node *node)
     sprintf(p,"_%s",node->lhs->var->name);
     return p;
   }
-  if (node->kind == ND_ADDR) {
-    var = find_base_var(node->lhs,&ofs);
-  } else if (node->ty && node->ty->kind == TY_ARRAY) {
-    var = find_base_var(node,&ofs);
-  }
+  var = find_base_addr(node,&ofs);
   if (var) {
     char *p = calloc(1,strlen(var->name)+32);
     if (ofs==0) {
