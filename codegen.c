@@ -6029,18 +6029,12 @@ void gen_expr(Node *node)
         IX_invalidate();
         return;
       }
-      switch (node->lhs->kind) {
-      case ND_NUM:
+      if (node->lhs->kind == ND_NUM) {
         gen_direct_pushl(node->lhs->val);
-        break;
-      case ND_VAR:
-        if (test_addr_x(node->lhs)){
-          int off = gen_addr_x(node->lhs);
-          pushlx(off);
-          break;
-        }
-	// THRU
-      default:
+      }else if (test_addr_x(node->lhs)){
+        int off = gen_addr_x(node->lhs);
+        pushlx(off);
+      }else{
         gen_expr(node->lhs);
         pushl();
       }
