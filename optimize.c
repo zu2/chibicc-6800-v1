@@ -230,12 +230,12 @@ static int node_cost(Node *node)
     return 2;
   }else if (is_pointer_constant(node,NULL)) {
     return 5;
+  }else if (is_addr_constant(node)) {
+    return 5+sign;
   }else if (is_global_var(node)) {
     return 150+sign;
   }else if (can_direct(node)) {
     return 200+sign;
-  }else if (is_addr_constant(node)) {
-    return 220+sign;
   }else if (test_addr_x(node)) {
     return 250+sign;
   }else if (node->kind==ND_VAR) {

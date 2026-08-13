@@ -87,16 +87,13 @@ char *is_addr_constant(Node *node)
   int64_t val;
 
   if (node->kind == ND_CAST
-  &&  node->ty->kind == TY_PTR
-  &&  is_global_array(node->lhs)) {
-    char *p = calloc(1,strlen(node->lhs->var->name)+2);
-    sprintf(p,"_%s",node->lhs->var->name);
-    return p;
-  }
-  if (node->kind == ND_CAST
-  &&  node->ty->kind == TY_PTR
-  &&  node->lhs->kind == ND_ADD) {
+  &&  node->ty->kind == TY_PTR) {
     node = node->lhs;
+  }
+  if (is_global_array(node)) {
+    char *p = calloc(1,strlen(node->var->name)+2);
+    sprintf(p,"_%s",node->var->name);
+    return p;
   }
   if (node->kind == ND_ADD
   &&  node->ty->kind == TY_ARRAY
