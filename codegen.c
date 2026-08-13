@@ -1550,6 +1550,15 @@ int gen_addr_x_sub(Node *node,bool test)
         ldx_bp_nX(node->lhs->lhs->var->offset);
         return val;
       }
+      if ((node->lhs->ty->kind == TY_PTR)
+      &&  (node->lhs->lhs->kind == ND_VAR)
+      &&   is_global_var(node->lhs->lhs)
+      &&  is_integer_constant(node->lhs->rhs,&val)
+      &&  (0<=val && val<=252)) {
+        if (test) return true;
+        ldx_EXT(node->lhs->lhs);
+        return val;
+      }
       // (ND_DEREF ty_int (+ TY_ARRAY(12) ...  n))
       if (node->lhs->ty->kind == TY_ARRAY
       &&  is_integer_constant(node->lhs->rhs,&val)
