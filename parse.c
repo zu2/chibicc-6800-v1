@@ -1095,8 +1095,8 @@ static Member *struct_designator(Token **rest, Token *tok, Type *ty) {
     error_tok(tok, "expected a field designator");
 
   for (Member *mem = ty->members; mem; mem = mem->next) {
-    // Anonymous struct member
-    if (mem->ty->kind == TY_STRUCT && !mem->name) {
+    // Anonymous struct or union member
+    if ((mem->ty->kind == TY_STRUCT || mem->ty->kind == TY_UNION) && !mem->name) {
       if (get_struct_member(mem->ty, tok)) {
         *rest = start;
         return mem;
@@ -1290,6 +1290,16 @@ static void union_initializer(Token **rest, Token *tok, Initializer *init) {
   init->mem = init->ty->members;
 
   if (!equal(tok, "{")) {
+    // A union can be initialized with another union. E.g.
+    // `union T x = y;` where y is a variable of type `union T`.
+    // Handle that case first.
+    Node *expr = assign(rest, tok);
+    add_type(expr);
+    if (expr->ty->kind == TY_UNION) {
+      init->expr = expr;
+      return;
+    }
+
     initializer2(rest, tok, init->children[0]);
     return;
   }
@@ -1463,7 +1473,7 @@ static Node *create_lvar_init(Initializer *init, Type *ty, InitDesg *desg, Token
     return node;
   }
 
-  if (ty->kind == TY_UNION) {
+  if (ty->kind == TY_UNION && !init->expr) {
     Member *mem = init->mem ? init->mem : ty->members;
     InitDesg desg2 = {desg, 0, mem};
     return create_lvar_init(init->children[mem->idx], mem->ty, &desg2, tok);
