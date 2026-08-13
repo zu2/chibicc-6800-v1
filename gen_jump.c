@@ -77,6 +77,39 @@ Node *is_array_base(Node *node)
   return NULL;
 }
 
+// Find the global variable at the bottom of an address constant.
+// &gd.in.arr[1] -> Obj *gd, *ofs = 0 + 4 + 2
+// (ND_ADD (ND_MEMBER arr:4 (ND_MEMBER in:0 (ND_VAR gd))) 2)
+static Obj *find_base_var(Node *node, int64_t *ofs)
+{
+  int64_t val;
+
+  if (node->kind == ND_MEMBER
+  &&  !node->member->is_bitfield) {
+    *ofs += node->member->offset;
+    return find_base_var(node->lhs,ofs);
+  }
+  if (node->kind == ND_DEREF
+  &&  node->lhs->ty->kind == TY_ARRAY) {
+    return find_base_var(node->lhs,ofs);
+  }
+  if (node->kind == ND_ADD
+  &&  node->ty->kind == TY_ARRAY
+  &&  is_integer_constant(node->rhs,&val)) {
+    *ofs += val;
+    return find_base_var(node->lhs,ofs);
+  }
+  if (node->kind != ND_VAR)
+    return NULL;
+  if (node->var->ty->kind == TY_VLA)
+    return NULL;
+  if (node->var->is_local)
+    return NULL;
+  if (node->ty->kind == TY_FUNC)
+    return NULL;
+  return node->var;
+}
+
 // Return a constant expression usable after '#', or NULL.
 // The value must be an address, not the contents of one.
 // (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
@@ -84,16 +117,12 @@ Node *is_array_base(Node *node)
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 char *is_addr_constant(Node *node)
 {
-  int64_t val;
+  int64_t ofs = 0;
+  Obj *var = NULL;
 
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_PTR) {
     node = node->lhs;
-  }
-  if (is_global_array(node)) {
-    char *p = calloc(1,strlen(node->var->name)+2);
-    sprintf(p,"_%s",node->var->name);
-    return p;
   }
   if (node->kind == ND_VAR
   &&  node->ty->kind == TY_FUNC) {
@@ -108,47 +137,19 @@ char *is_addr_constant(Node *node)
     sprintf(p,"_%s",node->lhs->var->name);
     return p;
   }
-  if (node->kind == ND_ADDR
-  &&  is_global_var(node->lhs)) {
-    char *p = calloc(1,strlen(node->lhs->var->name)+2);
-    sprintf(p,"_%s",node->lhs->var->name);
-    return p;
+  if (node->kind == ND_ADDR) {
+    var = find_base_var(node->lhs,&ofs);
+  } else if (node->ty && node->ty->kind == TY_ARRAY) {
+    var = find_base_var(node,&ofs);
   }
-  if (node->kind == ND_ADDR
-  &&  node->lhs->kind == ND_MEMBER
-  &&  !node->lhs->member->is_bitfield
-  &&  is_global_var(node->lhs->lhs)) {
-    Obj *var = node->lhs->lhs->var;
-    val = node->lhs->member->offset;
+  if (var) {
     char *p = calloc(1,strlen(var->name)+32);
-    if (val==0) {
+    if (ofs==0) {
       sprintf(p,"_%s",var->name);
     }else{
-      sprintf(p,"_%s%+ld",var->name,val);
+      sprintf(p,"_%s%+ld",var->name,ofs);
     }
     return p;
-  }
-  if (node->kind == ND_ADD
-  &&  node->ty->kind == TY_ARRAY
-  &&  is_integer_constant(node->rhs,&val)) {
-    Obj *var = NULL;
-    if (is_global_array(node->lhs)) {
-      var = node->lhs->var;
-    }else if (node->lhs->kind == ND_MEMBER
-          &&  !node->lhs->member->is_bitfield
-          &&  is_global_var(node->lhs->lhs)) {
-      var = node->lhs->lhs->var;
-      val += node->lhs->member->offset;
-    }
-    if (var) {
-      char *p = calloc(1,strlen(var->name)+32);
-      if (val==0) {
-        sprintf(p,"_%s",var->name);
-      }else{
-        sprintf(p,"_%s%+ld",var->name,val);
-      }
-      return p;
-    }
   }
   return NULL;
 }
