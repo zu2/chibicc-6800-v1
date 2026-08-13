@@ -1000,6 +1000,10 @@ int gen_expr_x_sub(Node *node,bool test)
   int64_t val;
   char *addr;
 
+  if (node->kind == ND_MEMBER
+  &&  node->member->is_bitfield) {
+    return false;
+  }
   if ((addr=is_addr_constant(node))) {
     if (test) return true;
     ldx_IMM_STR(addr);
@@ -1057,9 +1061,6 @@ int gen_expr_x_sub(Node *node,bool test)
     }
     return 0;
   case ND_MEMBER: {
-    if (node->member->is_bitfield) {     // bitfield cannot be move to IX
-      return false;
-    }
     if (test_addr_x(node)) {
       if (test) return true;
       off = gen_addr_x(node);
@@ -1431,13 +1432,17 @@ static int addr_x_offset(Node *node)
   int64_t val;
   int off;
 
+  if (node->kind == ND_MEMBER
+  &&  node->member->is_bitfield) {
+    return -1;
+  }
   if (is_global_var(node) || is_global_array(node)) {
     return 0;
   }
   if (is_local_var(node)) {
     return node->var->offset;
   }
-  if (node->kind == ND_MEMBER && !node->member->is_bitfield) {
+  if (node->kind == ND_MEMBER) {
     off = addr_x_offset(node->lhs);
     return (off < 0) ? -1 : off + node->member->offset;
   }
@@ -1475,6 +1480,10 @@ int gen_addr_x_sub(Node *node,bool test)
   int off;
   int64_t val;
 
+  if (node->kind == ND_MEMBER
+  &&  node->member->is_bitfield) {
+    return false;
+  }
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
@@ -1587,9 +1596,6 @@ int gen_addr_x_sub(Node *node,bool test)
   case ND_COMMA:
     return false;
   case ND_MEMBER:
-    if (node->member->is_bitfield) {
-      return false;
-    }
     if (!test_addr_x(lhs)) {
       return 0;
     }
