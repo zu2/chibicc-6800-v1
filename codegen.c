@@ -1029,13 +1029,13 @@ int gen_expr_x_sub(Node *node,bool test)
     if (test) return false;
     assert(0);
   }
+  if (is_decay_type(node->ty)) {
+    return false;
+  }
   if ((addr=is_addr_constant(node))) {
     if (test) return true;
     ldx_IMM_STR(addr);
     return 0;
-  }
-  if (is_decay_type(node->ty)) {
-    return false;
   }
   switch(node->kind) {
   case ND_NUM: {
@@ -1433,6 +1433,7 @@ int gen_decayed_x_sub(Node *node,bool test)
   Node *rhs = node->rhs;
   int off;
   int64_t val;
+  char *addr;
 
   if (!is_decay_type(node->ty)) {
     return false;
@@ -1465,7 +1466,12 @@ int gen_decayed_x_sub(Node *node,bool test)
         return gen_addr_x(lhs) + val;
       }
     }
-    return false;
+    break;
+  }
+  if ((addr=is_addr_constant(node))) {
+    if (test) return true;
+    ldx_IMM_STR(addr);
+    return 0;
   }
   return false;
 }
