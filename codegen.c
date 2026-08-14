@@ -333,6 +333,19 @@ void negd()
   println("\tsbca #0");
 }
 
+void inx_dex(int n)
+{
+  for (int i=0; i<n; i++) {
+    println("\tinx");
+  }
+  for (int i=0; i>n; i--) {
+    println("\tdex");
+  }
+  if (n) {
+    IX_invalidate();
+  }
+}
+
 void abx()
 {
   println("\tjsr __abx");
@@ -1140,33 +1153,13 @@ bool gen_expr_x_sub(Node *node,bool test)
           switch(val) {
           case 1:
           case 2:
-            if (test) return true;
-            ldx_EXT(lhs);
-            println("\tinx");
-            if (val==2) {
-              println("\tinx");
-            }
-            stx_EXT(lhs);
-            println("\tdex");
-            if (val==2) {
-              println("\tdex");
-            }
-            IX_invalidate();
-            return false;
           case -1:
           case -2:
             if (test) return true;
             ldx_EXT(lhs);
-            println("\tdex");
-            if (val==-2) {
-              println("\tdex");
-            }
+            inx_dex(val);
             stx_EXT(lhs);
-            println("\tinx");
-            if (val==-2) {
-              println("\tinx");
-            }
-            IX_invalidate();
+            inx_dex(-val);
             return false;
           }
         }
@@ -1219,22 +1212,11 @@ bool gen_expr_x_sub(Node *node,bool test)
           switch(val) {
           case 1:
           case 2:
-            if (test) return true;
-            ldx_EXT(lhs);
-            println("\tinx");
-            if (val==2) {
-              println("\tinx");
-            }
-            stx_EXT(lhs);
-            return false;
           case -1:
           case -2:
             if (test) return true;
             ldx_EXT(lhs);
-            println("\tdex");
-            if (val==-2) {
-              println("\tdex");
-            }
+            inx_dex(val);
             stx_EXT(lhs);
             return false;
           }
@@ -1258,17 +1240,14 @@ bool gen_expr_x_sub(Node *node,bool test)
         return (abs(lhs->var->offset)<=2);
       ldx_bp();
       switch(lhs->var->offset) {
-      case -2:  println("\tdex");
-      case -1:  println("\tdex");
-                IX_invalidate();
-                break;
-      case 2:   println("\tinx");
-      case 1:   println("\tinx");
-                IX_invalidate();
-                break;
+      case -2:
+      case -1:
+      case 1:
+      case 2:
+        inx_dex(lhs->var->offset);
+        break;
       // case 0: // do nothing
       }
-
       return false;
     }
     return false;
@@ -1324,12 +1303,7 @@ bool gen_expr_x_sub(Node *node,bool test)
     &&  node->lhs->var->offset<=6) {
       if (test) return true;
       ldx_bp();
-      for (int i=0; i<node->lhs->var->offset; i++) {
-        println("\tinx");
-      }
-      if (node->lhs->var->offset) {
-        IX_invalidate();
-      }
+      inx_dex(node->lhs->var->offset);
       return false;
     }
     if (!is_int16_or_ptr(node->lhs->ty)) {
@@ -1350,65 +1324,27 @@ bool gen_expr_x_sub(Node *node,bool test)
 // case ND_LOGOR:
 // case ND_FUNCALL:
 // case ND_LABEL_VAL:
+  //; (+ ty_int (ND_VAR ty_int y +0 ) 1)
   case ND_ADD:
-    //; (+ ty_int (ND_VAR ty_int y +0 ) 1)
-    if (is_int16(node->ty)
-    &&  is_int16(lhs->ty)
-    &&  test_expr_x(lhs)
-    &&  is_integer_constant(rhs,&val)) {
-      switch(val) {
-      case 0:
-        if (test) return true;
-        gen_expr_x(lhs);
-        return false;
-      case 1:
-      case 2:
-        if (test) return true;
-        gen_expr_x(lhs);
-        for(int i=0; i<val; i++) {
-          println("\tinx");
-        }
-        IX_invalidate();
-        return false;
-      case -1:
-      case -2:
-        if (test) return true;
-        gen_expr_x(lhs);
-        for(int i=0; i< -val; i++) {
-          println("\tdex");
-        }
-        IX_invalidate();
-        return false;
-      }
-    }
-    return false;
   case ND_SUB:
     if (is_int16(node->ty)
     &&  is_int16(lhs->ty)
     &&  test_expr_x(lhs)
     &&  is_integer_constant(rhs,&val)) {
+      if (node->kind == ND_SUB) {
+        val = -val;
+      }
       switch(val) {
       case 0:
         if (test) return true;
-        gen_expr_x(lhs);
         return false;
       case 1:
       case 2:
-        if (test) return true;
-        gen_expr_x(lhs);
-        for(int i=0; i<val; i++) {
-          println("\tdex");
-        }
-        IX_invalidate();
-        return false;
       case -1:
       case -2:
         if (test) return true;
         gen_expr_x(lhs);
-        for(int i=0; i< -val; i++) {
-          println("\tinx");
-        }
-        IX_invalidate();
+        inx_dex(val);
         return false;
       }
     }

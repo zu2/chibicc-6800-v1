@@ -501,6 +501,7 @@ bool is_local_array_with_constant(Node *node);
 bool is_global_array_with_constant(Node *node);
 bool test_addr_x(Node *node);
 void negd(void);
+void inx_dex(int n);
 void ldx_bp(void);
 void ldx_bp_nX(int off);
 void ldx_nX(int off);
