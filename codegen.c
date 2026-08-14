@@ -7694,8 +7694,17 @@ void codegen(Obj *prog, FILE *out) {
   println("\t.setcpu 6800");
   println(";\toption flag -O%c -g%c",opt_O,opt_g);
   File **files = get_input_files();
-  for (int i = 0; files[i]; i++)
-    println(";\t.file %d \"%s\" %s %s", files[i]->file_no, files[i]->name,__DATE__,__TIME__);
+  for (int i = 0; files[i]; i++) {
+    struct stat st;
+    char buf[32];
+
+    if (stat(files[i]->name, &st) == 0
+    &&  strftime(buf, sizeof(buf), "%b %e %Y %H:%M:%S", localtime(&st.st_mtime))) {
+      println(";\t.file %d \"%s\" %s", files[i]->file_no, files[i]->name, buf);
+    }else{
+      println(";\t.file %d \"%s\"", files[i]->file_no, files[i]->name);
+    }
+  }
   assign_lvar_offsets(prog);
   emit_data(prog);
   emit_text(prog);

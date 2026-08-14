@@ -1070,6 +1070,33 @@ static Token *base_file_macro(Token *start) {
   return tok;
 }
 
+// The time of translation, shared by __DATE__ and __TIME__ so that both
+// report the same moment. https://reproducible-builds.org/specs/source-date-epoch/
+static struct tm *translation_time(Token *start) {
+  static struct tm tm;
+  static bool done;
+  time_t t;
+
+  if (done)
+    return &tm;
+
+  char *epoch = getenv("SOURCE_DATE_EPOCH");
+  if (epoch) {
+    char *end;
+    long long val = strtoll(epoch, &end, 10);
+    if (!*epoch || *end || val < 0 || val > 253402300799LL)
+      error_tok(start, "environment variable 'SOURCE_DATE_EPOCH' must expand to"
+                       " a non-negative integer less than or equal to 253402300799");
+    t = (time_t)val;
+    tm = *gmtime(&t);
+  }else{
+    t = time(NULL);
+    tm = *localtime(&t);
+  }
+  done = true;
+  return &tm;
+}
+
 // __DATE__ is expanded to the current date, e.g. "May 17 2020".
 static char *format_date(struct tm *tm) {
   static char mon[][4] = {
@@ -1077,12 +1104,24 @@ static char *format_date(struct tm *tm) {
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   };
 
-  return format("\"%s %2d %d\"", mon[tm->tm_mon], tm->tm_mday, tm->tm_year + 1900);
+  return format("%s %2d %d", mon[tm->tm_mon], tm->tm_mday, tm->tm_year + 1900);
+}
+
+static Token *date_macro(Token *start) {
+  Token *tok = new_str_token(format_date(translation_time(start)), start);
+  tok->next = start->next;
+  return tok;
 }
 
 // __TIME__ is expanded to the current time, e.g. "13:34:03".
 static char *format_time(struct tm *tm) {
-  return format("\"%02d:%02d:%02d\"", tm->tm_hour, tm->tm_min, tm->tm_sec);
+  return format("%02d:%02d:%02d", tm->tm_hour, tm->tm_min, tm->tm_sec);
+}
+
+static Token *time_macro(Token *start) {
+  Token *tok = new_str_token(format_time(translation_time(start)), start);
+  tok->next = start->next;
+  return tok;
 }
 
 void init_macros(void) {
@@ -1137,11 +1176,8 @@ void init_macros(void) {
   add_builtin("__COUNTER__", counter_macro);
   add_builtin("__TIMESTAMP__", timestamp_macro);
   add_builtin("__BASE_FILE__", base_file_macro);
-
-  time_t now = time(NULL);
-  struct tm *tm = localtime(&now);
-  define_macro("__DATE__", format_date(tm));
-  define_macro("__TIME__", format_time(tm));
+  add_builtin("__DATE__", date_macro);
+  add_builtin("__TIME__", time_macro);
 }
 
 typedef enum {
