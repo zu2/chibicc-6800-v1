@@ -71,7 +71,7 @@ bool is_scalar(Type *ty) {
   return is_numeric(ty) || ty->kind == TY_PTR;
 }
 
-static bool is_scalar_after_decay(Type *ty) {
+bool is_scalar_after_decay(Type *ty) {
   return is_scalar(ty)
       || ty->kind == TY_ARRAY
       || ty->kind == TY_FUNC

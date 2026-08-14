@@ -1733,6 +1733,9 @@ static Node *stmt(Token **rest, Token *tok) {
     Node *node = new_node(ND_IF, tok);
     tok = skip(tok->next, "(");
     node->cond = expr(&tok, tok);
+    add_type(node->cond);
+    if (!is_scalar_after_decay(node->cond->ty))
+      error_tok(node->cond->tok, "invalid controlling expression");
     tok = skip(tok, ")");
     node->then = stmt(&tok, tok);
     if (equal(tok, "else"))
@@ -1827,8 +1830,12 @@ static Node *stmt(Token **rest, Token *tok) {
       node->init = expr_stmt(&tok, tok);
     }
 
-    if (!equal(tok, ";"))
+    if (!equal(tok, ";")) {
       node->cond = expr(&tok, tok);
+      add_type(node->cond);
+      if (!is_scalar_after_decay(node->cond->ty))
+        error_tok(node->cond->tok, "invalid controlling expression");
+    }
     tok = skip(tok, ";");
 
     if (!equal(tok, ")"))
@@ -1859,6 +1866,9 @@ static Node *stmt(Token **rest, Token *tok) {
     Node *node = new_node(ND_FOR, tok);
     tok = skip(tok->next, "(");
     node->cond = expr(&tok, tok);
+    add_type(node->cond);
+    if (!is_scalar_after_decay(node->cond->ty))
+      error_tok(node->cond->tok, "invalid controlling expression");
     tok = skip(tok, ")");
 
     char *brk = brk_label;
@@ -1889,6 +1899,9 @@ static Node *stmt(Token **rest, Token *tok) {
     tok = skip(tok, "while");
     tok = skip(tok, "(");
     node->cond = expr(&tok, tok);
+    add_type(node->cond);
+    if (!is_scalar_after_decay(node->cond->ty))
+      error_tok(node->cond->tok, "invalid controlling expression");
     tok = skip(tok, ")");
     *rest = skip(tok, ";");
     return node;
@@ -2685,6 +2698,9 @@ static Node *conditional(Token **rest, Token *tok) {
     *rest = tok;
     return cond;
   }
+  add_type(cond);
+  if (!is_scalar_after_decay(cond->ty))
+    error_tok(cond->tok, "invalid controlling expression");
 
   if (equal(tok->next, ":")) {
     // [GNU] Compile `a ?: b` as `tmp = a, tmp ? tmp : b`.
