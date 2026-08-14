@@ -2001,6 +2001,7 @@ static int getTypeId(Type *ty) {
   case TY_SHORT:
     return ty->is_unsigned ? U16 : I16;
   case TY_INT:
+  case TY_ENUM:
     return ty->is_unsigned ? U16 : I16;
   case TY_LONG:
     return ty->is_unsigned ? U32 : I32;
@@ -2009,7 +2010,7 @@ static int getTypeId(Type *ty) {
   case TY_LDOUBLE:
     return F32;
   }
-  return U16; // TY_PTR,TY_ENUM
+  return U16; // TY_PTR
 }
 
 // The table for type casts
