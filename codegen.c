@@ -7181,7 +7181,9 @@ static void gen_stmt(Node *node)
       }
     }
     if (!current_fn->params && !current_fn->stack_size && !current_fn->use_alloca) {
-      println("; function has no params & locals");
+      if (opt('g','2')) {
+        println("; function has no params & locals");
+      }
       IX_invalidate();
       println("\trts");
       return;
@@ -7372,10 +7374,12 @@ static void emit_text(Obj *prog) {
       println("\t.export _%s", fn->name);
 
     // Prologue
-    println("; function %s prologue emit_text",fn->name);
-    println("; function %s use alloca/vla %d use functions %d",
-                fn->name,fn->use_alloca,fn->use_funcall);
-    println("; fn->body->kind=%d",fn->body->kind);
+    if (opt('g','2')) {
+      println("; function %s prologue emit_text",fn->name);
+      println("; function %s use alloca/vla %d use functions %d",
+                  fn->name,fn->use_alloca,fn->use_funcall);
+      println("; fn->body->kind=%d",fn->body->kind);
+    }
     println("\t.code");
 //  println("\t.type %s, @function", fn->name);
     println("_%s:", fn->name);
