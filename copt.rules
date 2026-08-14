@@ -3,28 +3,33 @@
 #
 
 #
-#	jmp & bra
+#	jsr & rts
 #
 
-	jsr %1
+# These rule breaks helpers that need the return address on the stack.
+# I'll think about it later.
+
+#	jsr %1
+#	rts
+#=
+#	jmp %1
+
+#	jsr %1
+#%2:
+#	rts
+#=
+#	jmp %1
+#%2:
+#	rts
+
+	rts
 	rts
 =
-	jmp %1
-
-	jsr %1
-%2:
-	rts
-=
-	jmp %1
-%2:
 	rts
 
-
-	rts
-	rts
-=
-	rts
-
+#
+#	jmp & bra
+#
 	jmp %1
 %1:
 =
