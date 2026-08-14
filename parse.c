@@ -1720,6 +1720,8 @@ static Node *stmt(Token **rest, Token *tok) {
     Type *ty = current_fn->ty->return_ty;
     if (ty->kind == TY_VOID)
       warn_tok(tok,"Return value in void function");
+    if (ty->kind != TY_VOID && exp->ty->kind == TY_VOID)
+      error_tok(tok, "return of a void value");
     if (ty->kind != TY_STRUCT && ty->kind != TY_UNION)
       exp = new_cast(exp, current_fn->ty->return_ty);
 
@@ -3521,6 +3523,9 @@ static Node *funcall(Token **rest, Token *tok, Node *fn) {
 
     if (!param_ty && !ty->is_variadic)
       error_tok(tok, "too many arguments");
+
+    if (arg->ty->kind == TY_VOID)
+      error_tok(arg->tok, "a void value as an argument");
 
     if (param_ty) {
       if (param_ty->kind != TY_STRUCT && param_ty->kind != TY_UNION)

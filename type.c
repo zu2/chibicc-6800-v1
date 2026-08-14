@@ -400,6 +400,10 @@ void add_type(Node *node) {
     if (node->lhs->ty->kind == TY_ARRAY) {
       error_tok(node->lhs->tok, "not an lvalue");
     }
+    // void v(void); int x; x = v();
+    if (node->rhs->ty->kind == TY_VOID) {
+      error_tok(node->rhs->tok, "assignment from a void value");
+    }
     // char *p; p = 1;
     if (node->lhs->ty->kind == TY_PTR
     &&  is_integer(node->rhs->ty)
