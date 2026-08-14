@@ -2942,6 +2942,8 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
 
   // ptr - ptr, which returns how many elements are between the two.
   if (lhs->ty->base && rhs->ty->base) {
+    if (!is_compatible(lhs->ty->base, rhs->ty->base))
+      error_tok(tok, "invalid operands");
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
 //    node->ty = ty_long;
     node->ty = ty_int;
