@@ -2846,6 +2846,10 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
   add_type(lhs);
   add_type(rhs);
 
+  if ((!is_numeric(lhs->ty) && !is_ptr_or_array(lhs->ty))
+  ||  (!is_numeric(rhs->ty) && !is_ptr_or_array(rhs->ty)))
+    error_tok(tok, "invalid operands");
+
   // num + num
   if (is_numeric(lhs->ty) && is_numeric(rhs->ty))
     return new_binary(ND_ADD, lhs, rhs, tok);
@@ -2870,7 +2874,7 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
   }
 
   // ptr + num
-  if (lhs->ty->base && is_integer(rhs->ty)){
+  if (is_integer(rhs->ty)){
     if (lhs->ty->base->size!=1){
       if (rhs->kind == ND_NUM) {
         rhs = new_num(lhs->ty->base->size * rhs->val, tok);
@@ -2892,6 +2896,10 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
 static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
   add_type(lhs);
   add_type(rhs);
+
+  if ((!is_numeric(lhs->ty) && !is_ptr_or_array(lhs->ty))
+  ||  (!is_numeric(rhs->ty) && !is_ptr_or_array(rhs->ty)))
+    error_tok(tok, "invalid operands");
 
   // num - num
   if (is_numeric(lhs->ty) && is_numeric(rhs->ty))
@@ -2916,7 +2924,7 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
   }
 
   // ptr - num
-  if (lhs->ty->base && is_integer(rhs->ty)) {
+  if (is_integer(rhs->ty)) {
     if (lhs->ty->base->size!=1){
       if (rhs->kind == ND_NUM) {
         rhs = new_num(lhs->ty->base->size * rhs->val, tok);
