@@ -6321,6 +6321,27 @@ void gen_expr(Node *node)
         return;
       assert(0);
     }
+    // A decayed VLA keeps its pointer value in a slot, so the value is read
+    // from the slot and not from the array the slot points to.
+    if (node->rhs->kind == ND_VAR
+    &&  node->rhs->var->ty->kind == TY_VLA
+    &&  node->rhs->var->offset <= 254){	// the slot read is two bytes
+      gen_expr(node->lhs);
+      ldx_bp();
+      println("\tsubb %d+1,x",node->rhs->var->offset);
+      println("\tsbca %d,x",node->rhs->var->offset);
+      return;
+    }
+    if (node->lhs->kind == ND_VAR
+    &&  node->lhs->var->ty->kind == TY_VLA
+    &&  node->lhs->var->offset <= 254){
+      gen_expr(node->rhs);
+      negd();
+      ldx_bp();
+      println("\taddb %d+1,x",node->lhs->var->offset);
+      println("\tadca %d,x",node->lhs->var->offset);
+      return;
+    }
     if (test_addr_x(node->rhs)){
       gen_expr(node->lhs);
       int off = gen_addr_x(node->rhs);
