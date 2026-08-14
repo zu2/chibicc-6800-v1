@@ -1029,21 +1029,9 @@ bool gen_expr_x_sub(Node *node,bool test)
   &&  node->member->is_bitfield) {
     return false;
   }
-  switch (node->ty->kind) {
-  case TY_SHORT:
-  case TY_INT:
-  case TY_ENUM:
-  case TY_PTR:
-  case TY_ARRAY:
-  case TY_FUNC:
-  case TY_VLA:
-    break;
-  default:
+  if (!is_int16_or_ptr(node->ty)) {
     if (test) return false;
     assert(0);
-  }
-  if (is_decay_type(node->ty)) {
-    return false;
   }
   if ((addr=is_addr_constant(node))) {
     if (test) return true;
