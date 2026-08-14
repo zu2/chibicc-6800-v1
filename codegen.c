@@ -1346,19 +1346,6 @@ int gen_expr_x_sub(Node *node,bool test)
 // case ND_FUNCALL:
 // case ND_LABEL_VAL:
   case ND_ADD:
-    if (lhs->kind      == ND_CAST
-    &&  lhs->ty->kind  == TY_PTR
-    &&  test_addr_x(lhs->lhs)
-    &&  rhs->kind      == ND_CAST
-    &&  rhs->ty->kind  == TY_PTR
-    &&  rhs->lhs->kind == ND_NUM
-    &&  is_integer(rhs->lhs->ty)) {
-      off = addr_x_offset(lhs->lhs);
-      if (0 <= off && off + rhs->lhs->val <= 252) {
-        if (test) return true;
-        return gen_addr_x(lhs->lhs) + rhs->lhs->val;
-      }
-    }
     //(+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +0 ) 6)
     if (lhs->ty->kind == TY_ARRAY
     &&  is_integer_constant(rhs,&val)) {
@@ -3634,14 +3621,9 @@ static void gen_funcall(Node *node)
     }else if (node->ret_buffer) {
       push();
     }
-    if (test_expr_x(node->lhs)) {
-      gen_expr_x(node->lhs);
-      println("\tstx @tmp1");
-    }else{
-      gen_expr(node->lhs);
-      println("\tstab @tmp1+1");
-      println("\tstaa @tmp1");
-    }
+    gen_expr(node->lhs);
+    println("\tstab @tmp1+1");
+    println("\tstaa @tmp1");
     if (node->args && !node->args->pass_by_stack) {
       switch (node->args->ty->kind) {
       case TY_BOOL:
