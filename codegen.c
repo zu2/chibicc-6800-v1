@@ -7174,7 +7174,7 @@ static void gen_stmt(Node *node)
         break;
       }
     }
-    if (!current_fn->params && !current_fn->stack_size && !current_fn->use_alloca) {
+    if (!current_fn->use_bp) {
       if (opt('g','2')) {
         println("; function has no params & locals");
       }
