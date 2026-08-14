@@ -1622,7 +1622,6 @@ int gen_addr_x_sub(Node *node,bool test)
     assert(0); // gen_addr_x() must not be called when the offset is over 252
   case ND_FUNCALL:
     return false;
-    // TODO: Consider the correct address generation method
   case ND_ASSIGN:
   case ND_COND:
     return false;
@@ -5734,7 +5733,7 @@ void gen_expr(Node *node)
         println("\tbne L_memzero_%d", c);
       }
       if (node->var->ty->size % 2) {
-        println("\tstaa 0,x",node->var->offset);
+        println("\tstaa 0,x");
       }
       IX_invalidate();
     }
