@@ -115,12 +115,6 @@ void popx(void) {
   depth-=2;
 }
 
-void pushx(void)
-{
-  println("\tjsr __pushx");
-  depth+=2;
-}
-
 //
 // Use ins_only(n) to preserve flags.
 //
