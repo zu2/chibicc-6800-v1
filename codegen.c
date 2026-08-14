@@ -1247,8 +1247,12 @@ int gen_expr_x_sub(Node *node,bool test)
   // (ND_ADDR (ND_DEREF ty_uchar (ND_CAST TY_PTR(10) 63060)))
   case ND_ADDR: {
     if (node->lhs->kind == ND_DEREF) {
+      if (is_decay_type(node->lhs->lhs->ty)) {
+        return false;
+      }
       if (test) return test_expr_x(node->lhs->lhs);
-      return gen_expr_x(node->lhs->lhs);
+      gen_expr_x(node->lhs->lhs);
+      return 0;
     }
     if (is_local_var(lhs)) {
       if (test)
@@ -1332,8 +1336,8 @@ int gen_expr_x_sub(Node *node,bool test)
     }
     if (test_expr_x(lhs)) {
       if (test) return true;
-      off = gen_expr_x(lhs);
-      return off;
+      gen_expr_x(lhs);
+      return 0;
     }
     return false;
   } // ND_CAST:
