@@ -72,7 +72,10 @@ bool is_scalar(Type *ty) {
 }
 
 static bool is_scalar_after_decay(Type *ty) {
-  return is_scalar(ty) || ty->kind == TY_ARRAY;
+  return is_scalar(ty)
+      || ty->kind == TY_ARRAY
+      || ty->kind == TY_FUNC
+      || ty->kind == TY_VLA;
 }
 
 static bool is_ptr_or_array(Type *ty) {
