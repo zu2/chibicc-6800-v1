@@ -364,7 +364,7 @@ void ldx_bp()
     }
     if(depth==0 && !current_fn->use_alloca) {
       println("\ttsx");
-    }else if (!current_fn->params && !current_fn->stack_size && !current_fn->use_alloca) {
+    }else if (!current_fn->use_bp) {
       // function has no @bp
       println("\ttsx");
       for (int i=0; i<depth; i++) {
