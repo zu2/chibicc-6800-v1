@@ -79,7 +79,7 @@ static bool is_scalar_after_decay(Type *ty) {
 }
 
 static bool is_ptr_or_array(Type *ty) {
-  return ty->kind == TY_PTR || ty->kind == TY_ARRAY;
+  return ty->kind == TY_PTR || ty->kind == TY_ARRAY || ty->kind == TY_VLA;
 }
 
 bool is_null_ptr_constant(Node *node) {
