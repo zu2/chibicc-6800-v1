@@ -1571,13 +1571,7 @@ int gen_addr_x_sub(Node *node,bool test)
       }
       goto fallback;
     }
-    // Function
-    if (node->ty->kind == TY_FUNC) {
-      if (test) return 1;
-      ldx_IMM_VAR(node->var->name);
-      return 0;
-    }
-    // maybe Global variable
+    // Function and Global variable
     if (test) return 1;
     ldx_IMM_VAR(node->var->name);
     return 0;
