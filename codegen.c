@@ -1004,7 +1004,7 @@ bool test_decayed_x(Node *node);
 bool test_expr_x(Node *node);
 static int addr_x_offset(Node *node);
 
-int gen_expr_x_sub(Node *node,bool test)
+bool gen_expr_x_sub(Node *node,bool test)
 {
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
@@ -1035,7 +1035,7 @@ int gen_expr_x_sub(Node *node,bool test)
   if ((addr=is_addr_constant(node))) {
     if (test) return true;
     ldx_IMM_STR(addr);
-    return 0;
+    return false;
   }
   switch(node->kind) {
   case ND_NUM: {
@@ -1049,7 +1049,7 @@ int gen_expr_x_sub(Node *node,bool test)
       if (test) return true;
       println("\tldx @long+2");
       IX_invalidate();
-      return 0;
+      return false;
     case TY_BOOL:
     case TY_CHAR:
     case TY_SHORT:
@@ -1059,7 +1059,7 @@ int gen_expr_x_sub(Node *node,bool test)
       if (test) return true;
       println("\tldx #%d",(unsigned int)((node->val & 0x0ffff)));
       IX_invalidate();
-      return 0;
+      return false;
     }
     return false;
   } // ND_NUM
@@ -1070,26 +1070,26 @@ int gen_expr_x_sub(Node *node,bool test)
       if (is_global_var(node)) {
         if (test) return true;
         ldx_EXT(node);
-        return 0;
+        return false;
       }
       if (is_local_var(node)) {
         off = node->var->offset;
         if (test) return (0<=off && off<256);
         ldx_bp_nX(off);
-        return 0;
+        return false;
       }
     }
     if (test_addr_x(node)) {
       if (test) return true;
       ldx_nX(gen_addr_x(node));
-      return 0;
+      return false;
     }
-    return 0;
+    return false;
   case ND_MEMBER: {
     if (test_addr_x(node)) {
       if (test) return true;
       ldx_nX(gen_addr_x(node));
-      return 0;
+      return false;
     }
     return false;
   }; // ND_MEMBER:
@@ -1108,28 +1108,28 @@ int gen_expr_x_sub(Node *node,bool test)
         ldx_bp();
         ldx_nX(vp->var->offset);
         ldx_nX(val);
-        return 0;
+        return false;
       }
       if (is_global_var(vp)
       &&  (0 <= val && val<256)) {
         if (test) return true;
         ldx_EXT(vp);
         ldx_nX(val);
-        return 0;
+        return false;
       }
     }
     if (test_decayed_x(lhs)) {
       if (test) return true;
       ldx_nX(gen_decayed_x(lhs));
-      return 0;
+      return false;
     }
     if (test_expr_x(lhs)) {
       if (test) return true;
       gen_expr_x(lhs);
       ldx_nX(0);
-      return 0;
+      return false;
     }
-    return 0;
+    return false;
   } // ND_DEREF
   case ND_POST_INCDEC:
     if (is_int16_or_ptr(node->ty)
@@ -1152,7 +1152,7 @@ int gen_expr_x_sub(Node *node,bool test)
               println("\tdex");
             }
             IX_invalidate();
-            return 0;
+            return false;
           case -1:
           case -2:
             if (test) return true;
@@ -1167,7 +1167,7 @@ int gen_expr_x_sub(Node *node,bool test)
               println("\tinx");
             }
             IX_invalidate();
-            return 0;
+            return false;
           }
         }
       }
@@ -1189,7 +1189,7 @@ int gen_expr_x_sub(Node *node,bool test)
               println("\tldx %d,x",off);
               println("\tdex");
               IX_invalidate();
-              return 0;
+              return false;
             case -1:
               if (test) return true;
               off = gen_addr_x(lhs);
@@ -1202,7 +1202,7 @@ int gen_expr_x_sub(Node *node,bool test)
               println("\tldx %d,x",off);
               println("\tinx");
               IX_invalidate();
-              return 0;
+              return false;
             }
           }
         }
@@ -1226,7 +1226,7 @@ int gen_expr_x_sub(Node *node,bool test)
               println("\tinx");
             }
             stx_EXT(lhs);
-            return 0;
+            return false;
           case -1:
           case -2:
             if (test) return true;
@@ -1236,7 +1236,7 @@ int gen_expr_x_sub(Node *node,bool test)
               println("\tdex");
             }
             stx_EXT(lhs);
-            return 0;
+            return false;
           }
         }
       }
@@ -1251,7 +1251,7 @@ int gen_expr_x_sub(Node *node,bool test)
       }
       if (test) return test_expr_x(node->lhs->lhs);
       gen_expr_x(node->lhs->lhs);
-      return 0;
+      return false;
     }
     if (is_local_var(lhs)) {
       if (test)
@@ -1269,7 +1269,7 @@ int gen_expr_x_sub(Node *node,bool test)
       // case 0: // do nothing
       }
 
-      return 0;
+      return false;
     }
     return false;
   } // ND_ADDR;
@@ -1289,7 +1289,7 @@ int gen_expr_x_sub(Node *node,bool test)
       println("\tasl %d,x",off+1);
       println("\trol %d,x",off);
       ldx_nX(off);
-      return 0;
+      return false;
     }
     return false;
 //  (>>= ty_ushort (ND_VAR ty_ushort t +4 ) (ND_NUM TY_CHAR(2) 1))
@@ -1308,7 +1308,7 @@ int gen_expr_x_sub(Node *node,bool test)
         println("\tror %d,x",off+1);
       }
       ldx_nX(off);
-      return 0;
+      return false;
     }
     return false;
 //case ND_STMT_EXPR:
@@ -1328,7 +1328,7 @@ int gen_expr_x_sub(Node *node,bool test)
         println("\tinx");
         IX_invalidate();
       }
-      return 0;
+      return false;
     }
     if (!is_int16_or_ptr(node->lhs->ty)) {
       return false;
@@ -1336,7 +1336,7 @@ int gen_expr_x_sub(Node *node,bool test)
     if (test_expr_x(lhs)) {
       if (test) return true;
       gen_expr_x(lhs);
-      return 0;
+      return false;
     }
     return false;
   } // ND_CAST:
@@ -1358,7 +1358,7 @@ int gen_expr_x_sub(Node *node,bool test)
       case 0:
         if (test) return true;
         gen_expr_x(lhs);
-        return 0;
+        return false;
       case 1:
       case 2:
         if (test) return true;
@@ -1367,7 +1367,7 @@ int gen_expr_x_sub(Node *node,bool test)
           println("\tinx");
           IX_invalidate();
         }
-        return 0;
+        return false;
       case -1:
       case -2:
         if (test) return true;
@@ -1376,7 +1376,7 @@ int gen_expr_x_sub(Node *node,bool test)
           println("\tdex");
           IX_invalidate();
         }
-        return 0;
+        return false;
       }
     }
     return false;
@@ -1389,7 +1389,7 @@ int gen_expr_x_sub(Node *node,bool test)
       case 0:
         if (test) return true;
         gen_expr_x(lhs);
-        return 0;
+        return false;
       case 1:
       case 2:
         if (test) return true;
@@ -1398,7 +1398,7 @@ int gen_expr_x_sub(Node *node,bool test)
           println("\tdex");
           IX_invalidate();
         }
-        return 0;
+        return false;
       case -1:
       case -2:
         if (test) return true;
@@ -1407,7 +1407,7 @@ int gen_expr_x_sub(Node *node,bool test)
           println("\tinx");
           IX_invalidate();
         }
-        return 0;
+        return false;
       }
     }
     return false;
