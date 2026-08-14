@@ -1228,11 +1228,10 @@ bool gen_expr_x_sub(Node *node,bool test)
   // (ND_ADDR (ND_DEREF ty_uchar (ND_CAST TY_PTR(10) 63060)))
   case ND_ADDR: {
     if (node->lhs->kind == ND_DEREF) {
-      if (is_decay_type(node->lhs->lhs->ty)) {
-        return false;
+      if (test_expr_x(node->lhs->lhs)) {
+        if (test) return true;
+        gen_expr_x(node->lhs->lhs);
       }
-      if (test) return test_expr_x(node->lhs->lhs);
-      gen_expr_x(node->lhs->lhs);
       return false;
     }
     if (is_local_var(lhs)) {
