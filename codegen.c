@@ -1326,6 +1326,8 @@ bool gen_expr_x_sub(Node *node,bool test)
       ldx_bp();
       for (int i=0; i<node->lhs->var->offset; i++) {
         println("\tinx");
+      }
+      if (node->lhs->var->offset) {
         IX_invalidate();
       }
       return false;
@@ -1365,8 +1367,8 @@ bool gen_expr_x_sub(Node *node,bool test)
         gen_expr_x(lhs);
         for(int i=0; i<val; i++) {
           println("\tinx");
-          IX_invalidate();
         }
+        IX_invalidate();
         return false;
       case -1:
       case -2:
@@ -1374,8 +1376,8 @@ bool gen_expr_x_sub(Node *node,bool test)
         gen_expr_x(lhs);
         for(int i=0; i< -val; i++) {
           println("\tdex");
-          IX_invalidate();
         }
+        IX_invalidate();
         return false;
       }
     }
@@ -1396,8 +1398,8 @@ bool gen_expr_x_sub(Node *node,bool test)
         gen_expr_x(lhs);
         for(int i=0; i<val; i++) {
           println("\tdex");
-          IX_invalidate();
         }
+        IX_invalidate();
         return false;
       case -1:
       case -2:
@@ -1405,8 +1407,8 @@ bool gen_expr_x_sub(Node *node,bool test)
         gen_expr_x(lhs);
         for(int i=0; i< -val; i++) {
           println("\tinx");
-          IX_invalidate();
         }
+        IX_invalidate();
         return false;
       }
     }
