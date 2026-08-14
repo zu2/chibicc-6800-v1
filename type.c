@@ -529,6 +529,10 @@ void add_type(Node *node) {
     && !is_null_ptr_constant(node->lhs)) {
       warn_tok(node->lhs->tok, "invalid operand (expected pointer or 0)");
     }
+    if (node->lhs->ty->kind == TY_VOID
+    ||  node->rhs->ty->kind == TY_VOID) {
+      error_tok(node->tok, "invalid operand");
+    }
     usual_arith_conv(&node->lhs, &node->rhs);
     node->ty = ty_int;
     return;
