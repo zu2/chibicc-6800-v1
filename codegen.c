@@ -1351,7 +1351,7 @@ void gen_expr_x(Node *node)
 
 // C11 6.3.2.1p3,p4: an array or a function is converted to a pointer, so the
 // value is the address itself. The 6800 has no LEA, so the address is left at
-// IX+off instead of being materialized in IX.
+// IX+off instead of being materialized in IX. Returns off, or -1 if not applicable.
 int gen_decayed_x_sub(Node *node,bool test)
 {
   Node *lhs = node->lhs;
@@ -1361,24 +1361,24 @@ int gen_decayed_x_sub(Node *node,bool test)
   char *addr;
 
   if (!is_decay_type(node->ty)) {
-    return false;
+    return -1;
   }
   switch (node->kind) {
   case ND_VAR:
   case ND_MEMBER:
     if (!test_addr_x(node)) {
-      return false;
+      return -1;
     }
-    if (test) return true;
+    if (test) return 0;
     return gen_addr_x(node);
   case ND_DEREF:
     if (is_decay_type(lhs->ty)) {
       return gen_decayed_x_sub(lhs,test);
     }
     if (!test_expr_x(lhs)) {
-      return false;
+      return -1;
     }
-    if (test) return true;
+    if (test) return 0;
     gen_expr_x(lhs);
     return 0;
   case ND_ADD:
@@ -1387,18 +1387,18 @@ int gen_decayed_x_sub(Node *node,bool test)
     &&  is_integer_constant(rhs,&val)) {
       off = addr_x_offset(lhs);
       if (0 <= off && off + val <= 252) {
-        if (test) return true;
+        if (test) return 0;
         return gen_addr_x(lhs) + val;
       }
     }
     break;
   }
   if ((addr=is_addr_constant(node))) {
-    if (test) return true;
+    if (test) return 0;
     ldx_IMM_STR(addr);
     return 0;
   }
-  return false;
+  return -1;
 }
 
 int gen_decayed_x(Node *node)
@@ -1408,7 +1408,7 @@ int gen_decayed_x(Node *node)
 
 bool test_decayed_x(Node *node)
 {
-  return  gen_decayed_x_sub(node,true);
+  return 0 <= gen_decayed_x_sub(node,true);
 }
 
 bool test_expr_x(Node *node)
@@ -1463,7 +1463,7 @@ static int addr_x_offset(Node *node)
 }
 
 // Compute the absolute address of a given node in IX.
-// It's an error if a given node does not reside in memory.
+// Returns the offset from that address, or -1 if the node does not reside in memory.
 int gen_addr_x_sub(Node *node,bool test)
 {
   Node *lhs = node->lhs;
@@ -1473,14 +1473,14 @@ int gen_addr_x_sub(Node *node,bool test)
 
   if (node->kind == ND_MEMBER
   &&  node->member->is_bitfield) {
-    return false;
+    return -1;
   }
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
     if (node->var->ty->kind == TY_VLA){
       if (node->var->offset<=252) {
-        if (test) return 1;
+        if (test) return 0;
         println("; gen_addr_x():TY_LDA,%d ",node->var->offset);
         ldx_bp_nX(node->var->offset);
         return 0;
@@ -1490,14 +1490,14 @@ int gen_addr_x_sub(Node *node,bool test)
     // Local variable
     if (node->var->is_local) {
       if (node->var->offset <= 252){
-        if (test) return 1;
+        if (test) return 0;
         ldx_bp();
         return node->var->offset;
       }
       goto fallback;
     }
     // Function and Global variable
-    if (test) return 1;
+    if (test) return 0;
     ldx_IMM_VAR(node->var->name);
     return 0;
   case ND_DEREF:
@@ -1508,7 +1508,7 @@ int gen_addr_x_sub(Node *node,bool test)
     &&  node->lhs->lhs->ty->kind == TY_PTR
     &&  is_integer_constant(node->lhs->rhs,&val)
     &&  val==1 ){
-      if (test) return 1;
+      if (test) return 0;
       if (is_global_var(node->lhs->lhs)) {
         ldx_EXT(node->lhs->lhs);
         println("\tinx");
@@ -1535,7 +1535,7 @@ int gen_addr_x_sub(Node *node,bool test)
       &&  (node->lhs->lhs->var->offset<=252)
       &&  is_integer_constant(node->lhs->rhs,&val)
       &&  (0<=val && val<=252)) {
-        if (test) return true;
+        if (test) return 0;
         ldx_bp_nX(node->lhs->lhs->var->offset);
         return val;
       }
@@ -1544,7 +1544,7 @@ int gen_addr_x_sub(Node *node,bool test)
       &&   is_global_var(node->lhs->lhs)
       &&  is_integer_constant(node->lhs->rhs,&val)
       &&  (0<=val && val<=252)) {
-        if (test) return true;
+        if (test) return 0;
         ldx_EXT(node->lhs->lhs);
         return val;
       }
@@ -1555,10 +1555,10 @@ int gen_addr_x_sub(Node *node,bool test)
       &&  test_addr_x(node->lhs->lhs)) {
         if (test) {
           if (is_global_array(node->lhs->lhs)) {
-            return true;
+            return 0;
           }
           off = addr_x_offset(node->lhs->lhs);
-          return (0 <= off) && (off + val <= 252);
+          return ((0 <= off) && (off + val <= 252)) ? 0 : -1;
         }
         if (is_global_array(node->lhs->lhs)) {
           println("\tldx #_%s+%ld",node->lhs->lhs->var->name,val);
@@ -1573,28 +1573,28 @@ int gen_addr_x_sub(Node *node,bool test)
       }
     }
     if (test_decayed_x(node->lhs)) {
-      if (test) return true;
+      if (test) return 0;
       return gen_decayed_x(node->lhs);
     }
     if (test_expr_x(node->lhs)) {
-      if (test) return true;
+      if (test) return 0;
       gen_expr_x(node->lhs);
       return 0;
     }
-    return false;
+    return -1;
   case ND_COMMA:
-    return false;
+    return -1;
   case ND_MEMBER:
     if (!test_addr_x(lhs)) {
-      return 0;
+      return -1;
     }
     if (test) {
       int off;
       if (is_global_var(lhs)) {
-        return true;
+        return 0;
       }
       off = addr_x_offset(lhs);
-      return (0 <= off) && (off + node->member->offset <= 252);
+      return ((0 <= off) && (off + node->member->offset <= 252)) ? 0 : -1;
     }
     if (is_global_var(node->lhs)
     &&  node->member->offset > 252) {
@@ -1608,18 +1608,18 @@ int gen_addr_x_sub(Node *node,bool test)
     }
     assert(0); // gen_addr_x() must not be called when the offset is over 252
   case ND_FUNCALL:
-    return false;
+    return -1;
   case ND_ASSIGN:
   case ND_COND:
-    return false;
+    return -1;
   case ND_VLA_PTR:
-    return false;
+    return -1;
   }
-  if (test) return false;
+  if (test) return -1;
   error_tok(node->tok, "not an lvalue at gen_addr_x, node->kind %d",node->kind);
   // fallback to gen_addr()
 fallback:
-  if (test) return 0;
+  if (test) return -1;
   assert(0); // test_addr_x() must have returned false
 }
 
@@ -1631,8 +1631,7 @@ int gen_addr_x(Node *node)
 
 bool test_addr_x(Node *node)
 {
-  int r =  gen_addr_x_sub(node,true);
-  return r;
+  return 0 <= gen_addr_x_sub(node,true);
 }
 
 int gen_addr_array_sub(Node *node,bool test)
