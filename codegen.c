@@ -365,10 +365,10 @@ void ldx_bp()
     if(depth==0 && !current_fn->use_alloca) {
       println("\ttsx");
     }else if (!current_fn->use_bp) {
-      // function has no @bp
+      // function has no @bp. depth = @bp - sp
       println("\ttsx");
       for (int i=0; i<depth; i++) {
-        println("\tdex");
+        println("\tinx");
       }
     }else{
       println("\tldx @bp");	// TSX cannot be used because of VLA/alloca
