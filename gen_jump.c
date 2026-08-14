@@ -574,7 +574,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs);
+      gen_expr_x(lhs);
       println("\tcpx #%ld",val);
       switch(node->kind) {
       case ND_EQ:
@@ -605,7 +605,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   } else if (is_global_var_with_cast(rhs)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs);
+      gen_expr_x(lhs);
       cpx_EXT(skip_redundant_ptr_cast(rhs));
       switch(node->kind) {
       case ND_EQ:
@@ -621,7 +621,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   } else if ((addr=is_addr_constant(rhs))    // rhs == addr const
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs);
+      gen_expr_x(lhs);
       println("\tcpx #%s",addr);
       switch(node->kind) {
       case ND_EQ:
@@ -1094,7 +1094,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs);
+      gen_expr_x(lhs);
       println("\tcpx #%ld",val);
       switch(node->kind) {
       case ND_EQ:
@@ -1125,7 +1125,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   } else if (is_global_var_with_cast(rhs)
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs);
+      gen_expr_x(lhs);
       cpx_EXT(skip_redundant_ptr_cast(rhs));
       switch(node->kind) {
       case ND_EQ:
@@ -1141,7 +1141,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
   } else if ((addr=is_addr_constant(rhs))    // rhs == addr const
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
-      int off = gen_expr_x(lhs);
+      gen_expr_x(lhs);
       println("\tcpx #%s",addr);
       switch(node->kind) {
       case ND_EQ:

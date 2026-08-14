@@ -136,8 +136,10 @@ bool builtin_strcpy(Node *node)
 //  ast_node_dump(arg1);
     IX_invalidate();
     int off = 0;
-    if (test_expr_x(arg1)) {
-      off = gen_expr_x(arg1);
+    if (test_decayed_x(arg1)) {
+      off = gen_decayed_x(arg1);
+    }else if (test_expr_x(arg1)) {
+      gen_expr_x(arg1);
     }else{
       gen_expr(arg1);
       tfr_dx();

@@ -998,7 +998,9 @@ void gen_addr(Node *node)
   error_tok(node->tok, "not an lvalue");
 }
 
-int gen_expr_x(Node *node);
+void gen_expr_x(Node *node);
+int gen_decayed_x(Node *node);
+bool test_decayed_x(Node *node);
 bool test_expr_x(Node *node);
 static int addr_x_offset(Node *node);
 
@@ -1031,6 +1033,9 @@ int gen_expr_x_sub(Node *node,bool test)
     if (test) return true;
     ldx_IMM_STR(addr);
     return 0;
+  }
+  if (is_decay_type(node->ty)) {
+    return false;
   }
   switch(node->kind) {
   case ND_NUM: {
@@ -1076,23 +1081,15 @@ int gen_expr_x_sub(Node *node,bool test)
     }
     if (test_addr_x(node)) {
       if (test) return true;
-      off = gen_addr_x(node);
-      if (!is_decay_type(node->ty)) {
-        ldx_nX(off);
-        off = 0;
-      }
-      return off;
+      ldx_nX(gen_addr_x(node));
+      return 0;
     }
     return 0;
   case ND_MEMBER: {
     if (test_addr_x(node)) {
       if (test) return true;
-      off = gen_addr_x(node);
-      if (!is_decay_type(node->ty)) {
-        ldx_nX(off);
-        off = 0;
-      }
-      return off;
+      ldx_nX(gen_addr_x(node));
+      return 0;
     }
     return false;
   }; // ND_MEMBER:
@@ -1121,14 +1118,16 @@ int gen_expr_x_sub(Node *node,bool test)
         return 0;
       }
     }
-    if (test_expr_x(node->lhs)) {
+    if (test_decayed_x(lhs)) {
       if (test) return true;
-      off = gen_expr_x(lhs);
-      if (!is_decay_type(node->ty)) {
-        ldx_nX(off);
-        off = 0;
-      }
-      return off;
+      ldx_nX(gen_decayed_x(lhs));
+      return 0;
+    }
+    if (test_expr_x(lhs)) {
+      if (test) return true;
+      gen_expr_x(lhs);
+      ldx_nX(0);
+      return 0;
     }
     return 0;
   } // ND_DEREF
@@ -1350,15 +1349,6 @@ int gen_expr_x_sub(Node *node,bool test)
 // case ND_FUNCALL:
 // case ND_LABEL_VAL:
   case ND_ADD:
-    //(+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +0 ) 6)
-    if (lhs->ty->kind == TY_ARRAY
-    &&  is_integer_constant(rhs,&val)) {
-      off = addr_x_offset(lhs);
-      if (0 <= off && off + val <= 252) {
-        if (test) return true;
-        return gen_addr_x(lhs) + val;
-      }
-    }
     //; (+ ty_int (ND_VAR ty_int y +0 ) 1)
     if (is_int16(node->ty)
     &&  is_int16(lhs->ty)
@@ -1429,9 +1419,65 @@ int gen_expr_x_sub(Node *node,bool test)
   error_tok(node->tok, "invalid expression at %s node->kind %d",__func__,node->kind);
 }
 
-int gen_expr_x(Node *node)
+void gen_expr_x(Node *node)
 {
-  return gen_expr_x_sub(node,false);
+  gen_expr_x_sub(node,false);
+}
+
+// C11 6.3.2.1p3,p4: an array or a function is converted to a pointer, so the
+// value is the address itself. The 6800 has no LEA, so the address is left at
+// IX+off instead of being materialized in IX.
+int gen_decayed_x_sub(Node *node,bool test)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+  int off;
+  int64_t val;
+
+  if (!is_decay_type(node->ty)) {
+    return false;
+  }
+  switch (node->kind) {
+  case ND_VAR:
+  case ND_MEMBER:
+    if (!test_addr_x(node)) {
+      return false;
+    }
+    if (test) return true;
+    return gen_addr_x(node);
+  case ND_DEREF:
+    if (is_decay_type(lhs->ty)) {
+      return gen_decayed_x_sub(lhs,test);
+    }
+    if (!test_expr_x(lhs)) {
+      return false;
+    }
+    if (test) return true;
+    gen_expr_x(lhs);
+    return 0;
+  case ND_ADD:
+    //(+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +0 ) 6)
+    if (lhs->ty->kind == TY_ARRAY
+    &&  is_integer_constant(rhs,&val)) {
+      off = addr_x_offset(lhs);
+      if (0 <= off && off + val <= 252) {
+        if (test) return true;
+        return gen_addr_x(lhs) + val;
+      }
+    }
+    return false;
+  }
+  return false;
+}
+
+int gen_decayed_x(Node *node)
+{
+  return gen_decayed_x_sub(node,false);
+}
+
+bool test_decayed_x(Node *node)
+{
+  return  gen_decayed_x_sub(node,true);
 }
 
 bool test_expr_x(Node *node)
@@ -1601,10 +1647,14 @@ int gen_addr_x_sub(Node *node,bool test)
         assert(0); // gen_addr_x() must not be called when the offset is over 252
       }
     }
+    if (test_decayed_x(node->lhs)) {
+      if (test) return true;
+      return gen_decayed_x(node->lhs);
+    }
     if (test_expr_x(node->lhs)) {
       if (test) return true;
-      off = gen_expr_x(node->lhs);
-      return off;
+      gen_expr_x(node->lhs);
+      return 0;
     }
     return false;
   case ND_COMMA:
@@ -3596,9 +3646,11 @@ static void gen_funcall(Node *node)
 
   if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
     println("\tjsr _%s",node->lhs->var->name);
+  }else if (test_decayed_x(node->lhs)) {
+    println("\tjsr %d,x",gen_decayed_x(node->lhs));
   }else if (test_expr_x(node->lhs)) {
-    int off = gen_expr_x(node->lhs);
-    println("\tjsr %d,x",off);
+    gen_expr_x(node->lhs);
+    println("\tjsr 0,x");
   }else{
     if (node->args && !node->args->pass_by_stack) {
       switch (node->args->ty->kind) {
@@ -5393,9 +5445,13 @@ void gen_expr(Node *node)
       gen_direct(node,"ldab","ldaa");
       return;
     }
+    if (can_load_x(node->ty) && test_decayed_x(lhs)){
+      load_x(node->ty,gen_decayed_x(lhs));
+      return;
+    }
     if (can_load_x(node->ty) && test_expr_x(lhs)){
-      int off = gen_expr_x(lhs);
-      load_x(node->ty,off);
+      gen_expr_x(lhs);
+      load_x(node->ty,0);
       return;
     }
     gen_expr(lhs);
