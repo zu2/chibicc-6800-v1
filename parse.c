@@ -1748,6 +1748,9 @@ static Node *stmt(Token **rest, Token *tok) {
     Node *node = new_node(ND_SWITCH, tok);
     tok = skip(tok->next, "(");
     node->cond = expr(&tok, tok);
+    add_type(node->cond);
+    if (!is_integer(node->cond->ty))
+      error_tok(node->cond->tok, "controlling expression is not an integer");
     tok = skip(tok, ")");
 
     Node *sw = current_switch;
