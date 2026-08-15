@@ -811,7 +811,7 @@ Node *optimize_expr(Node *node)
         return node;
       }else{
         // C99 6.5.13p3: && yields int 0 or 1 (6.3.1.2: scalar to _Bool) 
-        return new_cast(new_cast(node->rhs,ty_bool),ty_int);
+        return optimize_expr(new_cast(new_cast(node->rhs,ty_bool),ty_int));
       }
     }
     return optimize_const_expr(node);
@@ -831,7 +831,7 @@ Node *optimize_expr(Node *node)
         return node;
       }else{
         // C99 6.5.14p3: || yields int 0 or 1 (6.3.1.2: scalar to _Bool) 
-        return new_cast(new_cast(node->rhs,ty_bool),ty_int);
+        return optimize_expr(new_cast(new_cast(node->rhs,ty_bool),ty_int));
       }
     }
     return optimize_const_expr(node);
