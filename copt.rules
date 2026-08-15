@@ -944,42 +944,6 @@
 =
 	stab %1
 
-	jsr __eq%1
-	aba
-	adca #0
-=
-	jsr __eq%1
-
-	jsr __ne%1
-	aba
-	adca #0
-=
-	jsr __ne%1
-
-	jsr __gt%1
-	aba
-	adca #0
-=
-	jsr __gt%1
-
-	jsr __ge%1
-	aba
-	adca #0
-=
-	jsr __ge%1
-
-	jsr __lt%1
-	aba
-	adca #0
-=
-	jsr __lt%1
-
-	jsr __le%1
-	aba
-	adca #0
-=
-	jsr __le%1
-
 #
 
 	ldab #<%1
