@@ -13,6 +13,88 @@ gen_mul8u(Node *node)
   if ((is_uchar_or_u8num(lhs) && is_uchar_or_u8num(rhs))
   ||  (is_int8(node->ty) && is_char_or_8num(lhs) && is_char_or_8num(rhs))) {
     gen_expr(lhs);
+    if (is_int8(node->ty)
+    &&  is_integer_constant(rhs,&val)) {
+      switch(val) {
+      case 0:
+        println("\tclrb");
+        return true;
+      case 1:
+        return true;
+      case 2:
+      case 4:
+      case 8:
+      case 16:
+      case 32:
+        int n = exact_log2(val);
+        for(int i=0; i<n; i++)
+          println("\taslb");
+        return true;
+      case 3:
+        println("\ttba");
+        println("\taba");
+        println("\taba");
+        println("\ttab");
+        return true;
+      case 5:
+        println("\ttba");
+        println("\tasla");
+        println("\tasla");
+        println("\taba");
+        println("\ttab");
+        return true;
+      case 6:
+        println("\ttba");
+        println("\tasla");
+        println("\taba");
+        println("\tasla");
+        println("\ttab");
+        return true;
+      case 7:
+        println("\ttba");
+        println("\tasla");
+        println("\taba");
+        println("\tasla");
+        println("\taba");
+        println("\ttab");
+        return true;
+      case 9:
+        println("\ttba");
+        println("\tasla");
+        println("\tasla");
+        println("\tasla");
+        println("\taba");
+        println("\ttab");
+        return true;
+      case 10:
+        println("\ttba");
+        println("\tasla");
+        println("\tasla");
+        println("\taba");
+        println("\tasla");
+        println("\ttab");
+        return true;
+      case 12:
+        println("\ttba");
+        println("\tasla");
+        println("\taba");
+        println("\tasla");
+        println("\tasla");
+        println("\ttab");
+        return true;
+      case 64:
+        println("\trorb");
+        println("\trorb");
+        println("\trorb");
+        println("\tandb #<192");
+        return true;
+      case 128:
+        println("\trorb");
+        println("\trorb");
+        println("\tandb #<128");
+        return true;
+      }
+    }
     if (is_integer_constant(rhs,&val)) {
       switch(val){
       case 0:
