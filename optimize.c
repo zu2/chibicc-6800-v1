@@ -529,6 +529,13 @@ Node *optimize_expr(Node *node)
       return node;
     }
     node->lhs = optimize_expr(node->lhs);
+    // optimize_expr() may have replaced the operand with a wider one
+    if (is_integer(node->lhs->ty) && is_integer(node->ty)
+    &&  node->ty->kind != TY_BOOL
+    &&  node->lhs->ty->size == node->ty->size
+    &&  node->lhs->ty->is_unsigned == node->ty->is_unsigned) {
+      return node->lhs;
+    }
     if (node->lhs->kind == ND_CAST) {
       if (node->ty->kind == TY_PTR
       &&  node->lhs->ty->kind == TY_PTR) {
