@@ -774,7 +774,7 @@ Node *optimize_expr(Node *node)
   // If the ND_NOT negates the result of a relational operator,
   // Rewrite !(node) into the negated related op.
   // when float compare, only == and != rewrited.
-  case ND_NOT:
+  case ND_NOT: {
     node->lhs = optimize_expr(node->lhs);
     node->lhs = skip_integral_promotion(node->lhs);
     if (can_negate_compare(node->lhs)) {
@@ -798,7 +798,17 @@ Node *optimize_expr(Node *node)
       new->ty = ty_bool;
       return new;
     }
+    if (opt('O','s') && is_integer_or_ptr(node->lhs->ty)) {  // Smaller, but slower
+      Node *zero = new_num(0,node->tok);
+      Node *new;
+
+      zero->ty = node->lhs->ty;
+      new = new_binary(ND_EQ, node->lhs, zero, node->tok);
+      new->ty = node->ty;
+      return new;
+    }
     return optimize_const_expr(node);
+  } // ND_NOT
   case ND_BITNOT:
     node = optimize_l(node);
     return optimize_const_expr(node);
