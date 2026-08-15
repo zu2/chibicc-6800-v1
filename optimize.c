@@ -188,6 +188,38 @@ static NodeKind negate_kind(NodeKind kind)
   assert(0);
 }
 
+//   !(a<b)         -> a>=b
+//   !(a<b && c<d)  -> a>=b || c>=d
+//   !(a<b && x)    -> a>=b || !x
+//   !(x && y)      -> !x || !y
+//   !(x || y)      -> !x && !y
+static Node *optimize_demorgan(Node *node)
+{
+  Node *lhs, *rhs, *new;
+
+  if (can_negate_compare(node)) {
+    new = new_binary(negate_kind(node->kind), node->lhs, node->rhs, node->tok);
+    new->ty = node->ty;
+    return new;
+  }
+  if (node->kind != ND_LOGAND && node->kind != ND_LOGOR) {
+    return NULL;
+  }
+  lhs = optimize_demorgan(node->lhs);
+  rhs = optimize_demorgan(node->rhs);
+  if (!lhs) {
+    lhs = new_unary(ND_NOT, node->lhs, node->lhs->tok);
+    lhs->ty = ty_int;
+  }
+  if (!rhs) {
+    rhs = new_unary(ND_NOT, node->rhs, node->rhs->tok);
+    rhs->ty = ty_int;
+  }
+  new = new_binary(node->kind == ND_LOGAND ? ND_LOGOR : ND_LOGAND, lhs, rhs, node->tok);
+  new->ty = node->ty;
+  return new;
+}
+
 Node *flip_condition(Node *node)
 {
   switch(node->kind){
@@ -798,9 +830,14 @@ Node *optimize_expr(Node *node)
       new->ty = ty_bool;
       return new;
     }
+    Node *new = optimize_demorgan(node->lhs);
+
+    if (new) {
+      new->ty = node->ty;
+      return optimize_expr(new);
+    }
     if (opt('O','s') && is_integer_or_ptr(node->lhs->ty)) {  // Smaller, but slower
       Node *zero = new_num(0,node->tok);
-      Node *new;
 
       zero->ty = node->lhs->ty;
       new = new_binary(ND_EQ, node->lhs, zero, node->tok);
