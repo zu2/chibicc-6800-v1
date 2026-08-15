@@ -10,8 +10,8 @@ gen_mul8u(Node *node)
   Node *rhs = skip_integral_promotion(node->rhs);
   int64_t val;
 
-  if (is_uchar_or_u8num(lhs)
-  &&  is_uchar_or_u8num(rhs)) {
+  if ((is_uchar_or_u8num(lhs) && is_uchar_or_u8num(rhs))
+  ||  (is_int8(node->ty) && is_char_or_8num(lhs) && is_char_or_8num(rhs))) {
     gen_expr(lhs);
     if (is_integer_constant(rhs,&val)) {
       switch(val){

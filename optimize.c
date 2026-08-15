@@ -133,6 +133,16 @@ bool is_schar_or_s8num(Node *node)
   return false;
 }
 
+bool is_char_or_8num(Node *node)
+{
+  if (is_int8(node->ty))
+    return true;
+  if (is_u8num(node) || is_s8num(node))
+    return true;
+
+  return false;
+}
+
 // for a power of 2, return the shift count. -1 for any other value
 int exact_log2(int64_t val)
 {
@@ -627,7 +637,8 @@ Node *optimize_expr(Node *node)
     // (ND_CAST TY_CHAR(2) (- ty_uint 6 (ND_CAST TY_INT(4) (ND_VAR ty_uchar _L_2 global))))
     // (ND_CAST TY_CHAR(2) (+ TY_INT(4) (ND_CAST TY_INT(4) (ND_VAR TY_CHAR(2) y0 +9 )) (ND_CAST TY_INT(4) (ND_VAR ty_uchar y +2 ))))
     if (node->ty->kind == TY_CHAR
-    &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
+    &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB
+      || node->lhs->kind == ND_MUL)
     &&  is_integral_promotion(node->lhs->lhs)
     &&  is_integral_promotion(node->lhs->rhs)) {
       Node *new = new_copy(node->lhs);
@@ -695,7 +706,8 @@ Node *optimize_expr(Node *node)
       return node;
     }
     if (node->ty->kind == TY_CHAR
-    &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
+    &&  (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB
+      || node->lhs->kind == ND_MUL)
     &&  node->lhs->rhs->kind == ND_NUM
     &&  (is_integral_promotion(node->lhs->lhs)
        ||is_byte_to_uint(node->lhs->lhs)) ) {

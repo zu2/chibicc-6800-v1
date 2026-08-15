@@ -479,6 +479,7 @@ bool is_u8num(Node *node);
 bool is_s8num(Node *node);
 bool is_uchar_or_u8num(Node *node);
 bool is_schar_or_s8num(Node *node);
+bool is_char_or_8num(Node *node);
 int  exact_log2(int64_t val);
 
 Node *optimize_expr(Node *node);
