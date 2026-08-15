@@ -500,14 +500,6 @@ Node *optimize_expr(Node *node)
       assert(0);
       return node;
     }
-    switch (node->ty->kind) {
-    case TY_ARRAY:
-    case TY_STRUCT:
-    case TY_UNION:
-    case TY_FUNC:
-    case TY_VLA:
-      return node;
-    }
     return node;
   case ND_MEMBER:
     return optimize_l(node);
