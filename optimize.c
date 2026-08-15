@@ -777,6 +777,10 @@ Node *optimize_expr(Node *node)
       node->lhs  = node->lhs->lhs; // must be last
       return optimize_expr(node);
     }
+    if (node->lhs->kind == ND_NOT) {
+      Node *new = new_cast(new_cast(node->lhs->lhs, ty_bool), node->ty);
+      return optimize_expr(new);
+    }
     if (is_integer_constant(node->lhs,&val)) {
       Node *new = new_num((val==0),node->tok);
       new->ty = ty_bool;
@@ -1351,6 +1355,10 @@ Node *optimize_condition(Node *node)
   &&  is_integer_or_ptr(node->lhs->ty)
   &&  is_integer_constant(node->rhs,&val)
   &&  val==0 ) {
+    node = optimize_condition(node->lhs);
+  }
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_BOOL) {
     node = optimize_condition(node->lhs);
   }
   // In conditions, drop cast to wider integer types.
