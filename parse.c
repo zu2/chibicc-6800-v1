@@ -2289,8 +2289,6 @@ bool is_const_expr(Node *node) {
     if (!is_const_expr(node->cond))
       return false;
     return is_const_expr(eval(node->cond) ? node->then : node->els);
-  case ND_COMMA:
-    return is_const_expr(node->rhs);
   case ND_NEG:
   case ND_NOT:
   case ND_BITNOT:
