@@ -183,7 +183,7 @@ gen_mul8s(Node *node)
         return true;
       }
     }
-    if (can_direct_char(node->rhs)) {
+    if (can_direct_char(rhs)) {
       gen_direct_char(rhs,"ldaa",NULL);
     }else if (test_addr_x(rhs)) {
       int off = gen_addr_x(rhs);
