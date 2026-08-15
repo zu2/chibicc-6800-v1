@@ -3191,6 +3191,9 @@ static void struct_members(Token **rest, Token *tok, Type *ty) {
         mem->bit_width = const_expr(&tok, tok);
         int max_width = mem->ty->kind == TY_BOOL ? 1 : mem->ty->size * 8;
 
+        if (!is_int8(mem->ty) && !is_int16(mem->ty)) {
+          error_tok(start, "invalid type for bit-field");
+        }
         if (mem->bit_width < 0
         ||  mem->bit_width > max_width
         ||  (mem->bit_width == 0 && mem->name)) {
