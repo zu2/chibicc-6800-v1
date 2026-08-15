@@ -4793,6 +4793,8 @@ void gen_expr(Node *node)
     case TY_LONG:
       load32i(node->val);
       return;
+    case TY_VOID:
+      return;
     }
     error_tok(node->tok, "gen_expr: not implemented yet token");
     return;
