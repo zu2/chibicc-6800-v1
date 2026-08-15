@@ -4187,6 +4187,7 @@ static void opeq(Node *node)
             println("\trorb");
             println("\tstab _%s+1",node->lhs->var->name);
             println("\tstaa _%s",  node->lhs->var->name);
+            invalidate_EXT(node->lhs);
             return;
           }else if (test_addr_x(node->lhs)) {
             int off = gen_addr_x(node->lhs);
