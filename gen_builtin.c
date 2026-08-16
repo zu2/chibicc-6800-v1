@@ -120,17 +120,12 @@ bool builtin_strcpy(Node *node)
       return false;
     }
     Obj *var = arg2->var;
-    println("; var->init_data %p",var->init_data);
     if (!var->init_data) {
       return false;
     }
-    println("; var->is_literal %d",var->is_literal);
     if (!var->is_literal) {
       return false;
     }
-    println("; var->ty->size %d", var->ty->size);
-    println("; _%s:", var->name);
-    println("; var->init_data[] %s",var->init_data);
     size_t size = var->ty->size;  // Size includes the trailing \0
 
 //  ast_node_dump(arg1);
