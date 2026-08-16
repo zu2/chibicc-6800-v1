@@ -3066,8 +3066,18 @@ static Node *cast(Token **rest, Token *tok) {
     }
 
     // type cast
+    Node *vla_sz = NULL;
+    for (Type *t = ty; t; t = t->base) {
+      if (t->kind == TY_VLA && !t->vla_size) {
+        vla_sz = compute_vla_size(ty, start);
+        break;
+      }
+    }
+
     Node *node = new_cast(expr, ty);
     node->tok = start;
+    if (vla_sz)
+      node = new_binary(ND_COMMA, vla_sz, node, start);
     return node;
   }
 
@@ -3084,7 +3094,7 @@ static Node *new_pre_inc_dec(Token **rest, Token *tok, int addend) {
   &&  (node->ty->kind == TY_CHAR
     || node->ty->kind == TY_SHORT
     || node->ty->kind == TY_INT
-    || node->ty->kind == TY_PTR
+    || (node->ty->kind == TY_PTR && node->ty->base->kind != TY_VLA)
     || node->ty->kind == TY_ENUM
     || node->ty->kind == TY_LONG) ){
 
@@ -3454,7 +3464,7 @@ static Node *new_post_inc_dec(Node *node, Token *tok, int addend) {
     ||  ty->kind == TY_SHORT
     ||  ty->kind == TY_INT
     ||  ty->kind == TY_ENUM
-    ||  ty->kind == TY_PTR
+    ||  (ty->kind == TY_PTR && ty->base->kind != TY_VLA)
     ||  ty->kind == TY_LONG) {
       node = new_add(node,new_num(addend,tok), tok);
       node->kind = ND_POST_INCDEC;
@@ -3728,7 +3738,8 @@ static Node *primary(Token **rest, Token *tok) {
     Node *node = unary(rest, tok->next);
     add_type(node);
     if (node->ty->kind == TY_VLA)
-      return new_var_node(node->ty->vla_size, tok);
+      return new_binary(ND_COMMA, node,
+                        new_var_node(node->ty->vla_size, tok), tok);
     return new_uint(node->ty->size, tok);
 //    return new_ulong(node->ty->size, tok);
   }
