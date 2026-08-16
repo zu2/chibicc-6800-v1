@@ -28,7 +28,7 @@ char *strncpy(char *dest, const char *src, size_t n);
 char *strcat(char *dest, const char *src);
 
 // Concatenate up to n chars from src to dest
-//char *strncat(char *dest, const char *src, size_t n);
+char *strncat(char *dest, const char *src, size_t n);
 
 // Compare two strings
 int strcmp(const char *s1, const char *s2);
@@ -46,7 +46,7 @@ char *strchr(const char *s, int c);
 char *strrchr(const char *s, int c);
 
 // Find first occurrence of needle in haystack
-//char *strstr(const char *haystack, const char *needle);
+char *strstr(const char *haystack, const char *needle);
 
 // Find first occurrence of any char from accept in s
 //char *strpbrk(const char *s, const char *accept);
@@ -56,6 +56,9 @@ char *strrchr(const char *s, int c);
 
 // Get length of initial segment containing no chars in reject
 //size_t strcspn(const char *s, const char *reject);
+
+// Copy s into memory from malloc()
+char *strdup(const char *s);
 
 // Tokenize string (not thread-safe)
 char *strtok(char *str, const char *delim);

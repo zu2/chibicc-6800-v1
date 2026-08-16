@@ -3,7 +3,7 @@
 #
 all: clibs.a
 
-OBJ =	qsort.o printf.o _printf_float.o assert.o malloc.o
+OBJ =	qsort.o printf.o _printf_float.o assert.o malloc.o strdup.o
 
 .s.o:
 	as6800 $<
