@@ -22,6 +22,9 @@
 #define NAN      (__builtin_nanf(""))
 #define INFINITY (__builtin_inff())
 
+#define HUGE_VAL  (__builtin_inff())
+#define HUGE_VALF (__builtin_inff())
+
 int	isnan(float x);
 int	isinf(float x);
 int	isfinite(float x);
