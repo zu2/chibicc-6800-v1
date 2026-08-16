@@ -660,6 +660,10 @@ static Type *func_params(Token **rest, Token *tok, Type *ty) {
   Type *cur = &head;
   bool is_variadic = false;
 
+  // A parameter name is in scope from its declarator to the end of the
+  // function, so a later parameter can use it as an array length.
+  enter_scope();
+
   while (!equal(tok, ")")) {
     if (cur != &head)
       tok = skip(tok, ",");
@@ -676,9 +680,11 @@ static Type *func_params(Token **rest, Token *tok, Type *ty) {
 
     Token *name = ty2->name;
 
-    if (ty2->kind == TY_ARRAY) {
+    if (ty2->kind == TY_ARRAY || ty2->kind == TY_VLA) {
       // "array of T" is converted to "pointer to T" only in the parameter
       // context. For example, *argv[] is converted to **argv by this.
+      if (ty2->base->kind == TY_VLA)
+        error_tok(tok, "a parameter of a multidimensional variable length array is not supported");
       ty2 = pointer_to(ty2->base);
       ty2->name = name;
     } else if (ty2->kind == TY_FUNC) {
@@ -688,8 +694,13 @@ static Type *func_params(Token **rest, Token *tok, Type *ty) {
       ty2->name = name;
     }
 
+    if (name)
+      new_var(get_ident(name), ty2);
+
     cur = cur->next = copy_type(ty2);
   }
+
+  leave_scope();
 
   if (cur == &head)
     is_variadic = true;
