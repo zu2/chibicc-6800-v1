@@ -123,11 +123,6 @@ static void add_default_include_paths(void) {
   // in the source tree the sub Makefiles pass -I../include instead
   strarray_push(&include_paths, "/opt/chibicc/include");
 
-  // Add standard include paths.
-  strarray_push(&include_paths, "/usr/local/include");
-  strarray_push(&include_paths, "/usr/include/x86_64-linux-gnu");
-  strarray_push(&include_paths, "/usr/include");
-
   // Keep a copy of the standard include paths for -MMD option.
   for (int i = 0; i < include_paths.len; i++)
     strarray_push(&std_include_paths, include_paths.data[i]);
