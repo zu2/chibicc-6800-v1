@@ -718,7 +718,11 @@ static Type *array_dimensions(Token **rest, Token *tok, Type *ty) {
 
   if (ty->kind == TY_VLA || !is_const_expr(expr))
     return vla_of(ty, expr);
-  return array_of(ty, eval(expr));
+
+  int len = eval(expr);
+  if (ty->size * len >= 0x10000)
+    error_tok(tok, "array is too large (%d bytes)", ty->size * len);
+  return array_of(ty, len);
 }
 
 // type-suffix = "(" func-params
