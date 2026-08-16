@@ -3891,6 +3891,33 @@ static Token *parse_typedef(Token *tok, Type *basety) {
   return tok;
 }
 
+static void repoint_vla_len(Node *node) {
+  if (!node)
+    return;
+  if (node->kind == ND_VAR && node->var && !node->var->is_local) {
+    VarScope *sc = find_var(node->tok);
+    if (sc && sc->var)
+      node->var = sc->var;
+  }
+  repoint_vla_len(node->lhs);
+  repoint_vla_len(node->rhs);
+}
+
+// The size must be computed after the params are marked, or the size variable
+// is taken for a param and gets no stack slot.
+static Node *fix_param_vla(Type *ty, Token *tok, Node *acc) {
+  for (Type *t = ty; t; t = t->base) {
+    if (t->kind == TY_VLA && !t->vla_size) {
+      repoint_vla_len(t->vla_len);
+      Node *n = new_unary(ND_EXPR_STMT, compute_vla_size(t, tok), tok);
+      add_type(n);
+      n->next = acc;
+      acc = n;
+    }
+  }
+  return acc;
+}
+
 static void create_param_lvars(Type *param) {
   if (param) {
     create_param_lvars(param->next);
@@ -4082,6 +4109,10 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
   }
   fn->params = locals;
 
+  Node *vla_init = NULL;
+  for (Type *p = ty->params; p; p = p->next)
+    vla_init = fix_param_vla(p, ty->name, vla_init);
+
 //  fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
 
   tok = skip(tok, "{");
@@ -4099,6 +4130,13 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
 #endif
 
   fn->body = compound_stmt(&tok, tok);
+  if (vla_init) {
+    Node *last = vla_init;
+    while (last->next)
+      last = last->next;
+    last->next = fn->body->body;
+    fn->body->body = vla_init;
+  }
   if (fn->use_alloca) {
     fn->alloca_bottom = new_lvar("__alloca_size__", pointer_to(ty_char));
   }
