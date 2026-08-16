@@ -4047,6 +4047,9 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
   if (consume(&tok, tok, ";"))
     return tok;
 
+  if (scope->next)
+    error_tok(ty->name, "nested function is not supported");
+
   // A function body cannot follow a variable declarator.
   if (ty->kind != TY_FUNC)
     tok = skip(tok, ";");
