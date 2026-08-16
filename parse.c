@@ -644,6 +644,12 @@ static Type *declspec(Token **rest, Token *tok, VarAttr *attr) {
     ty->is_atomic = true;
   }
 
+  // An implicit int declarator never starts with an identifier followed by
+  // another identifier or "*", so such a form is a missing type name.
+  if (!counter && tok->kind == TK_IDENT &&
+      (tok->next->kind == TK_IDENT || equal(tok->next, "*")))
+    error_tok(tok, "unknown type name '%.*s'", tok->len, tok->loc);
+
   *rest = tok;
   return ty;
 }
@@ -3843,6 +3849,9 @@ static Node *primary(Token **rest, Token *tok) {
 
     if (equal(tok->next, "("))
       error_tok(tok, "implicit declaration of a function");
+    if (tok->next->kind == TK_IDENT ||
+        (equal(tok->next, "*") && tok->next->next->kind == TK_IDENT))
+      error_tok(tok, "unknown type name '%.*s'", tok->len, tok->loc);
     error_tok(tok, "undefined variable");
   }
 
