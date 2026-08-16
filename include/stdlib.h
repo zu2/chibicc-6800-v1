@@ -5,7 +5,6 @@
 #define _STDLIB_H_
 
 #include <stddef.h> // for size_t
-#include <malloc.h>
 
 #define RAND_MAX 32767
 
@@ -36,7 +35,11 @@ int rand(void);
 // Seed for rand()
 void srand(unsigned int seed);
 
-// Memory allocation: see <malloc.h>, included above
+// Memory allocation
+void *malloc(size_t size);
+void *calloc(size_t nmemb, size_t size);
+void *realloc(void *ptr, size_t size);
+void free(void *ptr);
 
 // Program termination
 void exit(int status);

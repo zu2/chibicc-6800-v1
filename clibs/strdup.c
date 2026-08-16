@@ -1,6 +1,5 @@
-#include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
-#include <malloc.h>
 
 char *strdup(const char *s)
 {
