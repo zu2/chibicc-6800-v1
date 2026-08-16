@@ -1638,7 +1638,8 @@ int gen_addr_array_sub(Node *node,bool test)
   &&  node->lhs->ty->kind == TY_ARRAY
   &&  is_local_array(node->lhs->lhs)
   &&  node->lhs->lhs->var->offset <=252
-  &&  is_local_var(node->lhs->rhs)) {
+  &&  is_local_var(node->lhs->rhs)
+  &&  node->lhs->rhs->var->offset <=254) {
     if (is_int16(node->lhs->rhs->ty)) {
       if (test) return true;
       ldx_bp();
@@ -1660,7 +1661,8 @@ int gen_addr_array_sub(Node *node,bool test)
   &&  node->lhs->lhs->ty == ty_int
   &&  is_integer_constant(node->lhs->lhs->rhs,&val)
   &&  val==2
-  &&  is_local_var(node->lhs->lhs->lhs)) {
+  &&  is_local_var(node->lhs->lhs->lhs)
+  &&  node->lhs->lhs->lhs->var->offset <=254) {
     if (is_int16(node->lhs->lhs->lhs->ty)) {
       if (test) return true;
       ldx_bp();
