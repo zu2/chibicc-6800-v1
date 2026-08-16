@@ -149,8 +149,9 @@ static void remove_args(int n)
     return;
   }
   // function has @bp, and not use alloca()
-  if (current_fn->params
-  || (current_fn->stack_size && !current_fn->use_alloca)) {
+  if ((current_fn->params
+    || current_fn->stack_size)
+  &&  !current_fn->use_alloca) {
     if (depth==n) { // Removes all stack args.
       if (n>=3 || (n>=2 && opt('O','2'))) {
         ldx_bp();
