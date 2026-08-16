@@ -9,6 +9,9 @@
 
 #define RAND_MAX 32767
 
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
+
 // Convert string to int
 int atoi(const char *nptr);
 
@@ -33,11 +36,7 @@ int rand(void);
 // Seed for rand()
 void srand(unsigned int seed);
 
-// Memory allocation (if supported)
-//void *malloc(size_t size);
-//void free(void *ptr);
-//void *calloc(size_t nmemb, size_t size);
-//void *realloc(void *ptr, size_t size);
+// Memory allocation: see <malloc.h>, included above
 
 // Program termination
 void exit(int status);
