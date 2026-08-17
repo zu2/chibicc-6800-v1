@@ -2,6 +2,8 @@
 # Compile one test and run it
 # on the emulator
 
+PATH=/opt/fcc/bin:$PATH
+
 OPT_O="-Os"
 OPT_g=""
 OPT_v=""
