@@ -4052,11 +4052,18 @@ static Obj *func_declarator(Type *ty, VarAttr *attr, Token *tok) {
     if (!fn->is_static && attr->is_static)
       error_tok(tok, "static declaration follows a non-static declaration");
     fn->is_definition = fn->is_definition || equal(tok, "{");
+    if (fn->inline_static && !scope->next && !attr->is_static &&
+        !(attr->is_inline && !attr->is_extern)) {
+      fn->is_static = false;
+      fn->inline_static = false;
+      fn->is_inline = false;
+    }
   } else {
     fn = new_gvar(name_str, ty);
     fn->is_function = true;
     fn->is_definition = equal(tok, "{");
     fn->is_static = attr->is_static || (attr->is_inline && !attr->is_extern);
+    fn->inline_static = !attr->is_static && attr->is_inline && !attr->is_extern;
     fn->is_inline = attr->is_inline;
   }
 

@@ -160,6 +160,7 @@ struct Obj {
 
   // Function
   bool is_inline;
+  bool inline_static;
   Obj *params;
   Node *body;
   Obj *locals;
