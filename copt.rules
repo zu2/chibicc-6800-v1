@@ -900,13 +900,6 @@
 #
 #
 #
-	andb %2
-	anda %1
-	tstb
-=
-	anda %1
-	andb %2
-
 	clra
 	ldab %1
 	anda #0
@@ -1139,13 +1132,13 @@
 
 	ldab %2
 	ldaa %1
-	j%2 L%3
+	j%3 L%4
 	ldab %2
 	ldaa %1
 =
 	ldab %2
 	ldaa %1
-	j%2 L%3
+	j%3 L%4
 
 	ldab %1
 	cmpb #%2

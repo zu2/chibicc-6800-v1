@@ -14,13 +14,6 @@ XXX_%M:
         clra 
 
 
-	anda #>%1
-	andb #<%1
-	jeq %2
-=
-	andb #<%1
-	jeq %2
-
 	stab @tmp1+1
 	staa @tmp1
 	ldx @tmp1
