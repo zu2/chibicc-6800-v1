@@ -212,16 +212,16 @@ int main(int argc, char **argv)
     const char *res_msg = "PASS";
     if (isnan(expected)) {
       if (!isnan(result)) {
-        res_msg = "FAIL";
+        res_msg = "DIFF";
         ng++;
       }
     } else if (isinf(expected)) {
       if (!isinf(result) || (signbit(expected) != signbit(result))) {
-        res_msg = "FAIL";
+        res_msg = "DIFF";
         ng++;
       }
     } else if (ulp > max_ulp) {
-      res_msg = "FAIL";
+      res_msg = "DIFF";
       ng++;
     }
 
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
   if (ng == 0) {
     printf("All tests passed.\n");
   } else {
-    printf("%d tests failed.\n", ng);
+    printf("%d tests differ.\n", ng);
   }
 
 //return ng;
