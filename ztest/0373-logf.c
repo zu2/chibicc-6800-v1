@@ -196,7 +196,8 @@ int max_ulp_tolerance(float x)
 
 int main(int argc, char **argv)
 {
-  int ng = 0;
+  int n_diff = 0;
+  int n_fail = 0;
   int total = (int)ARRAY_SIZE(patterns);
 
   // Print header row (inside main)
@@ -212,17 +213,17 @@ int main(int argc, char **argv)
     const char *res_msg = "PASS";
     if (isnan(expected)) {
       if (!isnan(result)) {
-        res_msg = "DIFF";
-        ng++;
+        res_msg = "FAIL";
+        n_fail++;
       }
     } else if (isinf(expected)) {
       if (!isinf(result) || (signbit(expected) != signbit(result))) {
-        res_msg = "DIFF";
-        ng++;
+        res_msg = "FAIL";
+        n_fail++;
       }
     } else if (ulp > max_ulp) {
       res_msg = "DIFF";
-      ng++;
+      n_diff++;
     }
 
     // Print data row
@@ -232,12 +233,11 @@ int main(int argc, char **argv)
 
   // Print test summary
   printf("\nTotal tests: %d\n", total);
-  if (ng == 0) {
+  if (n_diff == 0 && n_fail == 0) {
     printf("All tests passed.\n");
   } else {
-    printf("%d tests differ.\n", ng);
+    printf("%d tests differ, %d tests failed.\n", n_diff, n_fail);
   }
 
-//return ng;
-  return 0;
+  return n_fail != 0 || n_diff > 16;
 }
