@@ -1355,7 +1355,8 @@ int gen_decayed_x_sub(Node *node,bool test)
   int64_t val;
   char *addr;
 
-  if (!is_decay_type(node->ty)) {
+  if (!is_decay_type(node->ty)
+  &&  !(node->kind == ND_ADD && is_decay_type(lhs->ty))) {
     return -1;
   }
   switch (node->kind) {
@@ -1437,11 +1438,12 @@ static int addr_x_offset(Node *node)
     &&  is_integer_constant(node->lhs->rhs,&val)
     &&  (0<=val && val<=252)) {
       if (node->lhs->ty->kind == TY_PTR
+      &&  node->lhs->lhs->ty->kind == TY_PTR
       &&  is_local_var(node->lhs->lhs)
       &&  node->lhs->lhs->var->offset<=252) {
         return val;
       }
-      if (node->lhs->ty->kind == TY_ARRAY) {
+      if (is_decay_type(node->lhs->lhs->ty)) {
         if (is_global_array(node->lhs->lhs)) {
           return 0;
         }
@@ -1526,6 +1528,7 @@ int gen_addr_x_sub(Node *node,bool test)
          
       if ((node->lhs->ty->kind == TY_PTR)
       &&  (node->lhs->lhs->kind == ND_VAR)
+      &&  (node->lhs->lhs->ty->kind == TY_PTR)
       &&   is_local_var(node->lhs->lhs)
       &&  (node->lhs->lhs->var->offset<=252)
       &&  is_integer_constant(node->lhs->rhs,&val)
@@ -1544,7 +1547,7 @@ int gen_addr_x_sub(Node *node,bool test)
         return val;
       }
       // (ND_DEREF ty_int (+ TY_ARRAY(12) ...  n))
-      if (node->lhs->ty->kind == TY_ARRAY
+      if (is_decay_type(node->lhs->lhs->ty)
       &&  is_integer_constant(node->lhs->rhs,&val)
       &&  (0<=val && val<=252)
       &&  test_addr_x(node->lhs->lhs)) {
@@ -1636,7 +1639,6 @@ int gen_addr_array_sub(Node *node,bool test)
 // (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +16 ) (ND_VAR ty_int i +0 )))
   if (node->kind == ND_DEREF
   &&  node->lhs->kind == ND_ADD
-  &&  node->lhs->ty->kind == TY_ARRAY
   &&  is_local_array(node->lhs->lhs)
   &&  node->lhs->lhs->var->offset <=252
   &&  is_local_var(node->lhs->rhs)
@@ -1655,7 +1657,6 @@ int gen_addr_array_sub(Node *node,bool test)
   // (ND_DEREF ty_int (+ TY_ARRAY(12) (* ty_int (ND_VAR ty_int l +16 ) 2) (ND_VAR TY_ARRAY(12) m +2 )))
   if (node->kind == ND_DEREF
   &&  node->lhs->kind == ND_ADD
-  &&  node->lhs->ty->kind == TY_ARRAY
   &&  is_local_array(node->lhs->rhs)
   &&  node->lhs->rhs->var->offset <=252
   &&  node->lhs->lhs->kind == ND_MUL
