@@ -556,6 +556,12 @@ static void parse_args(int argc, char **argv) {
   if (input_paths.len == 0)
     error("no input files");
 
+  if (opt_o) {
+    struct stat st;
+    if (stat(opt_o, &st) == 0 && S_ISDIR(st.st_mode))
+      error("cannot open output file: %s: Is a directory", opt_o);
+  }
+
   // -E implies that the input is the C macro language.
   if (opt_E)
     opt_x = FILE_C;
@@ -584,6 +590,16 @@ static char *replace_extn(char *tmpl, char *extn) {
   if (dot)
     *dot = '\0';
   return format("%s%s", filename, extn);
+}
+
+// Same as replace_extn, but keep the directory part of the path
+static char *replace_extn_path(char *tmpl, char *extn) {
+  char *path = strdup(tmpl);
+  char *slash = strrchr(path, '/');
+  char *dot = strrchr(slash ? slash : path, '.');
+  if (dot)
+    *dot = '\0';
+  return format("%s%s", path, extn);
 }
 
 static void cleanup(void) {
@@ -702,7 +718,7 @@ static void print_dependencies(void) {
   if (opt_MF)
     path = opt_MF;
   else if (opt_MD)
-    path = replace_extn(opt_o ? opt_o : base_file, ".d");
+    path = opt_o ? replace_extn_path(opt_o, ".d") : replace_extn(base_file, ".d");
   else if (opt_o)
     path = opt_o;
   else
@@ -914,10 +930,10 @@ static void run_linker(StringArray *inputs, char *output) {
   sprintf(buf_C,"-C%d",C); strarray_push(&arr, buf_C);
   sprintf(buf_Z,"-Z%d",Z); strarray_push(&arr, buf_Z);
   strarray_push(&arr, "-m");
-  char *mapfile = replace_extn(output, ".map");
+  char *mapfile = replace_extn_path(output, ".map");
   strarray_push(&arr, mapfile);
   strarray_push(&arr, "-o");
-  char *binfile = replace_extn(output, ".bin");
+  char *binfile = replace_extn_path(output, ".bin");
   strarray_push(&arr, binfile);
 
   char *libpath = find_libpath();
