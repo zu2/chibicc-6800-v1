@@ -3749,6 +3749,9 @@ static Node *primary(Token **rest, Token *tok) {
   if (equal(tok, "sizeof")) {
     Node *node = unary(rest, tok->next);
     add_type(node);
+    // int f(void); sizeof f;
+    if (node->ty->kind == TY_FUNC)
+      warn_tok(tok, "sizeof applied to a function");
     if (node->ty->kind == TY_VLA)
       return new_binary(ND_COMMA, node,
                         new_var_node(node->ty->vla_size, tok), tok);

@@ -430,6 +430,18 @@ void add_type(Node *node) {
     &&  is_flonum(node->lhs->ty)) {
       error_tok(node->rhs->tok, "assignment to a floating point number from a pointer");
     }
+    if (node->rhs->ty->kind == TY_FUNC) {
+      node->rhs = new_cast(node->rhs, pointer_to(node->rhs->ty));
+    }
+    // int f(void); void *p; p = f;
+    if (node->lhs->ty->base && node->rhs->ty->base) {
+      TypeKind lb = node->lhs->ty->base->kind;
+      TypeKind rb = node->rhs->ty->base->kind;
+      if ((lb == TY_VOID && rb == TY_FUNC)
+      ||  (lb == TY_FUNC && rb == TY_VOID)) {
+        warn_tok(node->rhs->tok, "assignment between a void pointer and a function pointer");
+      }
+    }
     if (node->lhs->ty->kind != TY_STRUCT && node->lhs->ty->kind != TY_UNION)
       node->rhs = new_cast(node->rhs, node->lhs->ty);
     node->ty = node->lhs->ty;
