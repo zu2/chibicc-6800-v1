@@ -593,6 +593,12 @@ void add_type(Node *node) {
     node->ty = node->var->ty;
     return;
   case ND_COND:
+    if (node->then->ty->kind == TY_FUNC){
+      node->then = new_cast(node->then, pointer_to(node->then->ty));
+    }
+    if (node->els->ty->kind == TY_FUNC){
+      node->els = new_cast(node->els, pointer_to(node->els->ty));
+    }
     if (node->then->ty->kind == TY_VOID && node->els->ty->kind == TY_VOID) {
       node->ty = ty_void;
       return;
