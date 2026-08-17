@@ -1,0 +1,157 @@
+diff --git a/misc/supplement1.c b/misc/supplement1.c
+index d0cb011..4cc529e 100644
+--- a/misc/supplement1.c
++++ b/misc/supplement1.c
+@@ -4,7 +4,7 @@ int always8() { return 8; }
+ int add(int x, int y) { return x + y; }
+ int subtract(int x, int y) { return x - y; }
+ 
+-int qwerty(char a, char b)
++int qwerty(int a, int b)
+ {
+ 	int d;
+ 	d = 3;
+@@ -12,7 +12,7 @@ int qwerty(char a, char b)
+ 	c = a + d;
+ 	return c * 4;
+ }
+-int qwer(char a, char b)
++int qwer(int a, int b)
+ {
+ 	int d;
+ 	d = 3;
+diff --git a/test_cases.sh b/test_cases.sh
+index 7b6c2af..bc33378 100755
+--- a/test_cases.sh
++++ b/test_cases.sh
+@@ -40,22 +40,22 @@ run_test 372 'void foo(int*p) {*p=3;} int main() { int a; if (0) { foo(&a); } el
+ run_test 373 'void foo(int*p) {*p=7;} int main() { int a; if (0) { a = 3; } else { foo(&a); } return a; }' 7
+ run_test 374 'int main() { int a; goto a; if (0) { a: a = 3; } else { a = 7; } return a; }' 3
+ run_test 375 'int main() { int a; goto a; if (1) { a = 3; } else { a: a = 7; } return a; }' 7
+-run_test 376 'int main() { int a; return sizeof a; }' 4
+-run_test 377 "int main() { return sizeof 'C'; }" 4
++run_test 376 'int main() { int a; return sizeof a; }' 2
++run_test 377 "int main() { return sizeof 'C'; }" 2
+ run_test 378 "int main() { char a; return sizeof a; }" 1
+-run_test 379 "int main() { char a; return sizeof +a; }" 4
+-run_test 380 'int main() { int *a; return sizeof a; }' 8
+-run_test 381 'int main() { int *a; return sizeof (a+0); }' 8
+-run_test 382 'int main() { int a[2][3]; return sizeof a; }' 24
+-run_test 383 'int main() { int a[2][3]; return sizeof (a+0); }' 8
++run_test 379 "int main() { char a; return sizeof +a; }" 2
++run_test 380 'int main() { int *a; return sizeof a; }' 2
++run_test 381 'int main() { int *a; return sizeof (a+0); }' 2
++run_test 382 'int main() { int a[2][3]; return sizeof a; }' 12
++run_test 383 'int main() { int a[2][3]; return sizeof (a+0); }' 2
+ 
+ run_test 365 'int foo(void) { return 3; } int bar(void) { return 5;} int main(void) { int (*foo1)(void) = foo; int (*bar1)(void) = bar; return (1? foo1 : bar1)(); }' 3
+ run_test 366 'int foo(void) { return 3; } int main(void) { return (1? foo : 0)(); }' 3
+ run_test 367 'int foo(void) { return 3; } int bar(void) { return 5;} int main(void) { return (1? foo : bar)(); }' 3
+ run_test 368 'int foo(void) { return 3; } int bar(void) { return 5;} int main(void) { return (0? foo : bar)(); }' 5
+ 
+-run_test 363 'union A { char a[7]; int b; }; int main(void) { return sizeof(union A); }' 8
+-run_test 364 'union A { char a[4]; int b; }; int main(void) { union A x; x.a[0] = 0x4b; x.a[1] = 0x6f; x.a[2] = 0x72; x.a[3] = 0x79; return x.b - 0x79726f4b; }' 0
++run_test 363 'union A { char a[7]; int b; }; int main(void) { return sizeof(union A); }' 7
++run_test 364 'union A { char a[2]; int b; }; int main(void) { union A x; x.b = 0x4b6f; return ((x.a[0]==0x4b && x.a[1]==0x6f) || (x.a[0]==0x6f && x.a[1]==0x4b)) ? 0 : 1; }' 0
+ 
+ run_test_with_supplement0 361 'int add8(); int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
+ run_test_with_supplement0 362 'struct INT_CHARS_INT { int a; char c[100]; int b; };struct INT_CHARS_INT merge7(); int main(){ struct INT_CHARS_INT st = merge7(1,2,3,4,5,6,7); return st.b - st.a; }' 4
+@@ -73,7 +73,7 @@ run_test 356 'struct A {int a; int b;}; struct A f(int a, int b){struct A q; q.a
+ run_test 344 'int main(){char a[456]; return a + 3 - a; }' 3
+ run_test 345 'struct A {int k[15];}; int main(){struct A s; return 3;}' 3
+ run_test 346 'struct A {int k[15]; int a;}; int main(){struct A s; s.a = 3; return s.a;}' 3
+-run_test 347 'struct A {int k[15]; int a;}; int main(){return sizeof(struct A);}' 64
++run_test 347 'struct A {int k[15]; int a;}; int main(){return sizeof(struct A);}' 32
+ run_test 348 'struct A {int k[15];}; int main(){struct A s; void *p = s.k; return 35;}' 35
+ run_test 349 'struct A {int k[15];}; int main(){struct A s; int *p = s.k; return 35;}' 35
+ run_test 350 'struct A {int k[15];}; int main(){struct A s; int (*p)[15] = &s.k; return 35;}' 35
+@@ -118,7 +118,7 @@ run_test 320 'struct A{int a; int b; int *p;}; struct A f(int j) {struct A u; u.
+ run_test_with_supplement1 321 'struct A{int a; int b; int *p; int *q; int *r; int *s;}; struct A test_(int *s); int main(void){int k; k = 100; struct A u = test_(&k); return u.a + *(u.s);}' 174
+ 
+ 
+-run_test_with_supplement0 203 'int ptrdiff(); int main(){int *p; p = 0; return ptrdiff(p+1, p);}' 4
++run_test_with_supplement0 203 'int ptrdiff(); int main(){int *p; p = 0; return ptrdiff(p+1, p);}' 2
+ run_test 204 'int main(){int *p; p = 0; if(p) {return 4; } return 174;}' 174
+ run_test 205 'int main(){int *p; int a; p = &a; if(p) {return 4; } return 174;}' 4
+ run_test 206 'int main(){int *p; int a; p = &a; return p && &p;}' 1
+@@ -127,7 +127,7 @@ run_test 208 'int main(){int *p; int a; p = &a; return p?174:1;}' 174
+ run_test 209 'int main(){int *p; p = 0; return p?174:1;}' 1
+ run_test 210 'int main(void){return 174;}' 174
+ run_test 211 'int main(void){void *p; p = 0; p = p; return 174;}' 174
+-run_test 212 'struct A{int a; int b;}; int main(){ struct A *p; void *q1; void *q2; q1 = p; q2 = p+1; char *r1; char *r2; r1 = q1; r2 = q2; return r2-r1;}' 8
++run_test 212 'struct A{int a; int b;}; int main(){ struct A *p; void *q1; void *q2; q1 = p; q2 = p+1; char *r1; char *r2; r1 = q1; r2 = q2; return r2-r1;}' 4
+ run_test 213 'void f(int *p){*p = 174; return;} int main(void){ int a; f(&a); return a;}' 174
+ run_test 214 'int main(void){ foo: return 174;}' 174
+ run_test 215 'int main(void){ foo: bar: return 174;}' 174
+@@ -140,11 +140,11 @@ run_test 221 'int main(void){ int a; a = 1; switch(1){ default: a = 173; switch(
+ run_test 222 'int main(void){ int a; a = 1; switch(1){ case 1: a = 174; } return a; }' 174
+ run_test 223 'int main(void){ int a; a = 174; switch(2){ case 1: a = 1; } return a; }' 174
+ run_test 224 'int f(int a){switch(a){case 1: return 3; case 2: return 5; default: return 8;}} int main(void){ return (f(1)-3) || (f(2)-5) || (f(3)-8) || (f(100)-8);}' 0
+-run_test 225 'int main(){return _Alignof(int);}' 4
+-run_test 226 'int main(){return _Alignof(int*);}' 8
+-run_test 227 'struct A{int a; int b;}; int main(){ return _Alignof(struct A);}' 4
+-run_test 228 'struct A{int a; char c; char d; int b;}; int main(){ return _Alignof(struct A);}' 4
+-run_test 229 'struct A{int a; int *b; int c;}; int main(){return _Alignof(struct A [5]);}' 8
++run_test 225 'int main(){return _Alignof(int);}' 1
++run_test 226 'int main(){return _Alignof(int*);}' 1
++run_test 227 'struct A{int a; int b;}; int main(){ return _Alignof(struct A);}' 1
++run_test 228 'struct A{int a; char c; char d; int b;}; int main(){ return _Alignof(struct A);}' 1
++run_test 229 'struct A{int a; int *b; int c;}; int main(){return _Alignof(struct A [5]);}' 1
+ run_test 230 'void f(int *p){*p = 174;} int main(void){ int a; f(&a); return a;}' 174
+ run_test 231 'int main(void){ char a; a = 0; switch(a){case 0: a = 174; break; case 256: a = 3; break; default: a = 5; break;}  return a;}' 174
+ run_test 232 'enum A{B, C}; int main(void){ enum A b; return 174; }' 174
+@@ -254,12 +254,12 @@ run_test 245 'int changeBoard(int (*board)[30], int i, int j, int d, int N){int
+ run_test 246 'int main(){int a[5][6];int (*p)[6];p = a;int *q;q = p[1]; 2[q]=174; return 1[a][2];}' 174
+ 
+ 
+-run_test 190 'int main(){return sizeof(int);}' 4
+-run_test 191 'int main(){return sizeof(int*);}' 8
+-run_test 192 'struct A{int a; int b;}; int main(){ return sizeof(struct A);}' 8
+-run_test 193 'struct A{int a; char c; char d; int b;}; int main(){ return sizeof(struct A);}' 12
+-run_test 194 'struct A{int a; int *b; int c;}; int main(){return sizeof(struct A [5]);}' 120
+-run_test 195 'struct A{int a; int *b; int c;}; struct B{char d; struct A e;}; int main(){return sizeof(struct B [4]);}' 128
++run_test 190 'int main(){return sizeof(int);}' 2
++run_test 191 'int main(){return sizeof(int*);}' 2
++run_test 192 'struct A{int a; int b;}; int main(){ return sizeof(struct A);}' 4
++run_test 193 'struct A{int a; char c; char d; int b;}; int main(){ return sizeof(struct A);}' 6
++run_test 194 'struct A{int a; int *b; int c;}; int main(){return sizeof(struct A [5]);}' 30
++run_test 195 'struct A{int a; int *b; int c;}; struct B{char d; struct A e;}; int main(){return sizeof(struct B [4]);}' 28
+ run_test 196 'int *f(int *p){return p;} int main(){int a[4]; a[0] = 1; f(a)[0]++; f(a)[1] = 172; return a[1]+a[0];}' 174 
+ run_test 197 'struct A{char a; int b;}; int main(){struct A a; a.a = 74; return a.a;}' 74
+ run_test 198 'struct A{int a; int b;}; int main(){struct A a; a.a = 174; return a.a;}' 174
+@@ -288,9 +288,9 @@ run_test 183 'struct A{int a; int b;}; int main(){ struct A; return 174;}' 174
+ run_test 184 'struct A{int a; int b;}; int main(){ struct A a; return 174;}' 174
+ run_test 185 'struct A{int a; int b;}; int main(){ struct A a[10]; return 174;}' 174
+ run_test 186 'struct A{int a; int b;};  struct A a[10]; int main(){return 174;}' 174
+-run_test_with_supplement0 187 'int ptrdiff();struct A{int a; int b;}; int main(){ struct A *p; return ptrdiff(p+1, p);}' 8
+-run_test_with_supplement0 188 'int ptrdiff();struct A{int a; char c; char d; int b;}; int main(){ struct A *p; return ptrdiff(p+1, p);}' 12
+-run_test_with_supplement0 189 'int ptrdiff();struct A{int a; int *b; int c;};  struct A a[1][5]; int main(){return ptrdiff(a+1, a);}' 120
++run_test_with_supplement0 187 'int ptrdiff();struct A{int a; int b;}; int main(){ struct A *p; return ptrdiff(p+1, p);}' 4
++run_test_with_supplement0 188 'int ptrdiff();struct A{int a; char c; char d; int b;}; int main(){ struct A *p; return ptrdiff(p+1, p);}' 6
++run_test_with_supplement0 189 'int ptrdiff();struct A{int a; int *b; int c;};  struct A a[1][5]; int main(){return ptrdiff(a+1, a);}' 30
+ 
+ 
+ 
+@@ -299,8 +299,8 @@ run_test 163 'int foo(char *a, int b, int c){return 0;} int a(int N) {return 3;}
+ run_test_with_supplement0 164 'int foobar();int a(int N) {return 3;}int main() {int i; foobar("%d %d", i, a(i)); return 0;}' 0
+ run_test 165 'int printf();int a(int N) {return 3;}int main() {int i; printf("%d %d", i, a(i)); return 0;}' 0
+ run_test 166 'int printf();int puts();int a(int N) {return 3;}int main() {int i; for (i = 1; i <= 12; i++) { printf("%d %d", i, a(i)); puts("");} return 0;}' 0
+-run_test 167 'int printf();int puts();int A[200][200];int a(int row, int N) {return 3;}int main() {int i; for (i = 1; i <= 12; i++) { printf("%d %d", i, a(0, i)); puts("");} return 0;}' 0
+-run_test 168 'int printf();int puts();int A[200][200];int dfs(int row, int N) { if (row == N) return 1; int ret;ret = 0; int col;for (col = 0; col < N; col++) { int ok; ok = 1; int i; for (i = 1; i < N; i++) { if (row - i >= 0 && col - i >= 0) { ok = ok && A[row - i][col - i] == 0; } if (row - i >= 0) { ok = ok && A[row - i][col] == 0; } if (row - i >= 0 && col + i < N) { ok = ok && A[row - i][col + i] == 0; } } if (ok) { A[row][col] = 1; ret += dfs(row + 1, N); A[row][col] = 0; } } return ret;}int main() {int i; for (i = 1; i < 12; i++) { printf("%d queen: %d", i, dfs(0, i)); puts("");} return 0;}' 0
++run_test 167 'int printf();int puts();int A[100][100];int a(int row, int N) {return 3;}int main() {int i; for (i = 1; i <= 12; i++) { printf("%d %d", i, a(0, i)); puts("");} return 0;}' 0
++run_test 168 'int printf();int puts();int A[100][100];int dfs(int row, int N) { if (row == N) return 1; int ret;ret = 0; int col;for (col = 0; col < N; col++) { int ok; ok = 1; int i; for (i = 1; i < N; i++) { if (row - i >= 0 && col - i >= 0) { ok = ok && A[row - i][col - i] == 0; } if (row - i >= 0) { ok = ok && A[row - i][col] == 0; } if (row - i >= 0 && col + i < N) { ok = ok && A[row - i][col + i] == 0; } } if (ok) { A[row][col] = 1; ret += dfs(row + 1, N); A[row][col] = 0; } } return ret;}int main() {int i; for (i = 1; i < 12; i++) { printf("%d queen: %d", i, dfs(0, i)); puts("");} return 0;}' 0
+ 
+ 
+ run_test 133 'char foo(){char a; return a;} int main(){foo(); return 174;}' 174
+@@ -322,9 +322,9 @@ run_test 148 'int foo(char a, char b){int d;d = 3;char c;c = a+d;return c*4;} in
+ run_test 149 'int foo(char a, char b){int d;d = 3;char c;c = a+d;return c*b;} int main(){char f;f=3;return foo(f,4)+150;}' 174
+ run_test 150 'char foo() { char *x;x = "1ab"; return x[0]; }int main(){ char *y;y = "a2b"; int z;z = 12; char a;a = y[1]; return (a-foo())*z+162;}' 174
+ run_test 151 'int printf();int main(){printf("%d %s", 1, "a");return 174;}' 174
+-run_test 152 'int printf();int puts();int A[200][200];int main() {int i; for (i = 1; i <= 12; i++) { printf("%d %d", i, i); puts(""); } return 0;}' 0
++run_test 152 'int printf();int puts();int A[100][100];int main() {int i; for (i = 1; i <= 12; i++) { printf("%d %d", i, i); puts(""); } return 0;}' 0
+ run_test 153 'int printf();int puts();int a(int b, int c) {return 3;}int main() {int i; for (i = 1; i <= 12; i++) { int j;j = a(0, i); printf("%d %d", i, j); puts("");} return 0;}' 0
+-run_test 154 'int printf();int puts();int A[200][200];int dfs(int row, int N) { if (row == N) return 1; int ret;ret = 0; int col;for (col = 0; col < N; col++) { int ok; ok = 1; int i; for (i = 1; i < N; i++) { if (row - i >= 0 && col - i >= 0) { ok = ok && A[row - i][col - i] == 0; } if (row - i >= 0) { ok = ok && A[row - i][col] == 0; } if (row - i >= 0 && col + i < N) { ok = ok && A[row - i][col + i] == 0; } } if (ok) { A[row][col] = 1; ret += dfs(row + 1, N); A[row][col] = 0; } } return ret;}int main() {int i; for (i = 1; i < 11; i++) { int j; j = dfs(0, i); printf("%d queen: %d", i, j); puts("");} return 0;}' 0
++run_test 154 'int printf();int puts();int A[100][100];int dfs(int row, int N) { if (row == N) return 1; int ret;ret = 0; int col;for (col = 0; col < N; col++) { int ok; ok = 1; int i; for (i = 1; i < N; i++) { if (row - i >= 0 && col - i >= 0) { ok = ok && A[row - i][col - i] == 0; } if (row - i >= 0) { ok = ok && A[row - i][col] == 0; } if (row - i >= 0 && col + i < N) { ok = ok && A[row - i][col + i] == 0; } } if (ok) { A[row][col] = 1; ret += dfs(row + 1, N); A[row][col] = 0; } } return ret;}int main() {int i; for (i = 1; i < 11; i++) { int j; j = dfs(0, i); printf("%d queen: %d", i, j); puts("");} return 0;}' 0
+ run_test 155 'int printf();int puts();int count;int solve(int n, int col, int *hist){if (col == n) {count+=1;return 0;}int i;int j;for (i = 0, j = 0; i < n; i++) {for (j = 0; j < col && hist [j] != i && (hist [j] - i) != col - j && (hist[j] - i) != j - col; j++){}if (j < col)continue;hist[col] = i;solve(n, col + 1, hist);}return 0;}int main(){int i; int hist[20]; for (i = 2; i < 11; i++) { count=0; solve(i, 0, hist); printf("%d queens: %d", i, count); puts("");} return 0;}' 0
+ run_test 156 'int main(){/**/return 123;}' 123
+ run_test 157 'int main(){/*u89g3wihu-@w3erolk*/ return (123);}' 123
