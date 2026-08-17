@@ -219,17 +219,17 @@ Type *func_type(Type *return_ty) {
 
 Type *array_of(Type *base, int len) {
   Type *ty = new_type(TY_ARRAY, base->size * len, 1);
-//Type *ty = new_type(TY_ARRAY, base->size * len, base->align);
   ty->base = base;
   ty->array_len = len;
+  ty->is_unsigned = true;
   return ty;
 }
 
 Type *vla_of(Type *base, Node *len) {
   Type *ty = new_type(TY_VLA, 2, 1);
-//Type *ty = new_type(TY_VLA, 8, 8);
   ty->base = base;
   ty->vla_len = len;
+  ty->is_unsigned = true;
   return ty;
 }
 
