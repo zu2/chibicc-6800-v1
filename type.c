@@ -191,6 +191,9 @@ bool is_compatible(Type *t1, Type *t2) {
       return false;
     return t1->array_len < 0 || t2->array_len < 0 ||
            t1->array_len == t2->array_len;
+  case TY_VLA:
+    // The length is a run-time value, so only the element type is compared.
+    return is_compatible(t1->base, t2->base);
   }
   return false;
 }

@@ -2951,7 +2951,7 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
   }
 
   // VLA - num
-  if (lhs->ty->base->kind == TY_VLA) {
+  if (lhs->ty->base->kind == TY_VLA && is_integer(rhs->ty)) {
     rhs = new_binary(ND_MUL, rhs, new_var_node(lhs->ty->base->vla_size, tok), tok);
     add_type(rhs);
     if (rhs->ty->kind!=TY_INT)
@@ -2985,6 +2985,12 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
 //    node->ty = ty_long;
     node->ty = ty_int;
+    if (lhs->ty->base->kind == TY_VLA) {
+      assert(lhs->ty->base->vla_size);
+      return new_binary(ND_DIV, node,
+                        new_cast(new_var_node(lhs->ty->base->vla_size, tok),
+                                 ty_int), tok);
+    }
     if (lhs->ty->base->size==1)
       return node;
     else
