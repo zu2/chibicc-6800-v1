@@ -11,7 +11,7 @@ fetch: $(ACWJ_WORK)
 	cp $(ACWJ_WORK)/$(ACWJ_SUBDIR)/out.input*.c .
 	cp $(ACWJ_WORK)/$(ACWJ_SUBDIR)/err.input*.c .
 	cp $(ACWJ_WORK)/$(ACWJ_SUBDIR)/runtests .
-	git apply port.patch
+	patch -p1 < port.patch
 	$(MAKE) regen-err
 
 regen-err:
