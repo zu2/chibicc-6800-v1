@@ -90,11 +90,12 @@ static Obj *find_base_var(Node *node, int64_t *ofs)
     return find_base_var(node->lhs,ofs);
   }
   if (node->kind == ND_DEREF
-  &&  node->lhs->ty->kind == TY_ARRAY) {
+  &&  (node->lhs->ty->kind == TY_ARRAY
+    || (node->lhs->kind == ND_ADD && is_decay_type(node->lhs->lhs->ty)))) {
     return find_base_var(node->lhs,ofs);
   }
   if (node->kind == ND_ADD
-  &&  node->ty->kind == TY_ARRAY
+  &&  is_decay_type(node->lhs->ty)
   &&  is_integer_constant(node->rhs,&val)) {
     *ofs += val;
     return find_base_var(node->lhs,ofs);
