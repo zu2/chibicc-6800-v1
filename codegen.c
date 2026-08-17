@@ -5262,7 +5262,6 @@ void gen_expr(Node *node)
     if (opt('O','3')) {
       if (node->ty->kind == TY_CHAR
       &&  lhs->kind == ND_ADD
-      &&  lhs->ty->kind == TY_ARRAY
       &&  is_global_array(lhs->rhs)
       &&  lhs->rhs->ty->array_len<=256
       &&  !is_integer_constant(lhs->lhs,&val)) {
@@ -5276,7 +5275,6 @@ void gen_expr(Node *node)
       }
       if (node->ty->kind == TY_CHAR
       &&  lhs->kind == ND_ADD
-      &&  lhs->ty->kind == TY_ARRAY
       &&  is_global_array(lhs->lhs)
       &&  lhs->lhs->ty->array_len<=256
       &&  !is_integer_constant(lhs->rhs,&val)) {
