@@ -1,0 +1,10 @@
+.acwj/
+input*.c
+out.input*.c
+err.input*.c
+runtests
+trial.input*
+out
+out.bin
+out.map
+out.s

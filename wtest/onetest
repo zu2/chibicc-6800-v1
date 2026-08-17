@@ -1,0 +1,48 @@
+#!/bin/bash
+# Compile one test and run it
+# on the emulator
+
+OPT_O="-Os"
+OPT_g=""
+OPT_v=""
+
+while true; do
+  case "$1" in
+  -O*)
+    OPT_O=$1
+    shift
+    ;;
+  -g*)
+    OPT_g=$1
+    shift
+    ;;
+  -v*)
+    OPT_v=$1
+    shift
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+
+# Build our compiler if needed
+if [ ! -f ../chibicc ]
+then (cd ..; make install)
+fi
+
+i=$1
+
+# Compilation errors and warnings go to
+# stderr; the program output goes to stdout
+../chibicc $OPT_v $OPT_O $OPT_g -o out $i -lm
+if [ "$?" -ne "0" ]
+then rm -f out out.bin out.map out.s
+     exit 1
+fi
+
+emu6800 6800 ./out.bin ./out.map
+ret=$?
+
+rm -f out out.bin out.map out.s
+exit $ret

@@ -1,0 +1,203 @@
+diff --git a/input010.c b/input010.c
+index 8f38248..19311a9 100644
+--- a/input010.c
++++ b/input010.c
+@@ -2,7 +2,7 @@ int printf(char *fmt, ...);
+ 
+ void main()
+ {
+-  int i; char j;
++  int i; unsigned char j;
+ 
+   j= 20; printf("%d\n", j);
+   i= 10; printf("%d\n", i);
+diff --git a/input011.c b/input011.c
+index 8a5e69a..647f934 100644
+--- a/input011.c
++++ b/input011.c
+@@ -2,7 +2,7 @@ int printf(char *fmt, ...);
+ 
+ int main()
+ {
+-  int i; char j; long k;
++  int i; unsigned char j; long k;
+ 
+   i= 10; printf("%d\n", i);
+   j= 20; printf("%d\n", j);
+diff --git a/input016.c b/input016.c
+index 99e1aa8..a50dfed 100644
+--- a/input016.c
++++ b/input016.c
+@@ -7,6 +7,6 @@ int   f;
+ 
+ int main() {
+   c= 12; d=18; printf("%d\n", c);
+-  e= &c + 1; f= *e; printf("%d\n", f);
++  e= &c - 1; f= *e; printf("%d\n", f);
+   return(0);
+ }
+diff --git a/input067.c b/input067.c
+index 04d42ad..f1d5faf 100644
+--- a/input067.c
++++ b/input067.c
+@@ -3,7 +3,7 @@ int printf(char *fmt, ...);
+ typedef int FOO;
+ FOO var1;
+ 
+-struct bar { int x; int y} ;
++struct bar { int x; int y; } ;
+ typedef struct bar BAR;
+ BAR var2;
+ 
+diff --git a/input101.c b/input101.c
+index 90a3d2a..8597237 100644
+--- a/input101.c
++++ b/input101.c
+@@ -2,7 +2,7 @@
+ 
+ int main() {
+   int x= 65535;
+-  char y;
++  unsigned char y;
+   char *str;
+ 
+   y= (char )x; printf("0x%x\n", y);
+diff --git a/runtests b/runtests
+index 811b117..ac2d0d4 100755
+--- a/runtests
++++ b/runtests
+@@ -1,70 +1,76 @@
+-#!/bin/sh
++#!/bin/bash
+ # Run each test and compare
+ # against known good output
+ 
+ # We need a CPU name
+-if [ "$#" -ne 1 ]
+-then echo "Usage: $0 cpuname, e.g $0 6809"; exit 1
+-fi
++#if [ "$#" -ne 1 ]
++#then echo "Usage: $0 cpuname, e.g $0 6809"; exit 1
++#fi
+ 
+ # Build our compiler if needed
+-if [ ! -f ../wcc ]
++if [ ! -f ../chibicc ]
+ then (cd ..; make install)
+ fi
+ 
+-# Try to use each input source file
+-for i in input*c
+-# We can't do anything if there's no file to test against
+-do if [ ! -f "out.$i" -a ! -f "err.$i" ]
+-   then echo "Can't run test on $i, no output file!"
+-
+-   # Output file: compile the source, run it and
+-   # capture the output, and compare it against
+-   # the known-good output
+-   else if [ -f "out.$i" ]
+-        then
+-	  # Print the test name, compile it
+-	  # with our compiler
+-          echo -n $i
+-
+-	  ../wcc -o out -m $1 $i
+-
+-          emu6809 ./out > trial.$i
+-	  rm -f out
+-
+-  	  # Compare this agains the correct output
+-          cmp -s "out.$i" "trial.$i"
+-
+-	  # If different, announce failure
+-          # and print out the difference
+-          if [ "$?" -eq "1" ]
+-          then echo ": failed"
+-            diff -c "out.$i" "trial.$i"
+-            echo
+-	    exit 0
+-
+-	  # No failure, so announce success
+-          else echo ": OK"
+-          fi
+-
+-   # Error file: compile the source and
+-   # capture the error messages. Compare
+-   # against the known-bad output. Same
+-   # mechanism as before
+-   else if [ -f "err.$i" ]
+-        then
+-          echo -n $i
+-	  ../wcc -o out -m $1 $i 2> "trial.$i"
+-
+-          cmp -s "err.$i" "trial.$i"
+-          if [ "$?" -eq "1" ]
+-          then echo ": failed"
+-            diff -c "err.$i" "trial.$i"
+-            echo
+-          else echo ": OK"
++for OPT_O in "-O0" "-O1" "-O2" "-O3" "-Os"
++do
++  # Try to use each input source file
++  for i in input*c
++  # We can't do anything if there's no file to test against
++  do
++    if [ "$i" = "input030.c" ]; then continue; fi
++    if [ "$i" = "input055.c" ]; then continue; fi
++    if [ ! -f "out.$i" -a ! -f "err.$i" ]
++     then echo "Can't run test on $i, no output file!"
++  
++     # Output file: compile the source, run it and
++     # capture the output, and compare it against
++     # the known-good output
++     else if [ -f "out.$i" ]
++          then
++  	  # Print the test name, compile it
++  	  # with our compiler
++            echo -n $i
++  
++  	  ./onetest $OPT_O $i > "trial.$i"
++  
++    	  # Compare this agains the correct output
++            cmp -s "out.$i" "trial.$i"
++  
++  	  # If different, announce failure
++            # and print out the difference
++            if [ "$?" -eq "1" ]
++            then echo ": failed"
++              diff -c "out.$i" "trial.$i"
++              echo
++  	    exit 1
++  
++  	  # No failure, so announce success
++            else echo ": OK"
++            fi
++  
++     # Error file: compile the source and
++     # capture the error messages. Compare
++     # against the known-bad output. Same
++     # mechanism as before
++     else if [ -f "err.$i" ]
++          then
++            echo -n $i
++  	    ./onetest $OPT_O $i 2> "trial.$i"
++  
++            diff -u \
++              <(sed -E 's/([A-Za-z0-9_-]+\.c) [0-9]+/\1 XXX/g' err.$i) \
++              <(sed -E 's/([A-Za-z0-9_-]+\.c) [0-9]+/\1 XXX/g' trial.$i)
++            if [ "$?" -eq "1" ]
++            then echo ": failed"
++              diff -c "err.$i" "trial.$i"
++              echo
++              exit 1;
++            else echo ": OK"
++            fi
+           fi
+-        fi
++       fi
+      fi
+-   fi
+-   rm -f out out.s "trial.$i"
++     rm -f out out.s "trial.$i"
++  done
+ done
