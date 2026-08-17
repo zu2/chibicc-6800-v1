@@ -2924,7 +2924,7 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
     if (rhs->ty->kind!=TY_INT)
       rhs = new_cast(rhs, ty_int);
     Node *node = new_binary(ND_ADD, lhs, rhs, tok);
-    node->ty = lhs->ty;
+    node->ty = (lhs->ty->kind == TY_ARRAY) ? pointer_to(lhs->ty->base) : lhs->ty;
     return node;
   }
   error_tok(tok, "invalid operands %s %d",__FILE__,__LINE__);
@@ -2974,7 +2974,7 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
     if (rhs->ty->kind!=TY_INT)
       rhs = new_cast(rhs, ty_int);
     Node *node = new_binary(ND_SUB, lhs, rhs, tok);
-    node->ty = lhs->ty;
+    node->ty = (lhs->ty->kind == TY_ARRAY) ? pointer_to(lhs->ty->base) : lhs->ty;
     return node;
   }
 
