@@ -319,7 +319,7 @@ DEC32_%M_3:
 # logcal op.
 #
 %check 0 <= %1 <= 255
-	ora #>%1
+	oraa #>%1
 =
 
 %check 0 <= %1 <= 255

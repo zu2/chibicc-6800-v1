@@ -717,7 +717,7 @@
 
 	ldab %1,x
 	ldaa %0,x
-	arlb
+	aslb
 	rola
 	stab %1,x
 	staa %0,x
@@ -914,7 +914,7 @@
 	clra
 	ldab %1
 
-	ora #0
+	oraa #0
 	stab %1
 =
 	stab %1
@@ -1107,7 +1107,7 @@
 %1:
 	rts
 
-	ora #0
+	oraa #0
 =
 
 %check 0 <= %1 <= 255
