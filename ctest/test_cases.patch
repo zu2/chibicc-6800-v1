@@ -21,10 +21,62 @@ index d0cb011..4cc529e 100644
  	int d;
  	d = 3;
 diff --git a/test_cases.sh b/test_cases.sh
-index 7b6c2af..bc33378 100755
+index 7b6c2af..5547c50 100755
 --- a/test_cases.sh
 +++ b/test_cases.sh
-@@ -40,22 +40,22 @@ run_test 372 'void foo(int*p) {*p=3;} int main() { int a; if (0) { foo(&a); } el
+@@ -1,36 +1,27 @@
+ #!/bin/bash
+ 
+-run_test_with_supplement0() {
+-	echo -e $2 | ./out/compiler.out > s/full_compile$1.s
+-	gcc misc/supplement0.c -S -o s/supplement0.s
+-	gcc s/full_compile$1.s s/supplement0.s -o out/task$1.out -no-pie -Wno-unused-command-line-argument
+-	./out/task$1.out
+-	res=$?
++run_6800() {
++	echo -e "$2" > s/task$1.c
++	if ! ../chibicc -o out/task$1 s/task$1.c $4; then
++		echo -e "\033[31mFAIL\033[m, at test case" $1: $2
++		exit 1
++	fi
++	err=`emu6800 6800 out/task$1.bin out/task$1.map 2>&1 >/dev/null`
++	res=`echo "$err" | sed -n 's/^\*\*\*FAIL \([0-9]*\)$/\1/p'`
++	if [ -z "$res" ]; then res=0; fi
+ 	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: $2; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
+ }
+ 
++run_test_with_supplement0() {
++	run_6800 "$1" "$2" "$3" misc/supplement0.c
++}
++
+ run_test() {
+-	echo -e $2 | ./out/compiler.out > s/full_compile$1.s
+-	gcc s/full_compile$1.s -o out/task$1.out -no-pie -Wno-unused-command-line-argument
+-	./out/task$1.out
+-	res=$?
+-	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case" $1: $2; exit 1; }; else echo -e "\033[32mPASS\033[m"; fi
++	run_6800 "$1" "$2" "$3"
+ }
+ 
+ run_test_with_supplement1() {
+-	echo -e $2 | ./out/compiler.out > s/full_compile$1.s
+-	gcc misc/supplement1.c -S -o s/supplement1.s
+-	gcc s/full_compile$1.s s/supplement1.s -o out/task$1.out -no-pie -Wno-unused-command-line-argument
+-	./out/task$1.out
+-	res=$?
+-	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (mixed)" $1: $2; exit 1; }; else echo -e "\033[32mPASS (mixed)\033[m"; fi
+-
+-	echo -e $2 | ./out/compiler.out > s/full_compile$1.s
+-	./out/compiler.out misc/supplement1.c > s/supplement1.s
+-	gcc s/full_compile$1.s s/supplement1.s -o out/task$1.out -no-pie -Wno-unused-command-line-argument
+-	./out/task$1.out
+-	res=$?
+-	if [ $res -ne $3 ]; then { echo "got:" $res; echo "expected:" $3; echo -e "\033[31mFAIL\033[m, at test case (pure)" $1: $2; exit 1; }; else echo -e "\033[32mPASS (pure)\033[m"; fi
++	run_6800 "$1" "$2" "$3" misc/supplement1.c
+ }
+ 
+ run_test 369 'enum Foo { ZERO } foo() { return ZERO; } int main() { int a = foo(); return a; }' 0
+@@ -40,22 +31,22 @@ run_test 372 'void foo(int*p) {*p=3;} int main() { int a; if (0) { foo(&a); } el
  run_test 373 'void foo(int*p) {*p=7;} int main() { int a; if (0) { a = 3; } else { foo(&a); } return a; }' 7
  run_test 374 'int main() { int a; goto a; if (0) { a: a = 3; } else { a = 7; } return a; }' 3
  run_test 375 'int main() { int a; goto a; if (1) { a = 3; } else { a: a = 7; } return a; }' 7
@@ -56,7 +108,7 @@ index 7b6c2af..bc33378 100755
  
  run_test_with_supplement0 361 'int add8(); int main(){ return add8(-1,-2,3,-4,5,6,-7,8); }' 8
  run_test_with_supplement0 362 'struct INT_CHARS_INT { int a; char c[100]; int b; };struct INT_CHARS_INT merge7(); int main(){ struct INT_CHARS_INT st = merge7(1,2,3,4,5,6,7); return st.b - st.a; }' 4
-@@ -73,7 +73,7 @@ run_test 356 'struct A {int a; int b;}; struct A f(int a, int b){struct A q; q.a
+@@ -73,7 +64,7 @@ run_test 356 'struct A {int a; int b;}; struct A f(int a, int b){struct A q; q.a
  run_test 344 'int main(){char a[456]; return a + 3 - a; }' 3
  run_test 345 'struct A {int k[15];}; int main(){struct A s; return 3;}' 3
  run_test 346 'struct A {int k[15]; int a;}; int main(){struct A s; s.a = 3; return s.a;}' 3
@@ -65,7 +117,7 @@ index 7b6c2af..bc33378 100755
  run_test 348 'struct A {int k[15];}; int main(){struct A s; void *p = s.k; return 35;}' 35
  run_test 349 'struct A {int k[15];}; int main(){struct A s; int *p = s.k; return 35;}' 35
  run_test 350 'struct A {int k[15];}; int main(){struct A s; int (*p)[15] = &s.k; return 35;}' 35
-@@ -118,7 +118,7 @@ run_test 320 'struct A{int a; int b; int *p;}; struct A f(int j) {struct A u; u.
+@@ -118,7 +109,7 @@ run_test 320 'struct A{int a; int b; int *p;}; struct A f(int j) {struct A u; u.
  run_test_with_supplement1 321 'struct A{int a; int b; int *p; int *q; int *r; int *s;}; struct A test_(int *s); int main(void){int k; k = 100; struct A u = test_(&k); return u.a + *(u.s);}' 174
  
  
@@ -74,7 +126,7 @@ index 7b6c2af..bc33378 100755
  run_test 204 'int main(){int *p; p = 0; if(p) {return 4; } return 174;}' 174
  run_test 205 'int main(){int *p; int a; p = &a; if(p) {return 4; } return 174;}' 4
  run_test 206 'int main(){int *p; int a; p = &a; return p && &p;}' 1
-@@ -127,7 +127,7 @@ run_test 208 'int main(){int *p; int a; p = &a; return p?174:1;}' 174
+@@ -127,7 +118,7 @@ run_test 208 'int main(){int *p; int a; p = &a; return p?174:1;}' 174
  run_test 209 'int main(){int *p; p = 0; return p?174:1;}' 1
  run_test 210 'int main(void){return 174;}' 174
  run_test 211 'int main(void){void *p; p = 0; p = p; return 174;}' 174
@@ -83,7 +135,7 @@ index 7b6c2af..bc33378 100755
  run_test 213 'void f(int *p){*p = 174; return;} int main(void){ int a; f(&a); return a;}' 174
  run_test 214 'int main(void){ foo: return 174;}' 174
  run_test 215 'int main(void){ foo: bar: return 174;}' 174
-@@ -140,11 +140,11 @@ run_test 221 'int main(void){ int a; a = 1; switch(1){ default: a = 173; switch(
+@@ -140,11 +131,11 @@ run_test 221 'int main(void){ int a; a = 1; switch(1){ default: a = 173; switch(
  run_test 222 'int main(void){ int a; a = 1; switch(1){ case 1: a = 174; } return a; }' 174
  run_test 223 'int main(void){ int a; a = 174; switch(2){ case 1: a = 1; } return a; }' 174
  run_test 224 'int f(int a){switch(a){case 1: return 3; case 2: return 5; default: return 8;}} int main(void){ return (f(1)-3) || (f(2)-5) || (f(3)-8) || (f(100)-8);}' 0
@@ -100,7 +152,7 @@ index 7b6c2af..bc33378 100755
  run_test 230 'void f(int *p){*p = 174;} int main(void){ int a; f(&a); return a;}' 174
  run_test 231 'int main(void){ char a; a = 0; switch(a){case 0: a = 174; break; case 256: a = 3; break; default: a = 5; break;}  return a;}' 174
  run_test 232 'enum A{B, C}; int main(void){ enum A b; return 174; }' 174
-@@ -254,12 +254,12 @@ run_test 245 'int changeBoard(int (*board)[30], int i, int j, int d, int N){int
+@@ -254,12 +245,12 @@ run_test 245 'int changeBoard(int (*board)[30], int i, int j, int d, int N){int
  run_test 246 'int main(){int a[5][6];int (*p)[6];p = a;int *q;q = p[1]; 2[q]=174; return 1[a][2];}' 174
  
  
@@ -119,7 +171,7 @@ index 7b6c2af..bc33378 100755
  run_test 196 'int *f(int *p){return p;} int main(){int a[4]; a[0] = 1; f(a)[0]++; f(a)[1] = 172; return a[1]+a[0];}' 174 
  run_test 197 'struct A{char a; int b;}; int main(){struct A a; a.a = 74; return a.a;}' 74
  run_test 198 'struct A{int a; int b;}; int main(){struct A a; a.a = 174; return a.a;}' 174
-@@ -288,9 +288,9 @@ run_test 183 'struct A{int a; int b;}; int main(){ struct A; return 174;}' 174
+@@ -288,9 +279,9 @@ run_test 183 'struct A{int a; int b;}; int main(){ struct A; return 174;}' 174
  run_test 184 'struct A{int a; int b;}; int main(){ struct A a; return 174;}' 174
  run_test 185 'struct A{int a; int b;}; int main(){ struct A a[10]; return 174;}' 174
  run_test 186 'struct A{int a; int b;};  struct A a[10]; int main(){return 174;}' 174
@@ -132,7 +184,7 @@ index 7b6c2af..bc33378 100755
  
  
  
-@@ -299,8 +299,8 @@ run_test 163 'int foo(char *a, int b, int c){return 0;} int a(int N) {return 3;}
+@@ -299,8 +290,8 @@ run_test 163 'int foo(char *a, int b, int c){return 0;} int a(int N) {return 3;}
  run_test_with_supplement0 164 'int foobar();int a(int N) {return 3;}int main() {int i; foobar("%d %d", i, a(i)); return 0;}' 0
  run_test 165 'int printf();int a(int N) {return 3;}int main() {int i; printf("%d %d", i, a(i)); return 0;}' 0
  run_test 166 'int printf();int puts();int a(int N) {return 3;}int main() {int i; for (i = 1; i <= 12; i++) { printf("%d %d", i, a(i)); puts("");} return 0;}' 0
@@ -143,7 +195,7 @@ index 7b6c2af..bc33378 100755
  
  
  run_test 133 'char foo(){char a; return a;} int main(){foo(); return 174;}' 174
-@@ -322,9 +322,9 @@ run_test 148 'int foo(char a, char b){int d;d = 3;char c;c = a+d;return c*4;} in
+@@ -322,9 +313,9 @@ run_test 148 'int foo(char a, char b){int d;d = 3;char c;c = a+d;return c*4;} in
  run_test 149 'int foo(char a, char b){int d;d = 3;char c;c = a+d;return c*b;} int main(){char f;f=3;return foo(f,4)+150;}' 174
  run_test 150 'char foo() { char *x;x = "1ab"; return x[0]; }int main(){ char *y;y = "a2b"; int z;z = 12; char a;a = y[1]; return (a-foo())*z+162;}' 174
  run_test 151 'int printf();int main(){printf("%d %s", 1, "a");return 174;}' 174
