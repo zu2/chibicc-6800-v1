@@ -2893,7 +2893,7 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
     return new_binary(ND_ADD, lhs, rhs, tok);
 
   if (lhs->ty->base && rhs->ty->base)
-    error_tok(tok, "invalid operands %s %d",__FILE__,__LINE__);
+    error_tok(tok, "invalid operands to binary +");
 
   // Canonicalize `num + ptr` to `ptr + num`.
   if (!lhs->ty->base && rhs->ty->base) {
@@ -2927,7 +2927,7 @@ static Node *new_add(Node *lhs, Node *rhs, Token *tok) {
     node->ty = is_decay_type(lhs->ty) ? pointer_to(lhs->ty->base) : lhs->ty;
     return node;
   }
-  error_tok(tok, "invalid operands %s %d",__FILE__,__LINE__);
+  error_tok(tok, "invalid operands to binary +");
 }
 
 // Like `+`, `-` is overloaded for the pointer type.
@@ -2997,7 +2997,7 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
       return new_binary(ND_DIV, node, new_num(lhs->ty->base->size, tok), tok);
   }
 
-  error_tok(tok, "invalid operands %s %d",__FILE__,__LINE__);
+  error_tok(tok, "invalid operands to binary -");
 }
 
 // add = mul ("+" mul | "-" mul)*
