@@ -12,6 +12,9 @@
 ;
 	.export _ldexpf
 	.data
+__mbits:	.byte	0
+__guard:	.byte	0
+__sticky:	.byte	0
 ;
 	.code
 ;
@@ -62,8 +65,8 @@ __ldexpf_03:
         jge     __f32Infs       ; return ±INF
         ldab    @tmp2+1
         ldaa    @tmp2
-        subb    #<-149          ; exp < -149 ?
-        sbca    #>-149
+        subb    #<-150          ; exp < -150 ?
+        sbca    #>-150
         jlt     __f32zeros      ; Underflow, return ±0.0
 ;
         ldab    @tmp2+1
@@ -72,8 +75,23 @@ __ldexpf_03:
         sbca    #>-126
         jge     __ldexpf_10     ; yes
 ;                               ; no, sub notmal
-        asl     @long+1         ; drop b7
-        lsr     @long+1
+;                               ; AccB = -k, k is the right shift count
+        ldaa    @long+1
+        oraa    #$80            ; set the hidden bit
+        staa    @long+1
+;
+        addb    #24             ; AccB = 24-k, the mask table index
+        stab    __mbits
+        jsr     __fmsbmask      ; the bit below the new LSB
+        jsr     __bit_fmask
+        staa    __guard
+        ldab    __mbits
+        jsr     __fracmask      ; everything under the guard bit
+        jsr     __bit_fmask
+        staa    __sticky
+;
+        ldab    __mbits
+        subb    #24             ; AccB = -k
 __ldexpf_04:
         lsr     @long+1
         ror     @long+2
@@ -81,13 +99,25 @@ __ldexpf_04:
         incb
         bne     __ldexpf_04
 ;
-        ldx     @long+2
+        ldaa    __guard
+        beq     __ldexpf_05
+        ldaa    __sticky
+        bne     __ldexpf_06
+        ldaa    @long+3
+        lsra                    ; a tie goes to the even one
+        bcc     __ldexpf_05
+__ldexpf_06:
+        inc     @long+3
         bne     __ldexpf_05
-        tst     @long
-        jeq     __f32zeros      ; under flow
+        inc     @long+2
+        bne     __ldexpf_05
+        inc     @long+1
 ;
 __ldexpf_05:
-        clrb                    ; new exp = 0 (sub normal, biased)
+        ldab    @long+1
+        aslb                    ; carry = bit 23, set only by the round up
+        rolb
+        andb    #1              ; new exp = 1 if the round up carried, else 0
         bra     __ldexpf_11
 ;
 __ldexpf_10:
