@@ -23,6 +23,21 @@ cmpf(float f, float g)
 	return 0;
 }
 
+int
+cmpfl(float f, unsigned long g)
+{
+	int i;
+	unsigned char *p = (unsigned char *)&f;
+	unsigned char *q = (unsigned char *)&g;
+
+	for (i=0; i<4; ++i,++p,++q){
+		if (*p != *q){
+			return	i+1;
+		}
+	}
+	return 0;
+}
+
 float long2float(unsigned long x)
 {
 	return	*((float *)&x);
@@ -109,6 +124,115 @@ int main(int argc, char **argv)
 	if (g+h != 0.1)
 		return 76;
 //	putstr("(unsigned long)1.0f:\t");puthexl((unsigned long)1.0);putchar('\n');
+
+	// round to nearest even
+	f = long2float(0x3f800000);
+	g = long2float(0x33800000);
+	if (cmpfl(f+g,0x3f800000))
+		return 100;
+
+	f = long2float(0x3f800001);
+	g = long2float(0x33800000);
+	if (cmpfl(f+g,0x3f800002))
+		return 101;
+
+	f = long2float(0x3f800000);
+	g = long2float(0x33810000);
+	if (cmpfl(f+g,0x3f800001))
+		return 102;
+
+	f = long2float(0x3f800000);
+	g = long2float(0x337e0000);
+	if (cmpfl(f+g,0x3f800000))
+		return 103;
+
+	// the tie carries into the exponent
+	f = long2float(0x3fffffff);
+	g = long2float(0x33800000);
+	if (cmpfl(f+g,0x40000000))
+		return 104;
+
+	f = long2float(0x3f800000);
+	g = long2float(0x2b800000);
+	if (cmpfl(f+g,0x3f800000))
+		return 105;
+
+	f = long2float(0x7f7fffff);
+	g = long2float(0x73000000);
+	if (f+g != __builtin_inff())
+		return 106;
+
+	f = long2float(0x7f7fffff);
+	g = long2float(0x72fffffe);
+	if (cmpfl(f+g,0x7f7fffff))
+		return 107;
+
+	// the sticky bits of the addend must raise the result
+	f = long2float(0x3df7141e);
+	g = long2float(0x3938913e);
+	if (cmpfl(f+g,0x3df77067))
+		return 108;
+
+	f = long2float(0x4a77549d);
+	g = long2float(0x47a902b1);
+	if (cmpfl(f+g,0x4a7c9cb3))
+		return 109;
+
+	f = long2float(0x2a8835b5);
+	g = long2float(0x26f9999a);
+	if (cmpfl(f+g,0x2a892f4f))
+		return 110;
+
+	f = long2float(0x4a77549d);
+	g = long2float(0x47a902b1);
+	if (cmpfl(f+g,0x4a7c9cb3))
+		return 111;
+
+	f = long2float(0x46289a7d);
+	g = long2float(0x3f0de70d);
+	if (cmpfl(f+g,0x46289cb5))
+		return 112;
+
+	f = long2float(0x33cd3348);
+	g = long2float(0x29a8518a);
+	if (cmpfl(f+g,0x33cd3353))
+		return 113;
+
+	f = long2float(0x3cf0dbe6);
+	g = long2float(0x32124b24);
+	if (cmpfl(f+g,0x3cf0dbeb))
+		return 114;
+
+	f = long2float(0x036b821c);
+	g = long2float(0x00076052);
+	if (cmpfl(f+g,0x036bbd1f))
+		return 115;
+
+	// G=1, R=0, S=1 at shift 4, 8, 13, 20 and 22
+	f = long2float(0x3f800000);
+	g = long2float(0x3d800009);
+	if (cmpfl(f+g,0x3f880001))
+		return 120;
+
+	f = long2float(0x3f800000);
+	g = long2float(0x3b800081);
+	if (cmpfl(f+g,0x3f808001))
+		return 121;
+
+	f = long2float(0x3f800000);
+	g = long2float(0x39001001);
+	if (cmpfl(f+g,0x3f800401))
+		return 122;
+
+	f = long2float(0x3f800000);
+	g = long2float(0x35880001);
+	if (cmpfl(f+g,0x3f800009))
+		return 123;
+
+	f = long2float(0x3f800000);
+	g = long2float(0x34a00001);
+	if (cmpfl(f+g,0x3f800003))
+		return 124;
 
 	return 0;
 }

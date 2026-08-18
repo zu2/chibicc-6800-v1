@@ -3,7 +3,35 @@
 //
 
 #include "common.h"
-#include "floatcheck.h"
+
+#define HEX_FLT_TRUE_MIN   (0x00000001)
+#define HEX_FLT_TRUE_MIN2  (0x00000002)
+#define HEX_FLT_MIN        (0x00800000)
+#define HEX_FLT_MIN_DIV2   (0x00400000)
+#define HEX_FLT_MIN_DIV4   (0x00200000)
+#define HEX_FLT_MIN_DIV8   (0x00100000)
+#define pZERO		   (0x00000000)
+#define mZERO		   (0x80000000)
+
+float to_float(unsigned long x)
+{
+	return	*((float *)&x);
+}
+
+int
+cmpfl(float f, unsigned long g)
+{
+	int i;
+	unsigned char *p = (unsigned char *)&f;
+	unsigned char *q = (unsigned char *)&g;
+
+	for (i=0; i<4; ++i,++p,++q){
+		if (*p != *q){
+			return	i+1;
+		}
+	}
+	return 0;
+}
 
 
 int main(int argc, char **argv)
@@ -12,8 +40,8 @@ int main(int argc, char **argv)
 
 	pzero = to_float(pZERO);
 	mzero = to_float(mZERO);
-	pinf  = to_float(pINFINITY);
-	minf  = to_float(mINFINITY);
+	pinf  = __builtin_inff();
+	minf  = -__builtin_inff();
 
 	f = 1.0f;
        	g = 2.0f;
@@ -133,7 +161,7 @@ int main(int argc, char **argv)
 		return 162;
 
 	f = 1.0f;
-	g = to_float(pINFINITY);
+	g = __builtin_inff();
 	e = f/g;
 
 	if (e!=0.0)
@@ -146,7 +174,7 @@ int main(int argc, char **argv)
 		return 173;
 
 	f = 1.0f;
-	g = to_float(mINFINITY);
+	g = -__builtin_inff();
 	e = f/g;
 
 	if (e!=0.0)
@@ -171,5 +199,115 @@ int main(int argc, char **argv)
 	if (e != 0.99999999f)
 		return 202;
 	
+	// round to nearest even
+	f = 1.0f;
+	g = 3.0f;
+	if (cmpfl(f/g,0x3eaaaaab))
+		return 210;
+
+	f = 2.0f;
+	g = 3.0f;
+	if (cmpfl(f/g,0x3f2aaaab))
+		return 211;
+
+	f = 1.0f;
+	g = 7.0f;
+	if (cmpfl(f/g,0x3e124925))
+		return 212;
+
+	f = 1.0f;
+	g = 25.0f;
+	if (cmpfl(f/g,0x3d23d70a))
+		return 213;
+
+	f = 3.0f;
+	g = 19.0f;
+	if (cmpfl(f/g,0x3e21af28))
+		return 214;
+
+	// the answer is half of the smallest subnormal
+	f = to_float(HEX_FLT_MIN);
+	g = to_float(0x4b800000);
+	if (cmpfl(f/g,0x00000000))
+		return 215;
+
+	f = to_float(0x00c00000);
+	g = to_float(0x4b000000);
+	if (cmpfl(f/g,0x00000002))
+		return 216;
+
+	f = to_float(0x7f7fffff);
+	g = 0.5f;
+	if (f/g != __builtin_inff())
+		return 217;
+
+	// exp difference is -150, the quotient still reaches the smallest subnormal
+	f = to_float(0x30c00000);
+	g = to_float(0x7b800000);
+	if (cmpfl(f/g,0x00000001))
+		return 218;
+
+	f = to_float(0x30880000);
+	g = to_float(0x7b800000);
+	if (cmpfl(f/g,0x00000001))
+		return 219;
+
+	f = to_float(0x30800000);
+	g = to_float(0x7b800000);
+	if (cmpfl(f/g,0x00000000))
+		return 220;
+
+	f = to_float(0x30780000);
+	g = to_float(0x7b800000);
+	if (cmpfl(f/g,0x00000000))
+		return 221;
+
+	// ties in the subnormal range must go to the even neighbour
+	f = to_float(0x04a00000);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00000002))
+		return 222;
+
+	f = to_float(0x05100000);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00000004))
+		return 223;
+
+	f = to_float(0x04e00000);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00000004))
+		return 224;
+
+	f = to_float(0x04a01000);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00000003))
+		return 225;
+
+	f = to_float(0x049ff000);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00000002))
+		return 226;
+
+	// the bits shifted out while denormalizing are the only sticky bits
+	f = to_float(0x05880800);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00000009))
+		return 227;
+
+	f = to_float(0x07010200);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00000041))
+		return 228;
+
+	f = to_float(0x09001080);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00000401))
+		return 229;
+
+	f = to_float(0x0b000120);
+	g = to_float(0x4e800000);
+	if (cmpfl(f/g,0x00004001))
+		return 230;
+
 	return 0;
 }
