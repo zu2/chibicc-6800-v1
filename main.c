@@ -109,7 +109,7 @@ static void usage(int status) {
 
 static bool take_arg(char *arg) {
   char *x[] = {
-    "-o", "-I", "-idirafter", "-include", "-x", "-MF", "-MT", "-Xlinker",
+    "-o", "-I", "-include", "-x", "-MF", "-MT", "-Xlinker",
     "-D", "-U", "-L", "-B", "-MQ", "-cc1-input", "-cc1-output",
   };
 
@@ -194,8 +194,6 @@ static void parse_args(int argc, char **argv) {
         fprintf(stderr, "missing argument to '%s'\n", argv[i - 1]);
         usage(1);
       }
-
-  StringArray idirafter = {};
 
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "-###")) {
@@ -427,11 +425,6 @@ static void parse_args(int argc, char **argv) {
       continue;
     }
 
-    if (!strcmp(argv[i], "-idirafter")) {
-      strarray_push(&idirafter, argv[i++]);
-      continue;
-    }
-
     if (!strcmp(argv[i], "-static")) {
       opt_static = true;
       strarray_push(&ld_extra_args, "-static");
@@ -587,9 +580,6 @@ static void parse_args(int argc, char **argv) {
 
     strarray_push(&input_paths, argv[i]);
   }
-
-  for (int i = 0; i < idirafter.len; i++)
-    strarray_push(&include_paths, idirafter.data[i]);
 
   if (input_paths.len == 0)
     error("no input files");
