@@ -751,8 +751,8 @@ __addf32_s05:
 	;
 __addf32_s10:
 	ldab	__zin		; Either TOS or @long is Inf.
-	cmpb	#$04		; @long is Inf?
-	bne	__addf32_s05	; No, return Inf, sign is same as @long
+	bitb	#$04		; @long is Inf?
+	bne	__addf32_s05	; Yes, return Inf, sign is same as @long
 	tsx
 	ldab	2,x
 	jmp	__f32retInf	; return Inf, The sign is the same as TOS

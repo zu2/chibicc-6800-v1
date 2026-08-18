@@ -48,13 +48,11 @@ int main(int argc, char **argv)
 	float zm = long2float(0x80000000);
 	float pInf = long2float(0x7F800000);
 	float mInf = long2float(0xFF800000);
+	float one = long2float(0x3F800000);
+	float two = long2float(0x40000000);
 
 	float y1 = long2float(0x7F7FFFFF);	// The largest nomalized number
 
-//	puthexf(y1);putchar('\n');
-//	puthexf(y1*2.0);putchar('\n');
-//	puthexf(pInf);putchar('\n');
-#if	1
 	if (pInf!=pInf)
 		return	1;
 	if (mInf!=mInf)
@@ -67,8 +65,8 @@ int main(int argc, char **argv)
 //	puthexf(y1*1.1);putchar('\n');
 	if ((y1*1.1)!=pInf)
 		return	22;
-#endif
-#if	1
+
+
 	if (y1*-2.0!=mInf)
 		return	22;
 	if (cmpfl(x1/2,0x00400000))
@@ -82,8 +80,6 @@ int main(int argc, char **argv)
 	if (cmpfl(x1/0x01000000,  0x00000000))
 		return 24;
 
-//	puthexf(x1*0.5);putchar('\n');		// 00800000 / 40000000
-//	puthexf(x1*0.25);putchar('\n');		// 00800000 / 40000000
 	if (cmpfl(x1*0.5,0x00400000))
 		return 31;
 	if (cmpfl(x1*0.25,  0x00200000))
@@ -94,9 +90,7 @@ int main(int argc, char **argv)
 		return 43;
 	if (cmpfl(x1*.00000005960464477539,  0x00000000))
 		return 44;
-//	puthexf(x2);putchar('\n');	
-//	puthexf(x1-x2);putchar('\n');
-//	puthexf(x1-x2-x2);putchar('\n');
+
 	if (x1-x2 != x2)
 		return	51;
 	if (x1-x2-x2 != 0.0)
@@ -106,9 +100,31 @@ int main(int argc, char **argv)
 		return	61;
 	if (x1+x2!=x2+x2+x2)
 		return	61;
-#endif
 
-
+	if (cmpfl(mInf+one, 0xFF800000))
+		return	71;
+	if (cmpfl(one+mInf, 0xFF800000))
+		return	72;
+	if (cmpfl(pInf+one, 0x7F800000))
+		return	73;
+	if (cmpfl(one+pInf, 0x7F800000))
+		return	74;
+	if (cmpfl(mInf+two, 0xFF800000))
+		return	75;
+	if (cmpfl(two+mInf, 0xFF800000))
+		return	76;
+	if (cmpfl(pInf+(-two), 0x7F800000))
+		return	77;
+	if (cmpfl((-two)+pInf, 0x7F800000))
+		return	78;
+	if (cmpfl(pInf+zm, 0x7F800000))
+		return	79;
+	if (cmpfl(zm+pInf, 0x7F800000))
+		return	80;
+	if (cmpfl(mInf+zp, 0xFF800000))
+		return	81;
+	if (cmpfl(zp+mInf, 0xFF800000))
+		return	82;
 
 	return 0;
 }
