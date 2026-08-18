@@ -6,85 +6,208 @@
 #include <string.h>
 
 typedef struct {
-    float base;
-    float exponent;
-    float expected;
+  float base;
+  float exponent;
+  float expected;
+  int max_ulp;
 } PowfTestCase;
 
 PowfTestCase powf_test_cases[] = {
-    {2.0f, 3.0f, 8.0f},
-    {10.0f, -1.0f, 0.1f},
-    {5.0f, 0.0f, 1.0f},
-    {0.0f, 0.0f, 1.0f},
-    {-2.0f, 2.0f, 4.0f},
-    {-2.0f, 0.5f, NAN},
-    {2.0f, 1000.0f, INFINITY},
-    {1.0f, 100.0f, 1.0f},
-    {0.0f, 1.0f, 0.0f},
-    {0.0f, -1.0f, INFINITY},
-    {1.0f, NAN, NAN},
-    {NAN, 1.0f, NAN},
-    {INFINITY, 1.0f, INFINITY},
-    {1.0f, INFINITY, 1.0f},
-    {0.5f, INFINITY, 0.0f},
-    {1.5f, INFINITY, INFINITY},
-    {1.40129846e-45f, 1.0f, 1.40129846e-45f},
-    {3.40282347e+38f, 1.0f, 3.40282347e+38f},
-    {1.0f, 3.40282347e+38f, 1.0f},
-    {2.0f, 3.40282347e+38f, INFINITY},
-    {0.5f, 3.40282347e+38f, 0.0f},
-    {2.0f, -3.40282347e+38f, 0.0f},
-    {0.5f, -3.40282347e+38f, INFINITY},
+    // C99 F.10.4.4 special values
+    {0.0f, 0.0f, 1.0f, 0},
+    {NAN, 0.0f, 1.0f, 0},
+    {NAN, -0.0f, 1.0f, 0},
+    {1.0f, NAN, 1.0f, 0},
+    {1.0f, INFINITY, 1.0f, 0},
+    {-1.0f, INFINITY, 1.0f, 0},
+    {-1.0f, -INFINITY, 1.0f, 0},
+    {0.0f, 3.0f, 0.0f, 0},
+    {-0.0f, 3.0f, -0.0f, 0},
+    {-0.0f, 2.0f, 0.0f, 0},
+    {-0.0f, 2.50000000e+00f, 0.0f, 0},
+    {0.0f, -3.0f, INFINITY, 0},
+    {-0.0f, -3.0f, -INFINITY, 0},
+    {-0.0f, -2.0f, INFINITY, 0},
+    {-0.0f, 5.00000000e-01f, 0.0f, 0},
+    {INFINITY, 2.0f, INFINITY, 0},
+    {INFINITY, -2.0f, 0.0f, 0},
+    {-INFINITY, 3.0f, -INFINITY, 0},
+    {-INFINITY, 2.0f, INFINITY, 0},
+    {-INFINITY, -3.0f, -0.0f, 0},
+    {-INFINITY, -2.0f, 0.0f, 0},
+    {-INFINITY, 5.00000000e-01f, INFINITY, 0},
+    {5.00000000e-01f, INFINITY, 0.0f, 0},
+    {5.00000000e-01f, -INFINITY, INFINITY, 0},
+    {1.50000000e+00f, INFINITY, INFINITY, 0},
+    {1.50000000e+00f, -INFINITY, 0.0f, 0},
+    {NAN, 1.0f, NAN, 0},
+    {2.0f, NAN, NAN, 0},
+    {-2.00000000e+00f, 2.50000000e+00f, NAN, 0},
+    {-1.00000000e-01f, 5.00000000e-01f, NAN, 0},
+    // overflow and underflow
+    {2.0f, 1.28000000e+02f, INFINITY, 0},
+    {2.0f, 1.27000000e+02f, 1.70141183e+38f, 0},
+    {2.0f, -1.49000000e+02f, 1.40129846e-45f, 0},
+    {2.0f, -1.50000000e+02f, 0.0f, 0},
+    {1.00000000e+03f, 1.00000000e+03f, INFINITY, 0},
+    {1.00000000e-03f, 1.00000000e+03f, 0.0f, 0},
+    // a huge exponent is always an even integer
+    {-2.0f, 3.40282347e+38f, INFINITY, 0},
+    {-2.0f, -3.40282347e+38f, 0.0f, 0},
+    {1.0f, 3.40282347e+38f, 1.0f, 0},
+    {2.00000000e+00f, 1.00000000e+00f, 2.00000000e+00f, 0},
+    {2.00000000e+00f, 2.00000000e+00f, 4.00000000e+00f, 0},
+    {2.00000000e+00f, 5.00000000e-01f, 1.41421354e+00f, 0},
+    {2.00000000e+00f, -1.00000000e+00f, 5.00000000e-01f, 0},
+    {-3.00000000e+00f, 1.00000000e+00f, -3.00000000e+00f, 0},
+    {-3.00000000e+00f, 2.00000000e+00f, 9.00000000e+00f, 0},
+    {2.50000000e-01f, 5.00000000e-01f, 5.00000000e-01f, 0},
+    {1.00000002e+20f, 2.00000000e+00f, INFINITY, 0},
+    {9.99999968e-21f, 2.00000000e+00f, 9.99994610e-41f, 0},
+    {7.00000000e+00f, -1.00000000e+00f, 1.42857149e-01f, 0},
+    {2.00000000e+00f, 3.00000000e+00f, 8.00000000e+00f, 0},
+    {2.00000000e+00f, 1.00000000e+01f, 1.02400000e+03f, 0},
+    {3.00000000e+00f, 5.00000000e+00f, 2.43000000e+02f, 0},
+    {7.00000000e+00f, 3.00000000e+00f, 3.43000000e+02f, 0},
+    {1.00000000e+01f, 5.00000000e+00f, 1.00000000e+05f, 0},
+    {-2.00000000e+00f, 3.00000000e+00f, -8.00000000e+00f, 0},
+    {-2.00000000e+00f, 4.00000000e+00f, 1.60000000e+01f, 0},
+    {5.00000000e-01f, -3.00000000e+00f, 8.00000000e+00f, 0},
+    {1.50000000e+00f, 2.00000000e+00f, 2.25000000e+00f, 0},
+    {9.00000000e+00f, 5.00000000e-01f, 3.00000000e+00f, 0},
+    {1.00000002e+30f, 5.00000000e-01f, 9.99999987e+14f, 0},
+    {1.49605548e+00f, 5.98967133e+01f, 3.01156495e+10f, 16},
+    {3.58167320e-01f, 5.33418732e+01f, 1.63723012e-24f, 16},
+    {1.43926156e+00f, 5.32873077e+01f, 2.67202304e+08f, 16},
+    {2.82379651e+00f, 5.59933281e+01f, 1.75251736e+25f, 16},
+    {3.74956131e-01f, -5.64298439e+01f, 1.09702412e+24f, 16},
+    {3.73596996e-01f, -5.97561798e+01f, 3.56074411e+25f, 16},
+    {2.94598889e+00f, 5.38763428e+01f, 1.90746182e+25f, 16},
+    {7.07977116e-01f, -5.79522018e+01f, 4.91718368e+08f, 16},
+    {7.25904524e-01f, -5.39760475e+01f, 3.22979200e+07f, 16},
+    {1.45163023e+00f, 4.63829193e+01f, 3.21628140e+07f, 16},
+    {1.51816998e-02f, 2.00424995e+01f, 3.54091037e-37f, 16},
+    {1.87184006e-01f, 2.97837009e+01f, 2.11577607e-22f, 16},
+    {1.10000002e+00f, 3.00000012e-01f, 1.02900577e+00f, 16},
+    {3.70000005e+00f, 2.20000005e+00f, 1.77845898e+01f, 16},
+    {1.00000005e-03f, 5.00000000e-01f, 3.16227786e-02f, 16},
+    {1.23456001e+02f, 1.70000005e+00f, 3.59394019e+03f, 16},
+    {1.00000000e-30f, 2.50000000e-01f, 3.16227755e-08f, 16},
+    {1.00000002e+30f, 7.50000000e-01f, 3.16227769e+22f, 16},
+    {2.50000000e+00f, -7.30000019e+00f, 1.24462310e-03f, 16},
+    {-2.50000000e+00f, 7.00000000e+00f, -6.10351562e+02f, 16},
+    {-1.70000005e+00f, -9.00000000e+00f, -8.43256339e-03f, 16},
+    // sign, subnormals and the exponent boundaries
+    {-2.00000000e+00f, 1.67772150e+07f, -INFINITY, 0},
+    {-2.00000000e+00f, -1.67772150e+07f, -0.0f, 0},
+    {-2.00000000e+00f, 1.67772160e+07f, INFINITY, 0},
+    {-2.00000000e+00f, 2.01000000e+02f, -INFINITY, 0},
+    {-2.00000000e+00f, -2.01000000e+02f, -0.0f, 0},
+    {-5.00000000e-01f, 2.01000000e+02f, -0.0f, 0},
+    {-5.00000000e-01f, -2.01000000e+02f, -INFINITY, 0},
+    {-3.00000000e+00f, 9.99000000e+02f, -INFINITY, 0},
+    {-3.00000000e+00f, -9.99000000e+02f, -0.0f, 0},
+    {-4.00000000e+00f, -1.00000000e+00f, -2.50000000e-01f, 0},
+    {-4.00000000e+00f, 1.00000000e+00f, -4.00000000e+00f, 0},
+    {-4.00000000e+00f, 2.00000000e+00f, 1.60000000e+01f, 0},
+    {-1.00000000e+00f, 3.00000000e+00f, -1.00000000e+00f, 0},
+    {-1.00000000e+00f, 4.00000000e+00f, 1.00000000e+00f, 0},
+    {-1.00000000e+00f, 1.67772150e+07f, -1.00000000e+00f, 0},
+    {1.40129846e-45f, 1.00000000e+00f, 1.40129846e-45f, 0},
+    {1.40129846e-45f, 2.00000000e+00f, 0.0f, 0},
+    {1.40129846e-45f, 5.00000000e-01f, 3.74339207e-23f, 0},
+    {1.40129846e-45f, -1.00000000e+00f, INFINITY, 0},
+    {1.17549421e-38f, 5.00000000e-01f, 1.08420211e-19f, 0},
+    {1.17549435e-38f, 2.00000000e+00f, 0.0f, 0},
+    {2.00000000e+00f, -1.40000000e+02f, 7.17464814e-43f, 0},
+    {3.00000000e+00f, -8.50000000e+01f, 2.78409979e-41f, 0},
+    {2.00000000e+00f, -1.49000000e+02f, 1.40129846e-45f, 0},
+    {2.00000000e+00f, -1.50000000e+02f, 0.0f, 0},
+    {1.00000012e+00f, 1.00000000e+07f, 3.29396772e+00f, 16},
+    {9.99999940e-01f, 1.00000000e+07f, 5.50985694e-01f, 16},
+    {3.00000000e+00f, 1.00000000e-30f, 1.00000000e+00f, 16},
+    {3.00000000e+00f, -1.00000000e-30f, 1.00000000e+00f, 16},
+    {3.40282347e+38f, 1.00000000e+00f, 3.40282347e+38f, 16},
+    {3.40282347e+38f, 5.00000000e-01f, 1.84467430e+19f, 16},
+    {2.00000000e+00f, 1.27999992e+02f, 3.40280562e+38f, 16},
+    // boundaries inside the log and exp steps
+    {7.50000000e-01f, 3.29999995e+00f, 3.86992157e-01f, 16},  // m = 0.75, the reduction boundary
+    {7.49999940e-01f, 3.29999995e+00f, 3.86992067e-01f, 16},
+    {1.49999988e+00f, 3.29999995e+00f, 3.81154490e+00f, 16},
+    {1.50000000e+00f, 3.29999995e+00f, 3.81154585e+00f, 16},
+    {2.00000000e+00f, 3.29999995e+00f, 9.84915543e+00f, 16},  // f = 0
+    {1.02400000e+03f, 3.29999995e+00f, 8.58993152e+09f, 16},
+    {7.88860905e-31f, 3.70000005e-01f, 7.27595501e-12f, 16},
+    {7.59999990e-01f, 7.30000019e+00f, 1.34877399e-01f, 16},  // e = 0 path
+    {1.49000001e+00f, 7.30000019e+00f, 1.83763733e+01f, 16},
+    {7.47692287e-01f, 1.13000002e+01f, 3.74169834e-02f, 16},  // worst input of logf
+    {1.49821603e+00f, 1.13000002e+01f, 9.63809509e+01f, 16},
+    {2.00000000e+00f, 1.26900002e+02f, 1.58747509e+38f, 16},  // n = 127, the top of exp
+    {2.00000000e+00f, -1.25900002e+02f, 1.25986233e-38f, 16},
+    {2.00000000e+00f, -1.48899994e+02f, 1.40129846e-45f, 16},  // subnormal result
+    {1.64872122e+00f, 1.00000000e+00f, 1.64872122e+00f, 16},
+    {3.00000000e+00f, 3.14062500e+00f, 3.15107651e+01f, 16},  // y with no low mantissa bits
+    {3.00000000e+00f, 3.14160132e+00f, 3.15445805e+01f, 16},  // y with all low mantissa bits
+    {1.00000012e+00f, 1.67772150e+07f, 7.38905430e+00f, 16},
+    {3.00000000e+00f, 1.40129846e-45f, 1.00000000e+00f, 16},  // subnormal exponent
 };
 
-
-int32_t ulp_diff(float a, float b) {
-    if (isnan(a) || isnan(b) || isinf(a) || isinf(b) || signbit(a) != signbit(b)) {
-        return -1;
-    }
-    int32_t ia, ib;
-    memcpy(&ia, &a, sizeof(float));
-    memcpy(&ib, &b, sizeof(float));
-    if (a < 0) {
-        ia = 0x80000000 - ia;
-        ib = 0x80000000 - ib;
-    }
-    return abs(ia - ib);
+int32_t ulp_diff(float a, float b)
+{
+  int32_t ia, ib;
+  memcpy(&ia, &a, sizeof(float));
+  memcpy(&ib, &b, sizeof(float));
+  if (ia < 0) {
+    ia = 0x80000000 - ia;
+  }
+  if (ib < 0) {
+    ib = 0x80000000 - ib;
+  }
+  return abs(ia - ib);
 }
 
-int main() {
-    int n_tests = sizeof(powf_test_cases) / sizeof(powf_test_cases[0]);
-    int passes = 0;
-    float tolerance = 10.0f * FLT_EPSILON;
+int main(void)
+{
+  int n_tests = sizeof(powf_test_cases) / sizeof(powf_test_cases[0]);
+  int n_fail = 0;
 
-    printf("%14s %14s %14s %14s %14s %4s %8s\n",
-           "Base", "Exponent", "Expected", "Actual", "Diff", "Pass", "ULP");
-    printf("%14s %14s %14s %14s %14s %4s %8s\n",
-           "-------------", "-------------", "-------------", "-------------", "-------------", "----", "--------");
+  printf("%14s %14s %14s %14s %4s %8s\n", "Base", "Exponent", "Expected",
+         "Actual", "Pass", "ULP");
 
-    for (int i = 0; i < n_tests; ++i) {
-        float base = powf_test_cases[i].base;
-        float exponent = powf_test_cases[i].exponent;
-        float expected = powf_test_cases[i].expected;
-        float actual = powf(base, exponent);
-        int pass;
-        if (isnan(expected)) {
-            pass = isnan(actual);
-        } else if (isinf(expected)) {
-            pass = isinf(actual);
-        } else {
-            float diff = fabsf(actual - expected);
-            pass = (diff <= tolerance * fabsf(expected)) || (diff <= FLT_MIN);
-        }
-        passes += pass;
-        float diff = (isnan(expected) || isnan(actual) || isinf(expected) || isinf(actual))
-                   ? 0.0f : fabsf(actual - expected);
-        int32_t ulp = ulp_diff(actual, expected);
-        printf("%14e %14e %14e %14e %14e %4s %8d\n",
-               base, exponent, expected, actual, diff, pass ? "YES" : "NO", ulp);
+  for (int i = 0; i < n_tests; ++i) {
+    float base = powf_test_cases[i].base;
+    float exponent = powf_test_cases[i].exponent;
+    float expected = powf_test_cases[i].expected;
+    float actual = powf(base, exponent);
+    int32_t ulp = 0;
+    int pass;
+
+    if (isnan(expected)) {
+      pass = isnan(actual);
+    } else if (isinf(expected)) {
+      pass = isinf(actual) && signbit(expected) == signbit(actual);
+    } else if (expected == 0.0f) {
+      pass = actual == 0.0f && signbit(expected) == signbit(actual);
+    } else if (isnan(actual) || isinf(actual) ||
+               signbit(expected) != signbit(actual)) {
+      pass = 0;
+    } else {
+      ulp = ulp_diff(actual, expected);
+      pass = ulp <= powf_test_cases[i].max_ulp;
     }
 
-    printf("\nPass rate: %d/%d (%.2f%%)\n", passes, n_tests, 100.0f * passes / n_tests);
-    return 0;
-}
+    if (!pass) {
+      n_fail++;
+    }
+    printf("%14e %14e %14e %14e %4s %8d\n", base, exponent, expected, actual,
+           pass ? "YES" : "NO", (int)ulp);
+  }
 
+  printf("\nTotal tests: %d\n", n_tests);
+  if (n_fail == 0) {
+    printf("All tests passed.\n");
+  } else {
+    printf("%d tests failed.\n", n_fail);
+  }
+  return n_fail != 0;
+}
