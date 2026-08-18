@@ -19,6 +19,9 @@ int main(int argc, char **argv)
   if (modff(INFINITY,&int_part)!=0.0f || int_part != INFINITY)
     return 2;
 
+  if (signbit(modff(INFINITY,&int_part)))
+    return 5;
+
   if (modff(0.0f,&int_part) != 0.0f || int_part != 0.0f)
     return 3;
 
@@ -132,6 +135,9 @@ int main(int argc, char **argv)
 
   if (modff(-INFINITY,&int_part)!=0.0f || int_part != -INFINITY)
     return 102;
+
+  if (!signbit(modff(-INFINITY,&int_part)))
+    return 105;
 
   if (modff(0.0f,&int_part) != 0.0f || int_part != 0.0f)
     return 103;

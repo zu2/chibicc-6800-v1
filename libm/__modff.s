@@ -9,8 +9,6 @@
 ;	Note: This program was created for testing chibicc-6800-v1, 
 ;	and does not pay attention to speed, accuracy, or exception handling.
 ;
-;	TODO: NaN, Inf
-;
 	.export	_modff
 	.data
 __nexp:	.byte	0	; new exp
@@ -32,7 +30,6 @@ __save:	.word	0
 _modff:
 	jsr	__f32isNaNorInf		; Handle NaN/Inf cases, mess IX
 	bcs	__modff_NaN		; if NaN, int_part=@long, return @long
-	beq	__modff_ret_long	; if Inf, int_part=Inf, return 0.0
 ;
 __modff_10:
 	jsr	__get_lexp_sign		; __lexp = @long's exp, __sign = sign
