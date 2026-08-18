@@ -5,6 +5,7 @@
 #ifndef MATH_H
 #define MATH_H
 #include <stdint.h>
+#include <limits.h>
 
 #define M_PI 	0x1.921fb54p+1f // 3.1415927f	pi
 #define	M_TWOPI	0x1.921fb54p+2f	// 6.2831855f	2*pi
@@ -25,12 +26,16 @@
 #define HUGE_VAL  (__builtin_inff())
 #define HUGE_VALF (__builtin_inff())
 
+#define FP_ILOGB0   (INT_MIN)
+#define FP_ILOGBNAN (INT_MAX)
+
 int	isnan(float x);
 int	isinf(float x);
 int	isfinite(float x);
 float	copysignf(float x, float y);
 int	signbit(float x);
 float	nextafterf(float x, float y);
+int	ilogbf(float x);
 
 float	sinf(float x);
 float	cosf(float x);
