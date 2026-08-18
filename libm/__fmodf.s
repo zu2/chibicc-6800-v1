@@ -27,12 +27,11 @@
 ;
 	.data
 __zin:	.blkb	1	; TOS & @long are Zero? Inf? NaN?
-__sign:	.blkb	1	; sign (TOS & @long sign are different? 1:differ,0:same)
 __exp:  .blkb   1
-__expdiff:.blkb	2	; TOS's exp - @long's exp
+__expdiff:.blkb	1	; high half of @long's exp - TOS's exp
 __expnew:.word	2	; new exp
 ;
-__yadrs:.blkb   2
+__tos_p:.blkb	2	; points to TOS
 ;
 	.code
 ;
@@ -88,82 +87,88 @@ __fmodf_retlong:
 __fmodf_zeros:
 	jmp	__f32zeros
 ;
-__fmodf_02:				; Here, fabsf(x)>fabsf(y)
+;	r -= my if r >= my.  r < 2*my holds every time, so one subtract is enough.
 ;
-        tsx                             ; exp's diff > 10?
-        ldab    3,x
-        ldaa    2,x
-        aslb
-        rola
-        staa    __exp                   ; TOS exp
-        ldab    @long+1
+__fmodf_reduce:
+        ldx     __tos_p
         ldaa    @long
-        aslb
-        rola
-        suba    __exp                   ; @long exp - TOS exp
-        cmpa    #48
-        jcc     __f32NaN                ; TODO: 
-        cmpa    #10
-        jcc     __fmodf_def             ; calculate x - y * truncf(x/y)
+        bne     __fmodf_sub             ; r >= 2^24 > my
+        ldaa    @long+1
+        cmpa    1,x
+        bhi     __fmodf_sub
+        bcs     __fmodf_keep
+        ldaa    @long+2
+        cmpa    2,x
+        bhi     __fmodf_sub
+        bcs     __fmodf_keep
+        ldaa    @long+3
+        cmpa    3,x
+        bcs     __fmodf_keep
+__fmodf_sub:
+        ldaa    @long+3
+        suba    3,x
+        staa    @long+3
+        ldaa    @long+2
+        sbca    2,x
+        staa    @long+2
+        ldaa    @long+1
+        sbca    1,x
+        staa    @long+1
+        clr     @long                   ; r-my < my, so it fits in 24 bit again
+__fmodf_keep:
+        rts
 ;
-	tsx
-	inx
-	inx
-	jsr	__adj_subnormal		; do normalize,AccAB = unbiased exp
-	stab	__expdiff+1
-	staa	__expdiff
-	ldx	#long
-	jsr	__adj_subnormal
-	stab	__expnew+1		; save @long's exp
-	staa	__expnew
-	subb	__expdiff+1
-	sbca	__expdiff
-	stab	__expdiff+1		; expdiff = long's exp - TOS's exp
-	staa	__expdiff
-;					; Here, fabsf(x)>fabsf(y), expdiff>=0
-	tsx
-        jsr     __asl8_both
+__fmodf_02:                             ; Here, fabsf(@long)>fabsf(TOS)
 ;
-	ldab	__expdiff+1
-	ldaa	__expdiff
-	cmpb	#<24
-	sbca	#>24
-	bge	__fmodf_zeros		; expdiff>23
+;	@long = mx * 2^(ex-23), TOS = my * 2^(ey-23), mx and my are 24 bit
+;	@long % TOS = (mx * 2^(ex-ey) % my) * 2^(ey-23), and the shift and
+;	subtract below keeps every bit, so the result needs no rounding.
 ;
-;					; Here, 0<=expdiff<=23, b=expdiff
-	tstb
-	beq	__fmodf_03
+        tsx
+        inx
+        inx
+        stx     __tos_p                 ; save TOS's address
+        jsr     __adj_subnormal         ; do normalize,AccAB = unbiased exp
+        stab    __expnew+1              ; the remainder sits at TOS's exp
+        staa    __expnew
 ;
-	ldaa	5,x
-__fmodf_021:				; scale adjust. TOS>>expdiff
-	lsr	2,x
-	ror	3,x
-	ror	4,x
-	rora
-	bcc	__fmodf_022
-	oraa	#$01			; apply sticky bit
-__fmodf_022:
-	decb
-	bne	__fmodf_021
+        ldx     #long
+        jsr     __adj_subnormal
+        subb    __expnew+1
+        sbca    __expnew                ; expdiff = long's exp - TOS's exp
+        staa    __expdiff               ; AccB keeps the low half, expdiff >= 0
 ;
-	staa	5,x
+        clr     @long                   ; r = mx, and r < 2^25 all the way
+        bsr     __fmodf_reduce          ; keeps AccB
 ;
-;	Since 24-bit division is performed using 32-bit operations
+__fmodf_shift:                          ; expdiff times: r <<= 1, then reduce
+        tstb
+        bne     __fmodf_dec_low
+        tst     __expdiff
+        beq     __fmodf_rem
+        dec     __expdiff
+__fmodf_dec_low:
+        decb
 ;
-__fmodf_03:
-	jsr	__div32x32x		; @tmp1:AccAB  = @long % TOS
+        asl     @long+3
+        rol     @long+2
+        rol     @long+1
+        rol     @long
+        bsr     __fmodf_reduce
+        bra     __fmodf_shift
 ;
-	stab	@long+3			; @long = @long % TOS
-	staa	@long+2
-	ldaa	@tmp1+1
-	staa	@long+1
-	ldaa	@tmp1
-	staa	@long
+__fmodf_rem:
+        ldaa    @long+1                 ; r == 0 ?
+        oraa    @long+2
+        oraa    @long+3
+        jeq     __fmodf_zeros           ; mod=0, return 0.0 with sign
 ;
-	orab	@long+2			; @long == 0 ?
-	orab	@long+1
-	orab	@long
-	jeq	__fmodf_zeros		; mod=0, return 0.0 with sign
+        ldab    __expnew+1              ; r is a 24 bit integer, while the tail
+        ldaa    __expnew                ; normalizes a 1.f from bit 31: 31-23
+        addb    #8
+        adca    #0
+        stab    __expnew+1
+        staa    __expnew
 ;
 	ldab	__expnew+1
 	ldaa	__expnew
@@ -278,46 +283,3 @@ __fmodf32_rup_occur:
 	sec
 	rts
 ;
-;       fmodf(x,y) = x - y * trunc(x/y)
-;
-
-__fmodf_def:
-        tsx
-        inx
-        inx
-        stx __yadrs                     ; save y's address
-;
-        jsr __push32                    ; push x
-;
-        ldx __yadrs
-        jsr __push32x                   ; push y
-        ldx __yadrs
-        jsr __push32x                   ; push y
-;
-	jsr __divf32tos                 ; @long = @long / TOS  = x / y  , discard TOS y
-;
-        jsr __f32isNaNorInf             ; Z=1 Inf, C=1 NaN
-        bhi __fmodf_ok                  ; jump if Z=0 and C=0
-;
-        ins                             ; discard TOS y
-        ins
-        ins
-        ins
-        ins                             ; discard TOS x
-        ins
-        ins
-        ins
-        jmp __fmodf_NaN
-;
-__fmodf_ok:
-	jsr _truncf                     ; @long = truncf(x/y)
-;
-	jsr __mulf32tos                 ; @long = y * truncf(x/y)       , discard TOS y
-;
-        jsr __subf32tos                 ; @long = @long - TOS = y*trucf(x/y) - x, dis x
-;
-        ldaa @long                      ; flip sign
-        eora #$80
-        staa @long
-;
-	rts

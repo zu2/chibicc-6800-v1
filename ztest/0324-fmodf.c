@@ -1,13 +1,21 @@
 #include <math.h>
 #include <float.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define PI 3.14159265358979323846f
-#define EPSILON 1e-6f // Acceptable error margin
 
-// Custom implementation of fmodf
-float fmodf_custom(float x, float y) { return x - y * truncf(x / y); }
+#define to_float(x) (*(const float*)&(uint32_t){x})
+
+int float_eq(float a, float b)
+{
+  uint32_t ua, ub;
+  memcpy(&ua, &a, sizeof(ua));
+  memcpy(&ub, &b, sizeof(ub));
+  return ua == ub;
+}
 
 // Test case struct: holds input, modulus base, and expected value
 typedef struct {
@@ -376,12 +384,11 @@ int run_tests(const TestCase *tests, int count)
     float x = tests[i].input;
     float mod_base = tests[i].mod_base;
     float expected = tests[i].expected;
-//  float result = fmodf_custom(x, mod_base);
     float result = fmodf(x, mod_base);
-    float error = fabsf(result - expected);
+    int ok = float_eq(result, expected);
     printf("fmodf(%+.8f,%+.8f) → %+.8f, expected: %+.8f [%s]\n", x, mod_base,
-           result, expected, (error <= EPSILON ? "PASS" : "FAIL"));
-    if (error>EPSILON)
+           result, expected, (ok ? "PASS" : "FAIL"));
+    if (!ok)
       fail++;
   }
   printf("Fail: %d\n",fail);
@@ -393,5 +400,130 @@ int main(void)
 {
   int count = sizeof(tests) / sizeof(TestCase);
 
-  return run_tests(tests, count)>16;
+  if (run_tests(tests, count) != 0)
+    return 1;
+
+  /* a large exponent difference needs an exact remainder, not x - y*trunc(x/y) */
+  if (!float_eq(fmodf(1.0f, to_float(0x33400000)), to_float(0x32800000)))
+    return 11;
+  if (!float_eq(fmodf(1.0f, to_float(0x2F400000)), to_float(0x2E800000)))
+    return 12;
+  if (!float_eq(fmodf(to_float(0x3FD07601), to_float(0x357CBCA6)),
+                to_float(0x34DC2D80)))
+    return 13;
+  if (!float_eq(fmodf(FLT_MAX, 1.0f), 0.0f))
+    return 14;
+  if (!float_eq(fmodf(1.0f, to_float(0x00000001)), 0.0f))
+    return 15;
+  if (!float_eq(fmodf(FLT_MAX, to_float(0x00000001)), 0.0f))
+    return 16;
+  if (!float_eq(fmodf(FLT_MAX, to_float(0x00000003)), 0.0f))
+    return 17;
+  if (!float_eq(fmodf(to_float(0x4B7FFFFF), 1.5f), 0.0f))
+    return 18;
+
+  /* subnormals */
+  if (!float_eq(fmodf(to_float(0x00000003), to_float(0x00000002)),
+                to_float(0x00000001)))
+    return 21;
+  if (!float_eq(fmodf(to_float(0x00000002), to_float(0x00000003)),
+                to_float(0x00000002)))
+    return 22;
+  if (!float_eq(fmodf(to_float(0x007FFFFF), to_float(0x00000003)),
+                to_float(0x00000001)))
+    return 23;
+  if (!float_eq(fmodf(to_float(0x00800000), to_float(0x007FFFFF)),
+                to_float(0x00000001)))
+    return 24;
+
+  /* the exponent difference around the old 8 bit limit */
+  if (!float_eq(fmodf(1.5f, to_float(0x3B900000)), to_float(0x3AC00000)))
+    return 25;
+  if (!float_eq(fmodf(1.5f, to_float(0x3B100000)), to_float(0x3AC00000)))
+    return 26;
+  if (!float_eq(fmodf(1.5f, to_float(0x3A900000)), to_float(0x39C00000)))
+    return 27;
+  if (!float_eq(fmodf(1.5f, to_float(0x3A100000)), to_float(0x39C00000)))
+    return 28;
+
+  /* the result keeps x's sign, whatever the sign of y is */
+  if (!float_eq(fmodf(to_float(0x80000003), to_float(0x00000002)),
+                to_float(0x80000001)))
+    return 31;
+  if (!float_eq(fmodf(to_float(0x00000003), to_float(0x80000002)),
+                to_float(0x00000001)))
+    return 32;
+  if (!float_eq(fmodf(-2.5f, 2.0f), -0.5f))
+    return 33;
+  if (!float_eq(fmodf(2.5f, -2.0f), 0.5f))
+    return 34;
+
+  /* a zero result keeps x's sign too */
+  if (!float_eq(fmodf(4.0f, 2.0f), 0.0f))
+    return 35;
+  if (!float_eq(fmodf(-4.0f, 2.0f), -0.0f))
+    return 36;
+  if (!float_eq(fmodf(4.0f, -2.0f), 0.0f))
+    return 37;
+  if (!float_eq(fmodf(-4.0f, -2.0f), -0.0f))
+    return 38;
+
+  /* fabsf(x) == fabsf(y) */
+  if (!float_eq(fmodf(2.0f, 2.0f), 0.0f))
+    return 51;
+  if (!float_eq(fmodf(-2.0f, 2.0f), -0.0f))
+    return 52;
+  if (!float_eq(fmodf(2.0f, -2.0f), 0.0f))
+    return 53;
+  if (!float_eq(fmodf(-2.0f, -2.0f), -0.0f))
+    return 54;
+  if (!float_eq(fmodf(to_float(0x00000001), to_float(0x80000001)), 0.0f))
+    return 55;
+
+  /* fabsf(x) < fabsf(y), x comes back untouched */
+  if (!float_eq(fmodf(-1.0f, 2.0f), -1.0f))
+    return 61;
+  if (!float_eq(fmodf(to_float(0x00000001), 1.0f), to_float(0x00000001)))
+    return 62;
+  if (!float_eq(fmodf(to_float(0x80000001), 1.0f), to_float(0x80000001)))
+    return 63;
+  if (!float_eq(fmodf(to_float(0x007FFFFF), to_float(0x00800000)),
+                to_float(0x007FFFFF)))
+    return 64;
+
+  /* NaN, Inf and zero */
+  if (!isnan(fmodf(INFINITY, 1.0f)))
+    return 41;
+  if (!isnan(fmodf(-INFINITY, 1.0f)))
+    return 42;
+  if (!float_eq(fmodf(1.0f, INFINITY), 1.0f))
+    return 43;
+  if (!isnan(fmodf(1.0f, 0.0f)))
+    return 44;
+  if (!float_eq(fmodf(0.0f, 1.0f), 0.0f))
+    return 45;
+  if (!float_eq(fmodf(-0.0f, 1.0f), -0.0f))
+    return 46;
+  if (!isnan(fmodf(NAN, 1.0f)))
+    return 47;
+  if (!isnan(fmodf(1.0f, NAN)))
+    return 48;
+  if (!isnan(fmodf(0.0f, 0.0f)))
+    return 49;
+  if (!isnan(fmodf(INFINITY, INFINITY)))
+    return 50;
+  if (!float_eq(fmodf(0.0f, INFINITY), 0.0f))
+    return 71;
+  if (!float_eq(fmodf(-0.0f, INFINITY), -0.0f))
+    return 72;
+  if (!float_eq(fmodf(0.0f, -1.0f), 0.0f))
+    return 73;
+  if (!float_eq(fmodf(-0.0f, 1.0f), -0.0f))
+    return 74;
+  if (!float_eq(fmodf(to_float(0x7F7FFFFF), to_float(0x80000001)), 0.0f))
+    return 75;
+  if (!float_eq(fmodf(to_float(0xFF7FFFFF), to_float(0x00000001)), -0.0f))
+    return 76;
+
+  return 0;
 }
