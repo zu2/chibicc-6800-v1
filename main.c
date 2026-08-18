@@ -110,7 +110,7 @@ static void usage(int status) {
 static bool take_arg(char *arg) {
   char *x[] = {
     "-o", "-I", "-idirafter", "-include", "-x", "-MF", "-MT", "-Xlinker",
-    "-v", "-D", "-O",
+    "-v", "-D", "-O", "-U", "-L", "-B", "-MQ", "-cc1-input", "-cc1-output",
   };
 
   for (int i = 0; i < sizeof(x) / sizeof(*x); i++)
@@ -190,8 +190,10 @@ static void parse_args(int argc, char **argv) {
   // have an argument.
   for (int i = 1; i < argc; i++)
     if (take_arg(argv[i]))
-      if (!argv[++i])
+      if (!argv[++i]) {
+        fprintf(stderr, "missing argument to '%s'\n", argv[i - 1]);
         usage(1);
+      }
 
   StringArray idirafter = {};
 
@@ -275,8 +277,18 @@ static void parse_args(int argc, char **argv) {
       continue;
     }
 
+    if (!strcmp(argv[i], "-B")) {
+      copt_rules_path = format("%s/",argv[++i]);
+      continue;
+    }
+
     if (!strncmp(argv[i], "-B", 2)) {
       copt_rules_path = format("%s/",argv[i]+2);
+      continue;
+    }
+
+    if (!strcmp(argv[i], "-I")) {
+      strarray_push(&include_paths, argv[++i]);
       continue;
     }
 
