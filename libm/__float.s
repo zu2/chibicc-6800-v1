@@ -793,10 +793,12 @@ __addf32_1:			; neither of @long and TOS was not 0.0, simply add them.
 	;			
 	negb			; texp < lexp
 	jsr	__lsr_tos	; shift TOS right by AccB, align the bit.
+	tsx
 	ldaa	__lexp		; @long is larger, use its exponent.
 	jmp	__addf32_11
 __addf32_10:			; texp > lexp
 	jsr	__lsr_long	; shift @long right by AccB, align the bit
+	tsx
 	ldaa	__texp		; TOS is larger, use its exponent.
 __addf32_11:
 	ldab	@long+3		; @long = @long + TOS , 32bit version
@@ -881,6 +883,7 @@ __addf32_51:
 	jsr	__setup_both	; AccB = TOS'exp - @long's exp
 	beq	__addf32_52	; Both exp were equal,  simply substract
 	jsr	__lsr_long	; shift @long right by AccB
+	tsx
 __addf32_52:
 	ldaa	__texp
 	;			; substract @long = TOS - @long
@@ -957,6 +960,7 @@ __addf32_60:
 	beq	__addf32_61	; AccB == 0, simply substract
 	negb
 	jsr	__lsr_tos	; shift TOS right by AccB
+	tsx
 __addf32_61:
 	ldaa	__lexp
 	;			; substract @long = @long - TOS
@@ -1174,46 +1178,74 @@ __asl8_tos:
 ;	TODO: If the shift>=24, This will result in unnecessary shifts.
 ;
 ;
-__lsr_long:			; lsr @long by AccB
-	ldaa	@long+3
-__lsr_long_1:
-	lsr	@long+0
-	ror	@long+1
-	ror	@long+2
+__lsr_long:			; lsr @long by AccB, X is destroyed
+	ldx	#long
+	bra	__lsrx
+;
+__lsr_tos:			; lsr TOS (2-5,x) by AccB, X is destroyed
+	inx
+	inx
+	bra	__lsrx
+;
+;	shift (0,x)-(3,x) right by AccB, the sticky bit is collected into b5
+;
+__lsrx:
+	cmpb	#26			; nothing but the sticky bit survives
+	bcc	__lsrx_f
+__lsrx_b:
+	subb	#8
+	bcs	__lsrx_r		; fewer than 8 bits left
+	bsr	__lsr8s
+	bra	__lsrx_b
+__lsrx_r:
+	addb	#8
+	ldaa	3,x
+	tstb
+	beq	__lsrx_e
+__lsrx_1:
+	lsr	0,x
+	ror	1,x
+	ror	2,x
 	rora
-        bcc     __lsr_long_2
+	bcc	__lsrx_2
 	oraa	#$20
-__lsr_long_2:
+__lsrx_2:
 	decb
-	bne	__lsr_long_1
+	bne	__lsrx_1
+__lsrx_e:
 	bita	#$1f		; recover the sticky bit
-	beq	__lsr_long_3
+	beq	__lsrx_3
 	oraa	#$20
-__lsr_long_3:
+__lsrx_3:
 	anda	#$e0
-	staa	@long+3
+	staa	3,x
 	rts
 ;
-__lsr_tos:			; lsr TOS (2-5,x) by AccB
-	ldaa	5,x
-__lsr_tos_1:
-	lsr	2,x
-	ror	3,x
-	ror	4,x
-	rora
-	bcc	__lsr_tos_2
-	oraa	#$20
-__lsr_tos_2:
-	decb
-	bne	__lsr_tos_1
-	bita	#$1f		; recover the sticky bit
-	beq	__lsr_tos_3
-	oraa	#$20
-__lsr_tos_3:
-	anda	#$e0
-	staa	5,x
+__lsrx_f:
+	clr	0,x			; the value is never zero here, so sticky is always 1
+	clr	1,x
+	clr	2,x
+	ldaa	#$20
+	staa	3,x
 	rts
 ;
+;	shift (0,x)-(3,x) right by 8bit, the byte that falls off becomes the sticky bit
+;
+__lsr8s:
+	ldaa	3,x
+	beq	__lsr8s_1
+	ldaa	2,x
+	oraa	#$01
+	staa	2,x
+__lsr8s_1:
+	ldaa	2,x
+	staa	3,x
+	ldaa	1,x
+	staa	2,x
+	ldaa	0,x
+	staa	1,x
+	clr	0,x
+	rts
 ;
 __pullret:
 	tsx
