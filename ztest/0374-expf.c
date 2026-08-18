@@ -14,7 +14,7 @@ typedef struct {
 #define SUBNORMAL2 1.0e-40f        // Example subnormal
 
 // Edge values for float expf
-#define EXPF_OVERFLOW_EDGE 88.7228317261f // Max x where expf(x) == FLT_MAX
+#define EXPF_OVERFLOW_EDGE 88.7228317261f // Max x where expf(x) is finite
 #define EXPF_OVERFLOW_EDGE_OVER                                                \
   88.722839f // Slightly over the edge (will overflow)
 #define EXPF_UNDERFLOW_EDGE                                                    \
@@ -25,9 +25,9 @@ typedef struct {
 // Test cases (comprehensive)
 const ExpfTestCase test_cases[] = {
     {8.87228317e+01f, 3.40279854e+38f},
-    {8.87228390e+01f, 3.40282329e+38f},
-    {-1.03972076e+02f, 7.00649700e-46f},
-    {-1.03972084e+02f, 7.00644386e-46f},
+    {8.87228390e+01f, INFINITY},
+    {-1.03972076e+02f, 1.40129846e-45f},
+    {-1.03972084e+02f, 0.0f},
     {1.40129846e-45f, 1.00000000e+00f},
     {-1.40129846e-45f, 1.00000000e+00f},
     {1.00000000e-40f, 1.00000000e+00f},
