@@ -254,6 +254,27 @@ int main(int argc, char **argv)
 	if (roundf(-65536.5f) != -65537.0f)
 		return 98;
 
+	if (roundf(0.49999997f) != 0.0f)
+		return 121;
+
+	if (roundf(-0.49999997f) != 0.0f)
+		return 122;
+
+	if (roundf(8388609.0f) != 8388609.0f)
+		return 123;
+
+	if (roundf(16777213.0f) != 16777213.0f)
+		return 124;
+
+	if (roundf(16777215.0f) != 16777215.0f)
+		return 125;
+
+	if (roundf(-16777215.0f) != -16777215.0f)
+		return 126;
+
+	if (roundf(8388607.5f) != 8388608.0f)
+		return 127;
+
 	return 0;
 }
 
