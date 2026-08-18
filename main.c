@@ -672,10 +672,15 @@ static void run_subprocess(char **argv, char *redirect_in, char *redirect_out) {
   int status;
   if (wait(&status) <= 0)
     error("wait failed for %s", argv[0]);
-  if (WIFSIGNALED(status))
+  if (WIFSIGNALED(status)) {
     fprintf(stderr, "%s died with signal %d\n", argv[0], WTERMSIG(status));
-  if (status != 0)
     exit(1);
+  }
+  if (WEXITSTATUS(status) != 0) {
+    fprintf(stderr, "chibicc: error: %s returned %d exit status\n",
+            argv[0], WEXITSTATUS(status));
+    exit(WEXITSTATUS(status));
+  }
 }
 
 static void run_cc1(int argc, char **argv, char *input, char *output) {
