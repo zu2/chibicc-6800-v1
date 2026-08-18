@@ -78,6 +78,27 @@ int main(int argc, char **argv)
 	if (floorf(-8388608.0f) != -8388608.0f)
 		return 27;
 
+	if (floorf(256.0f) != 256.0f)
+		return 31;
+
+	if (floorf(256.5f) != 256.0f)
+		return 32;
+
+	if (floorf(511.5f) != 511.0f)
+		return 33;
+
+	if (floorf(-256.5f) != -257.0f)
+		return 34;
+
+	if (floorf(65536.0f) != 65536.0f)
+		return 35;
+
+	if (floorf(65536.5f) != 65536.0f)
+		return 36;
+
+	if (floorf(-65536.5f) != -65537.0f)
+		return 37;
+
 	if (ceilf(0.0f) != 0.0f)
 		return 51;
 
@@ -119,6 +140,27 @@ int main(int argc, char **argv)
 
 	if (ceilf(-8388608.0f) != -8388608.0f)
 		return 67;
+
+	if (ceilf(256.0f) != 256.0f)
+		return 41;
+
+	if (ceilf(256.5f) != 257.0f)
+		return 42;
+
+	if (ceilf(511.5f) != 512.0f)
+		return 43;
+
+	if (ceilf(-256.5f) != -256.0f)
+		return 44;
+
+	if (ceilf(65536.0f) != 65536.0f)
+		return 45;
+
+	if (ceilf(65536.5f) != 65537.0f)
+		return 46;
+
+	if (ceilf(-65536.5f) != -65536.0f)
+		return 47;
 
 
 	if (roundf(0.0f) != 0.0f)
@@ -187,6 +229,30 @@ int main(int argc, char **argv)
 
 	if (roundf(-8388608.0f) != -8388608.0f)
 		return 83;
+
+	if (roundf(256.0f) != 256.0f)
+		return 91;
+
+	if (roundf(256.4f) != 256.0f)
+		return 92;
+
+	if (roundf(256.5f) != 257.0f)
+		return 93;
+
+	if (roundf(511.4f) != 511.0f)
+		return 94;
+
+	if (roundf(-256.5f) != -257.0f)
+		return 95;
+
+	if (roundf(65536.0f) != 65536.0f)
+		return 96;
+
+	if (roundf(65536.5f) != 65537.0f)
+		return 97;
+
+	if (roundf(-65536.5f) != -65537.0f)
+		return 98;
 
 	return 0;
 }

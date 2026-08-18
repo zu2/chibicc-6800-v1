@@ -28,7 +28,8 @@ __fmsbmask:				; IX = msb_table[3*(B%8)+2-B/8]
 	lsrb
 	lsrb
 	sba				; AccA -= AccB
-	clrb
+	ldab	#0			; sign extend
+	sbcb	#0
 	adda	#<__msb_table+2
 	adcb	#>__msb_table+2
 	staa	@tmp1+1
@@ -58,7 +59,8 @@ __fracmask:				; IX = frac_table[5*(B%8)+7-B/8]
 	lsrb
 	lsrb
 	sba
-	clrb
+	ldab	#0			; sign extend
+	sbcb	#0
 	adda	#<__frac_table+7
 	adcb	#>__frac_table+7
 	staa	@tmp1+1
