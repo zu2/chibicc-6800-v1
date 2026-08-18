@@ -1,58 +1,43 @@
 #include <math.h>
-#include <float.h>
 
-#define C0 1.00000000f
-#define C1 0.99999994f
-#define C2 0.50000012f
-#define C3 0.16666599f
-#define C4 0.04166901f
-#define C5 0.00833123f
-#define C6 0.00139145f
-#define C7 0.00019712f
+//
+// Cody–Waite range reduction
+// 
+// LN2_HI: top 24 bits of ln2
+// LN2_LO: the remaining part of ln2
+//
+#define LN2_HI   0x1.62e000p-1f
+#define LN2_LO   0x1.0bfbe8p-15f
+#define INV_LN2  0x1.715476p+0f
 
+// exp(r) = 1 + r + r*r*P(r) on |r| <= ln2/2, minimax fit
+#define P0  0x1.000000p-1f
+#define P1  0x1.5554dcp-3f
+#define P2  0x1.55551ap-5f
+#define P3  0x1.120b6cp-7f
+#define P4  0x1.6d1106p-10f
 
 float expf(float x)
 {
-  // Handle special cases
-  if (isnan(x)) {
-    return x;
-  }
-  if (x == 0.0f) {
+  if (x == 0.0f)
     return 1.0f;
-  }
-  if (x == INFINITY) {
+  if (isnan(x))
+    return x;
+  if (x > 0x1.62e430p+6f)
     return INFINITY;
-  }
-  if (x == -INFINITY) {
+  if (x < -0x1.9fe368p+6f)
     return 0.0f;
-  }
-  if (x > 0x1.62e43000p+6) {    // 88.72284f;
-    return INFINITY;
-  }
-  if (x == 88.722839f) {
-    return FLT_MAX;
-  }
-  if (x < -103.97208f) {
-    return 0.0f;
-  }
 
-  // Range reduction using frexpf for higher accuracy
-  // Step 1: Calculate n such that x = n*ln2 + r, r in [-ln2/2, ln2/2]
+  // n = round(x / ln2)
+  float n_f = roundf(x * INV_LN2);
+  int n = (int)n_f;
 
-  // Range reduction
-  int n = (int)(x / M_LN2);
-  float r = fmodf(x, M_LN2);
-  if (r > 0.5f * M_LN2) {
-    r -= M_LN2;
-    n += 1;
-  } else if (r < -0.5f * M_LN2) {
-    r += M_LN2;
-    n -= 1;
-  }
+  // r = x - n*ln2, Cody–Waite range reduction
+  float r = (x - n_f * LN2_HI) - n_f * LN2_LO;
 
-  // Step 2: Polynomial approximation of exp(r) using Horner's method
-  float exp_r = C0 + r * (C1 + r * (C2 + r * (C3 + r * (C4 + r * (C5 + r * (C6 + r * C7))))));
+  float r2 = r * r;
+  float p = P0 + r * (P1 + r * (P2 + r * (P3 + r * P4)));
+  float e = 1.0f + (r + r2 * p);
 
-  // Step 3: Combine using ldexpf
-  return ldexpf(exp_r, n);
+  return ldexpf(e, n);
 }
