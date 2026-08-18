@@ -12,21 +12,6 @@
 	.export __ins1_popx_stxbp
 	.code
 ;
-__popx:
-	tsx
-	ldx  2,x
-	stab @tmp1+1
-	staa @tmp1
-	pula
-	pulb
-	ins
-	ins
-	pshb
-	psha
-	ldab @tmp1+1
-	ldaa @tmp1
-	rts
-;
 __ins8_popx_stxbp:
         ins
 __ins7_popx_stxbp:
@@ -44,6 +29,6 @@ __ins2_popx_stxbp:
 __ins1_popx_stxbp:
         ins
 __popx_stxbp:
-        bsr __popx
+        jsr __popx
         stx @bp
         rts
