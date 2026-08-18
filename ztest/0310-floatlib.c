@@ -164,37 +164,37 @@ int main(int argc, char **argv)
 
 
 	if (roundf(0.0f) != 0.0f)
-		return 51;
+		return 101;
 
 	if (roundf(0.4f) != 0.0f)
-		return 52;
+		return 102;
 
 	if (roundf(0.5f) != 1.0f)
-		return 53;
+		return 103;
 
 	if (roundf(1.0f) != 1.0f)
-		return 54;
+		return 104;
 
 	if (roundf(1.4f) != 1.0f)
-		return 55;
+		return 105;
 
 	if (roundf(1.5f) != 2.0f)
-		return 56;
+		return 106;
 
 	if (roundf(1.6f) != 2.0f)
-		return 57;
+		return 107;
 
 	if (roundf(2.4f) != 2.0f)
-		return 58;
+		return 108;
 
 	if (roundf(2.5f) != 3.0f)
-		return 59;
+		return 109;
 
 	if (roundf(8388607.5f) != 8388608.0f)
-		return 62;
+		return 112;
 
 	if (roundf(8388608.0f) != 8388608.0f)
-		return 63;
+		return 113;
 
 
 	if (roundf(-0.0f) != -0.0f)
