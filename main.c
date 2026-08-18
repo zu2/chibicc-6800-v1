@@ -93,6 +93,7 @@ bool opt(char op, char lv)
 static char *copt_rules_path;
 
 static StringArray ld_extra_args;
+static StringArray as_extra_args;
 static StringArray std_include_paths;
 
 char *base_file;
@@ -338,6 +339,19 @@ static void parse_args(int argc, char **argv) {
       continue;
     }
 
+    if (!strncmp(argv[i], "-Wa,", 4)) {
+      char *s = strdup(argv[i] + 4);
+      char *arg = strtok(s, ",");
+      while (arg) {
+        strarray_push(&as_extra_args, arg);
+        arg = strtok(NULL, ",");
+      }
+      continue;
+    }
+
+    if (!strncmp(argv[i], "-Wp,", 4))
+      error("unknown argument: %s", argv[i]);
+
     if (!strcmp(argv[i], "-Xlinker")) {
       strarray_push(&ld_extra_args, argv[++i]);
       continue;
@@ -570,8 +584,6 @@ static void parse_args(int argc, char **argv) {
         !strcmp(argv[i], "-fno-omit-frame-pointer") ||
         !strcmp(argv[i], "-fno-stack-protector") ||
         !strcmp(argv[i], "-fno-strict-aliasing") ||
-        !strcmp(argv[i], "-m64") ||
-        !strcmp(argv[i], "-mno-red-zone") ||
         !strcmp(argv[i], "-w"))
       continue;
 
@@ -897,9 +909,15 @@ static void run_copt(char *input, char *output, char *copt_file) {
 }
 
 static void assemble(char *input, char *output) {
-//  char *cmd[] = {"as6800", "-c", input, "-o", output, NULL};
-  char *cmd[] = {"as6800", "-o", output, input,  NULL};
-  run_subprocess(cmd,NULL,NULL);
+  StringArray arr = {};
+  strarray_push(&arr, "as6800");
+  strarray_push(&arr, "-o");
+  strarray_push(&arr, output);
+  for (int i = 0; i < as_extra_args.len; i++)
+    strarray_push(&arr, as_extra_args.data[i]);
+  strarray_push(&arr, input);
+  strarray_push(&arr, NULL);
+  run_subprocess(arr.data,NULL,NULL);
 }
 
 #if 0
