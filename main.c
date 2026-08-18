@@ -355,8 +355,18 @@ static void parse_args(int argc, char **argv) {
       continue;
     }
 
+    if (!strcmp(argv[i], "-MM")) {
+      opt_M = opt_MMD = true;
+      continue;
+    }
+
     if (!strcmp(argv[i], "-MF")) {
       opt_MF = argv[++i];
+      continue;
+    }
+
+    if (!strncmp(argv[i], "-MF", 3)) {
+      opt_MF = argv[i] + 3;
       continue;
     }
 
@@ -373,6 +383,14 @@ static void parse_args(int argc, char **argv) {
       continue;
     }
 
+    if (!strncmp(argv[i], "-MT", 3)) {
+      if (opt_MT == NULL)
+        opt_MT = argv[i] + 3;
+      else
+        opt_MT = format("%s %s", opt_MT, argv[i] + 3);
+      continue;
+    }
+
     if (!strcmp(argv[i], "-MD")) {
       opt_MD = true;
       continue;
@@ -383,6 +401,14 @@ static void parse_args(int argc, char **argv) {
         opt_MT = quote_makefile(argv[++i]);
       else
         opt_MT = format("%s %s", opt_MT, quote_makefile(argv[++i]));
+      continue;
+    }
+
+    if (!strncmp(argv[i], "-MQ", 3)) {
+      if (opt_MT == NULL)
+        opt_MT = quote_makefile(argv[i] + 3);
+      else
+        opt_MT = format("%s %s", opt_MT, quote_makefile(argv[i] + 3));
       continue;
     }
 
