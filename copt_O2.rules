@@ -301,25 +301,6 @@ DEC32_%M_3:
 #
 # logcal op.
 #
-%check 0 <= %1 <= 255
-	oraa #>%1
-=
-
-%check 0 <= %1 <= 255
-	anda #>%1
-=
-	clra
-
-	ldaa %0
-	anda #0
-=
-	clra
-
-	ldaa %0
-	anda #255
-=
-	ldaa %0
-
 #
 # special pattern
 #

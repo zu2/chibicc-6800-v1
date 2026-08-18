@@ -178,23 +178,6 @@
 	jsr __load8
 
 
-	stab %1
-	clra
-	tstb
-=
-	clra
-	stab %1
-
-
-	incb
-	clra
-	tstb
-=
-	clra
-	incb
-;	tstb	; need check
-
-
 	clra
 	clrb
 	aba
@@ -795,13 +778,6 @@
 =
 	andb %1
 
-	incb
-	tstb
-=
-	incb
-;	tstb	; need check
-
-
 	ldab %2
 	ldaa %1
 	addb %2
@@ -865,13 +841,6 @@
 #
 #
 #
-	clra
-	ldab %1
-	anda #0
-=
-	clra
-	ldab %1
-
 	oraa #0
 	stab %1
 =
@@ -1067,15 +1036,6 @@
 
 	oraa #0
 =
-
-%check 0 <= %1 <= 255
-	anda #>%1
-=
-	clra
-
-	anda #0
-=
-	clra
 
 #
 # remove redundant lda
