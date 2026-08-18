@@ -1168,6 +1168,7 @@ __asl8_tos:
 	rts
 ;
 ;	shift right by AccB with G/R/S bit
+;	the sticky bit is collected into b5 of the guard byte
 ;	mess AccA
 ;
 ;	TODO: If the shift>=24, This will result in unnecessary shifts.
@@ -1185,6 +1186,10 @@ __lsr_long_1:
 __lsr_long_2:
 	decb
 	bne	__lsr_long_1
+	bita	#$1f		; recover the sticky bit
+	beq	__lsr_long_3
+	oraa	#$20
+__lsr_long_3:
 	anda	#$e0
 	staa	@long+3
 	rts
@@ -1201,6 +1206,10 @@ __lsr_tos_1:
 __lsr_tos_2:
 	decb
 	bne	__lsr_tos_1
+	bita	#$1f		; recover the sticky bit
+	beq	__lsr_tos_3
+	oraa	#$20
+__lsr_tos_3:
 	anda	#$e0
 	staa	5,x
 	rts
