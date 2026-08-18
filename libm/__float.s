@@ -1403,6 +1403,9 @@ __mulf32tos707:
 __mulf32tos71:
 	ldab	__work+3
 	bpl	__mulf32tos72	; G=0, do nothing
+	bitb	#$01		; b0 falls off the rorb below
+	beq	__mulf32tos721
+	orab	#$02
 __mulf32tos721:
 	ldaa	__work+2	; check LSB
 	lsra
