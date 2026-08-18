@@ -38,6 +38,12 @@ cmpfl(float f, unsigned long g)
 	return 0;
 }
 
+int
+is_nan(float f)
+{
+	return	f != f;
+}
+
 float long2float(unsigned long x)
 {
 	return	*((float *)&x);
@@ -75,8 +81,6 @@ int main(int argc, char **argv)
 		return 4;
 	if (zm+zm != zm)
 		return 5;
-
-	// NaN check. write it later
 
 	if (f+f != 2.0)
 		return 41;
@@ -233,6 +237,74 @@ int main(int argc, char **argv)
 	g = long2float(0x34a00001);
 	if (cmpfl(f+g,0x3f800003))
 		return 124;
+
+	// a NaN operand or Inf + (-Inf) gives a NaN
+	f = __builtin_nanf("");
+	g = 1.0;
+	if (!is_nan(f+g))
+		return 130;
+	if (!is_nan(g+f))
+		return 131;
+	if (!is_nan(f+f))
+		return 132;
+
+	f = long2float(0xffc00000);
+	if (!is_nan(f+g))
+		return 133;
+
+	f = long2float(0x7fa00000);
+	if (!is_nan(f+g))
+		return 134;
+
+	f = __builtin_inff();
+	g = -__builtin_inff();
+	if (!is_nan(f+g))
+		return 135;
+	if (!is_nan(g+f))
+		return 136;
+
+	f = __builtin_nanf("");
+	if (f == f)
+		return 137;
+	if (f < 1.0)
+		return 138;
+	if (f > 1.0)
+		return 139;
+
+	// Inf keeps its sign, and an overflow reaches Inf
+	f = __builtin_inff();
+	g = 1.0;
+	if (cmpfl(f+g,0x7f800000))
+		return 140;
+
+	f = -__builtin_inff();
+	if (cmpfl(f+g,0xff800000))
+		return 141;
+	if (cmpfl(f+f,0xff800000))
+		return 142;
+
+	f = long2float(0x7f7fffff);
+	if (cmpfl(f+f,0x7f800000))
+		return 143;
+
+	f = long2float(0xff7fffff);
+	if (cmpfl(f+f,0xff800000))
+		return 144;
+
+	// only -0.0 + -0.0 keeps the sign
+	f = long2float(0x80000000);
+	g = long2float(0x00000000);
+	if (cmpfl(f+g,0x00000000))
+		return 145;
+	if (cmpfl(g+f,0x00000000))
+		return 146;
+	if (cmpfl(f+f,0x80000000))
+		return 147;
+
+	// subnormal addition is exact
+	f = long2float(0x00000001);
+	if (cmpfl(f+f,0x00000002))
+		return 148;
 
 	return 0;
 }

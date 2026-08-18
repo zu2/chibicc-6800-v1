@@ -35,6 +35,12 @@ cmpfl(float f, unsigned long g)
 	return 0;
 }
 
+int
+is_nan(float f)
+{
+	return	f != f;
+}
+
 float long2float(unsigned long x)
 {
 	return	*((float *)&x);
@@ -61,9 +67,6 @@ int main(int argc, char **argv)
 		return 3;
 	if (zm*zm != 0.0)
 		return 4;
-
-	// TODO: NaN check
-	// write it later
 
 	// multiply 1.0
 	if (f*g != 2.0)
@@ -243,6 +246,74 @@ int main(int argc, char **argv)
 	g = long2float(0x21c14d00);
 	if (cmpfl(f*g,0x2210fd87))
 		return 126;
+
+	// a NaN operand or 0.0 * Inf gives a NaN
+	f = __builtin_nanf("");
+	g = 1.0;
+	if (!is_nan(f*g))
+		return 130;
+	if (!is_nan(g*f))
+		return 131;
+	if (!is_nan(f*f))
+		return 132;
+
+	f = long2float(0xffc00000);
+	if (!is_nan(f*g))
+		return 133;
+
+	f = long2float(0x7fa00000);
+	if (!is_nan(f*g))
+		return 134;
+
+	f = 0.0;
+	g = __builtin_inff();
+	if (!is_nan(f*g))
+		return 135;
+	if (!is_nan(g*f))
+		return 136;
+
+	g = -__builtin_inff();
+	if (!is_nan(f*g))
+		return 137;
+
+	// Inf and the sign rule
+	f = __builtin_inff();
+	g = 1.0;
+	if (cmpfl(f*g,0x7f800000))
+		return 140;
+	if (cmpfl(f*(-1.0f),0xff800000))
+		return 141;
+
+	g = -__builtin_inff();
+	if (cmpfl(f*g,0xff800000))
+		return 142;
+	if (cmpfl(g*g,0x7f800000))
+		return 143;
+
+	f = long2float(0x7f7fffff);
+	if (cmpfl(f*f,0x7f800000))
+		return 144;
+
+	f = long2float(0x00000000);
+	g = -1.0f;
+	if (cmpfl(f*g,0x80000000))
+		return 145;
+
+	f = long2float(0x80000000);
+	if (cmpfl(f*g,0x00000000))
+		return 146;
+	if (cmpfl(f*f,0x00000000))
+		return 147;
+
+	// underflow keeps the sign
+	f = long2float(0x00000001);
+	g = 0.5f;
+	if (cmpfl(f*g,0x00000000))
+		return 148;
+
+	f = long2float(0x80000001);
+	if (cmpfl(f*g,0x80000000))
+		return 149;
 
 	return 0;
 }

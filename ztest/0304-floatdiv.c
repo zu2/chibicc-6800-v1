@@ -13,6 +13,12 @@
 #define pZERO		   (0x00000000)
 #define mZERO		   (0x80000000)
 
+int
+is_nan(float f)
+{
+	return	f != f;
+}
+
 float to_float(unsigned long x)
 {
 	return	*((float *)&x);
@@ -308,6 +314,70 @@ int main(int argc, char **argv)
 	g = to_float(0x4e800000);
 	if (cmpfl(f/g,0x00004001))
 		return 230;
+
+	// a NaN operand or Inf / Inf gives a NaN
+	f = __builtin_nanf("");
+	g = 1.0f;
+	if (!is_nan(f/g))
+		return 240;
+	if (!is_nan(g/f))
+		return 241;
+	if (!is_nan(f/f))
+		return 242;
+
+	f = to_float(0xffc00000);
+	if (!is_nan(f/g))
+		return 243;
+
+	f = to_float(0x7fa00000);
+	if (!is_nan(f/g))
+		return 244;
+
+	f = __builtin_inff();
+	if (!is_nan(f/f))
+		return 245;
+
+	g = -__builtin_inff();
+	if (!is_nan(f/g))
+		return 246;
+	if (!is_nan(g/g))
+		return 247;
+
+	// a divide by zero keeps the sign of both operands
+	f = 1.0f;
+	g = to_float(0x00000000);
+	if (cmpfl(f/g,0x7f800000))
+		return 248;
+
+	g = to_float(0x80000000);
+	if (cmpfl(f/g,0xff800000))
+		return 249;
+
+	f = -1.0f;
+	g = to_float(0x00000000);
+	if (cmpfl(f/g,0xff800000))
+		return 250;
+
+	g = to_float(0x80000000);
+	if (cmpfl(f/g,0x7f800000))
+		return 251;
+
+	// x / Inf is a zero with the sign rule
+	f = 1.0f;
+	g = -__builtin_inff();
+	if (cmpfl(f/g,0x80000000))
+		return 252;
+
+	f = to_float(0x7f7fffff);
+	g = to_float(0x00800000);
+	if (cmpfl(f/g,0x7f800000))
+		return 253;
+
+	// underflow keeps the sign
+	f = to_float(0x80000001);
+	g = 2.0f;
+	if (cmpfl(f/g,0x80000000))
+		return 254;
 
 	return 0;
 }
