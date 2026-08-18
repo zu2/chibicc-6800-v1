@@ -1278,8 +1278,8 @@ __mulf32tos4:
 ;
 	ldab	__exp2+1
 	ldaa	__exp2
-	subb	#<-150		; sum of exp < -150?
-	sbca	#>-150
+	subb	#<-151		; sum of exp < -151?
+	sbca	#>-151
 	jlt	__f32retZeros	; Underflow, return zero with __sign.
 ;
 __mulf32tos03:
