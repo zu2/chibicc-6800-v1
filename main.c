@@ -110,7 +110,7 @@ static void usage(int status) {
 static bool take_arg(char *arg) {
   char *x[] = {
     "-o", "-I", "-idirafter", "-include", "-x", "-MF", "-MT", "-Xlinker",
-    "-v", "-D", "-O", "-U", "-L", "-B", "-MQ", "-cc1-input", "-cc1-output",
+    "-D", "-U", "-L", "-B", "-MQ", "-cc1-input", "-cc1-output",
   };
 
   for (int i = 0; i < sizeof(x) / sizeof(*x); i++)
