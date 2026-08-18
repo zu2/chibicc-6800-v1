@@ -1524,8 +1524,8 @@ __divf32tos01:
 ;
 	ldab	__expdiff+1
 	ldaa	__expdiff
-	subb	#<-149          ; TODO: Exponent may be incremented later.
-	sbca	#>-149
+	subb	#<-150
+	sbca	#>-150
 	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
 ;
 	tsx
@@ -1571,6 +1571,11 @@ __divf32tos05:
 	ror	@long+1
 	ror	@long+2
 	ror	@long+3
+	bcc	__divf32tos06
+	ldaa	@long+3			; keep the bit shifted out as sticky
+	oraa	#$01
+	staa	@long+3
+__divf32tos06:
 	incb
 	bne	__divf32tos05
 ;
@@ -1647,7 +1652,7 @@ __divf32_rup_nosticky:
 	ldaa	@long+2
 	lsra
 	rorb				; AccB b7 LSB, b6 G, b5 R, b4-b0 S
-	andb	#$7F			; only G=1 and LSB,R,S == 0 ?
+	andb	#$BF			; only G=1 and LSB,R,S == 0 ?
 	beq	__divf32_rup_none
 	pula
 	pulb
