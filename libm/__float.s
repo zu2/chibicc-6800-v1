@@ -1346,7 +1346,7 @@ __mulf32tos50:
         inx
         stx     __exp2
         cpx     #128
-        bne     __mulf32tos71
+        bne     __mulf32tos705
         jmp     __f32retInfs    ; Overflow, returns Inf with __sign.
 ;
 ; Already rounded to 32-bit, so 4-byte shift is sufficient.
@@ -1356,6 +1356,29 @@ __mulf32tos70:
 	rol	__work+2
 	rol	__work+1
 	rol     __work
+;
+; Denormalize before rounding, otherwise the rounding position is wrong.
+;
+__mulf32tos705:
+	ldab	__exp2+1
+	ldaa	__exp2
+	subb	#<-126
+	sbca	#>-126
+	bge	__mulf32tos71
+__mulf32tos706:
+	lsr	__work
+	ror	__work+1
+	ror	__work+2
+	ror	__work+3
+	bcc	__mulf32tos707
+	ldaa	__work+3
+	oraa	#$02		; sticky
+	staa	__work+3
+__mulf32tos707:
+	incb
+	bne	__mulf32tos706
+	ldab	#<-127
+	stab	__exp2+1
 ;
 ; even number rounding
 ;   ULP G R S
@@ -1396,17 +1419,11 @@ __mulf32tos721:
 ;
 __mulf32tos72:
 	ldab	__exp2+1
-	ldaa	__exp2
-	subb	#<-126          ; exp is subnormal ?
-	sbca	#>-126
-	jge	__mulf32tos74
-__mulf32tos73:			; subnormal
-	lsr	__work		; 1bit shift right
-	ror	__work+1
-	ror	__work+2
-	incb
-	bne	__mulf32tos73
-	ldab	#-127
+	cmpb	#<-127		; subnormal ?
+	bne	__mulf32tos74
+	tst	__work		; round up carried into the hidden bit
+	bpl	__mulf32tos74
+	ldab	#<-126
 	stab	__exp2+1
 __mulf32tos74:
 	ldab	__work+2
