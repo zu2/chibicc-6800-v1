@@ -1514,8 +1514,8 @@ __divf32tos:
 	jeq	__divf32_s10
 	;			; One is Inf and the other is 0.0
 	bitb	#$20		; TOS==0.0?
-	jeq	__f32retNaN	; Yes, Inf/0.0 returns NaN
-	jmp	__f32retZeros	; 0.0/Inf return 0.0 with __sign
+	jeq	__f32retZeros	; No, 0.0/Inf returns 0.0 with __sign
+	jmp	__f32retInfs	; Yes, Inf/0.0 returns Inf with __sign
 ;
 __divf32_s10:			; TOS or @long is Inf and finite numbers 
 	ldab	__zin

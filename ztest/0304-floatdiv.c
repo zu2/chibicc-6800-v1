@@ -315,6 +315,43 @@ int main(int argc, char **argv)
 	if (cmpfl(f/g,0x00004001))
 		return 230;
 
+	// Inf / zero is an Inf, and zero / Inf is a zero, both with the sign rule
+	f = __builtin_inff();
+	g = to_float(pZERO);
+	if (cmpfl(f/g,0x7f800000))
+		return 231;
+
+	g = to_float(mZERO);
+	if (cmpfl(f/g,0xff800000))
+		return 232;
+
+	f = -__builtin_inff();
+	g = to_float(pZERO);
+	if (cmpfl(f/g,0xff800000))
+		return 233;
+
+	g = to_float(mZERO);
+	if (cmpfl(f/g,0x7f800000))
+		return 234;
+
+	f = to_float(pZERO);
+	g = __builtin_inff();
+	if (cmpfl(f/g,0x00000000))
+		return 235;
+
+	g = -__builtin_inff();
+	if (cmpfl(f/g,0x80000000))
+		return 236;
+
+	f = to_float(mZERO);
+	g = __builtin_inff();
+	if (cmpfl(f/g,0x80000000))
+		return 237;
+
+	g = -__builtin_inff();
+	if (cmpfl(f/g,0x00000000))
+		return 238;
+
 	// a NaN operand or Inf / Inf gives a NaN
 	f = __builtin_nanf("");
 	g = 1.0f;
