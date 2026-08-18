@@ -905,7 +905,7 @@ __addf32_541:
 	ldab	@long+3
 	bitb	#$1F
 	beq	__addf32_542
-	ora	#$10		; sticky
+	orab	#$10		; sticky
 __addf32_542:
 	aslb
 	stab	@long+3
