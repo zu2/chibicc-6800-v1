@@ -1457,9 +1457,8 @@ __mulf32tos721:
         stx     __exp2
         cpx     #128            ; Recheck for overflow
 	jeq	__f32retInfs	; Overflow, returns Inf with __sign.
-	lsr	__work+0
-	ror	__work+1
-	ror	__work+2
+	ldaa	#$80		; the mantissa is all 0 by now, put the hidden bit back
+	staa	__work+0
 ;
 __mulf32tos72:
 	ldab	__exp2+1

@@ -315,6 +315,37 @@ int main(int argc, char **argv)
 	if (cmpfl(f*g,0x80000000))
 		return 149;
 
+	// the round up carries out of the mantissa, so the exponent goes up by one
+	f = long2float(0x42b17218);
+	g = long2float(0x3fb8aa3b);
+	if (cmpfl(f*g,0x43000000))
+		return 150;
+
+	f = long2float(0x4a3d90fb);
+	g = long2float(0x4dacdb92);
+	if (cmpfl(f*g,0x58800000))
+		return 151;
+
+	f = long2float(0x561d74bd);
+	g = long2float(0x29d01be2);
+	if (cmpfl(f*g,0x40800000))
+		return 152;
+
+	f = long2float(0x32bce126);
+	g = long2float(0x542d7c7d);
+	if (cmpfl(f*g,0x47800000))
+		return 153;
+
+	f = long2float(0x2b809f00);
+	g = long2float(0x4b7ec389);
+	if (cmpfl(f*g,0x37800000))
+		return 154;
+
+	f = long2float(0x3730f47f);
+	g = long2float(0x25392d4d);
+	if (cmpfl(f*g,0x1d000000))
+		return 155;
+
 	return 0;
 }
 
