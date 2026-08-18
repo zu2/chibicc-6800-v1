@@ -2510,6 +2510,8 @@ static bool opeq_ok(Type *lty,Type *rty)
   case TY_ENUM:
   case TY_LONG:
   case TY_PTR:
+  case TY_FLOAT:
+  case TY_DOUBLE:
     switch(rty->kind) {
     case TY_CHAR:
     case TY_SHORT:
@@ -2517,6 +2519,8 @@ static bool opeq_ok(Type *lty,Type *rty)
     case TY_ENUM:
     case TY_BOOL:
     case TY_LONG:
+    case TY_FLOAT:
+    case TY_DOUBLE:
       return true;
     }
   }

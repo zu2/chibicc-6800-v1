@@ -3666,6 +3666,7 @@ static void opeq_setup_operands(Node *node)
     break;
   case TY_LONG:
   case TY_FLOAT:
+  case TY_DOUBLE:
     load32x(0);
     break;
   case TY_PTR:
