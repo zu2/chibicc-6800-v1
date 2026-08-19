@@ -1,5 +1,6 @@
 	.zp
 	.data
+	.code
 	.export _copysignf
 ;
 ;	copy sign TOS -> @long
