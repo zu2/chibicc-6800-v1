@@ -55,6 +55,7 @@ float	log10f(float x);
 
 float	powf(float base, float exponent);
 float	log1pf(float x);
+float	expm1f(float x);
 
 float	sqrtf(float x);
 
