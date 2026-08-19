@@ -47,22 +47,13 @@ __fmsbmask:				; IX = msb_table[3*(B%8)+2-B/8]
 ;		AccB==22 ->$00 00 01
 ;		AccB==23 ->$00 00 00
 ;
-__fracmask:				; IX = frac_table[5*(B%8)+7-B/8]
-	pshb
-	andb	#7			; AccB %= 8
-	tba				; AccA = AccB*5
-	asla
-	asla
+__fracmask:				; IX = frac_table[3*B]
+	tba				; AccA = AccB*3
 	aba
-	pulb
-	lsrb				; AccA -= AccB/8
-	lsrb
-	lsrb
-	sba
-	ldab	#0			; sign extend
-	sbcb	#0
-	adda	#<__frac_table+7
-	adcb	#>__frac_table+7
+	aba
+	ldab	#0
+	adda	#<__frac_table
+	adcb	#>__frac_table
 	staa	@tmp1+1
 	stab	@tmp1
 	ldx	@tmp1
@@ -78,17 +69,32 @@ __msb_table:
 	.byte	$00,$00,$04
 	.byte	$00,$00,$02
 	.byte	$00,$00,$01
-;	.byte	$00,$00			; Reuse the first 2bytes of frac_table
+	.byte	$00,$00			; __fmsbmask reads 2 bytes past the last entry
 __frac_table:
-	.byte	$00,$00,$FF,$FF,$FF
-	.byte	$00,$00,$7F,$FF,$FF
-	.byte	$00,$00,$3F,$FF,$FF
-	.byte	$00,$00,$1F,$FF,$FF
-	.byte	$00,$00,$0F,$FF,$FF
-	.byte	$00,$00,$07,$FF,$FF
-	.byte	$00,$00,$03,$FF,$FF
-	.byte	$00,$00,$01,$FF,$FF
-	.byte	$00,$00,$00,$FF,$FF
+	.byte	$7F,$FF,$FF
+	.byte	$3F,$FF,$FF
+	.byte	$1F,$FF,$FF
+	.byte	$0F,$FF,$FF
+	.byte	$07,$FF,$FF
+	.byte	$03,$FF,$FF
+	.byte	$01,$FF,$FF
+	.byte	$00,$FF,$FF
+	.byte	$00,$7F,$FF
+	.byte	$00,$3F,$FF
+	.byte	$00,$1F,$FF
+	.byte	$00,$0F,$FF
+	.byte	$00,$07,$FF
+	.byte	$00,$03,$FF
+	.byte	$00,$01,$FF
+	.byte	$00,$00,$FF
+	.byte	$00,$00,$7F
+	.byte	$00,$00,$3F
+	.byte	$00,$00,$1F
+	.byte	$00,$00,$0F
+	.byte	$00,$00,$07
+	.byte	$00,$00,$03
+	.byte	$00,$00,$01
+	.byte	$00,$00,$00
 ;
 ;	mantissa & fmask
 ;
