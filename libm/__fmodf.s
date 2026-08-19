@@ -87,12 +87,40 @@ __fmodf_retlong:
 __fmodf_zeros:
 	jmp	__f32zeros
 ;
+__fmodf_02:                             ; Here, fabsf(@long)>fabsf(TOS)
+;
+;	@long = mx * 2^(ex-23), TOS = my * 2^(ey-23), mx and my are 24 bit
+;	@long % TOS = (mx * 2^(ex-ey) % my) * 2^(ey-23), and the shift and
+;	subtract below keeps every bit, so the result needs no rounding.
+;
+        tsx
+        inx
+        inx
+        stx     __tos_p                 ; save TOS's address
+        jsr     __adj_subnormal         ; do normalize,AccAB = unbiased exp
+        stab    __expnew+1              ; the remainder sits at TOS's exp
+        staa    __expnew
+;
+        ldx     #long
+        jsr     __adj_subnormal
+        subb    __expnew+1
+        sbca    __expnew                ; expdiff = long's exp - TOS's exp
+        staa    __expdiff               ; AccB keeps the low half, expdiff >= 0
+;
+        clr     @long                   ; r = mx, and r stays under 2^24
+        ldx     __tos_p
+        incb                            ; the loop runs expdiff+1 times
+        inc     __expdiff
+        bra     __fmodf_cmp             ; the first pass reduces without a shift
+;
 ;	r -= my if r >= my.  r < 2*my holds every time, so one subtract is enough.
 ;
-__fmodf_reduce:
-        ldx     __tos_p
-        ldaa    @long
-        bne     __fmodf_sub             ; r >= 2^24 > my
+__fmodf_shift:
+        asl     @long+3
+        rol     @long+2
+        rol     @long+1
+        bcs     __fmodf_sub             ; r >= 2^24 > my
+__fmodf_cmp:
         ldaa    @long+1
         cmpa    1,x
         bhi     __fmodf_sub
@@ -114,48 +142,11 @@ __fmodf_sub:
         ldaa    @long+1
         sbca    1,x
         staa    @long+1
-        clr     @long                   ; r-my < my, so it fits in 24 bit again
 __fmodf_keep:
-        rts
-;
-__fmodf_02:                             ; Here, fabsf(@long)>fabsf(TOS)
-;
-;	@long = mx * 2^(ex-23), TOS = my * 2^(ey-23), mx and my are 24 bit
-;	@long % TOS = (mx * 2^(ex-ey) % my) * 2^(ey-23), and the shift and
-;	subtract below keeps every bit, so the result needs no rounding.
-;
-        tsx
-        inx
-        inx
-        stx     __tos_p                 ; save TOS's address
-        jsr     __adj_subnormal         ; do normalize,AccAB = unbiased exp
-        stab    __expnew+1              ; the remainder sits at TOS's exp
-        staa    __expnew
-;
-        ldx     #long
-        jsr     __adj_subnormal
-        subb    __expnew+1
-        sbca    __expnew                ; expdiff = long's exp - TOS's exp
-        staa    __expdiff               ; AccB keeps the low half, expdiff >= 0
-;
-        clr     @long                   ; r = mx, and r < 2^25 all the way
-        bsr     __fmodf_reduce          ; keeps AccB
-;
-__fmodf_shift:                          ; expdiff times: r <<= 1, then reduce
-        tstb
-        bne     __fmodf_dec_low
-        tst     __expdiff
-        beq     __fmodf_rem
-        dec     __expdiff
-__fmodf_dec_low:
         decb
-;
-        asl     @long+3
-        rol     @long+2
-        rol     @long+1
-        rol     @long
-        bsr     __fmodf_reduce
-        bra     __fmodf_shift
+        bne     __fmodf_shift
+        dec     __expdiff
+        bne     __fmodf_shift
 ;
 __fmodf_rem:
         ldaa    @long+1                 ; r == 0 ?
