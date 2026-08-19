@@ -7,6 +7,7 @@
 #include "common.h"
 
 #define to_float(x) (*(const float*)&(uint32_t){x})
+#define to_bits(x)  (*(const uint32_t*)&(float){x})
 
 int main(int argc, char **argv)
 {
@@ -213,6 +214,109 @@ int main(int argc, char **argv)
 
   if (ceilf(-2147483647.0f) != -2147483647.0f)
     return 193;
+
+
+  if (to_bits(ceilf(to_float(0xFF800000))) != 0xFF800000)
+    return 201;
+
+  if (to_bits(ceilf(to_float(0x7F800000))) != 0x7F800000)
+    return 202;
+
+  if (!isnan(ceilf(to_float(0xFFC00000))))
+    return 203;
+
+  if (!isnan(ceilf(to_float(0x7FC00000))))
+    return 204;
+
+  if (!isnan(ceilf(to_float(0x7F800001))))
+    return 205;
+
+  if (!isnan(ceilf(to_float(0xFF800001))))
+    return 206;
+
+  if (to_bits(ceilf(to_float(0x00000000))) != 0x00000000)
+    return 207;
+
+  if (to_bits(ceilf(to_float(0x80000000))) != 0x80000000)
+    return 208;
+
+  if (to_bits(ceilf(to_float(0x00000001))) != 0x3F800000)
+    return 209;
+
+  if (to_bits(ceilf(to_float(0x80000001))) != 0x80000000)
+    return 210;
+
+  if (to_bits(ceilf(to_float(0x007FFFFF))) != 0x3F800000)
+    return 211;
+
+  if (to_bits(ceilf(to_float(0x807FFFFF))) != 0x80000000)
+    return 212;
+
+  if (to_bits(ceilf(to_float(0x00800000))) != 0x3F800000)
+    return 213;
+
+  if (to_bits(ceilf(to_float(0x80800000))) != 0x80000000)
+    return 214;
+
+  if (to_bits(ceilf(to_float(0x3F000000))) != 0x3F800000)
+    return 215;
+
+  if (to_bits(ceilf(to_float(0xBF000000))) != 0x80000000)
+    return 216;
+
+  if (to_bits(ceilf(to_float(0x3F7FFFFF))) != 0x3F800000)
+    return 217;
+
+  if (to_bits(ceilf(to_float(0xBF7FFFFF))) != 0x80000000)
+    return 218;
+
+  if (to_bits(ceilf(to_float(0x3F800000))) != 0x3F800000)
+    return 219;
+
+  if (to_bits(ceilf(to_float(0xBF800000))) != 0xBF800000)
+    return 220;
+
+  if (to_bits(ceilf(to_float(0x3F800001))) != 0x40000000)
+    return 221;
+
+  if (to_bits(ceilf(to_float(0xBF800001))) != 0xBF800000)
+    return 222;
+
+  if (to_bits(ceilf(to_float(0x3FC00000))) != 0x40000000)
+    return 223;
+
+  if (to_bits(ceilf(to_float(0xBFC00000))) != 0xBF800000)
+    return 224;
+
+  if (to_bits(ceilf(to_float(0x3FFFFFFF))) != 0x40000000)
+    return 225;
+
+  if (to_bits(ceilf(to_float(0xBFFFFFFF))) != 0xBF800000)
+    return 226;
+
+  if (to_bits(ceilf(to_float(0x4AFFFFFF))) != 0x4B000000)
+    return 227;
+
+  if (to_bits(ceilf(to_float(0xCAFFFFFF))) != 0xCAFFFFFE)
+    return 228;
+
+  if (to_bits(ceilf(to_float(0x4B000000))) != 0x4B000000)
+    return 229;
+
+  if (to_bits(ceilf(to_float(0xCB000000))) != 0xCB000000)
+    return 230;
+
+  if (to_bits(ceilf(to_float(0x4B000001))) != 0x4B000001)
+    return 231;
+
+  if (to_bits(ceilf(to_float(0xCB000001))) != 0xCB000001)
+    return 232;
+
+  if (to_bits(ceilf(to_float(0x7F7FFFFF))) != 0x7F7FFFFF)
+    return 233;
+
+  if (to_bits(ceilf(to_float(0xFF7FFFFF))) != 0xFF7FFFFF)
+    return 234;
 
 	return 0;
 }
