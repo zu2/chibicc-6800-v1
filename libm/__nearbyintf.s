@@ -12,8 +12,6 @@
 ;
         .export	_nearbyintf
         .data
-__fmsbmask_p:
-	.word	0
 __fracmask_p:
 	.word	0
 __exp:
@@ -40,16 +38,11 @@ __nbintf_ret2:
 ;
 _nearbyintf:
 	jsr	__get_lexp_sign
-	cmpb	#150
-	bcc	__nbintf_ret
+	cmpb	#150			; if exp>=150 return @long
+	bcc	__nbintf_ret2
 	cmpb	#126			; if exp<126 return +0.0 -0.0
 	jcs	__f32zeros
 ;
-	cmpb	#150			; if exp>=150 return @long
-	bcs	__nbintf_setup
-__nbintf_ret:
-	rts
-__nbintf_setup:
 	subb	#126
 	pshb
 	jsr	__fracmask
@@ -58,14 +51,12 @@ __nbintf_setup:
 	pulb
 	pshb
 	jsr	__fmsbmask		; make (1<<(23-B))
-	stx	__fmsbmask_p
 ;
 	pulb
 	tstb				; if exp==126, 0.5bit always 1 (hidden)
 	beq	__nbintf_check
 ;
-;	ldx	__fmsbmask_p		; the 0.5 bit is 1 ?	
-	bsr	__nbintf_maskcheck
+	bsr	__nbintf_maskcheck	; the 0.5 bit is 1 ?
 	beq	__nbintf_trunc		; No, do truncate
 ;
 __nbintf_check:				; the 0.5 bit is 1, check fracpart
@@ -73,40 +64,32 @@ __nbintf_check:				; the 0.5 bit is 1, check fracpart
 	bsr	__nbintf_maskcheck
 	bne	__nbintf_roundup	; fracpart != 0, do roundup
 ;
-;					; only the 0.5 bit is 1, check LSB
+					; only the 0.5 bit is 1, check LSB
 	ldab	__lexp
 	cmpb	#126			; if exp==126, LSB always 0
 	jeq	__f32zeros		;    return 0.0f
 	cmpb	#127			; if exp==127, LSB always 1 (hidden)
 	beq	__nbintf_roundup
 ;
-	ldx	__fmsbmask_p		; here, exp==128 to 149
-	dex				; mask << 1
-	dex
-	dex
-;
-	bsr	__nbintf_maskcheck	; LSB on?
+	subb	#127			; here, exp==128 to 149
+	jsr	__fmsbmask		; LSB on?
+	jsr	__nbintf_maskcheck
 	bne	__nbintf_roundup
 ;
 __nbintf_trunc:				; Truncate
-	ldx	__fracmask_p
-	dex				; mask<<1
-	dex
-	dex
-	dex
-	dex
+	ldab	__lexp
+	subb	#127
+	jsr	__fracmask
 	jmp	__and_not_fmask
 ;
 __nbintf_roundup:
 	ldab	__lexp
 	cmpb	#126
 	jeq	__f32ones		; return 1.0f
-	ldx	__fracmask_p
 	bsr	__nbintf_trunc
-	ldx	__fmsbmask_p
-	dex
-	dex
-	dex
+	ldab	__lexp
+	subb	#127
+	jsr	__fmsbmask		; '1' bit
 	ldab	@long+1
 	orab	#$80			; hidden bit on
 	stab	@long+1
