@@ -33,7 +33,10 @@
 // the lowest mean. It saves about 4600 cycles for 1.0 < x < 1.0469
 #define W_PI_4   0x3f86u   // 1.0469
 #define W_3PI_4  0x4016u   // 0x1.2cp+1
+#define W_PH     0x47c9u   // n reaches 2^16 here, so Cody-Waite stops being exact
 #define W_INF    0x7f80u   // NaN and infinity are at or above this
+
+int __rem_pio2f(float x, float *rp);
 
 union fword {
   float f;
@@ -79,13 +82,19 @@ float tanf(float x)
     return cot_small(r1);
   }
 
-  float n_f = roundf(x * TWO_OVER_PI);
-  long n = (long)n_f;
+  float r;
+  long n;
 
-  float r = x - n_f * PIO2_0;
-  r = r - n_f * PIO2_1;
-  r = r - n_f * PIO2_2;
-  r = r - n_f * PIO2_3;
+  if (w >= W_PH) {
+    n = __rem_pio2f(x, &r);
+  } else {
+    float n_f = roundf(x * TWO_OVER_PI);
+    n = (long)n_f;
+    r = x - n_f * PIO2_0;
+    r = r - n_f * PIO2_1;
+    r = r - n_f * PIO2_2;
+    r = r - n_f * PIO2_3;
+  }
 
   if (n & 1) {
     return cot_small(r);

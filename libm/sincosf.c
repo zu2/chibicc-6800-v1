@@ -17,7 +17,10 @@
 #define W_COS_SMALL  0x3980u   // 0x1.00p-12, cos(x) == 1 below this
 #define W_PI_4       0x3f80u   // 1.0
 #define W_3PI_4      0x4020u   // 2.5
+#define W_PH         0x47c9u   // n reaches 2^16 here, so Cody-Waite stops being exact
 #define W_INF        0x7f80u   // NaN and infinity are at or above this
+
+int __rem_pio2f(float x, float *rp);
 
 union fword {
   float f;
@@ -58,8 +61,12 @@ static float reduce_one(float x)
 }
 
 // Returns the quadrant and leaves the reduced argument in *rp
-static long reduce(float x, float *rp)
+static long reduce(float x, unsigned int w, float *rp)
 {
+  if (w >= W_PH) {
+    return __rem_pio2f(x, rp);
+  }
+
   float n_f = roundf(x * TWO_OVER_PI);
   float r = x - n_f * PIO2_0;
   r = r - n_f * PIO2_1;
@@ -89,7 +96,7 @@ float sinf(float x)
   }
 
   float r;
-  long n = reduce(x, &r);
+  long n = reduce(x, w, &r);
 
   switch ((int)(n & 3)) {
   case 0:
@@ -125,7 +132,7 @@ float cosf(float x)
   }
 
   float r;
-  long n = reduce(x, &r);
+  long n = reduce(x, w, &r);
 
   switch ((int)(n & 3)) {
   case 0:
