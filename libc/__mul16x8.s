@@ -4,8 +4,6 @@
 	.export __mul16x8x
 	.code
 ;
-; 0-1,x return address
-;
 __mul16x8x:
         stx @tmp2
         stab @tmp1+1

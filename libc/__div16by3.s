@@ -1,5 +1,7 @@
 ;
-;	@tmp2 = AccAB / 3
+;	AccAB = AccAB / 3
+;	AccAB = AccAB / 6
+;	AccAB = AccAB / 12
 ;
         .export __div16by3s
 	.export __div16by6s
