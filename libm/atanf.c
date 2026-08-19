@@ -8,15 +8,18 @@
 #define P4  0x1.9e54f8p-4f
 #define P5  -0x1.9f06c8p-5f
 
-// atan(x) = Q(x) on [0.5, 1], minimax fit
-#define Q0  0x1.0485dap-9f
-#define Q1  0x1.f49958p-1f
-#define Q2  0x1.b34dccp-4f
-#define Q3  -0x1.3854e6p-1f
-#define Q4  0x1.a24e38p-2f
-#define Q5  -0x1.7ac126p-4f
-#define Q6  -0x1.d6f91ep-7f
-#define Q7  0x1.fcf8bep-8f
+// (atan(x) - atan(0.75))/(x - 0.75) = R(x - 0.75) on [0.5, 1], minimax fit
+// C0_HI holds the top 24 bits of atan(0.75), C0_LO the rest
+#define C0_HI  0x1.4978fap-1f
+#define C0_LO  0x1.934f70p-28f
+#define R0  0x1.47ae14p-1f
+#define R1  -0x1.3a92a2p-2f
+#define R2  0x1.ec234cp-5f
+#define R3  0x1.c2f886p-5f
+#define R4  -0x1.0be980p-4f
+#define R5  0x1.d7ca20p-6f
+#define R6  0x1.fce0f8p-8f
+#define R7  -0x1.3a0684p-6f
 
 // PI_2_HI holds the top 12 bits of pi/2, PI_2_LO the rest
 #define PI_2_HI  0x1.920000p+0f
@@ -43,11 +46,12 @@ float atanf(float x)
     float a2 = a * a;
     r = a * (P0 + a2 * (P1 + a2 * (P2 + a2 * (P3 + a2 * (P4 + a2 * P5)))));
   } else {
-    r = Q0 + a * (Q1 + a * (Q2 + a * (Q3 + a * (Q4 + a * (Q5 + a * (Q6 + a * Q7))))));
+    float u = a - 0.75f;
+    r = C0_HI + (u * (R0 + u * (R1 + u * (R2 + u * (R3 + u * (R4 + u * (R5 + u * (R6 + u * R7))))))) + C0_LO);
   }
 
   if (inv) {
-    r = (PI_2_HI - r) + PI_2_LO;
+    r = PI_2_HI + (PI_2_LO - r);
   }
   return copysignf(r, x);
 }
