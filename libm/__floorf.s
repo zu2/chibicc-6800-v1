@@ -21,31 +21,24 @@ __fracmask_p:
 ;               parameter passed by @long
 ;
 _floorf:
-	jsr	__f32isNaNorInf
-	bls	__floor_ret		; C=1 or Z=1 : C:NaN, Z:Inf
-	jsr	__f32iszero
-	bne	__floor_non_zero
-__floor_ret:
-	rts
-__floor_non_zero:
 	jsr	__get_lexp_sign		; AccB = exp (biased)
-	cmpb	#150			; exp>=23+127?
+	cmpb	#150			; exp>=23+127? NaN and Inf are exp==255
 	bcc	__floor_ret		; return @long
 	subb	#127
 	bcc	__floor_ge1		; exp>126? (fabsf(@long)>=1.0f)
 	ldab	__sign			; exp<=126, check sign
 	jpl	__f32zeros		; if @long>=0.0f return +0.0f
+	jsr	__f32iszero
+	beq	__floor_ret		; -0.0f
 	jmp	__f32ones		; if @long<0.0f  return -1.0f
+__floor_ret:
+	rts
 ;
 __floor_ge1:				; fabsf(@long) >= 1.0f
 	jsr	__fracmask		; make mantissa mask
-	jsr	__bit_fmask		; fac & mask == 0 ?
-	beq	__floor_ret		; @long is already an integer
-	jsr	__and_not_fmask		; truncate fractional
-	tst	__sign
-	bpl	__floor_ret
-	ldab	__lexp
-	subb	#127
-	jsr	__fmsbmask		; '1' bit
+	ldab	__sign
+	bmi	__floor_neg
+	jmp	__and_not_fmask		; @long>0: truncate fractional
+__floor_neg:
 	ldaa	__lexp
-	jmp	__add_msb		; +1.0
+	jmp	__add_frac_trunc	; @long<0: round away from zero
