@@ -7,18 +7,21 @@
 #include <stdint.h>
 #include <limits.h>
 
-#define M_PI 	0x1.921fb54p+1f // 3.1415927f	pi
-#define	M_TWOPI	0x1.921fb54p+2f	// 6.2831855f	2*pi
-#define M_PI_2	0x1.921fb54p+0f	// 1.5707964f	pi/2
-#define M_PI_4	0x1.921fb54p-1f	// 0.7853982f	pi/4
-#define	M_PI_8	0x1.921fb54p-2f	// 0.3926991f	pi/8
-#define M_1_PI	0x1.45f307p-2f	// 0.3183099f	1/pi
-#define M_2_PI	0x1.45f307p-1f	// 0.6366198f	2/pi
-#define M_E  	0x1.bc55864p+0f // 2.7182817f	e
-#define M_LOG2E	0x1.715476p+0f  // 1.44269504f  log_2 e
-#define	M_LOG10E 0x1.b8aa3b2p-3f // 0.4342945f	log_10 e
-#define	M_LN2	0x1.62e42fep-1f	// 0.6931472f	ln 2
-#define	M_LN10	0x1.772b538p+1f	// 2.3025851f	ln 10
+#define	M_PI       0x1.921fb6p+1f	// 3.1415927f 	pi
+#define	M_TWOPI    0x1.921fb6p+2f	// 6.2831855f 	2*pi
+#define	M_PI_2     0x1.921fb6p+0f	// 1.5707964f 	pi/2
+#define	M_PI_4     0x1.921fb6p-1f	// 0.78539819f	pi/4
+#define	M_PI_8     0x1.921fb6p-2f	// 0.39269909f	pi/8
+#define	M_1_PI     0x1.45f306p-2f	// 0.31830987f	1/pi
+#define	M_2_PI     0x1.45f306p-1f	// 0.63661975f	2/pi
+#define	M_2_SQRTPI 0x1.20dd76p+0f	// 1.1283792f 	2/sqrt(pi)
+#define	M_E        0x1.5bf0a8p+1f	// 2.7182817f 	e
+#define	M_LOG2E    0x1.715476p+0f	// 1.442695f  	log_2 e
+#define	M_LOG10E   0x1.bcb7b2p-2f	// 0.43429449f	log_10 e
+#define	M_LN2      0x1.62e430p-1f	// 0.69314718f	ln 2
+#define	M_LN10     0x1.26bb1cp+1f	// 2.3025851f 	ln 10
+#define	M_SQRT2    0x1.6a09e6p+0f	// 1.4142135f 	sqrt(2)
+#define	M_SQRT1_2  0x1.6a09e6p-1f	// 0.70710677f	1/sqrt(2)
 
 #define NAN      (__builtin_nanf(""))
 #define INFINITY (__builtin_inff())
