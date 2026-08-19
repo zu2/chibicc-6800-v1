@@ -69,22 +69,22 @@ int main(int argc, char **argv)
 		return 31;
 
 	if (floorf(3.4) != 3.0)
-		return 31;
-
-	if (floorf(3.5) != 3.0)
 		return 32;
 
-	if (floorf(3.6) != 3.0)
+	if (floorf(3.5) != 3.0)
 		return 33;
 
-	if (floorf(3.7) != 3.0)
+	if (floorf(3.6) != 3.0)
 		return 34;
 
+	if (floorf(3.7) != 3.0)
+		return 35;
+
   if (floorf(to_float(0x405FFFFF))!=3.0)  // 3.5 - LSB=1
-    return 35;
+    return 36;
 
   if (floorf(to_float(0x40600001))!=3.0)  // 3.5 + LSB=1
-    return 36;
+    return 37;
 
 
   if (floorf(to_float(0x3eFFFFFF)) != 0.0f) // 0.49999..
@@ -165,22 +165,22 @@ int main(int argc, char **argv)
 		return 131;
 
 	if (floorf(-3.4) != -4.0)
-		return 131;
-
-	if (floorf(-3.5) != -4.0)
 		return 132;
 
-	if (floorf(-3.6) != -4.0)
+	if (floorf(-3.5) != -4.0)
 		return 133;
 
-	if (floorf(-3.7) != -4.0)
+	if (floorf(-3.6) != -4.0)
 		return 134;
 
+	if (floorf(-3.7) != -4.0)
+		return 135;
+
   if (floorf(to_float(0xC05FFFFF))!=-4.0)  // 3.5 - LSB=1
-    return 135;
+    return 136;
 
   if (floorf(to_float(0xC0600001))!=-4.0)  // 3.5 + LSB=1
-    return 136;
+    return 137;
 
 
   if (floorf(to_float(0xBeFFFFFF)) != -1.0f) // 0.49999..
@@ -320,148 +320,148 @@ int main(int argc, char **argv)
 
 
   if (to_bits(floorf(to_float(0x3F800000))) != 0x3F800000)
-    return 241;
+    return 144;
 
   if (to_bits(floorf(to_float(0xBF800000))) != 0xBF800000)
-    return 242;
+    return 145;
 
   if (to_bits(floorf(to_float(0x3F800001))) != 0x3F800000)
-    return 243;
+    return 146;
 
   if (to_bits(floorf(to_float(0xBF800001))) != 0xC0000000)
-    return 244;
+    return 147;
 
   if (to_bits(floorf(to_float(0x3FC00000))) != 0x3F800000)
-    return 245;
+    return 148;
 
   if (to_bits(floorf(to_float(0xBFC00000))) != 0xC0000000)
-    return 246;
+    return 149;
 
   if (to_bits(floorf(to_float(0x3FFFFFFF))) != 0x3F800000)
-    return 247;
+    return 150;
 
   if (to_bits(floorf(to_float(0xBFFFFFFF))) != 0xC0000000)
-    return 248;
+    return 151;
 
   if (to_bits(floorf(to_float(0x43000000))) != 0x43000000)
-    return 249;
+    return 152;
 
   if (to_bits(floorf(to_float(0xC3000000))) != 0xC3000000)
-    return 250;
+    return 153;
 
   if (to_bits(floorf(to_float(0x43000001))) != 0x43000000)
-    return 251;
+    return 154;
 
   if (to_bits(floorf(to_float(0xC3000001))) != 0xC3010000)
-    return 252;
+    return 155;
 
   if (to_bits(floorf(to_float(0x43400000))) != 0x43400000)
-    return 253;
+    return 156;
 
   if (to_bits(floorf(to_float(0xC3400000))) != 0xC3400000)
-    return 254;
+    return 157;
 
   if (to_bits(floorf(to_float(0x437FFFFF))) != 0x437F0000)
-    return 255;
+    return 158;
 
   if (to_bits(floorf(to_float(0xC37FFFFF))) != 0xC3800000)
-    return 256;
+    return 159;
 
   if (to_bits(floorf(to_float(0x43800000))) != 0x43800000)
-    return 257;
+    return 160;
 
   if (to_bits(floorf(to_float(0xC3800000))) != 0xC3800000)
-    return 258;
+    return 161;
 
   if (to_bits(floorf(to_float(0x43800001))) != 0x43800000)
-    return 259;
+    return 162;
 
   if (to_bits(floorf(to_float(0xC3800001))) != 0xC3808000)
-    return 260;
+    return 163;
 
   if (to_bits(floorf(to_float(0x43C00000))) != 0x43C00000)
-    return 261;
+    return 164;
 
   if (to_bits(floorf(to_float(0xC3C00000))) != 0xC3C00000)
-    return 262;
+    return 165;
 
   if (to_bits(floorf(to_float(0x43FFFFFF))) != 0x43FF8000)
-    return 263;
+    return 166;
 
   if (to_bits(floorf(to_float(0xC3FFFFFF))) != 0xC4000000)
-    return 264;
+    return 167;
 
   if (to_bits(floorf(to_float(0x47000000))) != 0x47000000)
-    return 265;
+    return 168;
 
   if (to_bits(floorf(to_float(0xC7000000))) != 0xC7000000)
-    return 266;
+    return 169;
 
   if (to_bits(floorf(to_float(0x47000001))) != 0x47000000)
-    return 267;
+    return 170;
 
   if (to_bits(floorf(to_float(0xC7000001))) != 0xC7000100)
-    return 268;
+    return 235;
 
   if (to_bits(floorf(to_float(0x47400000))) != 0x47400000)
-    return 269;
+    return 236;
 
   if (to_bits(floorf(to_float(0xC7400000))) != 0xC7400000)
-    return 270;
+    return 237;
 
   if (to_bits(floorf(to_float(0x477FFFFF))) != 0x477FFF00)
-    return 271;
+    return 238;
 
   if (to_bits(floorf(to_float(0xC77FFFFF))) != 0xC7800000)
-    return 272;
+    return 239;
 
   if (to_bits(floorf(to_float(0x47800000))) != 0x47800000)
-    return 273;
+    return 240;
 
   if (to_bits(floorf(to_float(0xC7800000))) != 0xC7800000)
-    return 274;
+    return 241;
 
   if (to_bits(floorf(to_float(0x47800001))) != 0x47800000)
-    return 275;
+    return 242;
 
   if (to_bits(floorf(to_float(0xC7800001))) != 0xC7800080)
-    return 276;
+    return 243;
 
   if (to_bits(floorf(to_float(0x47C00000))) != 0x47C00000)
-    return 277;
+    return 244;
 
   if (to_bits(floorf(to_float(0xC7C00000))) != 0xC7C00000)
-    return 278;
+    return 245;
 
   if (to_bits(floorf(to_float(0x47FFFFFF))) != 0x47FFFF80)
-    return 279;
+    return 246;
 
   if (to_bits(floorf(to_float(0xC7FFFFFF))) != 0xC8000000)
-    return 280;
+    return 247;
 
   if (to_bits(floorf(to_float(0x4A800000))) != 0x4A800000)
-    return 281;
+    return 248;
 
   if (to_bits(floorf(to_float(0xCA800000))) != 0xCA800000)
-    return 282;
+    return 249;
 
   if (to_bits(floorf(to_float(0x4A800001))) != 0x4A800000)
-    return 283;
+    return 250;
 
   if (to_bits(floorf(to_float(0xCA800001))) != 0xCA800002)
-    return 284;
+    return 251;
 
   if (to_bits(floorf(to_float(0x4AC00000))) != 0x4AC00000)
-    return 285;
+    return 252;
 
   if (to_bits(floorf(to_float(0xCAC00000))) != 0xCAC00000)
-    return 286;
+    return 253;
 
   if (to_bits(floorf(to_float(0x4AFFFFFF))) != 0x4AFFFFFE)
-    return 287;
+    return 254;
 
   if (to_bits(floorf(to_float(0xCAFFFFFF))) != 0xCB000000)
-    return 288;
+    return 255;
 
 	return 0;
 }

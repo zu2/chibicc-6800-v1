@@ -401,148 +401,148 @@ int main(int argc, char **argv)
 
 
 	if (cmpfl(roundf(to_float(0x3F800000)), 0x3F800000UL))
-		return 241;
+		return 128;
 
 	if (cmpfl(roundf(to_float(0xBF800000)), 0xBF800000UL))
-		return 242;
+		return 129;
 
 	if (cmpfl(roundf(to_float(0x3F800001)), 0x3F800000UL))
-		return 243;
+		return 130;
 
 	if (cmpfl(roundf(to_float(0xBF800001)), 0xBF800000UL))
-		return 244;
+		return 131;
 
 	if (cmpfl(roundf(to_float(0x3FC00000)), 0x40000000UL))
-		return 245;
+		return 132;
 
 	if (cmpfl(roundf(to_float(0xBFC00000)), 0xC0000000UL))
-		return 246;
+		return 133;
 
 	if (cmpfl(roundf(to_float(0x3FFFFFFF)), 0x40000000UL))
-		return 247;
+		return 134;
 
 	if (cmpfl(roundf(to_float(0xBFFFFFFF)), 0xC0000000UL))
-		return 248;
+		return 135;
 
 	if (cmpfl(roundf(to_float(0x43000000)), 0x43000000UL))
-		return 249;
+		return 136;
 
 	if (cmpfl(roundf(to_float(0xC3000000)), 0xC3000000UL))
-		return 250;
+		return 137;
 
 	if (cmpfl(roundf(to_float(0x43000001)), 0x43000000UL))
-		return 251;
+		return 138;
 
 	if (cmpfl(roundf(to_float(0xC3000001)), 0xC3000000UL))
-		return 252;
+		return 139;
 
 	if (cmpfl(roundf(to_float(0x43400000)), 0x43400000UL))
-		return 253;
+		return 140;
 
 	if (cmpfl(roundf(to_float(0xC3400000)), 0xC3400000UL))
-		return 254;
+		return 141;
 
 	if (cmpfl(roundf(to_float(0x437FFFFF)), 0x43800000UL))
-		return 255;
+		return 142;
 
 	if (cmpfl(roundf(to_float(0xC37FFFFF)), 0xC3800000UL))
-		return 256;
+		return 143;
 
 	if (cmpfl(roundf(to_float(0x43800000)), 0x43800000UL))
-		return 257;
+		return 144;
 
 	if (cmpfl(roundf(to_float(0xC3800000)), 0xC3800000UL))
-		return 258;
+		return 145;
 
 	if (cmpfl(roundf(to_float(0x43800001)), 0x43800000UL))
-		return 259;
+		return 146;
 
 	if (cmpfl(roundf(to_float(0xC3800001)), 0xC3800000UL))
-		return 260;
+		return 147;
 
 	if (cmpfl(roundf(to_float(0x43C00000)), 0x43C00000UL))
-		return 261;
+		return 148;
 
 	if (cmpfl(roundf(to_float(0xC3C00000)), 0xC3C00000UL))
-		return 262;
+		return 149;
 
 	if (cmpfl(roundf(to_float(0x43FFFFFF)), 0x44000000UL))
-		return 263;
+		return 150;
 
 	if (cmpfl(roundf(to_float(0xC3FFFFFF)), 0xC4000000UL))
-		return 264;
+		return 151;
 
 	if (cmpfl(roundf(to_float(0x47000000)), 0x47000000UL))
-		return 265;
+		return 152;
 
 	if (cmpfl(roundf(to_float(0xC7000000)), 0xC7000000UL))
-		return 266;
+		return 153;
 
 	if (cmpfl(roundf(to_float(0x47000001)), 0x47000000UL))
-		return 267;
+		return 154;
 
 	if (cmpfl(roundf(to_float(0xC7000001)), 0xC7000000UL))
-		return 268;
+		return 155;
 
 	if (cmpfl(roundf(to_float(0x47400000)), 0x47400000UL))
-		return 269;
+		return 156;
 
 	if (cmpfl(roundf(to_float(0xC7400000)), 0xC7400000UL))
-		return 270;
+		return 157;
 
 	if (cmpfl(roundf(to_float(0x477FFFFF)), 0x47800000UL))
-		return 271;
+		return 158;
 
 	if (cmpfl(roundf(to_float(0xC77FFFFF)), 0xC7800000UL))
-		return 272;
+		return 159;
 
 	if (cmpfl(roundf(to_float(0x47800000)), 0x47800000UL))
-		return 273;
+		return 160;
 
 	if (cmpfl(roundf(to_float(0xC7800000)), 0xC7800000UL))
-		return 274;
+		return 161;
 
 	if (cmpfl(roundf(to_float(0x47800001)), 0x47800000UL))
-		return 275;
+		return 162;
 
 	if (cmpfl(roundf(to_float(0xC7800001)), 0xC7800000UL))
-		return 276;
+		return 163;
 
 	if (cmpfl(roundf(to_float(0x47C00000)), 0x47C00000UL))
-		return 277;
+		return 164;
 
 	if (cmpfl(roundf(to_float(0xC7C00000)), 0xC7C00000UL))
-		return 278;
+		return 165;
 
 	if (cmpfl(roundf(to_float(0x47FFFFFF)), 0x48000000UL))
-		return 279;
+		return 166;
 
 	if (cmpfl(roundf(to_float(0xC7FFFFFF)), 0xC8000000UL))
-		return 280;
+		return 167;
 
 	if (cmpfl(roundf(to_float(0x4A800000)), 0x4A800000UL))
-		return 281;
+		return 168;
 
 	if (cmpfl(roundf(to_float(0xCA800000)), 0xCA800000UL))
-		return 282;
+		return 169;
 
 	if (cmpfl(roundf(to_float(0x4A800001)), 0x4A800002UL))
-		return 283;
+		return 170;
 
 	if (cmpfl(roundf(to_float(0xCA800001)), 0xCA800002UL))
-		return 284;
+		return 171;
 
 	if (cmpfl(roundf(to_float(0x4AC00000)), 0x4AC00000UL))
-		return 285;
+		return 172;
 
 	if (cmpfl(roundf(to_float(0xCAC00000)), 0xCAC00000UL))
-		return 286;
+		return 173;
 
 	if (cmpfl(roundf(to_float(0x4AFFFFFF)), 0x4B000000UL))
-		return 287;
+		return 174;
 
 	if (cmpfl(roundf(to_float(0xCAFFFFFF)), 0xCB000000UL))
-		return 288;
+		return 175;
 
 	return 0;
 }

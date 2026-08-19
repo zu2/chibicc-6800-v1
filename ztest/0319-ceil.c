@@ -69,22 +69,22 @@ int main(int argc, char **argv)
 		return 31;
 
 	if (ceilf(3.4) != 4.0)
-		return 31;
-
-	if (ceilf(3.5) != 4.0)
 		return 32;
 
-	if (ceilf(3.6) != 4.0)
+	if (ceilf(3.5) != 4.0)
 		return 33;
 
-	if (ceilf(3.7) != 4.0)
+	if (ceilf(3.6) != 4.0)
 		return 34;
 
+	if (ceilf(3.7) != 4.0)
+		return 35;
+
   if (ceilf(to_float(0x405FFFFF))!=4.0)  // 3.5 - LSB=1
-    return 35;
+    return 36;
 
   if (ceilf(to_float(0x40600001))!=4.0)  // 3.5 + LSB=1
-    return 36;
+    return 37;
 
 
   if (ceilf(to_float(0x3eFFFFFF)) != 1.0f) // 0.49999..
@@ -165,22 +165,22 @@ int main(int argc, char **argv)
 		return 131;
 
 	if (ceilf(-3.4) != -3.0)
-		return 131;
-
-	if (ceilf(-3.5) != -3.0)
 		return 132;
 
-	if (ceilf(-3.6) != -3.0)
+	if (ceilf(-3.5) != -3.0)
 		return 133;
 
-	if (ceilf(-3.7) != -3.0)
+	if (ceilf(-3.6) != -3.0)
 		return 134;
 
+	if (ceilf(-3.7) != -3.0)
+		return 135;
+
   if (ceilf(to_float(0xC05FFFFF))!=-3.0)  // 3.5 - LSB=1
-    return 135;
+    return 136;
 
   if (ceilf(to_float(0xC0600001))!=-3.0)  // 3.5 + LSB=1
-    return 136;
+    return 137;
 
 
   if (ceilf(to_float(0xBeFFFFFF)) != -0.0f) // 0.49999..
