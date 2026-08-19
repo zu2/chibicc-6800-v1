@@ -1,34 +1,38 @@
 #include <float.h>
 #include <math.h>
 
-// Threshold to avoid overflow in expf(x)
-// cosh(x) = (exp(x) + exp(-x)) / 2
-// For x > threshold, cosh(x) ≈ exp(x)/2 → exp(x) < FLT_MAX
-// x <= logf(2 * FLT_MAX) ≈ 88.722595
-#define COSH_THRESHOLD 88.722595f
+// cosh(x) overflows above this point
+#define COSH_THRESHOLD 89.4159927f
+
+// expf(x) overflows above this point
+#define COSH_HALF 0x1.62e430p+6f
+
+// cosh(x) == 1.0f below this point
+#define COSH_SMALL 3.45267006e-04f
 
 float coshf(float x)
 {
   if (isnan(x)) {
     return x;
   }
-  if (isinf(x)) {
+  if (x > COSH_THRESHOLD || x < -COSH_THRESHOLD) {
     return INFINITY;
   }
-  if (fabsf(x) < 1e-10f) {
+
+  float a = fabsf(x);
+  if (a < COSH_SMALL) {
     return 1.0f;
   }
-  if (fabsf(x) < 1.0f) {
-    float x2 = x * x;
-    return (720.0f + x2 * (360.0f + x2 * (30.0f + x2))) / 720.0f;
+  if (a < 1.0f) {
+    float t = expm1f(a);
+    float u = t + 1.0f;
+    return 1.0f + (t * t) / (u + u);
   }
-  // Return INFINITY for values beyond the threshold to avoid overflow
-  if (x > COSH_THRESHOLD) {
-    return INFINITY;
+  if (a < COSH_HALF) {
+    float u = expf(a);
+    return u * 0.5f + 0.5f / u;
   }
-  if (x < -COSH_THRESHOLD) {
-    return INFINITY;
-  }
-  // For |x| <= threshold, use the identity cosh(x) = (exp(x) + exp(-x)) / 2
-  return (expf(x) + expf(-x)) / 2.0f;
+
+  float w = expf(a * 0.5f);
+  return (w * 0.5f) * w;
 }

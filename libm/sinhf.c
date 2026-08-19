@@ -1,35 +1,36 @@
 #include <float.h>
 #include <math.h>
 
-// Threshold to avoid overflow in expf(x)
-// sinh(x) = (exp(x) - exp(-x)) / 2
-// For x > threshold, sinh(x) ≈ exp(x)/2 → exp(x) < FLT_MAX
-// x <= logf(2 * FLT_MAX) ≈ 88.722595
-#define SINH_THRESHOLD 88.722595f
+// sinh(x) overflows above this point
+#define SINH_THRESHOLD 89.4159927f
+
+// expf(x) overflows above this point
+#define SINH_HALF 0x1.62e430p+6f
+
+// sinh(x) == x below this point
+#define SINH_SMALL 5.58942498e-04f
 
 float sinhf(float x)
 {
   if (isnan(x)) {
     return x;
   }
-  if (isinf(x)) {
-    return x;
-  }
-  if (fabsf(x) < 1e-10f) {
-    return x;
-  }
-  if (fabsf(x) < 1.0f) {
-    float x2 = x * x;
-    return (((x2 + 42.0f) * x2 + 840.0f) * x2 + 5040.0f) * x / 5040.0f;
-  }
-
-  // Return ±INFINITY for values beyond the threshold to avoid overflow
   if (x > SINH_THRESHOLD) {
     return INFINITY;
   }
   if (x < -SINH_THRESHOLD) {
     return -INFINITY;
   }
-  // For |x| <= threshold, use the identity sinh(x) = (exp(x) - exp(-x)) / 2
-  return (expf(x) - expf(-x)) / 2.0f;
+
+  float a = fabsf(x);
+  if (a < SINH_SMALL) {
+    return x;
+  }
+  if (a < SINH_HALF) {
+    float t = expm1f(a);
+    return copysignf((t + t / (t + 1.0f)) * 0.5f, x);
+  }
+
+  float w = expf(a * 0.5f);
+  return copysignf((w * 0.5f) * w, x);
 }
