@@ -1020,11 +1020,25 @@ __abscmp_ret:
 ;		b0	@long is NaN?
 ;
 __setup_zin:
-	ldab	2,x
+	ldaa	2,x
+	tab
 	eorb	@long
 	andb	#$80
 	stab	__sign		; First, determine the sign
 ;
+	anda	#$7F		; exp 2-253 is normal. exp 0,1,254,255 need the full test
+	deca			; (exp>>1)-1 is $00-$7D when normal, $FF or $7E otherwise
+	cmpa	#$7E
+	bcc	__setup_zin_05
+	ldaa	@long
+	anda	#$7F
+	deca
+	cmpa	#$7E
+	bcc	__setup_zin_05
+	stab	__zin
+	rts
+;
+__setup_zin_05:
 	inx
 	inx
 	pshb
