@@ -1,12 +1,14 @@
 		.code
 		.export	__add_frac_trunc
 		.export	__add_half_trunc
+		.export	__add_even_trunc
 ;
 ;	@long = (@long + addend) & ~fmask
 ;	AccA: exp
 ;	IX:   fmask
 ;		__add_frac_trunc: addend = fmask	 (floorf)
 ;		__add_half_trunc: addend = (fmask+1)/2	 (roundf)
+;		__add_even_trunc: addend = fmask/2 + integer LSB (nearbyintf)
 ;
 __add_half_trunc:
 		ldab	2,x
@@ -22,6 +24,37 @@ __add_half_trunc:
 		ror	__work+2
 		stab	__work
 		bra	__add_trunc
+__add_even_trunc:
+		ldab	@long+1			; the LSB test needs the hidden bit
+		orab	#$80
+		stab	@long+1
+		ldab	0,x			; __work = fmask/2
+		lsrb
+		stab	__work
+		ldab	1,x
+		rorb
+		stab	__work+1
+		ldab	2,x
+		rorb
+		stab	__work+2
+		ldab	2,x			; (fmask+1) picks the integer LSB
+		addb	#1
+		andb	@long+3			; ANDB keeps C
+		bne	__add_odd
+		ldab	1,x
+		adcb	#0
+		andb	@long+2
+		bne	__add_odd
+		ldab	0,x
+		adcb	#0
+		andb	@long+1
+		beq	__add_trunc
+__add_odd:
+		sec				; a tie rounds up to the even integer
+		ldab	__work+2
+		adcb	@long+3
+		bra	__trunc_lo
+;
 __add_frac_trunc:
 		ldab	0,x
 		stab	__work
@@ -32,6 +65,7 @@ __add_frac_trunc:
 __add_trunc:
 		ldab	__work+2
 		addb	@long+3
+__trunc_lo:
 		stab	@long+3
 		ldab	__work+1
 		adcb	@long+2
