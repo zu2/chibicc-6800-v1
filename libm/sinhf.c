@@ -7,8 +7,9 @@
 // expf(x) overflows above this point
 #define SINH_HALF 0x1.62e430p+6f
 
-// sinh(x) == x below this point
-#define SINH_SMALL 5.58942498e-04f
+// sinhf returns x below this point. The truncation error stays under 1 ulp
+// and beats the expm1f path up to here
+#define SINH_SMALL 7.04223407e-04f
 
 float sinhf(float x)
 {
