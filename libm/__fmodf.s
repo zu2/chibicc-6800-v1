@@ -198,9 +198,6 @@ __fmodf_05:
 	ror	@long+1
 	ror	@long+2
 	rora
-	bcc	__fmodf_06
-	oraa	#$01			; sticky
-__fmodf_06:
 	incb
 	bne	__fmodf_05
 ;
@@ -208,43 +205,11 @@ __fmodf_06:
 ;
 	ldab	#<-127			; subnormal's exp
 	ldaa	#>-127
-;					; round up check (subnormal)
-	bsr	__fmodf32_rup_check	; if C==1, need round up
-	bcc	__fmodf32_done
-;	
-	inc	@long+2
-	bne	__fmodf32_done
-	inc	@long+1
-	bne	__fmodf32_done
-	inc	@long
-	bpl	__fmodf32_done		; Still subnormal
-;
-;	annoying thing here is:
-;	  round up carry from the subnormal results in a normal number.
-;
-	ldab	#<-126
-	ldaa	#>-126
-	stab	__expnew+1
-	staa	__expnew
 	bra	__fmodf32_done
 ;
-__fmodf_20:				; round up check (normal)
+__fmodf_20:
 	ldab	__expnew+1
 	ldaa	__expnew
-	bsr	__fmodf32_rup_check	; C==1, need round up
-	bcc	__fmodf32_done
-;
-__fmodf32_rup:
-	inc	@long+2
-	bne	__fmodf32_done
-	inc	@long+1
-	bne	__fmodf32_done
-	inc	@long
-	bne	__fmodf32_done
-;
-	lsr	@long+2
-	ror	@long+1
-	ror	@long
 ;
 __fmodf32_done:				; here, AccAB = expnew-shift(normalized)
 	addb	#127			; add bias
@@ -260,26 +225,5 @@ __fmodf32_done:				; here, AccAB = expnew-shift(normalized)
 	stab	@long+1
 	oraa	__sign
 	staa	@long
-	rts
-;
-;	round up check, @long+3 and @long+2
-;
-__fmodf32_rup_check:
-	pshb
-	ldab	@long+3
-	bpl	__fmodf32_rup_none	; G==0, no round up
-	aslb				; (bitb #$7F)
-	bne	__fmodf32_rup_occur	; R or S==1, do round up
-	ldab	@long+2
-	asrb
-	pulb
-	rts				; if LSB==0, no round up
-__fmodf32_rup_none:
-	pulb
-	clc
-	rts
-__fmodf32_rup_occur:
-	pulb
-	sec
 	rts
 ;
