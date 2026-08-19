@@ -37,8 +37,9 @@ static float hipart(float v)
 
 static void log_hl(float x, float *hi, float *lo)
 {
-  int e;
-  float m = frexpf(x, &e);
+  static int e;
+  static float m, f, s, z, hfsq, R, e_f, t, th, tl, h;
+  m = frexpf(x, &e);
 
   // Precise range reduction: [0.75, 1.5)
   if (m < 0.75f) {
@@ -46,30 +47,32 @@ static void log_hl(float x, float *hi, float *lo)
     e--;
   }
 
-  float f = m - 1.0f;
-  float s = f / (2.0f + f);
-  float z = s * s;
-  float hfsq = 0.5f * f * f;
-  float R = z * (L0 + z * (L1 + z * L2));
-  float e_f = (float)e;
+  f = m - 1.0f;
+  s = f / (2.0f + f);
+  z = s * s;
+  hfsq = 0.5f * f * f;
+  R = z * (L0 + z * (L1 + z * L2));
+  e_f = (float)e;
 
-  float t = f - (hfsq - s * (hfsq + R));
-  float th = hipart(t);
-  float tl = (f - th) - (hfsq - (s * (hfsq + R)));
+  t = f - (hfsq - s * (hfsq + R));
+  th = hipart(t);
+  tl = (f - th) - (hfsq - (s * (hfsq + R)));
 
-  float h = e_f * LN2_HI + th;
+  h = e_f * LN2_HI + th;
   *hi = hipart(h);
   *lo = (e_f * LN2_HI - *hi) + th + (tl + e_f * LN2_LO);
 }
 
 static float exp_hl(float hi, float lo)
 {
-  float n_f = roundf((hi + lo) * INV_LN2);
-  int n = (int)n_f;
-  float r = ((hi - n_f * LN2_HI) - n_f * LN2_LO) + lo;
-  float r2 = r * r;
-  float p = P0 + r * (P1 + r * (P2 + r * (P3 + r * P4)));
-  float t = 1.0f + (r + r2 * p);
+  static float n_f, r, r2, p, t;
+  static int n;
+  n_f = roundf((hi + lo) * INV_LN2);
+  n = (int)n_f;
+  r = ((hi - n_f * LN2_HI) - n_f * LN2_LO) + lo;
+  r2 = r * r;
+  p = P0 + r * (P1 + r * (P2 + r * (P3 + r * P4)));
+  t = 1.0f + (r + r2 * p);
   return ldexpf(t, n);
 }
 
