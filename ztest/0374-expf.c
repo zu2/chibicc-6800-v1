@@ -1,33 +1,20 @@
 #include <float.h>
 #include <math.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
-// Struct for test case
 typedef struct {
   float input;
   float expected;
-} ExpfTestCase;
+} ExpfTestPattern;
 
-// Subnormal values
-#define SUBNORMAL1 1.40129846e-45f // Smallest positive subnormal float
-#define SUBNORMAL2 1.0e-40f        // Example subnormal
-
-// Edge values for float expf
-#define EXPF_OVERFLOW_EDGE 88.7228317261f // Max x where expf(x) is finite
-#define EXPF_OVERFLOW_EDGE_OVER                                                \
-  88.722839f // Slightly over the edge (will overflow)
-#define EXPF_UNDERFLOW_EDGE                                                    \
-  -103.9720764160f // Min x where expf(x) == FLT_TRUE_MIN
-#define EXPF_UNDERFLOW_EDGE_UNDER                                              \
-  -103.972084f // Slightly under the edge (will underflow)
-
-// Test cases (comprehensive)
-const ExpfTestCase test_cases[] = {
+ExpfTestPattern patterns[] = {
     {8.87228317e+01f, 3.40279854e+38f},
     {8.87228390e+01f, INFINITY},
-    {-1.03972076e+02f, 1.40129846e-45f},
-    {-1.03972084e+02f, 0.0f},
+    {-1.03972076e+02f, 7.00649700e-46f},
+    {-1.03972084e+02f, 0.00000000e+00f},
     {1.40129846e-45f, 1.00000000e+00f},
     {-1.40129846e-45f, 1.00000000e+00f},
     {1.00000000e-40f, 1.00000000e+00f},
@@ -46,184 +33,259 @@ const ExpfTestCase test_cases[] = {
     {-3.50000000e+00f, 3.01973834e-02f},
     {4.50000000e+00f, 9.00171313e+01f},
     {-4.50000000e+00f, 1.11089965e-02f},
-    {4.50000000e+00f, 9.00171313e+01f},
-    {6.27000000e+00f, 5.28477378e+02f},
-    {8.73000000e+00f, 6.18572510e+03f},
-    {1.21600000e+01f, 1.90994484e+05f},
-    {1.69300000e+01f, 2.25219360e+07f},
+    {6.27000000e+00f, 5.28477368e+02f},
+    {8.73000000e+00f, 6.18572528e+03f},
+    {1.21600000e+01f, 1.90994488e+05f},
+    {1.69300000e+01f, 2.25219355e+07f},
     {2.35800000e+01f, 1.74045921e+10f},
-    {3.28400000e+01f, 1.82907222e+14f},
-    {4.57300000e+01f, 7.24913954e+19f},
-    {6.36900000e+01f, 4.57314472e+27f},
+    {3.28400000e+01f, 1.82907221e+14f},
+    {4.57300000e+01f, 7.24913952e+19f},
+    {6.36900000e+01f, 4.57314483e+27f},
     {8.80000000e+01f, 1.65163625e+38f},
-    {8.87000000e+01f, 3.32597686e+38f},
+    {8.87000000e+01f, 3.32597683e+38f},
     {1.00000000e-01f, 1.10517092e+00f},
     {2.00000000e-01f, 1.22140276e+00f},
-    {3.00000000e-01f, 1.34985888e+00f},
-    {4.00000000e-01f, 1.49182470e+00f},
-    {6.00000000e-01f, 1.82211888e+00f},
-    {7.00000000e-01f, 2.01375271e+00f},
-    {8.00000000e-01f, 2.22554093e+00f},
-    {9.00000000e-01f, 2.45960311e+00f},
-    {-1.00000000e-01f, 9.04837418e-01f},
-    {-2.00000000e-01f, 8.18730753e-01f},
-    {-3.00000000e-01f, 7.40818221e-01f},
-    {-4.00000000e-01f, 6.70320046e-01f},
-    {-6.00000000e-01f, 5.48811636e-01f},
-    {-7.00000000e-01f, 4.96585304e-01f},
-    {-8.00000000e-01f, 4.49328964e-01f},
-    {-9.00000000e-01f, 4.06569660e-01f},
-    {3.14159265e+00f, 2.31406956e+01f},
-    {2.71828183e+00f, 1.51542606e+01f},
-    {1.44269504e+00f, 4.23208611e+00f},
-    {4.34294482e-01f, 1.54387344e+00f},
-    {-3.14159265e+00f, 4.32139151e-02f},
-    {-2.71828183e+00f, 6.59880415e-02f},
+    {3.00000000e-01f, 1.34985882e+00f},
+    {4.00000000e-01f, 1.49182471e+00f},
+    {6.00000000e-01f, 1.82211884e+00f},
+    {7.00000000e-01f, 2.01375268e+00f},
+    {8.00000000e-01f, 2.22554096e+00f},
+    {9.00000000e-01f, 2.45960305e+00f},
+    {-1.00000000e-01f, 9.04837417e-01f},
+    {-2.00000000e-01f, 8.18730751e-01f},
+    {-3.00000000e-01f, 7.40818212e-01f},
+    {-4.00000000e-01f, 6.70320042e-01f},
+    {-6.00000000e-01f, 5.48811623e-01f},
+    {-7.00000000e-01f, 4.96585310e-01f},
+    {-8.00000000e-01f, 4.49328959e-01f},
+    {-9.00000000e-01f, 4.06569669e-01f},
+    {3.14159265e+00f, 2.31406947e+01f},
+    {2.71828183e+00f, 1.51542610e+01f},
+    {1.44269504e+00f, 4.23208603e+00f},
+    {4.34294482e-01f, 1.54387346e+00f},
+    {-3.14159265e+00f, 4.32139145e-02f},
+    {-2.71828183e+00f, 6.59880413e-02f},
+    {3.46573532e-01f, 1.41421348e+00f},
+    {-3.46573532e-01f, 7.07106823e-01f},
+    {3.46573561e-01f, 1.41421352e+00f},
+    {-3.46573561e-01f, 7.07106802e-01f},
+    {3.46573591e-01f, 1.41421356e+00f},  // reduction boundary, n=0
+    {-3.46573591e-01f, 7.07106781e-01f},
+    {3.46573621e-01f, 1.41421361e+00f},
+    {-3.46573621e-01f, 7.07106759e-01f},
+    {3.46573651e-01f, 1.41421365e+00f},
+    {-3.46573651e-01f, 7.07106738e-01f},
+    {1.03972054e+00f, 2.82842646e+00f},
+    {-1.03972054e+00f, 3.53553474e-01f},
+    {1.03972065e+00f, 2.82842680e+00f},
+    {-1.03972065e+00f, 3.53553432e-01f},
+    {1.03972077e+00f, 2.82842713e+00f},  // reduction boundary, n=1
+    {-1.03972077e+00f, 3.53553390e-01f},
+    {1.03972089e+00f, 2.82842747e+00f},
+    {-1.03972089e+00f, 3.53553347e-01f},
+    {1.03972101e+00f, 2.82842781e+00f},
+    {-1.03972101e+00f, 3.53553305e-01f},
+    {1.73286772e+00f, 5.65685293e+00f},
+    {-1.73286772e+00f, 1.76776737e-01f},
+    {1.73286784e+00f, 5.65685360e+00f},
+    {-1.73286784e+00f, 1.76776716e-01f},
+    {1.73286796e+00f, 5.65685428e+00f},  // reduction boundary, n=2
+    {-1.73286796e+00f, 1.76776694e-01f},
+    {1.73286808e+00f, 5.65685495e+00f},
+    {-1.73286808e+00f, 1.76776673e-01f},
+    {1.73286819e+00f, 5.65685563e+00f},
+    {-1.73286819e+00f, 1.76776652e-01f},
+    {4.40148392e+01f, 1.30437292e+19f},
+    {-4.40148392e+01f, 7.66651916e-20f},
+    {4.40148430e+01f, 1.30437790e+19f},
+    {-4.40148430e+01f, 7.66648992e-20f},
+    {4.40148468e+01f, 1.30438287e+19f},  // reduction boundary, n=63
+    {-4.40148468e+01f, 7.66646067e-20f},
+    {4.40148506e+01f, 1.30438785e+19f},
+    {-4.40148506e+01f, 7.66643143e-20f},
+    {4.40148544e+01f, 1.30439282e+19f},
+    {-4.40148544e+01f, 7.66640218e-20f},
+    {4.47079849e+01f, 2.60874212e+19f},
+    {-4.47079849e+01f, 3.83326506e-20f},
+    {4.47079887e+01f, 2.60875207e+19f},
+    {-4.47079887e+01f, 3.83325044e-20f},
+    {4.47079926e+01f, 2.60876202e+19f},  // reduction boundary, n=64
+    {-4.47079926e+01f, 3.83323581e-20f},
+    {4.47079964e+01f, 2.60877197e+19f},
+    {-4.47079964e+01f, 3.83322119e-20f},
+    {4.47080002e+01f, 2.60878192e+19f},
+    {-4.47080002e+01f, 3.83320657e-20f},
+    {8.83762512e+01f, 2.40612528e+38f},
+    {-8.83762512e+01f, 4.15605957e-39f},
+    {8.83762589e+01f, 2.40614364e+38f},
+    {-8.83762589e+01f, 4.15602786e-39f},
+    {8.83762665e+01f, 2.40616200e+38f},  // reduction boundary, n=127
+    {-8.83762665e+01f, 4.15599615e-39f},
+    {8.83762741e+01f, 2.40618035e+38f},
+    {-8.83762741e+01f, 4.15596444e-39f},
+    {8.83762817e+01f, 2.40619871e+38f},
+    {-8.83762817e+01f, 4.15593274e-39f},
+    {5.19906521e+00f, 1.81102869e+02f},
+    {-5.19906521e+00f, 5.52172367e-03f},
+    {5.19906569e+00f, 1.81102956e+02f},
+    {-5.19906569e+00f, 5.52172104e-03f},
+    {5.19906616e+00f, 1.81103042e+02f},  // worst point of the exhaustive scan
+    {-5.19906616e+00f, 5.52171840e-03f},
+    {5.19906664e+00f, 1.81103128e+02f},
+    {-5.19906664e+00f, 5.52171577e-03f},
+    {5.19906712e+00f, 1.81103215e+02f},
+    {-5.19906712e+00f, 5.52171314e-03f},
+    {3.77765617e+01f, 2.54772359e+16f},
+    {-3.77765617e+01f, 3.92507258e-17f},
+    {3.77765656e+01f, 2.54773330e+16f},
+    {-3.77765656e+01f, 3.92505761e-17f},
+    {3.77765694e+01f, 2.54774302e+16f},  // worst point, 0x42000000-0x42b1721b
+    {-3.77765694e+01f, 3.92504264e-17f},
+    {3.77765732e+01f, 2.54775274e+16f},
+    {-3.77765732e+01f, 3.92502767e-17f},
+    {3.77765770e+01f, 2.54776246e+16f},
+    {-3.77765770e+01f, 3.92501269e-17f},
+    {-4.88663445e+01f, 5.99261330e-22f},
+    {4.88663445e+01f, 1.66872106e+21f},
+    {-4.88663483e+01f, 5.99259044e-22f},
+    {4.88663483e+01f, 1.66872742e+21f},
+    {-4.88663521e+01f, 5.99256758e-22f},  // worst point, negative side
+    {4.88663521e+01f, 1.66873379e+21f},
+    {-4.88663559e+01f, 5.99254472e-22f},
+    {4.88663559e+01f, 1.66874015e+21f},
+    {-4.88663597e+01f, 5.99252186e-22f},
+    {4.88663597e+01f, 1.66874652e+21f},
+    {3.95649731e-01f, 1.48534895e+00f},
+    {-3.95649731e-01f, 6.73242471e-01f},
+    {3.95649761e-01f, 1.48534900e+00f},
+    {-3.95649761e-01f, 6.73242450e-01f},
+    {3.95649791e-01f, 1.48534904e+00f},  // worst point, below 1
+    {-3.95649791e-01f, 6.73242430e-01f},
+    {3.95649821e-01f, 1.48534909e+00f},
+    {-3.95649821e-01f, 6.73242410e-01f},
+    {3.95649850e-01f, 1.48534913e+00f},
+    {-3.95649850e-01f, 6.73242390e-01f},
+    {-8.73365250e+01f, 1.17551761e-38f},
+    {-8.73365326e+01f, 1.17550864e-38f},
+    {-8.73365402e+01f, 1.17549967e-38f},  // result becomes subnormal here
+    {-8.73365479e+01f, 1.17549071e-38f},
+    {-8.73365555e+01f, 1.17548174e-38f},
+    {-8.73373413e+01f, 1.17455837e-38f},
+    {-8.73373489e+01f, 1.17454941e-38f},
+    {-8.73373566e+01f, 1.17454045e-38f},  // worst point of the subnormal band
+    {-8.73373642e+01f, 1.17453149e-38f},
+    {-8.73373718e+01f, 1.17452253e-38f},
+    {5.96046341e-08f, 1.00000006e+00f},
+    {5.96046377e-08f, 1.00000006e+00f},
+    {5.96046412e-08f, 1.00000006e+00f},  // expf(x) != 1 starts here
+    {5.96046448e-08f, 1.00000006e+00f},
+    {5.96046519e-08f, 1.00000006e+00f},
+    {-2.98023188e-08f, 9.99999970e-01f},
+    {-2.98023206e-08f, 9.99999970e-01f},
+    {-2.98023224e-08f, 9.99999970e-01f},  // expf(x) != 1 starts here, negative side
+    {-2.98023259e-08f, 9.99999970e-01f},
+    {-2.98023295e-08f, 9.99999970e-01f},
+    {-1.03278915e+02f, 1.40131878e-45f},
+    {-1.03278923e+02f, 1.40130809e-45f},
+    {-1.03278931e+02f, 1.40129740e-45f},  // result crosses 2^-149
+    {-1.03278938e+02f, 1.40128671e-45f},
+    {-1.03278946e+02f, 1.40127602e-45f},
+    {-8.73365631e+01f, 1.17547277e-38f},
+    {-6.93147063e-01f, 5.00000059e-01f},
+    {-6.93147123e-01f, 5.00000029e-01f},
+    {-6.93147182e-01f, 4.99999999e-01f},  // result crosses 2^-1
+    {-6.93147242e-01f, 4.99999969e-01f},
+    {-6.93147302e-01f, 4.99999939e-01f},
+    {0.00000000e+00f, 1.00000000e+00f},  // result crosses 2^0
+    {2.80259693e-45f, 1.00000000e+00f},
+    {6.93147063e-01f, 1.99999977e+00f},
+    {6.93147123e-01f, 1.99999988e+00f},
+    {6.93147182e-01f, 2.00000000e+00f},  // result crosses 2^1
+    {6.93147242e-01f, 2.00000012e+00f},
+    {6.93147302e-01f, 2.00000024e+00f},
+    {8.80296783e+01f, 1.70138872e+38f},
+    {8.80296860e+01f, 1.70140170e+38f},
+    {8.80296936e+01f, 1.70141468e+38f},  // result crosses 2^127
+    {8.80297012e+01f, 1.70142766e+38f},
+    {8.80297089e+01f, 1.70144064e+38f},
+    {-0.00000000e+00f, 1.00000000e+00f},  // negative zero
+    {3.40282347e+38f, INFINITY},  // FLT_MAX
+    {-3.40282347e+38f, 0.00000000e+00f},  // -FLT_MAX
     {INFINITY, INFINITY},
-    {-INFINITY, 0.0f},
+    {-INFINITY, 0.00000000e+00f},
     {NAN, NAN},
 };
 
-#define EPSILON 1e-6f
-
-// Compare two floats, including NaN and Inf
-int float_equal(float a, float b)
-{
-  if (isnan(a) && isnan(b)) {
-    return 1;
-  }
-  if (isinf(a) && isinf(b) && (a > 0) == (b > 0)) {
-    return 1;
-  }
-  float diff = fabsf(a - b);
-  float rel = EPSILON * fabsf(b);
-  if (diff <= rel || diff <= EPSILON) {
-    return 1;
-  }
-  return 0;
-}
-
-// Calculate ULP difference between two floats
 int ulp_diff(float a, float b)
 {
-  unsigned int a_bits, b_bits;
-  memcpy(&a_bits, &a, sizeof(float));
-  memcpy(&b_bits, &b, sizeof(float));
-  // Convert to signed int representation
-  if (a_bits & 0x80000000) {
-    a_bits = 0x80000000 - (a_bits & 0x7FFFFFFF);
+  union {
+    float f;
+    int32_t i;
+  } ua = {a}, ub = {b};
+  if (ua.i < 0) {
+    ua.i = 0x80000000 - ua.i;
   }
-  if (b_bits & 0x80000000) {
-    b_bits = 0x80000000 - (b_bits & 0x7FFFFFFF);
+  if (ub.i < 0) {
+    ub.i = 0x80000000 - ub.i;
   }
-  return (a_bits > b_bits) ? (a_bits - b_bits) : (b_bits - a_bits);
+  return abs(ua.i - ub.i);
 }
 
-// 9th order Taylor expansion coefficients (precomputed)
-#define C0 1.00000000e+00f
-#define C1 1.00000000e+00f
-#define C2 5.00000000e-01f
-#define C3 1.66666667e-01f  // 1/6
-#define C4 4.16666667e-02f  // 1/24
-#define C5 8.33333333e-03f  // 1/120
-#define C6 1.38888889e-03f  // 1/720
-#define C7 1.98412698e-04f  // 1/5040
-#define C8 2.48015873e-05f  // 1/40320
-#define C9 2.75573192e-06f  // 1/362880
-
-// expf implementation using 7th order Taylor expansion (Horner's method)
-float myexpf(float x)
+// The exhaustive scan gives 1.0488 as the maximum.
+int max_ulp_tolerance(float x)
 {
-  // Handle special cases
-  if (isnan(x)) {
-    return x;
-  }
-  if (x == 0.0f) {
-    return 1.0f;
-  }
-  if (x == INFINITY) {
-    return INFINITY;
-  }
-  if (x == -INFINITY) {
-    return 0.0f;
-  }
-  if (x > EXPF_OVERFLOW_EDGE_OVER) {
-    return INFINITY;
-  }
-  if (x < EXPF_UNDERFLOW_EDGE_UNDER) {
-    return 0.0f;
-  }
-#if 0
-  if (x > 4.0f) {
-    float y = x / 4.0f;
-    float exp_y = myexpf(y);
-    exp_y = exp_y * exp_y;
-    return exp_y * exp_y;
-  }
-#endif
-  // Range reduction using fmodf
-  int n = (int)(x / M_LN2);
-  float r = fmodf(x, M_LN2);
-  if (r > 0.5f * M_LN2) {
-    r -= M_LN2;
-    n += 1;
-  } else if (r < -0.5f * M_LN2) {
-    r += M_LN2;
-    n -= 1;
-  }
-
-  // 7th order Taylor expansion using Horner's method
-//  float exp_r = C0 + r * (C1 + r * (C2 + r * (C3 + r * (C4 + r * (C5 + r * (C6 + r * C7))))));
-//  float exp_r = C0 + r * (C1 + r * (C2 + r * (C3 + r * (C4 + r * (C5 + r * (C6 + r * (C7 + r * (C8 + r * C9))))))));
-float exp_r = ((((((((C9 * r + C8) * r + C7) * r + C6) * r + C5) * r + C4) * r + C3) * r + C2) * r  + C1) * r + C0;
-
-
-  return ldexpf(exp_r, n);
+  (void)x;
+  return 2;
 }
 
-// Test function for expf
-int test_expf(float (*my_expf)(float))
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
+int main(int argc, char **argv)
 {
-  int num_cases = sizeof(test_cases) / sizeof(test_cases[0]);
-  int failed = 0;
-  printf("%13s %13s %13s %13s %6s %8s\n", "input", "expected", "got", "diff",
-         "result", "ULP");
-  for (int i = 0; i < num_cases; ++i) {
-    float input = test_cases[i].input;
-    float expected = test_cases[i].expected;
-    float result = expf(input);
-//  float result = my_expf(input);
+  int n_diff = 0;
+  int n_fail = 0;
+  int total = (int)ARRAY_SIZE(patterns);
 
-    int ok = float_equal(result, expected);
+  printf("%-12s %-12s %-12s %-8s %-8s\n", "input", "expected", "got", "ULP",
+         "result");
 
-    float diff = (isnan(expected) && isnan(result)) ||
-                         (isinf(expected) && isinf(result) &&
-                          (expected > 0) == (result > 0))
-                     ? 0.0f
-                     : fabsf(result - expected);
+  for (size_t i = 0; i < ARRAY_SIZE(patterns); ++i) {
+    float result = expf(patterns[i].input);
+    float expected = patterns[i].expected;
+    int ulp = ulp_diff(result, expected);
+    int max_ulp = max_ulp_tolerance(fabsf(expected));
 
-    int ulp = ok ? 0 : ulp_diff(result, expected);
-
-    printf("%13.6e %13.6e %13.6e %13.6e %6s %8d\n", input, expected, result,
-           diff, ok ? "Pass" : "Fail", ulp);
-
-    if (!ok) {
-      failed++;
+    const char *res_msg = "PASS";
+    if (expected == 0.0f) {
+      if (result != 0.0f || signbit(expected) != signbit(result)) {
+        res_msg = "FAIL";
+        n_fail++;
+      }
+    } else if (isnan(expected)) {
+      if (!isnan(result)) {
+        res_msg = "FAIL";
+        n_fail++;
+      }
+    } else if (isinf(expected)) {
+      if (!isinf(result) || (signbit(expected) != signbit(result))) {
+        res_msg = "FAIL";
+        n_fail++;
+      }
+    } else if (ulp > max_ulp) {
+      res_msg = "DIFF";
+      n_diff++;
     }
+
+    printf("%-12e %-12e %-12e %-8d %-8s\n", patterns[i].input, expected, result,
+           ulp, res_msg);
   }
-  if (!failed) {
-    printf("All tests passed! %d case\n", num_cases);
+
+  printf("\nTotal tests: %d\n", total);
+  if (n_diff == 0 && n_fail == 0) {
+    printf("All tests passed.\n");
   } else {
-    printf("failed %d/%d (%.2f%%)\n", failed, num_cases,
-           failed * 100.0 / num_cases);
+    printf("%d tests differ, %d tests failed.\n", n_diff, n_fail);
   }
 
-//return failed;
-  return 0;
-}
-
-int main(void)
-{
-  // Run test
-  return test_expf(myexpf);
+  return n_fail != 0 || n_diff != 0;
 }
