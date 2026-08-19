@@ -1,5 +1,10 @@
 #include <math.h>
 
+union fword {
+  float f;
+  unsigned int w[2];
+};
+
 //
 // Cody–Waite range reduction
 //
@@ -14,31 +19,49 @@
 #define L1  0x1.996298p-2f
 #define L2  0x1.32bed2p-2f
 
+#define W_INF   0x7f80u   // NaN and infinity are at or above this
+#define W_0_75  0x3f40u   // 0.75
+
 float logf(float x)
 {
-  if (x < 0.0f || isnan(x)) {
+  union fword b;
+  unsigned int w, a;
+
+  b.f = x;
+  w = b.w[0];
+  a = w & 0x7fffu;
+  if (a >= W_INF) {
+    if (a == W_INF && b.w[1] == 0u && (w & 0x8000u) == 0u) {
+      return INFINITY;
+    }
     return NAN;
   }
-  if (x == 0.0f) {
+  if (a == 0u && b.w[1] == 0u) {
     return -INFINITY;
   }
-  if (isinf(x)) {
-    return INFINITY;
+  if (w & 0x8000u) {
+    return NAN;
   }
 
   int e;
-  float m = frexpf(x, &e);
+  b.f = frexpf(x, &e);
 
   // Precise range reduction: [0.75, 1.5)
-  if (m < 0.75f) {
-    m *= 2.0f;
+  if (b.w[0] < W_0_75) {
+    b.w[0] += 0x0080u;
     e--;
   }
+  float m = b.f;
 
   float f = m - 1.0f;
   float s = f / (2.0f + f);
   float z = s * s;
-  float hfsq = 0.5f * f * f;
+  union fword h;
+  h.f = f * f;
+  if (h.w[0] != 0u) {
+    h.w[0] -= 0x0080u;
+  }
+  float hfsq = h.f;
   float R = z * (L0 + z * (L1 + z * L2));
 
   if (e == 0) {
