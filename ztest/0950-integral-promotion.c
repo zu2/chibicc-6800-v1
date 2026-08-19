@@ -33,12 +33,12 @@ int main(void)
   if ((sc=a^b)!=0)   return 33;
 
   if ((uc=c&d)!=128) return 41;
-  if ((uc=c|d)!=128) return 22;
-  if ((uc=c^d)!=0)   return 23;
+  if ((uc=c|d)!=128) return 42;
+  if ((uc=c^d)!=0)   return 43;
 
-  if ((sc=c&d)!=-128) return 31;
-  if ((sc=c|d)!=-128) return 32;
-  if ((sc=c^d)!=0)    return 33;
+  if ((sc=c&d)!=-128) return 51;
+  if ((sc=c|d)!=-128) return 52;
+  if ((sc=c^d)!=0)    return 53;
 
   return 0;
 }

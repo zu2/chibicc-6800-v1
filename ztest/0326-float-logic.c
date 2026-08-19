@@ -27,11 +27,11 @@ int main(int argc, char **argv)
   if (!!f) { ; }else{ return 25; }
   if (!!!f)     return 26;
 
-  if (g)       return 22;
-  if ((char)g) return 23;
-  if ((long)g) return 24;
-  if (!g) { ; }else{ return 25; }
-  if (!!g)     return 26;
+  if (g)       return 42;
+  if ((char)g) return 43;
+  if ((long)g) return 44;
+  if (!g) { ; }else{ return 45; }
+  if (!!g)     return 46;
 
   if (h) { ; }else{ return 31; }
   if (!h)       return 32;
