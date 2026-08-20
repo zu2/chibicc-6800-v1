@@ -1647,7 +1647,6 @@ __divf32_rup_none:
 ;
 ;	@long			= @long / TOS
 ;	@tmp1+1:AccA:AccB	= @long % TOS
-;	@tmp2+1:        loop counter
 ;       @tmp3:@tmp4     copy of 2-4,x
 ;	mess @long
 ;
@@ -1659,8 +1658,6 @@ __fdiv32x32:
         ldab 0,x
         stab @tmp3
 ;
-	ldab #8
-	stab @tmp2+1	; loop counter
         ldx #long
 ;
 	ldab @long	; tmp1+1:AccAB <- @long 24bit
@@ -1670,6 +1667,8 @@ __fdiv32x32:
         clrb
 	stab @long+3	; clear quotient
 	stab @long+1
+;
+	incb		; sentinel. rol carries it out after 8 turns
 	stab @long
 ;
 	ldab @long+2
@@ -1714,20 +1713,20 @@ skip:
         clc
 next:
         rol 0,x
-        dec @tmp2+1
-        bne loop
-        pshb
-        ldab #8
-        stab @tmp2+1
-        pulb
+        bcc loop
         inx
-        cpx #long+3
-        bne next4
-        lsr @tmp2+1    ; loop count 8→4 / 8*3+4 = 28bit (24+G+R+S+1)
-        bra loop
-next4:
         cpx #long+4
-	bne loop
+        beq next8
+        pshb
+        ldab #1
+        cpx #long+3
+        bne next4      ; the last byte takes 4 bits / 8*3+4 = 28bit (24+G+R+S+1)
+        ldab #$10
+next4:
+        stab 0,x
+        pulb
+        bra loop
+next8:
 ;
         pshb
         ldab @long+3    ; Last byte has only 4 bits; shift left by 4 bits.
