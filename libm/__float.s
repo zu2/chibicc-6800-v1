@@ -1694,27 +1694,29 @@ loop:
         bcs loop_begin_1
         bmi loop_begin
         bra next        ; now, C=0
-loop_begin_1:
-        rol @tmp1
+loop_begin_1:			; bit24 is set, so the divisor always fits
+	subb @tmp4	; dividend - divisor
+	sbca @tmp3+1
+	pshb
+	ldab @tmp1+1
+	sbcb @tmp3
+	stab @tmp1+1
+	pulb
+        sec
+	bra  next
 loop_begin:
 	subb @tmp4	; dividend - divisor
 	sbca @tmp3+1
 	pshb
-	psha
 	ldab @tmp1+1
 	sbcb @tmp3
-	ldaa @tmp1
-	sbca #0
 	bcs  skip
 	stab @tmp1+1	; subtracted.
-	staa @tmp1
-	pula
 	pulb
 ;	inc  0,x	; set the lower bit of the quotient
         sec
 	bra  next
 skip:
-	pula
 	pulb		; can't substract. pull it back.
 	addb @tmp4
 	adca @tmp3+1
