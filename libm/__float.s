@@ -809,7 +809,105 @@ __addf32_4:
 	andb	#$80
 	stab	__sign
 	jsr	__setup_long
-	jsr	__setup_work
+;
+;	Unpack the smaller value into __fp_work and line it up with @long.
+;
+;	IX:	the address of the smaller value
+;
+;	__fp_work layout:
+;	  +1..+3  mantissa 24bit
+;	  +4      guard byte. b7:G b6:R b5:S
+;	  +5..+7  scratch
+;
+	ldab	1,x		; the operand itself stays untouched
+	ldaa	0,x
+	aslb
+	rola
+	sec			; set hidden bit
+	bne	__setup_work_01	; subnormal number?
+	inca
+	clc
+__setup_work_01:
+	rorb			; AccB: mantissa 23-16
+	nega
+	ldx	2,x		; IX: mantissa 15-0
+	adda	__lexp		; AccA: 0 to 253, never overflows
+	cmpa	#8
+	bcs	__setup_work_10
+	cmpa	#16
+	bcs	__setup_work_20
+	cmpa	#24
+	bcs	__setup_work_30
+	cmpa	#26
+	bcs	__setup_work_40
+;				; the smaller value cannot change the result
+	ldaa	__lexp
+	jmp	__addf32_29
+;
+__setup_work_10:		; 0 to 7
+	stab	__fp_work+1
+	stx	__fp_work+2
+	clr	__fp_work+4
+	bra	__setup_work_50
+;
+__setup_work_20:		; 8 to 15
+	suba	#8
+	stab	__fp_work+2
+	stx	__fp_work+3
+	clr	__fp_work+1
+	bra	__setup_work_50
+;
+__setup_work_30:		; 16 to 23
+	suba	#16
+	stab	__fp_work+3
+	stx	__fp_work+4	; +5 keeps the byte that falls off
+	tst	__fp_work+5
+	beq	__setup_work_31
+	ldab	__fp_work+4
+	orab	#1		; sticky
+	stab	__fp_work+4
+__setup_work_31:
+	clr	__fp_work+1
+	clr	__fp_work+2
+	bra	__setup_work_50
+;
+__setup_work_40:		; 24 to 25
+	suba	#24
+	stx	__fp_work+5	; the bytes that fall off
+	tst	__fp_work+5
+	bne	__setup_work_41
+	tst	__fp_work+6
+	beq	__setup_work_42
+__setup_work_41:
+	orab	#1		; sticky
+__setup_work_42:
+	stab	__fp_work+4
+	clr	__fp_work+1
+	clr	__fp_work+2
+	clr	__fp_work+3
+;
+__setup_work_50:
+	tab			; AccB: 0 to 7
+	ldaa	__fp_work+4
+	tstb
+	beq	__setup_work_60
+__setup_work_51:
+	lsr	__fp_work+1
+	ror	__fp_work+2
+	ror	__fp_work+3
+	rora
+	bcc	__setup_work_52
+	oraa	#$20
+__setup_work_52:
+	decb
+	bne	__setup_work_51
+__setup_work_60:
+	bita	#$1f		; recover the sticky bit
+	beq	__setup_work_61
+	oraa	#$20
+__setup_work_61:
+	anda	#$e0
+	staa	__fp_work+4
 __addf32_5:
 	ldaa	__lexp
 	tst	__zin		; the signs differ?
@@ -1062,118 +1160,6 @@ __setup_long_1:
 	rorb
 	stab	@long+1
 	staa	__lexp
-	rts
-;
-;	Unpack the smaller value into __fp_work and line it up with @long.
-;
-;	IX:	the address of the smaller value
-;	__lexp:	the exponent of the bigger value. must be set before the call
-;
-;	__fp_work layout:
-;	  +1..+3  mantissa 24bit
-;	  +4      guard byte. b7:G b6:R b5:S
-;	  +5..+7  scratch
-;
-__setup_work:
-	ldab	1,x		; the operand itself stays untouched
-	ldaa	0,x
-	aslb
-	rola
-	sec			; set hidden bit
-	bne	__setup_work_01	; subnormal number?
-	inca
-	clc
-__setup_work_01:
-	rorb			; AccB: mantissa 23-16
-	nega
-	ldx	2,x		; IX: mantissa 15-0
-	adda	__lexp		; AccA: 0 to 253, never overflows
-	cmpa	#8
-	bcs	__setup_work_10
-	cmpa	#16
-	bcs	__setup_work_20
-	cmpa	#24
-	bcs	__setup_work_30
-	cmpa	#32
-	bcs	__setup_work_40
-;				; nothing but the sticky bit survives
-	stx	__fp_work+5
-	orab	__fp_work+5
-	orab	__fp_work+6
-	beq	__setup_work_05
-	ldab	#1
-__setup_work_05:
-	stab	__fp_work+4
-	clr	__fp_work+1
-	clr	__fp_work+2
-	clr	__fp_work+3
-	clra
-	bra	__setup_work_50
-;
-__setup_work_10:		; 0 to 7
-	stab	__fp_work+1
-	stx	__fp_work+2
-	clr	__fp_work+4
-	bra	__setup_work_50
-;
-__setup_work_20:		; 8 to 15
-	suba	#8
-	stab	__fp_work+2
-	stx	__fp_work+3
-	clr	__fp_work+1
-	bra	__setup_work_50
-;
-__setup_work_30:		; 16 to 23
-	suba	#16
-	stab	__fp_work+3
-	stx	__fp_work+4	; +5 keeps the byte that falls off
-	tst	__fp_work+5
-	beq	__setup_work_31
-	ldab	__fp_work+4
-	orab	#1		; sticky
-	stab	__fp_work+4
-__setup_work_31:
-	clr	__fp_work+1
-	clr	__fp_work+2
-	bra	__setup_work_50
-;
-__setup_work_40:		; 24 to 31
-	suba	#24
-	stx	__fp_work+5	; the bytes that fall off
-	tst	__fp_work+5
-	bne	__setup_work_41
-	tst	__fp_work+6
-	beq	__setup_work_42
-__setup_work_41:
-	orab	#1		; sticky
-__setup_work_42:
-	stab	__fp_work+4
-	clr	__fp_work+1
-	clr	__fp_work+2
-	clr	__fp_work+3
-;
-__setup_work_50:
-	tab			; AccB: 0 to 7
-	ldaa	__fp_work+4
-	tstb
-	beq	__setup_work_60
-__setup_work_51:
-	lsr	__fp_work+1
-	ror	__fp_work+2
-	ror	__fp_work+3
-	rora
-	bcc	__setup_work_52
-	oraa	#$20
-__setup_work_52:
-	decb
-	bne	__setup_work_51
-__setup_work_60:
-	bita	#$1f		; recover the sticky bit
-	beq	__setup_work_61
-	oraa	#$20
-__setup_work_61:
-	anda	#$e0
-	staa	__fp_work+4
 	rts
 ;
 ;	@long/TOS shift left 8bit
