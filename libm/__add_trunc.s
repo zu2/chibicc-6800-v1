@@ -13,30 +13,30 @@
 __add_half_trunc:
 		ldab	2,x
 		addb	#1			; addb sets C, incb does not
-		stab	__work+2
+		stab	__fp_work+2
 		ldab	1,x
 		adcb	#0
-		stab	__work+1
+		stab	__fp_work+1
 		ldab	0,x
 		adcb	#0
 		lsrb
-		ror	__work+1
-		ror	__work+2
-		stab	__work
+		ror	__fp_work+1
+		ror	__fp_work+2
+		stab	__fp_work
 		bra	__add_trunc
 __add_even_trunc:
 		ldab	@long+1			; the LSB test needs the hidden bit
 		orab	#$80
 		stab	@long+1
-		ldab	0,x			; __work = fmask/2
+		ldab	0,x			; __fp_work = fmask/2
 		lsrb
-		stab	__work
+		stab	__fp_work
 		ldab	1,x
 		rorb
-		stab	__work+1
+		stab	__fp_work+1
 		ldab	2,x
 		rorb
-		stab	__work+2
+		stab	__fp_work+2
 		ldab	2,x			; (fmask+1) picks the integer LSB
 		addb	#1
 		andb	@long+3			; ANDB keeps C
@@ -51,28 +51,28 @@ __add_even_trunc:
 		beq	__add_trunc
 __add_odd:
 		sec				; a tie rounds up to the even integer
-		ldab	__work+2
+		ldab	__fp_work+2
 		adcb	@long+3
 		bra	__trunc_lo
 ;
 __add_frac_trunc:
 		ldab	0,x
-		stab	__work
+		stab	__fp_work
 		ldab	1,x
-		stab	__work+1
+		stab	__fp_work+1
 		ldab	2,x
-		stab	__work+2
+		stab	__fp_work+2
 __add_trunc:
-		ldab	__work+2
+		ldab	__fp_work+2
 		addb	@long+3
 __trunc_lo:
 		stab	@long+3
-		ldab	__work+1
+		ldab	__fp_work+1
 		adcb	@long+2
 		stab	@long+2
 		ldab	@long+1			; set hidden bit
 		orab	#$80
-		adcb	__work
+		adcb	__fp_work
 		stab	@long+1
 		bcs	__trunc_carry
 		jsr	__and_not_fmask

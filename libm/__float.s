@@ -36,7 +36,7 @@
 	.export __asl8_both
         .export __f32NaN
 	.export __sign
-	.export __work
+	.export __fp_work
 	.export __lexp
 	.export __addf32x
 	.export __subf32x
@@ -83,7 +83,16 @@ __exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
 __fp_ix:.word	0	; address of the operand the routines read
 __fp_op:.word	0	; working copy of that operand
 	.word	0
-__work: .word	0	; working area 48bit
+;
+;	__fp_work: 8 byte scratch area.
+;
+;	Only one routine uses __fp_work at a time. Add, subtract, multiply
+;	and divide never run together, so the routines share the area.
+;	Each routine picks its own layout. The layout sits at the top of
+;	the routine that uses __fp_work.
+;
+__fp_work: .word	0
+	.word	0
 	.word	0
 	.word	0
 	
@@ -249,17 +258,17 @@ __i32tof32_2:
 	beq	__i32tof32_left	; need left shift
 ;
 	ldab	#$96		; exp.
-	clr	__work
+	clr	__fp_work
 __i32tof32_right:		; right shift is required until the MSB byte becomes 0
 	incb
 	lsra
 	ror	1,x
 	ror	2,x
 	ror	3,x
-	ror	__work		; save R/S bit
+	ror	__fp_work		; save R/S bit
 	tsta
 	bne	__i32tof32_right
-	ldaa	__work
+	ldaa	__fp_work
 	bpl	__i32tof32_done	; if R==0 no round up.
 	anda	#$7F		; get sticky
 	bne	__i32tof32_rup	; if S==1 do round up.
@@ -316,17 +325,17 @@ __u32tof32x:
 	beq	__u32tof32_left	; need left shift
 ;
 	ldab	#$96		; exp.
-	clr	__work
+	clr	__fp_work
 __u32tof32_right:		; right shift is required until the MSB byte becomes 0
 	incb
 	lsra
 	ror	1,x
 	ror	2,x
 	ror	3,x
-	ror	__work		; save R/S bit
+	ror	__fp_work		; save R/S bit
 	tsta
 	bne	__u32tof32_right
-	ldaa	__work
+	ldaa	__fp_work
 	bpl	__u32tof32_done	; if R==0 no round up.
 	anda	#$7F		; get sticky
 	bne	__u32tof32_rup	; if S==1 do round up.
@@ -777,29 +786,41 @@ __addf32_s50:			; TOS or @long == 0.0
 __addf32_s51:
 	rts
 ;
-__addf32_1:			; neither of @long and TOS was not 0.0, simply add them.
+__addf32_1:			; neither @long nor TOS is 0.0
 	ldx	__fp_ix
-	ldab	0,x		; get MSB of TOS
-	eorb	@long
-	andb	#$80		; sign equal?
-	jne	__addf32_50
-	;			; sign equal, add it
-	ldab	@long		; save sign
+	jsr	__abscmp	; abs(TOS) - abs(@long)
+	bhi	__addf32_2	; abs(TOS) > abs(@long), so swap the two
+	bne	__addf32_3
+	tst	__zin		; equal size. b7 says the signs differ
+	jmi	__f32retpZero	; x + (-x) is +0.0
+	bra	__addf32_3
+;
+__addf32_2:			; move the bigger value into @long
+	ldx	#long
+	jsr	__setup_tos	; the work copy takes @long
+	ldx	__fp_ix
+	jsr	__load32x	; @long <= the raw operand
+	bra	__addf32_4
+;
+__addf32_3:			; @long already holds the bigger value
+	jsr	__setup_tos	; the work copy takes the raw operand
+;
+__addf32_4:
+	ldab	@long		; the result takes the sign of the bigger value
 	andb	#$80
 	stab	__sign
-	jsr	__setup_both	; get both exp to texp, lexp. AccB = texp - lexp
-	beq	__addf32_11	; texp==lexp, Simply add it (AccA has __texp).
-	bcc	__addf32_10	; jump if texp > lexp
-	;			
-	negb			; texp < lexp
-	jsr	__lsr_tos	; shift TOS right by AccB, align the bit.
-	ldx	__fp_ix
-	ldaa	__lexp		; @long is larger, use its exponent.
-	jmp	__addf32_11
-__addf32_10:			; texp > lexp
-	jsr	__lsr_long	; shift @long right by AccB, align the bit
-	ldx	__fp_ix
-	ldaa	__texp		; TOS is larger, use its exponent.
+	jsr	__setup_long
+	jsr	__asl8_long
+	ldab	__lexp
+	subb	__texp		; the bigger exp - the smaller exp. never borrows
+	beq	__addf32_5
+	ldx	#__fp_work
+	jsr	__lsr_tos	; line up the smaller value
+__addf32_5:
+	ldaa	__lexp
+	ldx	#__fp_work
+	tst	__zin		; the signs differ?
+	jmi	__addf32_61
 __addf32_11:
 	ldab	@long+3		; @long = @long + TOS , 32bit version
 	addb	3,x
@@ -868,37 +889,8 @@ __addf32_30:
 	staa	@long		; set exp
 	rts
 ;
-;	TOS and @long have different signs, do subtract
-;	(note: TOS:rhs, @long:lhs)
+;	@long holds the bigger value, so the result is @long - the work copy
 ;
-__addf32_50:
-	jsr	__abscmp	; compare: abs(tos) - abs(@long)
-	jeq	__f32retpZero	; different sign, but value equal, return +0.0
-__addf32_51:
-	jcs	__addf32_60	; jump if TOS<@long
-	;
-	ldab	0,x		; abs(TOS) > abs(@long), result sign is TOS's
-	andb	#$80
-	stab	__sign
-	jsr	__setup_both	; AccB = TOS'exp - @long's exp
-	beq	__addf32_52	; Both exp were equal,  simply substract
-	jsr	__lsr_long	; shift @long right by AccB
-	ldx	__fp_ix
-__addf32_52:
-	ldaa	__texp
-	;			; substract @long = TOS - @long
-	ldab	3,x
-	subb	@long+3
-	stab	@long+3
-	ldab	2,x
-	sbcb	@long+2
-	stab	@long+2
-	ldab	1,x
-	sbcb	@long+1
-	stab	@long+1
-	ldab	0,x
-	sbcb	@long
-	stab	@long
 __addf32_54:
 	bmi	__addf32_543	; hidden bit on?
 	;
@@ -951,18 +943,7 @@ __addf32_55:
 	staa	@long
 	rts
 ;
-__addf32_60:
-;				; abs(TOS) < abs(@long), return @long's sign
-	ldab	@long
-	andb	#$80
-	stab	__sign
-	jsr	__setup_both	; AccB = TOS'exp - @long's exp
-	beq	__addf32_61	; AccB == 0, simply substract
-	negb
-	jsr	__lsr_tos	; shift TOS right by AccB
-	ldx	__fp_ix
 __addf32_61:
-	ldaa	__lexp
 	;			; substract @long = @long - TOS
 	ldab	@long+3
 	subb	3,x
@@ -1091,15 +1072,6 @@ __setup_zin_99:
 ;
 ;	Special numbers ( Inf, NaN ) cannot be handled here.
 ;
-__setup_both:			; get both exp, set hidden bit
-	jsr	__setup_long	; @long's exp->AccA, set hidden bit of @long
-	jsr	__setup_tos	; TOS's   exp->AccA, set hidden bit of TOS
-	jsr	__asl8_long
-	ldab	__texp
-	subb	__lexp		; AccB = TOS'exp - @long's exp
-	stab	__expdiff	; save it
-	rts			; (note: AccA has __texp from __setup_tos)
-;
 __setup_long:			; @long's exp->AccA, set hidden bit of @long
 	ldab	@long+1		; get TOS's exp to a
 	ldaa	@long
@@ -1127,13 +1099,11 @@ __setup_tos:			; exp->AccA, hidden bit set, into the work area
 	clc
 __setup_tos_1:
 	rorb
-	stab	__fp_op	; __asl8_tos is folded in here
+	stab	__fp_work	; __asl8_tos is folded in here
 	staa	__texp
 	ldx	2,x
-	stx	__fp_op+1
-	clr	__fp_op+3
-	ldx	#__fp_op
-	stx	__fp_ix
+	stx	__fp_work+1
+	clr	__fp_work+3
 	rts
 ;
 ;	@long/TOS shift right 8bit
@@ -1197,10 +1167,6 @@ __asl8_tos:
 ;
 ;	TODO: If the shift>=24, This will result in unnecessary shifts.
 ;
-;
-__lsr_long:			; lsr @long by AccB, X is destroyed
-	ldx	#long
-	bra	__lsrx
 ;
 __lsr_tos:			; lsr TOS (2-5,x) by AccB, X is destroyed
 	bra	__lsrx
@@ -1346,18 +1312,18 @@ __mulf32tos03:
 ;                       	; setup working area 48bit
 	ldx	__fp_ix
         ldx     2,x
-        stx     __work+4
+        stx     __fp_work+4
 	ldx	__fp_ix
         ldab    1,x
 	orab	#$80		; hidden bit, __adj_subn_x does not write it back
-	stab	__work+3
-;	clr	__work+2        ; use AccB
-;	clr	__work+1        ; use AccA
-        clra                    ; __work+1
-        staa    __work
+	stab	__fp_work+3
+;	clr	__fp_work+2        ; use AccB
+;	clr	__fp_work+1        ; use AccA
+        clra                    ; __fp_work+1
+        staa    __fp_work
 ;
-        clrb                    ; __work+2
-	ldx	#__work+5
+        clrb                    ; __fp_work+2
+	ldx	#__fp_work+5
 ;
 __mulf32tos29:
         pshb
@@ -1374,42 +1340,42 @@ __mulf32tos30:
         adca    @long+2
 ;       psha
         staa    @tmp2+1
-        ldaa   __work
+        ldaa   __fp_work
         adca    @long+1
-        staa    __work
+        staa    __fp_work
 ;       pula
         ldaa    @tmp2+1         ; 1cyc faster
 ;
 __mulf32tos32:
-        ror     __work
+        ror     __fp_work
 	rora
 	rorb
         ror     0,x             ; Carry used by by __mulf32tos30. Must preserve
 	dec     @tmp2
 	bne	__mulf32tos30   ; ↑ C flag must not be modified until here
         dex
-        cpx     #__work+2
+        cpx     #__fp_work+2
         bne     __mulf32tos29
 ;
-        stab    __work+2
-        staa    __work+1
+        stab    __fp_work+2
+        staa    __fp_work+1
 ;
         			; end of mant*mant multiply
 ;
 ;  Bits 28-47 required only for rounding. To reduce shift operations,
 ;  round lower 2 bytes (bits 32-47) to sticky bit beforehand.
 ;
-        ldx     __work+4
+        ldx     __fp_work+4
         beq     __mulf32tos50
-        ldab    __work+3
+        ldab    __fp_work+3
         orab    #$10            ; set sticky
-        stab    __work+3
+        stab    __fp_work+3
 __mulf32tos50:
 ;
 ; When highest bit is set, add 1 to the exponent.
 ; Exponent can be up to 127; overflow if incremented to 128.
 ;
-	ldab	__work		; carryover of the MSB bit?
+	ldab	__fp_work		; carryover of the MSB bit?
 	bpl	__mulf32tos70
         ldx     __exp2
         inx
@@ -1421,10 +1387,10 @@ __mulf32tos50:
 ; Already rounded to 32-bit, so 4-byte shift is sufficient.
 ;
 __mulf32tos70:
-	asl	__work+3
-	rol	__work+2
-	rol	__work+1
-	rol     __work
+	asl	__fp_work+3
+	rol	__fp_work+2
+	rol	__fp_work+1
+	rol     __fp_work
 ;
 ; Denormalize before rounding, otherwise the rounding position is wrong.
 ;
@@ -1435,14 +1401,14 @@ __mulf32tos705:
 	sbca	#>-126
 	bge	__mulf32tos71
 __mulf32tos706:
-	lsr	__work
-	ror	__work+1
-	ror	__work+2
-	ror	__work+3
+	lsr	__fp_work
+	ror	__fp_work+1
+	ror	__fp_work+2
+	ror	__fp_work+3
 	bcc	__mulf32tos707
-	ldaa	__work+3
+	ldaa	__fp_work+3
 	oraa	#$02		; sticky
-	staa	__work+3
+	staa	__fp_work+3
 __mulf32tos707:
 	incb
 	bne	__mulf32tos706
@@ -1461,23 +1427,23 @@ __mulf32tos707:
 ;    1  1 1 -   +1 ULP
 ;
 __mulf32tos71:
-	ldab	__work+3
+	ldab	__fp_work+3
 	bpl	__mulf32tos72	; G=0, do nothing
 	bitb	#$01		; b0 falls off the rorb below
 	beq	__mulf32tos721
 	orab	#$02
 __mulf32tos721:
-	ldaa	__work+2	; check LSB
+	ldaa	__fp_work+2	; check LSB
 	lsra
 	rorb			; b7:ULP, b6:G, b5:R, b4-0:S
 	andb	#$BF		; 1011 1111:ULP,R,S are all 0 ?
 	beq	__mulf32tos72	;   Yes, do nothng
 ;
-	inc	__work+2	; round up
+	inc	__fp_work+2	; round up
 	bne	__mulf32tos72
-	inc	__work+1
+	inc	__fp_work+1
 	bne	__mulf32tos72
-	inc	__work+0
+	inc	__fp_work+0
 	bne	__mulf32tos72
 ;
         ldx     __exp2          ; Rounding changed exponent
@@ -1486,27 +1452,27 @@ __mulf32tos721:
         cpx     #128            ; Recheck for overflow
 	jeq	__f32retInfs	; Overflow, returns Inf with __sign.
 	ldaa	#$80		; the mantissa is all 0 by now, put the hidden bit back
-	staa	__work+0
+	staa	__fp_work+0
 ;
 __mulf32tos72:
 	ldab	__exp2+1
 	cmpb	#<-127		; subnormal ?
 	bne	__mulf32tos74
-	tst	__work		; round up carried into the hidden bit
+	tst	__fp_work		; round up carried into the hidden bit
 	bpl	__mulf32tos74
 	ldab	#<-126
 	stab	__exp2+1
 __mulf32tos74:
-	ldab	__work+2
-	orab	__work+1
-	orab	__work
+	ldab	__fp_work+2
+	orab	__fp_work+1
+	orab	__fp_work
 	jeq	__f32retZeros	; The mantissa is all 0, so the value is 0.
 __mulf32tos75:
-	ldab	__work+2
+	ldab	__fp_work+2
 	stab	@long+3
-	ldab	__work+1
+	ldab	__fp_work+1
 	stab	@long+2
-	ldab	__work
+	ldab	__fp_work
 	ldaa	__exp2+1
 	adda	#127
 	aslb
