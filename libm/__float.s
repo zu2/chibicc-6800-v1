@@ -1262,12 +1262,12 @@ __mulf32tos4:
 	subb	#<128		; sum of exp>127? (>=128)
 	sbca	#>128
 	jge	__f32retInfs	; Overflow, returns Inf with __sign.
+	addb	#<128		; put the exponent back
+	adca	#>128
 ;
 ; Exponent sum(=150) appears to underflow,
 ; but mantissa multiplication carry can keep it subnormal.
 ;
-	ldab	__exp2+1
-	ldaa	__exp2
 	subb	#<-151		; sum of exp < -151?
 	sbca	#>-151
 	jlt	__f32retZeros	; Underflow, return zero with __sign.
@@ -1276,12 +1276,11 @@ __mulf32tos03:
 ;                               ; To improve performance, use AccAB insted of work+4,5
 ;                       	; setup working area 48bit
 	ldx	__fp_ix
-        ldx     2,x
-        stx     __fp_work+4
-	ldx	__fp_ix
         ldab    1,x
 	orab	#$80		; hidden bit, __adj_subn_x does not write it back
 	stab	__fp_work+3
+        ldx     2,x
+        stx     __fp_work+4
 ;	clr	__fp_work+2        ; use AccB
 ;	clr	__fp_work+1        ; use AccA
         clra                    ; __fp_work+1
@@ -1508,8 +1507,8 @@ __divf32tos01:
 	sbca	#>129
 	jge	__f32retInfs	; overflow
 ;
-	ldab	__expdiff+1
-	ldaa	__expdiff
+	addb	#<129		; put the exponent back
+	adca	#>129
 	subb	#<-150
 	sbca	#>-150
 	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
@@ -1564,10 +1563,10 @@ __divf32tos06:
 	incb
 	bne	__divf32tos05
 ;
-	ldab	#<-127			; subnormal's exp
-	ldaa	#>-127
 ;					; round up check (subnormal)
 	bsr	__divf32_rup_check	; if C==1, need round up
+	ldab	#<-127			; subnormal's exp. ldab and ldaa keep C
+	ldaa	#>-127
 	bcc	__divf32_done
 ;	
 	inc	@long+2
@@ -1590,9 +1589,9 @@ __divf32tos20:				; round up check (normal)
 	ldx	__expdiff		; the left shift did not happen, so 128 is still possible
 	cpx	#128
 	jeq	__f32retInfs
-	ldab	__expdiff+1
-	ldaa	__expdiff
 	bsr	__divf32_rup_check	; C==1, need round up
+	ldab	__expdiff+1		; ldab and ldaa keep C
+	ldaa	__expdiff
 	bcc	__divf32_done
 ;
 __divf32_rup:
@@ -1621,8 +1620,6 @@ __divf32_done:
 ;	round up check, @tmp4 and @tmp4+1
 ;
 __divf32_rup_check:
-	pshb
-	psha
 	ldab	@long+3	
 	bpl	__divf32_rup_none	; G==0, no round up
 	tba
@@ -1635,13 +1632,9 @@ __divf32_rup_nosticky:
 	rorb				; AccB b7 LSB, b6 G, b5 R, b4-b0 S
 	andb	#$BF			; only G=1 and LSB,R,S == 0 ?
 	beq	__divf32_rup_none
-	pula
-	pulb
 	sec
 	rts				; if LSB==0, no round up
 __divf32_rup_none:
-	pula
-	pulb
 	clc
 	rts
 ;
@@ -1677,13 +1670,15 @@ __fdiv32x32:
         bra  loop_begin
 ;
 loop:
-;	asl  0,x        ; shift quotient
 	aslb		; shift reminder
 	rola
 	rol  @tmp1+1
         bcs loop_begin_1
         bmi loop_begin
-        bra next        ; now, C=0
+;                       ; C=0, so the quotient takes a 0 bit
+        rol 0,x
+        bcc loop
+        bra nextbyte
 loop_begin_1:			; bit24 is set, so the divisor always fits
 	subb @tmp4	; dividend - divisor
 	sbca @tmp3+1
@@ -1714,6 +1709,7 @@ skip:
 next:
         rol 0,x
         bcc loop
+nextbyte:
         inx
         cpx #long+4
         beq next8
@@ -1788,7 +1784,7 @@ __adj_subn_01:
 	bpl	__adj_subn_01
 	rts
 __adj_subn_ret:
-	ldaa	1,x
+	lsra		; asla left 1,x here. bit7 is the exp LSB and the hidden bit takes it
 	ora	#$80
 	staa	1,x
 	clra
