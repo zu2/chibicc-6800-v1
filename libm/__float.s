@@ -76,7 +76,6 @@
 	.data
 __zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
 __sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
-__texp:	.byte	0	; TOS's exp
 __lexp:	.byte	0	; @long's exp
 __expdiff:.byte	0	; TOS's exp - @long's exp
 __exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
@@ -1041,15 +1040,11 @@ __setup_zin_99:
 	stab	__zin
 	rts
 ;
-;	Change @long and (2-5,x) floating point number for easier calculations.
-;	  Put the exponent in __lexp, __texp (1 byte, biased)
+;	Change @long floating point number for easier calculations.
+;	  Put the exponent in __lexp (1 byte, biased)
 ;	    If the biased exponent is 00 (subnormal), it becomes 01.
 ;	  Set a hidden bit for normal number (without subnormal).
-;	  Shift the mantissa to the left by 8 bits
-;	    and put 0 in the tail byte. // @long+3 and (5,x)
-;
-;	Note:   to use @long+0 or 2,x as the last byte is faster than 
-;		to move the whole thing, but this is easier to understand.
+;	  The mantissa stays at @long+1 to +3, and @long+0 takes the carry.
 ;
 ;	Special numbers ( Inf, NaN ) cannot be handled here.
 ;
@@ -1090,10 +1085,9 @@ __setup_work:
 	clc
 __setup_work_01:
 	rorb			; AccB: mantissa 23-16
-	staa	__texp
+	nega
 	ldx	2,x		; IX: mantissa 15-0
-	ldaa	__lexp
-	suba	__texp		; AccA: 0 to 253, never borrows
+	adda	__lexp		; AccA: 0 to 253, never overflows
 	cmpa	#8
 	bcs	__setup_work_10
 	cmpa	#16
