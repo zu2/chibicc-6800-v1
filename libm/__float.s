@@ -1521,9 +1521,8 @@ __divf32tos01:
 ;	  the result will never be 0 (Dividend 0 is already excluded)
 ;
 __divf32tos03:
-	jsr	__fdiv32x32		; @long = @long / TOS, @tmp1:AB = rem
-	orab	@tmp1                   ; Set sticky bit if any remainder.
-	orab	@tmp1+1
+	jsr	__fdiv32x32		; @long = @long / TOS, @tmp1+1:AB = rem
+	orab	@tmp1+1                 ; Set sticky bit if any remainder.
 	staa	@tmp1
 	orab	@tmp1
 	beq	____divf32_norem
@@ -1601,14 +1600,7 @@ __divf32_rup:
 	bne	__divf32_done
 	inc	@long+1
 	bne	__divf32_done
-	inc	@long
-	bne	__divf32_done
-;
-	lsr	@long
-	ror	@long+1
-	ror	@long+2
-	addb	#1
-	adca	#0
+	inc	@long		; the mantissa is never all ones here, so no carry out
 ;
 __divf32_done:
 	addb	#127
@@ -1654,7 +1646,7 @@ __divf32_rup_none:
 	rts
 ;
 ;	@long			= @long / TOS
-;	@tmp1:AccA:AccB		= @long % TOS
+;	@tmp1+1:AccA:AccB	= @long % TOS
 ;	@tmp2+1:        loop counter
 ;       @tmp3:@tmp4     copy of 2-4,x
 ;	mess @long
@@ -1671,12 +1663,11 @@ __fdiv32x32:
 	stab @tmp2+1	; loop counter
         ldx #long
 ;
-	ldab @long	; tmp1:AccAB <- @long 24bit
+	ldab @long	; tmp1+1:AccAB <- @long 24bit
 	stab @tmp1+1
 	ldaa @long+1
 ;
         clrb
-	stab @tmp1
 	stab @long+3	; clear quotient
 	stab @long+1
 	stab @long
