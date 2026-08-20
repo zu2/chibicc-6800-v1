@@ -1,4 +1,47 @@
 ;
+	.export	__i16tof32
+	.export	__u16tof32
+	.export	__i32tof32
+	.export	__u32tof32
+	.export	__f32tou32
+	.export	__f32toi32
+	.export	__f32tou16
+	.export	__f32toi16
+	.export	__f32tou8
+	.export	__f32toi8
+	.export	__addf32tos
+	.export __subf32tos
+	.export __mulf32tos
+	.export __divf32tos
+	.export __cmpf32tos
+	.export __cmpf32x
+	.export __load32x_addf
+	.export __load32x_subf
+	.export __load32x_mulf
+	.export __load32x_divf
+	.export __load32x_cmpf
+	.export __f32iszero
+	.export __f32isNaNorInf
+	.export __fdiv32x32
+	.export	__setup_long
+	.export __f32retpZero
+	.export __setup_zin
+	.export __f32NaN
+	.export __f32NaNx
+	.export __f32zerox
+	.export __f32zeros
+	.export __f32ones
+	.export	__f32Infs
+	.export __adj_subnormal
+	.export __asl8_both
+        .export __f32NaN
+	.export __sign
+	.export __work
+	.export __lexp
+	.export __addf32x
+	.export __subf32x
+	.export __mulf32x
+	.export __divf32x
 ;	MC6800 floating point arithmetic library
 ;
 ;	Copyright (c) 2025 by ZUKERAN, shin
@@ -26,48 +69,9 @@
 
 	.zp
 	.data
-	.export	__i16tof32
-	.export	__u16tof32
-	.export	__i32tof32
-	.export	__u32tof32
-	.export	__f32tou32
-	.export	__f32toi32
-	.export	__f32tou16
-	.export	__f32toi16
-	.export	__f32tou8
-	.export	__f32toi8
-	.export	__addf32tos
-	.export __subf32tos
-	.export __mulf32tos
-	.export __divf32tos
-	.export __cmpf32tos
-	.export __cmpf32x
-	.export __load32x_addf
-	.export __load32x_subf
-	.export __load32x_mulf
-	.export __load32x_divf
-	.export __load32x_cmpf
-	.export __f32iszero
 ;	.export __f32iszerox
-	.export __f32isNaNorInf
 ;	.export __f32isNaNorInfx
-	.export __fdiv32x32
-	.export	__setup_long
-	.export __f32retpZero
-	.export __setup_zin
-	.export __f32NaN
-	.export __f32NaNx
-	.export __f32zerox
-	.export __f32zeros
-	.export __f32ones
-	.export	__f32Infs
-	.export __adj_subnormal
-	.export __asl8_both
-        .export __f32NaN
 ;
-	.export __sign
-	.export __work
-	.export __lexp
 ;
 	.data
 __zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
@@ -76,6 +80,9 @@ __texp:	.byte	0	; TOS's exp
 __lexp:	.byte	0	; @long's exp
 __expdiff:.byte	0	; TOS's exp - @long's exp
 __exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
+__fp_ix:.word	0	; address of the operand the routines read
+__fp_op:.word	0	; working copy of that operand
+	.word	0
 __work: .word	0	; working area 48bit
 	.word	0
 	.word	0
@@ -472,16 +479,16 @@ __f32retInf:		; AccB(Sign)+7f80 0000
 	bmi	__f32retmInf
 __f32retpInf:		; 7f80 0000
 	bsr	__f327f800000
-	jmp     __pullret
+	rts
 __f32retmInf:		; ff80 0000
 	bsr	__f32ff800000
-	jmp     __pullret
+	rts
 ;
 ;	load plus/minus qNaN into @long
 ;
 __f32retNaN:
 	bsr	__f32NaN
-	jmp	__pullret	
+	rts
 __f32NaN:
 	ldx	#long
 __f32NaNx:
@@ -515,7 +522,7 @@ __f32retZero:
 	stab	@long+1
 	stab	@long+2
 	stab	@long+3
-	jmp	__pullret
+	rts
 ;
 ;	pull TOS into @long, and return
 ;
@@ -712,24 +719,19 @@ __u16ffff:
 ;	@long	= @long - TOS
 ;	→	= @long + (-TOS)
 ;
-__load32x_subf:
 __subf32x:
-	jsr	__load32x
-__subf32tos:
-	tsx
-	ldab	2,x		; flip the sign of TOS
+	jsr	__fp_settos
+	ldab	0,x		; flip the sign of TOS
 	eorb	#$80
-	stab	2,x
-	jmp	__addf32tos
+	stab	0,x
+	jmp	__addf32x
 ;
 ;	@long = TOS + @long
 ;	pull TOS
 ;
-__load32x_addf:
-	jsr     __load32x
-__addf32tos:
-	tsx
-	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
+__addf32x:
+	stx	__fp_ix
+	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
 ;	ldab	__zin
 	bitb	#$3F
 	beq	__addf32_1	; No,  normal calculation
@@ -753,8 +755,8 @@ __addf32_s10:
 	ldab	__zin		; Either TOS or @long is Inf.
 	bitb	#$04		; @long is Inf?
 	bne	__addf32_s05	; Yes, return Inf, sign is same as @long
-	tsx
-	ldab	2,x
+	ldx	__fp_ix
+	ldab	0,x
 	jmp	__f32retInf	; return Inf, The sign is the same as TOS
 ;
 __addf32_s20:			; TOS and @long are not NaN,Inf.
@@ -770,16 +772,14 @@ __addf32_s20:			; TOS and @long are not NaN,Inf.
 __addf32_s50:			; TOS or @long == 0.0
 	cmpb	#$20		; TOS == 0.0?
 	beq	__addf32_s51	; Yes, return @long (do nothing)
-	tsx			; No,  return TOS
-	inx
-	inx
+	ldx	__fp_ix
 	jsr	__load32x	; @long <= (0-3,x)
 __addf32_s51:
-	jmp	__pullret
+	rts
 ;
 __addf32_1:			; neither of @long and TOS was not 0.0, simply add them.
-	tsx
-	ldab	2,x		; get MSB of TOS
+	ldx	__fp_ix
+	ldab	0,x		; get MSB of TOS
 	eorb	@long
 	andb	#$80		; sign equal?
 	jne	__addf32_50
@@ -793,25 +793,25 @@ __addf32_1:			; neither of @long and TOS was not 0.0, simply add them.
 	;			
 	negb			; texp < lexp
 	jsr	__lsr_tos	; shift TOS right by AccB, align the bit.
-	tsx
+	ldx	__fp_ix
 	ldaa	__lexp		; @long is larger, use its exponent.
 	jmp	__addf32_11
 __addf32_10:			; texp > lexp
 	jsr	__lsr_long	; shift @long right by AccB, align the bit
-	tsx
+	ldx	__fp_ix
 	ldaa	__texp		; TOS is larger, use its exponent.
 __addf32_11:
 	ldab	@long+3		; @long = @long + TOS , 32bit version
-	addb	5,x
+	addb	3,x
 	stab	@long+3
 	ldab	@long+2
-	adcb	4,x
+	adcb	2,x
 	stab	@long+2
 	ldab	@long+1
-	adcb	3,x
+	adcb	1,x
 	stab	@long+1
 	ldab	@long
-	adcb	2,x
+	adcb	0,x
 	stab	@long
 	bcc	__addf32_20	; over flow?
         ror     @long		; shift one bit with carry
@@ -866,7 +866,7 @@ __addf32_30:
 	ror	@long+1
 	ora	__sign
 	staa	@long		; set exp
-	jmp	__pullret
+	rts
 ;
 ;	TOS and @long have different signs, do subtract
 ;	(note: TOS:rhs, @long:lhs)
@@ -877,26 +877,26 @@ __addf32_50:
 __addf32_51:
 	jcs	__addf32_60	; jump if TOS<@long
 	;
-	ldab	2,x		; abs(TOS) > abs(@long), result sign is TOS's
+	ldab	0,x		; abs(TOS) > abs(@long), result sign is TOS's
 	andb	#$80
 	stab	__sign
 	jsr	__setup_both	; AccB = TOS'exp - @long's exp
 	beq	__addf32_52	; Both exp were equal,  simply substract
 	jsr	__lsr_long	; shift @long right by AccB
-	tsx
+	ldx	__fp_ix
 __addf32_52:
 	ldaa	__texp
 	;			; substract @long = TOS - @long
-	ldab	5,x
+	ldab	3,x
 	subb	@long+3
 	stab	@long+3
-	ldab	4,x
+	ldab	2,x
 	sbcb	@long+2
 	stab	@long+2
-	ldab	3,x
+	ldab	1,x
 	sbcb	@long+1
 	stab	@long+1
-	ldab	2,x
+	ldab	0,x
 	sbcb	@long
 	stab	@long
 __addf32_54:
@@ -949,7 +949,7 @@ __addf32_55:
 	ror	@long+1
 	ora	__sign		; recover sign bit
 	staa	@long
-	jmp	__pullret
+	rts
 ;
 __addf32_60:
 ;				; abs(TOS) < abs(@long), return @long's sign
@@ -960,21 +960,21 @@ __addf32_60:
 	beq	__addf32_61	; AccB == 0, simply substract
 	negb
 	jsr	__lsr_tos	; shift TOS right by AccB
-	tsx
+	ldx	__fp_ix
 __addf32_61:
 	ldaa	__lexp
 	;			; substract @long = @long - TOS
 	ldab	@long+3
-	subb	5,x
+	subb	3,x
 	stab	@long+3
 	ldab	@long+2
-	sbcb	4,x
+	sbcb	2,x
 	stab	@long+2
 	ldab	@long+1
-	sbcb	3,x
+	sbcb	1,x
 	stab	@long+1
 	ldab	@long
-	sbcb	2,x
+	sbcb	0,x
 	stab	@long
 	;
 	jmp	__addf32_54
@@ -987,25 +987,26 @@ __addf32_61:
 ;	  TOS>@long:  C=0,Z=0    (BHI)
 ;
 __abscmp:
-	ldaa	2,x
+	ldaa	0,x
 	anda	#$7f		; ignore sign bit
 	ldab	@long
 	andb	#$7f		; ignore sign bit
 	sba
 	bne	__abscmp_ret
-	ldab	3,x
+	ldab	1,x
 	subb	@long+1
 	bne	__abscmp_ret
-	ldab	4,x
+	ldab	2,x
 	subb	@long+2
 	bne	__abscmp_ret
-	ldab	5,x
+	ldab	3,x
 	subb	@long+3
 __abscmp_ret:
 	rts
 ;
 ;	check both Inf and NaN
-;	2,x = TOS top
+;	__setup_zin:   2,x = TOS top
+;	__setup_zin_x: 0,x = TOS top
 ;
 ;	__sign: TOS and @long has different sign? same:b7=0, differ:b7=1
 ;
@@ -1019,8 +1020,11 @@ __abscmp_ret:
 ;		b1	TOS   is NaN?
 ;		b0	@long is NaN?
 ;
-__setup_zin:
-	ldaa	2,x
+__setup_zin:			; X is 2 based. falls into the _x entry
+	inx
+	inx
+__setup_zin_x:			; X is 0 based
+	ldaa	0,x
 	tab
 	eorb	@long
 	andb	#$80
@@ -1039,8 +1043,6 @@ __setup_zin:
 	rts
 ;
 __setup_zin_05:
-	inx
-	inx
 	pshb
 	jsr	__f32iszerox	; TOS == 0.0?
 	pulb
@@ -1092,7 +1094,7 @@ __setup_zin_99:
 __setup_both:			; get both exp, set hidden bit
 	jsr	__setup_long	; @long's exp->AccA, set hidden bit of @long
 	jsr	__setup_tos	; TOS's   exp->AccA, set hidden bit of TOS
-	jsr	__asl8_both
+	jsr	__asl8_long
 	ldab	__texp
 	subb	__lexp		; AccB = TOS'exp - @long's exp
 	stab	__expdiff	; save it
@@ -1114,20 +1116,24 @@ __setup_long_1:
 	staa	__lexp
 	rts
 ;
-__setup_tos:			; TOS's   exp->AccA, set hidden bit of TOS
-	ldab	3,x		; get TOS's exp to a
-	ldaa	2,x
-	clr	2,x
+__setup_tos:			; exp->AccA, hidden bit set, into the work area
+	ldab	1,x		; the operand itself stays untouched
+	ldaa	0,x
 	aslb
 	rola
-	sec			; set hidden bit of TOS
+	sec			; set hidden bit
 	bne	__setup_tos_1	; subnormal number?
 	inca
 	clc
 __setup_tos_1:
 	rorb
-	stab	3,x
+	stab	__fp_op	; __asl8_tos is folded in here
 	staa	__texp
+	ldx	2,x
+	stx	__fp_op+1
+	clr	__fp_op+3
+	ldx	#__fp_op
+	stx	__fp_ix
 	rts
 ;
 ;	@long/TOS shift right 8bit
@@ -1151,13 +1157,13 @@ __lsr8_long:
 ;	TOS:(2-5,x) shift right 8bit
 ;
 __lsr8_tos:
-	ldab	4,x
-	stab	5,x
-	ldab	3,x
-	stab	4,x
 	ldab	2,x
 	stab	3,x
-	clr	2,x
+	ldab	1,x
+	stab	2,x
+	ldab	0,x
+	stab	1,x
+	clr	0,x
 	rts
 ;
 ;	@long/TOS shift left 8bit
@@ -1176,13 +1182,13 @@ __asl8_long:
 	rts
 ;
 __asl8_tos:
+	ldab	1,x
+	stab	0,x
+	ldab	2,x
+	stab	1,x
 	ldab	3,x
 	stab	2,x
-	ldab	4,x
-	stab	3,x
-	ldab	5,x
-	stab	4,x
-	clr	5,x
+	clr	3,x
 	rts
 ;
 ;	shift right by AccB with G/R/S bit
@@ -1197,8 +1203,6 @@ __lsr_long:			; lsr @long by AccB, X is destroyed
 	bra	__lsrx
 ;
 __lsr_tos:			; lsr TOS (2-5,x) by AccB, X is destroyed
-	inx
-	inx
 	bra	__lsrx
 ;
 ;	shift (0,x)-(3,x) right by AccB, the sticky bit is collected into b5
@@ -1261,6 +1265,19 @@ __lsr8s_1:
 	clr	0,x
 	rts
 ;
+__fp_settos:			; sub flips the sign, so it needs its own copy
+	ldab	0,x
+	stab	__fp_op
+	ldab	1,x
+	stab	__fp_op+1
+	ldab	2,x
+	stab	__fp_op+2
+	ldab	3,x
+	stab	__fp_op+3
+	ldx	#__fp_op
+	stx	__fp_ix
+	rts
+;
 __pullret:
 	tsx
 	ldx	0,x
@@ -1276,11 +1293,9 @@ __pullret:
 ;
 ;	No arithmetic is required when multiplying by 1, but simply multiply it now.
 ;
-__load32x_mulf:
-	jsr	__load32x
-__mulf32tos:
-	tsx
-	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
+__mulf32x:
+	stx	__fp_ix
+	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
 	;
 ;	ldab	__zin
 	bitb	#$3F		;
@@ -1301,10 +1316,8 @@ __mulf32_s10:			; TOS and @long is not Inf,NaN
 	jne	__f32retZeros	; TOS or @long is zero
 ;
 __mulf32tos4:
-	tsx
-	inx
-	inx
-	jsr	__adj_subnormal	; if subnormal, adjust it. exp into AccAB.
+	ldx	__fp_ix
+	jsr	__adj_subn_x	; if subnormal, adjust it. exp into AccAB.
 	stab	__exp2+1
 	staa	__exp2
 ;
@@ -1331,11 +1344,12 @@ __mulf32tos4:
 __mulf32tos03:
 ;                               ; To improve performance, use AccAB insted of work+4,5
 ;                       	; setup working area 48bit
-	tsx
-        ldx     4,x
+	ldx	__fp_ix
+        ldx     2,x
         stx     __work+4
-        tsx
-        ldab    3,x
+	ldx	__fp_ix
+        ldab    1,x
+	orab	#$80		; hidden bit, __adj_subn_x does not write it back
 	stab	__work+3
 ;	clr	__work+2        ; use AccB
 ;	clr	__work+1        ; use AccA
@@ -1501,15 +1515,13 @@ __mulf32tos75:
 	stab	@long+1
 	oraa	__sign
 	staa	@long
-	jmp	__pullret
+	rts
 ;
 ;	@long = @long / TOS
 ;
-__load32x_divf:
-	jsr	__load32x
-__divf32tos:
-	tsx
-	jsr	__setup_zin	; TOS & @long is zero/Inf/NaN?
+__divf32x:
+	jsr	__fp_settos
+	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
 ;	ldab	__zin
 ;
 	bitb	#$3F
@@ -1550,9 +1562,7 @@ __divf32_s20:
 ;	
 __divf32tos01:
 ;
-	tsx
-	inx
-	inx
+	ldx	__fp_ix
 	jsr	__adj_subnormal	; do normalize,AccAB = unbiased exp
 	stab	__expdiff+1
 	staa	__expdiff
@@ -1573,7 +1583,7 @@ __divf32tos01:
 	sbca	#>-150
 	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
 ;
-	tsx
+	ldx	__fp_ix
         jsr     __asl8_both     
 ;
 ;	Since division 24bit is done in 32-bit,
@@ -1680,7 +1690,7 @@ __divf32_done:
 	stab	@long+1
 	oraa	__sign
 	staa	@long
-	jmp	__pullret
+	rts
 ;
 ;	round up check, @tmp4 and @tmp4+1
 ;
@@ -1716,11 +1726,11 @@ __divf32_rup_none:
 ;	mess @long
 ;
 __fdiv32x32:
-        ldab 4,x
-        stab @tmp4
-        ldab 3,x
-        stab @tmp3+1
         ldab 2,x
+        stab @tmp4
+        ldab 1,x
+        stab @tmp3+1
+        ldab 0,x
         stab @tmp3
 ;
 	ldab #8
@@ -1813,6 +1823,93 @@ ret:
 ;	  @long>TOS	1
 ;
 ;
+
+;
+;	if float is subnormal, mantissa into normal form.
+;	unbiased exp is returned in AccAB.
+;	bit 23 turn on (| 0x00800000)
+;	parameter:
+;	  (0,x) - (3,x): subnormal float
+;
+__adj_subn_x:			; like __adj_subnormal, but keeps a normal operand intact
+	ldaa	1,x
+	ldab	0,x
+	asla
+	rolb			; get exp in b
+	beq	__adj_subn_x_s	; subnormal needs the shifting loop
+	clra
+	subb	#127		; un bias
+	sbca	#0
+	rts
+__adj_subn_x_s:
+	jsr	__fp_settos	; shift a private copy instead
+	jmp	__adj_subnormal
+;
+__adj_subnormal:
+	ldaa	1,x
+	ldab	0,x
+	asla
+	rolb		; get exp in b
+	bne	__adj_subn_ret
+	ldab	#<-126	; least minimum nomal number
+	ldaa	#>-126
+__adj_subn_01:
+	subb	#1
+	sbca	#0
+	asl	3,x
+	rol	2,x
+	rol	1,x
+	bpl	__adj_subn_01
+	rts
+__adj_subn_ret:
+	ldaa	1,x
+	ora	#$80
+	staa	1,x
+	clra
+	subb	#127	; un bias
+	sbca	#0
+	rts
+
+;
+;	stack calling convention: the operand sits on the stack,
+;	so point X at it and let __pullret drop it on the way back
+;
+__load32x_addf:
+	jsr	__load32x
+__addf32tos:
+	tsx
+	inx
+	inx
+	jsr	__addf32x
+	jmp	__pullret
+;
+__load32x_subf:
+	jsr	__load32x
+__subf32tos:
+	tsx
+	inx
+	inx
+	jsr	__subf32x
+	jmp	__pullret
+;
+__load32x_mulf:
+	jsr	__load32x
+__mulf32tos:
+	tsx
+	inx
+	inx
+	jsr	__mulf32x
+	jmp	__pullret
+;
+__load32x_divf:
+	jsr	__load32x
+__divf32tos:
+	tsx
+	inx
+	inx
+	jsr	__divf32x
+	jmp	__pullret
+;
 __load32x_cmpf:
 	jsr	__load32x
 __cmpf32tos:
@@ -1888,35 +1985,3 @@ __cmpf32_sret:
 				; @long == TOS : C=0, Z=1
 				; @long <  TOS : C=0, Z=0
 				; @long >  TOS : C=1, Z=0
-
-;
-;	if float is subnormal, mantissa into normal form.
-;	unbiased exp is returned in AccAB.
-;	bit 23 turn on (| 0x00800000)
-;	parameter:
-;	  (0,x) - (3,x): subnormal float
-;
-__adj_subnormal:
-	ldaa	1,x
-	ldab	0,x
-	asla
-	rolb		; get exp in b
-	bne	__adj_subn_ret
-	ldab	#<-126	; least minimum nomal number
-	ldaa	#>-126
-__adj_subn_01:
-	subb	#1
-	sbca	#0
-	asl	3,x
-	rol	2,x
-	rol	1,x
-	bpl	__adj_subn_01
-	rts
-__adj_subn_ret:
-	ldaa	1,x
-	ora	#$80
-	staa	1,x
-	clra
-	subb	#127	; un bias
-	sbca	#0
-	rts

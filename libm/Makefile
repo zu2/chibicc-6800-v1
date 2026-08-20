@@ -12,7 +12,8 @@ OBJ =	__float.o __floatlib.o __floatconst.o \
 	sinhf.o coshf.o tanhf.o \
 	expf.o logf.o powf.o log1pf.o expm1f.o \
 	__copysignf.o __nearbyintf.o __nextafterf.o \
-	__fracmask.o __get_lexp_sign.o __add_trunc.o
+	__fracmask.o __get_lexp_sign.o __add_trunc.o \
+	__polyf.o
 
 .s.o:
 	as6800 $<
