@@ -886,11 +886,7 @@ __addf32_54:
 __addf32_541:
 	deca
 	beq	__addf32_543	; subnormal number. stop shift
-	ldab	__fp_work+4
-	bitb	#$1F
-	beq	__addf32_542
-	orab	#$10		; sticky
-__addf32_542:
+	ldab	__fp_work+4	; b4-b0 are always 0, so no sticky fold is needed
 	aslb
 	stab	__fp_work+4
 	rol	@long+3
