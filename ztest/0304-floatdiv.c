@@ -416,5 +416,40 @@ int main(int argc, char **argv)
 	if (cmpfl(f/g,0x80000000))
 		return 254;
 
+	// exp difference is 128, but the left shift brings the exponent back to 127
+	f = to_float(0x3f800000);
+	g = to_float(0x002aaaab);
+	if (cmpfl(f/g,0x7f3fffff))
+		return 190;
+
+	f = to_float(0x3f800001);
+	g = to_float(0x003f8001);
+	if (cmpfl(f/g,0x7f010203))
+		return 191;
+
+	// exp difference is 129, so the left shift still leaves 128
+	f = to_float(0x3f800000);
+	g = to_float(0x001fffff);
+	if (cmpfl(f/g,0x7f800000))
+		return 192;
+
+	// the round up carries into the hidden bit, so the subnormal turns normal
+	f = to_float(0x00ffffff);
+	g = to_float(0x3fffffff);
+	if (cmpfl(f/g,0x00800000))
+		return 193;
+
+	// the smallest normal falls to the largest subnormal
+	f = to_float(0x00800000);
+	g = to_float(0x3f800001);
+	if (cmpfl(f/g,0x007fffff))
+		return 194;
+
+	// both operands are subnormal
+	f = to_float(0x00000001);
+	g = to_float(0x00000001);
+	if (cmpfl(f/g,0x3f800000))
+		return 195;
+
 	return 0;
 }

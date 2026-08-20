@@ -1504,8 +1504,8 @@ __divf32tos01:
 	stab	__expdiff+1	; expdiff = long's exp - TOS's exp
 	staa	__expdiff
 ;
-	subb	#<128
-	sbca	#>128
+	subb	#<129
+	sbca	#>129
 	jge	__f32retInfs	; overflow
 ;
 	ldab	__expdiff+1
@@ -1588,6 +1588,9 @@ __divf32tos06:
 	bra	__divf32_done
 ;
 __divf32tos20:				; round up check (normal)
+	ldx	__expdiff		; the left shift did not happen, so 128 is still possible
+	cpx	#128
+	jeq	__f32retInfs
 	ldab	__expdiff+1
 	ldaa	__expdiff
 	bsr	__divf32_rup_check	; C==1, need round up

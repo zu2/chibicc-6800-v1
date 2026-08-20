@@ -346,6 +346,45 @@ int main(int argc, char **argv)
 	if (cmpfl(f*g,0x1d000000))
 		return 155;
 
+	// the mantissa carry pushes the exponent up to 128
+	f = long2float(0x7f400000);
+	g = long2float(0x3fc00000);
+	if (cmpfl(f*g,0x7f800000))
+		return 160;
+
+	f = long2float(0x7f7fffff);
+	g = long2float(0x3f800001);
+	if (cmpfl(f*g,0x7f800000))
+		return 161;
+
+	// the round up carries into the hidden bit, so the subnormal turns normal
+	f = long2float(0x00800000);
+	g = long2float(0x3f7fffff);
+	if (cmpfl(f*g,0x00800000))
+		return 162;
+
+	f = long2float(0x007fffff);
+	g = long2float(0x3f800001);
+	if (cmpfl(f*g,0x00800000))
+		return 163;
+
+	// both operands are subnormal
+	f = long2float(0x00000001);
+	g = long2float(0x00000001);
+	if (cmpfl(f*g,0x00000000))
+		return 164;
+
+	// the sign rule for zero times zero
+	f = long2float(0x00000000);
+	g = long2float(0x00000000);
+	if (cmpfl(f*g,0x00000000))
+		return 165;
+
+	f = long2float(0x80000000);
+	g = long2float(0x00000000);
+	if (cmpfl(f*g,0x80000000))
+		return 166;
+
 	return 0;
 }
 
