@@ -847,60 +847,76 @@ __setup_work_01:
 __setup_work_10:		; 0 to 7
 	stab	__fp_work+1
 	stx	__fp_work+2
-	clr	__fp_work+4
-	bra	__setup_work_50
-;
-__setup_work_20:		; 8 to 15
-	stab	__fp_work+2
-	stx	__fp_work+3
-	clr	__fp_work+1
-	bra	__setup_work_50
+	clrb			; nothing falls off the guard byte here
+	tsta
+	beq	__setup_work_60
+__setup_work_11:
+	lsr	__fp_work+1
+	ror	__fp_work+2
+	ror	__fp_work+3
+	rorb
+	deca
+	bne	__setup_work_11
+	bra	__setup_work_60
 ;
 __setup_work_30:		; 16 to 23
 	stab	__fp_work+3
-	stx	__fp_work+4	; +5 keeps the byte that falls off
+	stx	__fp_work+4	; +5 takes the byte that falls off
 	ldab	__fp_work+5
 	beq	__setup_work_31
-	ldab	__fp_work+4
-	orab	#1		; sticky
-	stab	__fp_work+4
+	ldab	#1		; sticky
 __setup_work_31:
-	clr	__fp_work+1
-	clr	__fp_work+2
-	bra	__setup_work_50
+	orab	__fp_work+4
+	bra	__setup_work_43
 ;
 __setup_work_40:		; 24 to 25
 	cpx	#0		; the whole 16 bits fall off
 	beq	__setup_work_42
 	orab	#1		; sticky
 __setup_work_42:
-	stab	__fp_work+4
-	clr	__fp_work+1
-	clr	__fp_work+2
 	clr	__fp_work+3
+__setup_work_43:
+	ldx	#0
+	stx	__fp_work+1
 ;
-__setup_work_50:
-	tab
-	ldaa	__fp_work+4
-	andb	#7		; AccB: the shift count
+__setup_work_45:		; +1 and +2 are already 0
+	anda	#7		; AccA: the shift count
+	beq	__setup_work_60
+__setup_work_46:
+	lsr	__fp_work+3
+	rorb
+	bcc	__setup_work_47
+	orab	#$20
+__setup_work_47:
+	deca
+	bne	__setup_work_46
+	bra	__setup_work_60
+;
+__setup_work_20:		; 8 to 15
+	stab	__fp_work+2
+	stx	__fp_work+3
+	clr	__fp_work+1
+;
+__setup_work_50:		; +1 is already 0
+	ldab	__fp_work+4
+	anda	#7		; AccA: the shift count
 	beq	__setup_work_60
 __setup_work_51:
-	lsr	__fp_work+1
-	ror	__fp_work+2
+	lsr	__fp_work+2
 	ror	__fp_work+3
-	rora
+	rorb
 	bcc	__setup_work_52
-	oraa	#$20
+	orab	#$20
 __setup_work_52:
-	decb
+	deca
 	bne	__setup_work_51
 __setup_work_60:
-	bita	#$1f		; recover the sticky bit
+	bitb	#$1f		; recover the sticky bit
 	beq	__setup_work_61
-	oraa	#$20
+	orab	#$20
 __setup_work_61:
-	anda	#$e0
-	staa	__fp_work+4
+	andb	#$e0
+	stab	__fp_work+4
 __addf32_5:
 	ldaa	__lexp
 	tst	__zin		; the signs differ?
