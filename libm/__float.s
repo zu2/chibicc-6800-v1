@@ -851,17 +851,15 @@ __setup_work_10:		; 0 to 7
 	bra	__setup_work_50
 ;
 __setup_work_20:		; 8 to 15
-	suba	#8
 	stab	__fp_work+2
 	stx	__fp_work+3
 	clr	__fp_work+1
 	bra	__setup_work_50
 ;
 __setup_work_30:		; 16 to 23
-	suba	#16
 	stab	__fp_work+3
 	stx	__fp_work+4	; +5 keeps the byte that falls off
-	tst	__fp_work+5
+	ldab	__fp_work+5
 	beq	__setup_work_31
 	ldab	__fp_work+4
 	orab	#1		; sticky
@@ -872,13 +870,8 @@ __setup_work_31:
 	bra	__setup_work_50
 ;
 __setup_work_40:		; 24 to 25
-	suba	#24
-	stx	__fp_work+5	; the bytes that fall off
-	tst	__fp_work+5
-	bne	__setup_work_41
-	tst	__fp_work+6
+	cpx	#0		; the whole 16 bits fall off
 	beq	__setup_work_42
-__setup_work_41:
 	orab	#1		; sticky
 __setup_work_42:
 	stab	__fp_work+4
@@ -887,9 +880,9 @@ __setup_work_42:
 	clr	__fp_work+3
 ;
 __setup_work_50:
-	tab			; AccB: 0 to 7
+	tab
 	ldaa	__fp_work+4
-	tstb
+	andb	#7		; AccB: the shift count
 	beq	__setup_work_60
 __setup_work_51:
 	lsr	__fp_work+1
