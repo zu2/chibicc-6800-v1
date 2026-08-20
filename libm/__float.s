@@ -795,63 +795,54 @@ __addf32_1:			; neither @long nor TOS is 0.0
 	jmi	__f32retpZero	; x + (-x) is +0.0
 	bra	__addf32_3
 ;
-__addf32_2:			; move the bigger value into @long
-	ldx	#long
-	jsr	__setup_tos	; the work copy takes @long
+__addf32_2:			; the operand is bigger, so swap the two
+	ldx	#__fp_work+4
+	jsr	__store32x	; keep the smaller value
 	ldx	__fp_ix
 	jsr	__load32x	; @long <= the raw operand
+	ldx	#__fp_work+4
 	bra	__addf32_4
 ;
 __addf32_3:			; @long already holds the bigger value
-	jsr	__setup_tos	; the work copy takes the raw operand
 ;
 __addf32_4:
 	ldab	@long		; the result takes the sign of the bigger value
 	andb	#$80
 	stab	__sign
 	jsr	__setup_long
-	jsr	__asl8_long
-	ldab	__lexp
-	subb	__texp		; the bigger exp - the smaller exp. never borrows
-	beq	__addf32_5
-	ldx	#__fp_work
-	jsr	__lsr_tos	; line up the smaller value
+	jsr	__setup_work
 __addf32_5:
 	ldaa	__lexp
-	ldx	#__fp_work
 	tst	__zin		; the signs differ?
 	jmi	__addf32_61
 __addf32_11:
-	ldab	@long+3		; @long = @long + TOS , 32bit version
-	addb	3,x
+	ldab	@long+3		; @long = @long + __fp_work , 24bit version
+	addb	__fp_work+3
 	stab	@long+3
 	ldab	@long+2
-	adcb	2,x
+	adcb	__fp_work+2
 	stab	@long+2
 	ldab	@long+1
-	adcb	1,x
+	adcb	__fp_work+1
 	stab	@long+1
-	ldab	@long
-	adcb	0,x
-	stab	@long
 	bcc	__addf32_20	; over flow?
-        ror     @long		; shift one bit with carry
-        ror     @long+1
+        ror     @long+1		; shift one bit with carry
         ror     @long+2
-        ldab	@long+3		; sticky
+        ror     @long+3
+        ldab	__fp_work+4	; sticky
 	rorb
 	bitb	#$3F	
 	beq	__addf32_12
 	orab	#$20
 __addf32_12:
-	stab	@long+3
+	stab	__fp_work+4
 	inca			; exp++
 	cmpa	#$FF		; biased exponent exceeds 254, so it is Inf.
 	jeq	__f32retInfs
 __addf32_20:			; even number rounding
-	ldab	@long+2
-	lsrb			; LSB -> Carry
 	ldab	@long+3
+	lsrb			; LSB -> Carry
+	ldab	__fp_work+4
 	rorb			; b7:LSB, b6:G, b5:R, b4:S
 	bitb	#$40		; b6:G==0?
 	beq	__addf32_29	;   Yes, do nothng
@@ -859,29 +850,27 @@ __addf32_20:			; even number rounding
 	cmpb	#$40		; 0100:only G is 1?
 	beq	__addf32_29	;   Yes, do nothng
 ;
-	inc	@long+2		; round up
+	inc	@long+3		; round up
+	bne	__addf32_29
+	inc	@long+2
 	bne	__addf32_29
 	inc	@long+1
-	bne	__addf32_29
-	inc	@long+0
 	bne	__addf32_29
 ;
 	inca
 	cmpa	#$FF
 	jeq	__f32retInfs
-	lsr	@long+0
-	ror	@long+1
+	lsr	@long+1
 	ror	@long+2
+	ror	@long+3
 ;
 __addf32_29:
 	cmpa	#1		; sub normal number?
 	bne	__addf32_30
-	tst	@long		; check hiden bit, when 1 convert to normal
+	tst	@long+1		; check hiden bit, when 1 convert to normal
 	bmi	__addf32_30
 	clra
 __addf32_30:
-	jsr	__lsr8_long	; Put it back in the right position
-;
 	asl	@long+1		; exp's LSB set to @long+1
 	lsra
 	ror	@long+1
@@ -889,7 +878,7 @@ __addf32_30:
 	staa	@long		; set exp
 	rts
 ;
-;	@long holds the bigger value, so the result is @long - the work copy
+;	@long holds the bigger value, so the result is @long - __fp_work
 ;
 __addf32_54:
 	bmi	__addf32_543	; hidden bit on?
@@ -897,22 +886,22 @@ __addf32_54:
 __addf32_541:
 	deca
 	beq	__addf32_543	; subnormal number. stop shift
-	ldab	@long+3
+	ldab	__fp_work+4
 	bitb	#$1F
 	beq	__addf32_542
 	orab	#$10		; sticky
 __addf32_542:
 	aslb
-	stab	@long+3
+	stab	__fp_work+4
+	rol	@long+3
 	rol	@long+2
 	rol	@long+1
-	rol	@long+0
 	jpl	__addf32_541	; hidden bit become 1 ?
 ;
 __addf32_543:
-	ldab	@long+2
-	lsrb			; LSB -> Carry
 	ldab	@long+3
+	lsrb			; LSB -> Carry
+	ldab	__fp_work+4
 	rorb			; b7:LSB, b6:G, b5:R, b4:S
 	bitb	#$40		; b6:G==0?
 	beq	__addf32_55	;   Yes, do nothng
@@ -920,22 +909,21 @@ __addf32_543:
 	cmpb	#$40		; 0100:only G is 1?
 	beq	__addf32_55	;   Yes, do nothng
 ;
-	inc	@long+2		; round up
+	inc	@long+3		; round up
+	bne	__addf32_55
+	inc	@long+2
 	bne	__addf32_55
 	inc	@long+1
-	bne	__addf32_55
-	inc	@long+0
 	bne	__addf32_55
 ;
 	inca
 	cmpa	#$FF
 	jeq	__f32retInfs
-	lsr	@long+0
-	ror	@long+1
+	lsr	@long+1
 	ror	@long+2
+	ror	@long+3
 ;
 __addf32_55:
-	jsr	__lsr8_long
 	asl	@long+1		; exp's LSB into @long+1
 	lsra
 	ror	@long+1
@@ -944,19 +932,16 @@ __addf32_55:
 	rts
 ;
 __addf32_61:
-	;			; substract @long = @long - TOS
-	ldab	@long+3
-	subb	3,x
+	neg	__fp_work+4	; C=1 when the guard byte borrows
+	ldab	@long+3		; @long = @long - __fp_work
+	sbcb	__fp_work+3
 	stab	@long+3
 	ldab	@long+2
-	sbcb	2,x
+	sbcb	__fp_work+2
 	stab	@long+2
 	ldab	@long+1
-	sbcb	1,x
+	sbcb	__fp_work+1
 	stab	@long+1
-	ldab	@long
-	sbcb	0,x
-	stab	@long
 	;
 	jmp	__addf32_54
 
@@ -1088,52 +1073,117 @@ __setup_long_1:
 	staa	__lexp
 	rts
 ;
-__setup_tos:			; exp->AccA, hidden bit set, into the work area
+;	Unpack the smaller value into __fp_work and line it up with @long.
+;
+;	IX:	the address of the smaller value
+;	__lexp:	the exponent of the bigger value. must be set before the call
+;
+;	__fp_work layout:
+;	  +1..+3  mantissa 24bit
+;	  +4      guard byte. b7:G b6:R b5:S
+;	  +5..+7  scratch
+;
+__setup_work:
 	ldab	1,x		; the operand itself stays untouched
 	ldaa	0,x
 	aslb
 	rola
 	sec			; set hidden bit
-	bne	__setup_tos_1	; subnormal number?
+	bne	__setup_work_01	; subnormal number?
 	inca
 	clc
-__setup_tos_1:
-	rorb
-	stab	__fp_work	; __asl8_tos is folded in here
+__setup_work_01:
+	rorb			; AccB: mantissa 23-16
 	staa	__texp
-	ldx	2,x
-	stx	__fp_work+1
+	ldx	2,x		; IX: mantissa 15-0
+	ldaa	__lexp
+	suba	__texp		; AccA: 0 to 253, never borrows
+	cmpa	#8
+	bcs	__setup_work_10
+	cmpa	#16
+	bcs	__setup_work_20
+	cmpa	#24
+	bcs	__setup_work_30
+	cmpa	#32
+	bcs	__setup_work_40
+;				; nothing but the sticky bit survives
+	stx	__fp_work+5
+	orab	__fp_work+5
+	orab	__fp_work+6
+	beq	__setup_work_05
+	ldab	#1
+__setup_work_05:
+	stab	__fp_work+4
+	clr	__fp_work+1
+	clr	__fp_work+2
 	clr	__fp_work+3
-	rts
+	clra
+	bra	__setup_work_50
 ;
-;	@long/TOS shift right 8bit
-;	  messing up AccB
+__setup_work_10:		; 0 to 7
+	stab	__fp_work+1
+	stx	__fp_work+2
+	clr	__fp_work+4
+	bra	__setup_work_50
 ;
-__lsr8_both:
-	bsr	__lsr8_tos
+__setup_work_20:		; 8 to 15
+	suba	#8
+	stab	__fp_work+2
+	stx	__fp_work+3
+	clr	__fp_work+1
+	bra	__setup_work_50
 ;
-;	@long shift right 8bit
+__setup_work_30:		; 16 to 23
+	suba	#16
+	stab	__fp_work+3
+	stx	__fp_work+4	; +5 keeps the byte that falls off
+	tst	__fp_work+5
+	beq	__setup_work_31
+	ldab	__fp_work+4
+	orab	#1		; sticky
+	stab	__fp_work+4
+__setup_work_31:
+	clr	__fp_work+1
+	clr	__fp_work+2
+	bra	__setup_work_50
 ;
-__lsr8_long:
-	ldab	@long+2
-	stab	@long+3
-	ldab	@long+1
-	stab	@long+2
-	ldab	@long
-	stab	@long+1
-	clr	@long
-	rts
+__setup_work_40:		; 24 to 31
+	suba	#24
+	stx	__fp_work+5	; the bytes that fall off
+	tst	__fp_work+5
+	bne	__setup_work_41
+	tst	__fp_work+6
+	beq	__setup_work_42
+__setup_work_41:
+	orab	#1		; sticky
+__setup_work_42:
+	stab	__fp_work+4
+	clr	__fp_work+1
+	clr	__fp_work+2
+	clr	__fp_work+3
 ;
-;	TOS:(2-5,x) shift right 8bit
-;
-__lsr8_tos:
-	ldab	2,x
-	stab	3,x
-	ldab	1,x
-	stab	2,x
-	ldab	0,x
-	stab	1,x
-	clr	0,x
+__setup_work_50:
+	tab			; AccB: 0 to 7
+	ldaa	__fp_work+4
+	tstb
+	beq	__setup_work_60
+__setup_work_51:
+	lsr	__fp_work+1
+	ror	__fp_work+2
+	ror	__fp_work+3
+	rora
+	bcc	__setup_work_52
+	oraa	#$20
+__setup_work_52:
+	decb
+	bne	__setup_work_51
+__setup_work_60:
+	bita	#$1f		; recover the sticky bit
+	beq	__setup_work_61
+	oraa	#$20
+__setup_work_61:
+	anda	#$e0
+	staa	__fp_work+4
 	rts
 ;
 ;	@long/TOS shift left 8bit
@@ -1159,76 +1209,6 @@ __asl8_tos:
 	ldab	3,x
 	stab	2,x
 	clr	3,x
-	rts
-;
-;	shift right by AccB with G/R/S bit
-;	the sticky bit is collected into b5 of the guard byte
-;	mess AccA
-;
-;	TODO: If the shift>=24, This will result in unnecessary shifts.
-;
-;
-__lsr_tos:			; lsr TOS (2-5,x) by AccB, X is destroyed
-	bra	__lsrx
-;
-;	shift (0,x)-(3,x) right by AccB, the sticky bit is collected into b5
-;
-__lsrx:
-	cmpb	#26			; nothing but the sticky bit survives
-	bcc	__lsrx_f
-__lsrx_b:
-	subb	#8
-	bcs	__lsrx_r		; fewer than 8 bits left
-	bsr	__lsr8s
-	bra	__lsrx_b
-__lsrx_r:
-	addb	#8
-	ldaa	3,x
-	tstb
-	beq	__lsrx_e
-__lsrx_1:
-	lsr	0,x
-	ror	1,x
-	ror	2,x
-	rora
-	bcc	__lsrx_2
-	oraa	#$20
-__lsrx_2:
-	decb
-	bne	__lsrx_1
-__lsrx_e:
-	bita	#$1f		; recover the sticky bit
-	beq	__lsrx_3
-	oraa	#$20
-__lsrx_3:
-	anda	#$e0
-	staa	3,x
-	rts
-;
-__lsrx_f:
-	clr	0,x			; the value is never zero here, so sticky is always 1
-	clr	1,x
-	clr	2,x
-	ldaa	#$20
-	staa	3,x
-	rts
-;
-;	shift (0,x)-(3,x) right by 8bit, the byte that falls off becomes the sticky bit
-;
-__lsr8s:
-	ldaa	3,x
-	beq	__lsr8s_1
-	ldaa	2,x
-	oraa	#$01
-	staa	2,x
-__lsr8s_1:
-	ldaa	2,x
-	staa	3,x
-	ldaa	1,x
-	staa	2,x
-	ldaa	0,x
-	staa	1,x
-	clr	0,x
 	rts
 ;
 __fp_settos:			; sub flips the sign, so it needs its own copy
