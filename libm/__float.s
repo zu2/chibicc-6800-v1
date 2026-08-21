@@ -1237,6 +1237,12 @@ __mulf32tos4:			; like __adj_subnormal, but keeps a normal operand intact
 __mulf32tos4_e:
 	stab	__exp2+1
 	staa	__exp2
+;                               ; IX still points at the operand on both paths
+        ldab    1,x
+	orab	#$80		; hidden bit, the normal path does not write it back
+	stab	__fp_work+3
+        ldx     2,x
+        stx     __fp_work+4
 ;
 	ldx	#long
 	jsr	__adj_subnormal
@@ -1248,25 +1254,17 @@ __mulf32tos4_e:
 	subb	#<128		; sum of exp>127? (>=128)
 	sbca	#>128
 	jge	__f32retInfs	; Overflow, returns Inf with __sign.
-	addb	#<128		; put the exponent back
-	adca	#>128
 ;
 ; Exponent sum(=150) appears to underflow,
 ; but mantissa multiplication carry can keep it subnormal.
 ;
-	subb	#<-151		; sum of exp < -151?
-	sbca	#>-151
+	subb	#<-151-128	; sum of exp < -151? AccAB still holds exp-128
+	sbca	#>-151-128
 	jlt	__f32retZeros	; Underflow, return zero with __sign.
 ;
 __mulf32tos03:
 ;                               ; To improve performance, use AccAB insted of work+4,5
 ;                       	; setup working area 48bit
-	ldx	__fp_ix
-        ldab    1,x
-	orab	#$80		; hidden bit, __adj_subn_x does not write it back
-	stab	__fp_work+3
-        ldx     2,x
-        stx     __fp_work+4
 ;	clr	__fp_work+2        ; use AccB
 ;	clr	__fp_work+1        ; use AccA
         clra                    ; __fp_work+1
@@ -1493,10 +1491,11 @@ __divf32tos01:
 	sbca	#>129
 	jge	__f32retInfs	; overflow
 ;
-	addb	#<129		; put the exponent back
-	adca	#>129
-	subb	#<-150
-	sbca	#>-150
+; Exponent diff(=-150) appears to underflow,
+; but the round up can still make it subnormal.
+;
+	subb	#<-150-129	; expdiff < -150? AccAB still holds expdiff-129
+	sbca	#>-150-129
 	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
 ;
 	ldx	__fp_ix
