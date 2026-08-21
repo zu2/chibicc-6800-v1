@@ -28,21 +28,27 @@ union fword {
   unsigned int w[2];
 };
 
-// sin(r) = r + r*u*S(u) on |r| <= pi/4, u = r*r, minimax fit
+// sin(r) = r + r*u*S(u) on |r| < 1, u = r*r, fpminimax fit over that range
 #define S0  -0x1.555556p-3f
-#define S1  0x1.11110ep-7f
-#define S2  -0x1.a013a8p-13f
-#define S3  0x1.6dbe08p-19f
+#define S1  0x1.111136p-7f
+#define S2  -0x1.a01ae2p-13f
+#define S3  0x1.6d210ep-19f
 
 // cos(r) = 1 - u/2 + u*u*C(u) on |r| < 1, fpminimax fit over that range
 static const float CC[3] = {
   0x1.960924p-16f, -0x1.6bfaa0p-10f, 0x1.555524p-5f,
 };
 
+static const float SS[4] = {
+  S3, S2, S1, S0,
+};
+
 static float kernel_sin(float r)
 {
-  float u = r * r;
-  return r + r * (u * (S0 + u * (S1 + u * (S2 + u * S3))));
+  static float u;
+
+  u = r * r;
+  return r + r * (u * __polyf(u, SS, 3));
 }
 
 static float kernel_cos(float r)
