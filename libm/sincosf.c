@@ -21,6 +21,7 @@
 #define W_INF        0x7f80u   // NaN and infinity are at or above this
 
 int __rem_pio2f(float x, float *rp);
+float __polyf(float x, const float *c, int n);
 
 union fword {
   float f;
@@ -33,11 +34,10 @@ union fword {
 #define S2  -0x1.a013a8p-13f
 #define S3  0x1.6dbe08p-19f
 
-// cos(r) = 1 - u/2 + u*u*C(u) on the same range, minimax fit
-#define C0  0x1.555556p-5f
-#define C1  -0x1.6c16c0p-10f
-#define C2  0x1.a015c4p-16f
-#define C3  -0x1.25244ep-22f
+// cos(r) = 1 - u/2 + u*u*C(u) on |r| < 1, fpminimax fit over that range
+static const float CC[3] = {
+  0x1.960924p-16f, -0x1.6bfaa0p-10f, 0x1.555524p-5f,
+};
 
 static float kernel_sin(float r)
 {
@@ -47,8 +47,24 @@ static float kernel_sin(float r)
 
 static float kernel_cos(float r)
 {
-  float u = r * r;
-  return (1.0f - 0.5f * u) + u * (u * (C0 + u * (C1 + u * (C2 + u * C3))));
+  static union fword ub;
+  static float u, p, hz, w;
+
+  u = r * r;
+  ub.f = u;
+  // below 2^-12 the polynomial falls under the last bit, and u may be subnormal
+  if (ub.w[0] < 0x3980u) {
+    return 1.0f - 0.5f * u;
+  }
+  ub.w[0] -= 0x0080u;
+  hz = ub.f;
+  p = u * (u * __polyf(u, CC, 2));
+  if (ub.w[0] >= 0x3e00u) {
+    // (1 - w) - hz is the exact rounding error of w, so it can be added back
+    w = 1.0f - hz;
+    return w + (((1.0f - w) - hz) + p);
+  }
+  return 1.0f - (hz - p);
 }
 
 // Up to 3*pi/4 the quadrant is +-1, so the four products drop out
