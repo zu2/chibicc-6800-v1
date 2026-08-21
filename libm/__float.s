@@ -1401,11 +1401,12 @@ __mulf32tos721:
 __mulf32tos72:
 	ldab	__exp2+1
 	cmpb	#<-127		; subnormal ?
-	bne	__mulf32tos74
+	bne	__mulf32tos75	; a normal result keeps the hidden bit, so it is never 0
 	tst	__fp_work		; round up carried into the hidden bit
 	bpl	__mulf32tos74
 	ldab	#<-126
 	stab	__exp2+1
+	bra	__mulf32tos75	; the round up just set the hidden bit, so it is never 0
 __mulf32tos74:
 	ldab	__fp_work+2
 	orab	__fp_work+1
