@@ -33,7 +33,6 @@
 	.export __f32ones
 	.export	__f32Infs
 	.export __adj_subnormal
-	.export __asl8_both
         .export __f32NaN
 	.export __sign
 	.export __fp_work
@@ -1171,31 +1170,6 @@ __setup_long_1:
 	staa	__lexp
 	rts
 ;
-;	@long/TOS shift left 8bit
-;	  messing up AccB
-;
-__asl8_both:
-	bsr	__asl8_tos
-__asl8_long:
-	ldab	@long+1
-	stab	@long
-	ldab	@long+2
-	stab	@long+1
-	ldab	@long+3
-	stab	@long+2
-	clr	@long+3
-	rts
-;
-__asl8_tos:
-	ldab	1,x
-	stab	0,x
-	ldab	2,x
-	stab	1,x
-	ldab	3,x
-	stab	2,x
-	clr	3,x
-	rts
-;
 __fp_settos:			; sub flips the sign, so it needs its own copy
 	ldab	0,x
 	stab	__fp_op
@@ -1514,7 +1488,6 @@ __divf32tos01:
 	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
 ;
 	ldx	__fp_ix
-        jsr     __asl8_both     
 ;
 ;	Since division 24bit is done in 32-bit,
 ;	  the result will never be 0 (Dividend 0 is already excluded)
@@ -1644,28 +1617,28 @@ __divf32_rup_none:
 ;	mess @long
 ;
 __fdiv32x32:
-        ldab 2,x
+        ldab 3,x	; the mantissa sits at 1-3,x, so no byte shift is needed
         stab @tmp4
-        ldab 1,x
+        ldab 2,x
         stab @tmp3+1
-        ldab 0,x
+        ldab 1,x
         stab @tmp3
 ;
         ldx #long
 ;
-	ldab @long	; tmp1+1:AccAB <- @long 24bit
+	ldab @long+1	; tmp1+1:AccAB <- @long+1 24bit
 	stab @tmp1+1
-	ldaa @long+1
+	ldaa @long+2
 ;
         clrb
-	stab @long+3	; clear quotient
-	stab @long+1
+	stab @long+1	; clear quotient
+	stab @long+2
 ;
 	incb		; sentinel. rol carries it out after 8 turns
 	stab @long
 ;
-	ldab @long+2
-	clr  @long+2
+	ldab @long+3	; read it before the clear below
+	clr  @long+3
 ;
         bra  loop_begin
 ;

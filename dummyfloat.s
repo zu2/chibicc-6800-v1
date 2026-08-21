@@ -44,7 +44,6 @@
 	.export __f32ones
 	.export	__f32Infs
 	.export __adj_subnormal
-	.export __asl8_both
 ;
 	.export	_fabsf
 	.export	_isinf
@@ -95,7 +94,6 @@ __f32zeros:
 __f32ones:
 __f32Infs:
 __adj_subnormal:
-__asl8_both:
 ;
 _fabsf:
 _isinf:
