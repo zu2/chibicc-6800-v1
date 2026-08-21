@@ -1,7 +1,9 @@
 ;
 ;	float __polyf(float x, const float *c, int n)
 ;
-;	Horner: r = c[0]; while (--n) r = r * x + *++c;
+;	Horner: r = c[0]; while (n--) r = r * x + *++c;
+;
+;	n is the degree. c[] holds n+1 coefficients, c[0] first. n >= 1.
 ;
 ;	entry:	@long = x, stack: ret(2), c(2), n(2)
 ;	exit:	@long = r
@@ -24,7 +26,6 @@ __polyn:
 ___polyf:
 	tsx
 	ldab	5,x
-	decb
 	stab	__polyn
 	ldx	2,x
 	stx	__polyc
@@ -36,16 +37,15 @@ ___polyf:
 ;
 	ldx	__polyc
 	jsr	__mulf32x
-	bsr	__polyadv
 	bra	__polyadd
 ;
 __polyloop:
 	ldx	#__polyx
 	jsr	__mulf32x
 __polyadd:
+	bsr	__polyadv
 	ldx	__polyc
 	jsr	__addf32x
-	bsr	__polyadv
 	dec	__polyn
 	bne	__polyloop
 	rts
