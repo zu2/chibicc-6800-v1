@@ -746,10 +746,12 @@ __addf32x:
 	bitb	#$03		; TOS or @long is NaN?
 	bne	__addf32_retNaN ; Yes: return NaN
 ;
-	andb	#$0C		; TOS or @long is Inf?
+	bitb	#$0C		; TOS or @long is Inf?
 	beq	__addf32_s20
-	cmpb	#$0C		; TOS and @long are Inf?
-	bne	__addf32_s10
+	bitb	#$04		; @long is Inf?
+	beq	__addf32_s10	; No, only TOS is Inf
+	bitb	#$08		; TOS is Inf too?
+	beq	__addf32_s05	; No, return Inf, sign is same as @long
 	ldab	__sign		; each sign are same?
 	bpl	__addf32_s05	; 
 __addf32_retNaN:
@@ -758,16 +760,12 @@ __addf32_s05:
 	ldab	@long		; Yes, return Inf. sign is the same as @long
 	jmp	__f32retInf
 	;
-__addf32_s10:
-	ldab	__zin		; Either TOS or @long is Inf.
-	bitb	#$04		; @long is Inf?
-	bne	__addf32_s05	; Yes, return Inf, sign is same as @long
+__addf32_s10:			; TOS is Inf, @long is not
 	ldx	__fp_ix
 	ldab	0,x
 	jmp	__f32retInf	; return Inf, The sign is the same as TOS
 ;
 __addf32_s20:			; TOS and @long are not NaN,Inf.
-	ldab	__zin
 	andb	#$30		; TOS or @long == 0.0?
 	beq	__addf32_1	; No
 	cmpb	#$30		; TOS and @long == 0.0?
@@ -1208,15 +1206,13 @@ __mulf32x:
 ;
 	bitb	#$03		; TOS or @long is NaN?
 	jne	__f32retNaN	; Yes: return NaN
-	andb	#$0C		; TOS or @long is Inf?
+	bitb	#$0C		; TOS or @long is Inf?
 	beq	__mulf32_s10
-	ldab	__zin
 	andb	#$30		; TOS or @long is zero?
 	jeq	__f32retInfs	; No, Inf * (not zero) returns Inf with __sign.
 	jmp	__f32retNaN	; Inf*0.0 returns NaN
 ;
 __mulf32_s10:			; TOS and @long is not Inf,NaN
-	ldab	__zin
 	andb	#$30
 	jne	__f32retZeros	; TOS or @long is zero
 __mulf32tos4_s:
@@ -1444,27 +1440,18 @@ __divf32x:
 	bitb	#$03
 	jne	__f32retNaN	; TOS or @long is NaN, return NaN
 ;
-	andb	#$0C		; TOS or @long is Inf?
+	bitb	#$0C		; TOS or @long is Inf?
 	beq	__divf32_s20
-	cmpb	#$0C		; TOS and @long is Inf?
-	jeq	__f32retNaN	; Yes, Inf/Inf returns NaN
+	bitb	#$08		; TOS is Inf?
+	beq	__divf32_s10	; No: @long is Inf, TOS is finite
+	bitb	#$04		; @long is Inf too?
+	jne	__f32retNaN	; Yes, Inf/Inf returns NaN
+	jmp	__f32retZeros	; num/Inf returns 0.0 with __sign
 ;
-	ldab	__zin
-	bitb	#$30		; TOS or @long is 0.0 ?
-	jeq	__divf32_s10
-	;			; One is Inf and the other is 0.0
-	bitb	#$20		; TOS==0.0?
-	jeq	__f32retZeros	; No, 0.0/Inf returns 0.0 with __sign
-	jmp	__f32retInfs	; Yes, Inf/0.0 returns Inf with __sign
-;
-__divf32_s10:			; TOS or @long is Inf and finite numbers 
-	ldab	__zin
-	bitb	#$08		; TOS == Inf?
-	jne	__f32retZeros	; num/Inf returns 0.0 with __sign
+__divf32_s10:			; @long is Inf, TOS is finite. 0.0 included
 	jmp	__f32retInfs	; Inf/num returns Inf with __sign
 ;
 __divf32_s20:
-	ldab	__zin
 	andb	#$30
 	beq	__divf32tos01
 	cmpb	#$30		; 0.0/0.0?
