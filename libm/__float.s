@@ -1271,8 +1271,8 @@ __mulf32tos03:
 ;
 __mulf32tos29:
         pshb
-        ldab    #8
-        stab    @tmp2           ; loop count
+        ldab    #4
+        stab    @tmp2           ; loop count. the body runs twice per turn
         pulb
 ;
         lsr     0,x             ; check LSbit
@@ -1291,6 +1291,21 @@ __mulf32tos30:
         ldaa    @tmp2+1         ; 1cyc faster
 ;
 __mulf32tos32:
+        ror     __fp_work
+	rora
+	rorb
+        ror     0,x             ; Carry used by by __mulf32tos34. Must preserve
+;
+        bcc     __mulf32tos34
+        addb    @long+3
+        adca    @long+2
+        staa    @tmp2+1
+        ldaa   __fp_work
+        adca    @long+1
+        staa    __fp_work
+        ldaa    @tmp2+1
+;
+__mulf32tos34:
         ror     __fp_work
 	rora
 	rorb
