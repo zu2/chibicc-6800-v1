@@ -1219,10 +1219,22 @@ __mulf32_s10:			; TOS and @long is not Inf,NaN
 	ldab	__zin
 	andb	#$30
 	jne	__f32retZeros	; TOS or @long is zero
+__mulf32tos4_s:
+	jsr	__fp_settos	; shift a private copy instead
+	jsr	__adj_subnormal
+	bra	__mulf32tos4_e
 ;
-__mulf32tos4:
+__mulf32tos4:			; like __adj_subnormal, but keeps a normal operand intact
 	ldx	__fp_ix
-	jsr	__adj_subn_x	; if subnormal, adjust it. exp into AccAB.
+	ldaa	1,x
+	ldab	0,x
+	asla
+	rolb			; get exp in b
+	beq	__mulf32tos4_s	; subnormal needs the shifting loop
+	clra
+	subb	#127		; un bias
+	sbca	#0
+__mulf32tos4_e:
 	stab	__exp2+1
 	staa	__exp2
 ;
@@ -1725,20 +1737,6 @@ ret:
 ;	bit 23 turn on (| 0x00800000)
 ;	parameter:
 ;	  (0,x) - (3,x): subnormal float
-;
-__adj_subn_x:			; like __adj_subnormal, but keeps a normal operand intact
-	ldaa	1,x
-	ldab	0,x
-	asla
-	rolb			; get exp in b
-	beq	__adj_subn_x_s	; subnormal needs the shifting loop
-	clra
-	subb	#127		; un bias
-	sbca	#0
-	rts
-__adj_subn_x_s:
-	jsr	__fp_settos	; shift a private copy instead
-	jmp	__adj_subnormal
 ;
 __adj_subnormal:
 	ldaa	1,x
