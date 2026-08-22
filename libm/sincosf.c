@@ -29,14 +29,15 @@ union fword {
 };
 
 // sin(r) = r + r*u*S(u) on |r| < 1, u = r*r, fpminimax fit over that range
+// Zero tails on purpose: the software multiply costs 25 cycles per 1 bit
 #define S0  -0x1.555556p-3f
-#define S1  0x1.111136p-7f
-#define S2  -0x1.a01ae2p-13f
-#define S3  0x1.6d210ep-19f
+#define S1  0x1.111130p-7f
+#define S2  -0x1.a01a00p-13f
+#define S3  0x1.6d2100p-19f
 
-// cos(r) = 1 - u/2 + u*u*C(u) on |r| < 1, fpminimax fit over that range
+// cos(r) = 1 - u/2 + u*u*C(u) on |r| < 1, fpminimax fit, same zero tails
 static const float CC[3] = {
-  0x1.960924p-16f, -0x1.6bfaa0p-10f, 0x1.555524p-5f,
+  0x1.960900p-16f, -0x1.6bfaa0p-10f, 0x1.555524p-5f,
 };
 
 static const float SS[4] = {
