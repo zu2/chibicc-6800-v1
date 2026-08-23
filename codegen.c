@@ -1216,20 +1216,19 @@ bool gen_expr_x_sub(Node *node,bool test)
     &&  node->lhs->lhs->kind == ND_VAR
     &&  node->lhs->lhs->ty->kind == TY_PTR
     &&  is_integer_constant(node->lhs->rhs,&val)) {
-      Node *vp = node->lhs->lhs;
-      if (is_local_var(vp)
-      &&  (0 <= vp->var->offset && vp->var->offset<256)
+      if (is_local_var(node->lhs->lhs)
+      &&  (0 <= node->lhs->lhs->var->offset && node->lhs->lhs->var->offset<256)
       &&  (0 <= val && val<256)) {
         if (test) return true;
         ldx_bp();
-        ldx_nX(vp->var->offset);
+        ldx_nX(node->lhs->lhs->var->offset);
         ldx_nX(val);
         return false;
       }
-      if (is_global_var(vp)
+      if (is_global_var(node->lhs->lhs)
       &&  (0 <= val && val<256)) {
         if (test) return true;
-        ldx_EXT(vp);
+        ldx_EXT(node->lhs->lhs);
         ldx_nX(val);
         return false;
       }
@@ -1579,12 +1578,15 @@ static int addr_x_offset(Node *node)
   return -1;
 }
 
+static Node *skip_empty_cast(Node *node);
+
 // Compute the absolute address of a given node in IX.
 // Returns the offset from that address, or -1 if the node does not reside in memory.
 int gen_addr_x_sub(Node *node,bool test)
 {
   Node *lhs = node->lhs;
 //Node *rhs = node->rhs;
+  Node *addr;
   int off;
   int64_t val;
 
@@ -1618,6 +1620,24 @@ int gen_addr_x_sub(Node *node,bool test)
     ldx_IMM_VAR(node->var->name);
     return 0;
   case ND_DEREF:
+    // (ND_DEREF ty_uint (ND_CAST TY_PTR(10):u (ND_ADDR (ND_VAR TY_FLOAT y +0 ))))
+    addr = skip_empty_cast(node->lhs);
+    if (addr->kind == ND_ADDR) {
+      return gen_addr_x_sub(addr->lhs,test);
+    }
+    // (ND_DEREF ty_uint (+ TY_PTR(10):u (ND_CAST TY_PTR(10):u (ND_ADDR (ND_VAR TY_FLOAT y +0 ))) 2))
+    if (node->lhs->kind == ND_ADD
+    &&  node->lhs->ty->kind == TY_PTR
+    &&  is_integer_constant(node->lhs->rhs,&val)) {
+      addr = skip_empty_cast(node->lhs->lhs);
+      if (addr->kind == ND_ADDR) {
+        off = addr_x_offset(addr->lhs);
+        if ((0 <= off) && (off + val <= 252)) {
+          return gen_addr_x_sub(addr->lhs,test) + val;
+        }
+        return -1;
+      }
+    }
     // (ND_DEREF ty_uchar (ND_POST_INCDEC (ND_VAR TY_PTR(10) src +8 ) 1))
     if (node->lhs->kind == ND_POST_INCDEC
     &&  (is_int8(node->ty) || is_int16_or_ptr(node->ty))
@@ -1967,8 +1987,16 @@ void load_var(Node *node)
       println("\tldaa _%s",  node->var->name);
       break;
     case 4:
-      ldx_IMM_VAR(node->var->name);
-      load32x(0);
+      if (opt('O','2')) {
+        println("\tldx _%s+2",node->var->name);
+        println("\tstx @long+2");
+        println("\tldx _%s",  node->var->name);
+        println("\tstx @long");
+        IX_invalidate();
+      }else{
+        ldx_IMM_VAR(node->var->name);
+        load32x(0);
+      }
       break;
     default:
       assert(0);
@@ -5388,6 +5416,16 @@ void gen_expr(Node *node)
         return;
       }
     }
+    if (opt('O','2')
+    &&  node->ty->size == 4
+    &&  (addr = is_var_addr_constant(node))) {
+      println("\tldx %s+2",addr);
+      println("\tstx @long+2");
+      println("\tldx %s",  addr);
+      println("\tstx @long");
+      IX_invalidate();
+      return;
+    }
     if (can_load_x(node->ty) && test_addr_x(node)) {
       off = gen_addr_x(node);
       load_x(node->ty,off);
@@ -5515,6 +5553,10 @@ void gen_expr(Node *node)
     if (can_load_x(node->ty) && test_expr_x(lhs)){
       gen_expr_x(lhs);
       load_x(node->ty,0);
+      return;
+    }
+    if (can_load_x(node->ty) && test_addr_x(node)) {
+      load_x(node->ty,gen_addr_x(node));
       return;
     }
     gen_expr(lhs);
