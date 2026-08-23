@@ -31,7 +31,6 @@ bool builtin_signbit(Node *node)
       }
       return true;
     }
-    // The MSB is the sign bit for all types.
     if (is_global_var(node->args)) {
       println("\tclra");
       println("\tldab _%s",node->args->var->name);
@@ -43,6 +42,40 @@ bool builtin_signbit(Node *node)
       println("\tclra");
       println("\tldab %d,x",off);
       println("\tandb #$80");
+      return true;
+    }
+  }
+  return false;
+}
+
+//
+// copysignf(x, y):
+//    return the value of x with the sign of y;
+//
+bool builtin_copysignf(Node *node)
+{
+  if (node->lhs->kind == ND_VAR
+  && !strcmp(node->lhs->var->name, "copysignf")
+  && node->args && node->args->next) {
+    if (is_global_var(node->args->next)) {
+      gen_expr(node->args);
+      println("\tldab _%s", node->args->next->var->name);
+      println("\tldaa @long");
+      println("\tasla");
+      println("\taslb");
+      println("\trora");
+      println("\tstaa @long");
+      return true;
+    }
+    if (test_addr_x(node->args->next)) {
+      gen_expr(node->args);
+      int off = gen_addr_x(node->args->next);
+      println("\tldab %d,x", off);
+      println("\tldaa @long");
+      println("\tasla");
+      println("\taslb");
+      println("\trora");
+      println("\tstaa @long");
       return true;
     }
   }

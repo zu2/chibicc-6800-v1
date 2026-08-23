@@ -42,6 +42,7 @@ bool opt_fbuiltin_memcpy = true;
 bool opt_fbuiltin_memset = true;
 bool opt_fbuiltin_strcpy = true;
 bool opt_fbuiltin_signbit = true;
+bool opt_fbuiltin_copysignf = true;
 bool opt_fwrapv = false;
 bool opt_fdouble_as_float = true;
 
@@ -249,6 +250,10 @@ static void parse_args(int argc, char **argv) {
     }
     if (!strcmp(argv[i], "-fno-builtin-signbit")) {
       opt_fbuiltin_signbit = false;
+      continue;
+    }
+    if (!strcmp(argv[i], "-fno-builtin-copysignf")) {
+      opt_fbuiltin_copysignf = false;
       continue;
     }
     if (!strcmp(argv[i], "-fwrapv")) {

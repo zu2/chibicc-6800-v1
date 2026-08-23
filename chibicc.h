@@ -668,10 +668,12 @@ extern bool opt_fbuiltin_memcpy;
 extern bool opt_fbuiltin_memset;
 extern bool opt_fbuiltin_strcpy;
 extern bool opt_fbuiltin_signbit;
+extern bool opt_fbuiltin_copysignf;
 bool builtin_memcpy(Node *node);
 bool builtin_memset(Node *node);
 bool builtin_strcpy(Node *node);
 bool builtin_signbit(Node *node);
+bool builtin_copysignf(Node *node);
 
 extern bool opt_fwrapv;
 extern bool opt_fdouble_as_float;
