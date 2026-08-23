@@ -1,71 +1,131 @@
 #include "chibicc.h"
 
+void
+gen_direct_pushf(double fval)
+{
+  union { float f32; uint32_t u32; } u = { fval };
+
+  println("; push float %e, %08x",u.f32,u.u32);
+  gen_direct_pushl(u.u32);
+}
+
 void gen_expr_float(Node *node)
 {
-  if (node->kind == ND_NEG) {
+  double fval;
+  char *addr;
+
+  switch (node->kind) {
+  case ND_NEG:
     gen_expr(node->lhs);
     println("\tldab @long	; negate float");
     println("\teorb #$80");
     println("\tstab @long");
     return;
-  }
-  double fval;
-  if (is_flonum_constant(node->rhs, &fval)
-  && fval == 0.0
-  && (node->kind == ND_EQ || node->kind == ND_NE)) {
-    gen_expr(node->lhs);
-    println("\tjsr __f32iszero");	// ±0.0: AccB=0, NaN: AccB!=0
-    IX_invalidate();
-    println("\tclra");
-    println("\tnegb");		// C=1 if AccB!=0
-    if (node->kind == ND_EQ) {
-      println("\tldab #1");
-      println("\tsbcb #0");
-    } else {
-      println("\trolb");
-      println("\tandb #1");
-    }
-    return;
-  }
-  if (is_flonum_constant(node->rhs, &fval)) {
-    union { float f32; uint32_t u32; } u = { fval };
-    println("; push float %e, %08x",u.f32,u.u32);
-    gen_direct_pushl(u.u32);
-  }else if (test_addr_x(node->rhs)) {
-    int off = gen_addr_x(node->rhs);
-    pushlx(off);
-  }else{
-    gen_expr(node->rhs);	// xmm1
-    pushf();
-  }
-  gen_expr(node->lhs);	// xmm0
-  switch (node->kind) {
   case ND_ADD:
+    if (is_flonum_constant(node->rhs, &fval)) {
+      gen_direct_pushf(fval);
+    }else if ((addr = is_var_addr_constant(node->rhs))) {
+      gen_expr(node->lhs);
+      ldx_IMM_STR(addr);
+      println("\tjsr __addf32x");
+      IX_invalidate();
+      return;
+    }else if (test_addr_x(node->rhs)) {
+      int off = gen_addr_x(node->rhs);
+      pushlx(off);
+    }else{
+      gen_expr(node->rhs);	// xmm1
+      pushf();
+    }
+    gen_expr(node->lhs);	// xmm0
     println("\tjsr __addf32tos");
-    depth -= 4;
     IX_invalidate();
+    depth -= 4;
     return;
   case ND_SUB:
+    if (is_flonum_constant(node->rhs, &fval)) {
+      gen_direct_pushf(fval);
+    }else if ((addr = is_var_addr_constant(node->rhs))) {
+      gen_expr(node->lhs);
+      ldx_IMM_STR(addr);
+      println("\tjsr __subf32x");
+      IX_invalidate();
+      return;
+    }else if (test_addr_x(node->rhs)) {
+      int off = gen_addr_x(node->rhs);
+      pushlx(off);
+    }else{
+      gen_expr(node->rhs);	// xmm1
+      pushf();
+    }
+    gen_expr(node->lhs);	// xmm0
     println("\tjsr __subf32tos");
     IX_invalidate();
     depth -= 4;
     return;
   case ND_MUL:
+    if (is_flonum_constant(node->rhs, &fval)) {
+      gen_direct_pushf(fval);
+    }else if (test_addr_x(node->rhs)) {
+      int off = gen_addr_x(node->rhs);
+      pushlx(off);
+    }else{
+      gen_expr(node->rhs);	// xmm1
+      pushf();
+    }
+    gen_expr(node->lhs);	// xmm0
     println("\tjsr __mulf32tos");
     IX_invalidate();
     depth -= 4;
     return;
   case ND_DIV:
+    if (is_flonum_constant(node->rhs, &fval)) {
+      gen_direct_pushf(fval);
+    }else if (test_addr_x(node->rhs)) {
+      int off = gen_addr_x(node->rhs);
+      pushlx(off);
+    }else{
+      gen_expr(node->rhs);	// xmm1
+      pushf();
+    }
+    gen_expr(node->lhs);	// xmm0
     println("\tjsr __divf32tos");
     IX_invalidate();
     depth -= 4;
     return;
   case ND_EQ:
   case ND_NE:
+    if (is_flonum_constant(node->rhs, &fval)
+    &&  fval == 0.0) {
+      gen_expr(node->lhs);
+      println("\tjsr __f32iszero");	// ±0.0: AccB=0, NaN: AccB!=0
+      IX_invalidate();
+      println("\tclra");
+      println("\tnegb");		// C=1 if AccB!=0
+      if (node->kind == ND_EQ) {
+        println("\tldab #1");
+        println("\tsbcb #0");
+      } else {
+        println("\trolb");
+        println("\tandb #1");
+      }
+      return;
+    }
+    // fall through
   case ND_LT:
   case ND_LE:
   case ND_GT:
   case ND_GE: { // float relop float
+    if (is_flonum_constant(node->rhs, &fval)) {
+      gen_direct_pushf(fval);
+    }else if (test_addr_x(node->rhs)) {
+      int off = gen_addr_x(node->rhs);
+      pushlx(off);
+    }else{
+      gen_expr(node->rhs);	// xmm1
+      pushf();
+    }
+    gen_expr(node->lhs);	// xmm0
     char *L_cmpf1 = new_jump_label();
     char *L_cmpf2 = new_jump_label();
     println("\tjsr __cmpf32tos");	// @long cmp  TOS");
