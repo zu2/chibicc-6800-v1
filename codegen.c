@@ -3110,6 +3110,9 @@ static int long_location_type(Node *node)
       return 3;
     return 0;
   }
+  if (is_var_addr_constant(node)) {
+    return 3;
+  }
   if (test_addr_x(node)) {
     return 4;
   }
@@ -3463,6 +3466,7 @@ static void gen_direct_long(Node *node)
   char *opb, *opa;
   int R = long_location_type(rhs);
   int roff = 0;
+  char *raddr = NULL;
 
   assert(R == 2 || R == 3 || R == 4);
 
@@ -3478,11 +3482,14 @@ static void gen_direct_long(Node *node)
   if (R==2 || R==4) {
     roff = gen_addr_x(rhs);
   }
+  if (R==3) {
+    raddr = is_var_addr_constant(rhs);
+  }
 
   // ldab -> op -> stab
   println("\tldab @long+3");
   if (R == 3) {
-    println("\t%s _%s+3", opb, rhs->var->name);
+    println("\t%s %s+3", opb, raddr);
   } else {
     println("\t%s %d,x",  opb, roff+3);
   }
@@ -3492,7 +3499,7 @@ static void gen_direct_long(Node *node)
   for (int nth = 2; nth >= 0; nth--) {
     println("\tldaa @long+%d", nth);
     if (R == 3) {
-      println("\t%s _%s+%d", opa, rhs->var->name, nth);
+      println("\t%s %s+%d", opa, raddr, nth);
     } else {
       println("\t%s %d,x",   opa, roff+nth);
     }
@@ -3523,6 +3530,8 @@ bool gen_direct_long2(Node *node)
   int R = long_location_type(rhs);
   int loff = 0;
   int roff = 0;
+  char *laddr = NULL;
+  char *raddr = NULL;
   int64_t lv = 0;
   int64_t rv = 0;
 
@@ -3541,6 +3550,8 @@ bool gen_direct_long2(Node *node)
   // lhs,rhs: local or other var
   if (L==2 || L==4) loff = gen_addr_x(lhs);
   if (R==2 || R==4) roff = gen_addr_x(rhs);
+  if (L==3)         laddr = is_var_addr_constant(lhs);
+  if (R==3)         raddr = is_var_addr_constant(rhs);
 
   for (int i = 3; i >= 0; i--) {
     char *ld = (i==3) ? "ldab" : "ldaa";
@@ -3552,7 +3563,7 @@ bool gen_direct_long2(Node *node)
     case 1: println("\t%s #%d",    ld, (int)((lv >> sh) & 0xFF)); break;
     case 2: // THRU
     case 4: println("\t%s %d,x",   ld, loff+i);                   break;
-    case 3: println("\t%s _%s+%d", ld, lhs->var->name, i);        break;
+    case 3: println("\t%s %s+%d",  ld, laddr, i);                 break;
     default: assert(0);
     }
 
@@ -3560,7 +3571,7 @@ bool gen_direct_long2(Node *node)
     case 1: println("\t%s #%d",    op, (int)((rv >> sh) & 0xFF)); break;
     case 2: // THRU
     case 4: println("\t%s %d,x",   op, roff+i);                   break;
-    case 3: println("\t%s _%s+%d", op, rhs->var->name, i);        break;
+    case 3: println("\t%s %s+%d",  op, raddr, i);                 break;
     default: assert(0);
     }
 
