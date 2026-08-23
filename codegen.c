@@ -1012,6 +1012,126 @@ bool test_decayed_x(Node *node);
 bool test_expr_x(Node *node);
 static int addr_x_offset(Node *node);
 
+// Find the global variable at the bottom of an address constant.
+// &gd.in.arr[1] -> Obj *gd, *ofs = 0 + 4 + 2
+// (ND_ADD (ND_MEMBER arr:4 (ND_MEMBER in:0 (ND_VAR gd))) 2)
+static Obj *find_base_var(Node *node, int64_t *ofs)
+{
+  int64_t val;
+
+  if (node->kind == ND_MEMBER
+  &&  !node->member->is_bitfield) {
+    *ofs += node->member->offset;
+    return find_base_var(node->lhs,ofs);
+  }
+  if (node->kind == ND_DEREF
+  &&  (node->lhs->ty->kind == TY_ARRAY
+    || (node->lhs->kind == ND_ADD && is_decay_type(node->lhs->lhs->ty)))) {
+    return find_base_var(node->lhs,ofs);
+  }
+  if (node->kind == ND_ADD
+  &&  is_decay_type(node->lhs->ty)
+  &&  is_integer_constant(node->rhs,&val)) {
+    *ofs += val;
+    return find_base_var(node->lhs,ofs);
+  }
+  if (node->kind != ND_VAR)
+    return NULL;
+  if (node->var->ty->kind == TY_VLA)
+    return NULL;
+  if (node->var->is_local)
+    return NULL;
+  if (node->ty->kind == TY_FUNC)
+    return NULL;
+  return node->var;
+}
+
+// Find the global variable under an expression whose value is an address.
+// garr + 1     -> the array itself is an address
+// &gd.in.x + 1 -> the operand of '&' is an object, so find_base_var() takes over
+static Obj *find_base_addr(Node *node, int64_t *ofs)
+{
+  int64_t val;
+
+  if (node->kind == ND_ADDR)
+    return find_base_var(node->lhs,ofs);
+  if (node->kind == ND_ADD
+  &&  node->ty->kind == TY_PTR
+  &&  is_integer_constant(node->rhs,&val)) {
+    *ofs += val;
+    return find_base_addr(node->lhs,ofs);
+  }
+  if (node->kind == ND_SUB
+  &&  node->ty->kind == TY_PTR
+  &&  is_integer_constant(node->rhs,&val)) {
+    *ofs -= val;
+    return find_base_addr(node->lhs,ofs);
+  }
+  if (node->ty
+  &&  node->ty->kind == TY_ARRAY)
+    return find_base_var(node,ofs);
+  return NULL;
+}
+
+// Return a constant expression usable after '#', or NULL.
+// The value must be an address, not the contents of one.
+// (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
+// (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 0)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
+// (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
+char *is_addr_constant(Node *node)
+{
+  int64_t ofs = 0;
+  Obj *var = NULL;
+
+  if (node->kind == ND_CAST
+  &&  node->ty->kind == TY_PTR) {
+    node = node->lhs;
+  }
+  if (node->kind == ND_VAR
+  &&  node->ty->kind == TY_FUNC) {
+    char *p = calloc(1,strlen(node->var->name)+2);
+    sprintf(p,"_%s",node->var->name);
+    return p;
+  }
+  if (node->kind == ND_ADDR
+  &&  node->lhs->kind == ND_VAR
+  &&  node->lhs->ty->kind == TY_FUNC) {
+    char *p = calloc(1,strlen(node->lhs->var->name)+2);
+    sprintf(p,"_%s",node->lhs->var->name);
+    return p;
+  }
+  var = find_base_addr(node,&ofs);
+  if (var) {
+    char *p = calloc(1,strlen(var->name)+32);
+    if (ofs==0) {
+      sprintf(p,"_%s",var->name);
+    }else{
+      sprintf(p,"_%s%+ld",var->name,ofs);
+    }
+    return p;
+  }
+  return NULL;
+}
+
+// Find the fixed address of an lvalue. The address of a local variable
+// depends on the frame pointer, so a local variable returns NULL.
+char *is_var_addr_constant(Node *node)
+{
+  int64_t ofs = 0;
+  Obj *var = find_base_var(node,&ofs);
+
+  if (var) {
+    char *p = calloc(1,strlen(var->name)+32);
+    if (ofs==0) {
+      sprintf(p,"_%s",var->name);
+    }else{
+      sprintf(p,"_%s%+ld",var->name,ofs);
+    }
+    return p;
+  }
+  return NULL;
+}
+
 bool gen_expr_x_sub(Node *node,bool test)
 {
   Node *lhs = node->lhs;
