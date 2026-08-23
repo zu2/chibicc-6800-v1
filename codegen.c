@@ -4778,6 +4778,7 @@ void gen_expr(Node *node)
     case TY_DOUBLE:
     case TY_LDOUBLE: {
       union { float f32; uint32_t u32; } u = { node->fval };
+      println("; load float %e, %08x",u.f32,u.u32);
       load32i(u.u32);
       return;
     }
@@ -5884,11 +5885,26 @@ void gen_expr(Node *node)
   case TY_FLOAT:
   case TY_DOUBLE:
   case TY_LDOUBLE: {
-    if (node->rhs->kind == ND_NUM
-    && (node->rhs->ty->kind == TY_FLOAT
-    ||  node->rhs->ty->kind == TY_DOUBLE
-    ||  node->rhs->ty->kind == TY_LDOUBLE)) {
-      union { float f32; uint32_t u32; } u = { node->rhs->fval };
+    double fval;
+    if (is_flonum_constant(node->rhs, &fval)
+    && fval == 0.0
+    && (node->kind == ND_EQ || node->kind == ND_NE)) {
+      gen_expr(node->lhs);
+      println("\tjsr __f32iszero");	// ±0.0: AccB=0, NaN: AccB!=0
+      IX_invalidate();
+      println("\tclra");
+      println("\tnegb");		// C=1 if AccB!=0
+      if (node->kind == ND_EQ) {
+        println("\tldab #1");
+        println("\tsbcb #0");
+      } else {
+        println("\trolb");
+        println("\tandb #1");
+      }
+      return;
+    }
+    if (is_flonum_constant(node->rhs, &fval)) {
+      union { float f32; uint32_t u32; } u = { fval };
       println("; push float %e, %08x",u.f32,u.u32);
       gen_direct_pushl(u.u32);
     }else if (test_addr_x(node->rhs)) {
