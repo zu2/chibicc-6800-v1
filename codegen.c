@@ -1013,27 +1013,27 @@ bool test_expr_x(Node *node);
 static int addr_x_offset(Node *node);
 
 // Find the global variable at the bottom of an address constant.
-// &gd.in.arr[1] -> Obj *gd, *ofs = 0 + 4 + 2
+// &gd.in.arr[1] -> Obj *gd, *off = 0 + 4 + 2
 // (ND_ADD (ND_MEMBER arr:4 (ND_MEMBER in:0 (ND_VAR gd))) 2)
-static Obj *find_base_var(Node *node, int64_t *ofs)
+static Obj *find_base_var(Node *node, int64_t *off)
 {
   int64_t val;
 
   if (node->kind == ND_MEMBER
   &&  !node->member->is_bitfield) {
-    *ofs += node->member->offset;
-    return find_base_var(node->lhs,ofs);
+    *off += node->member->offset;
+    return find_base_var(node->lhs,off);
   }
   if (node->kind == ND_DEREF
   &&  (node->lhs->ty->kind == TY_ARRAY
     || (node->lhs->kind == ND_ADD && is_decay_type(node->lhs->lhs->ty)))) {
-    return find_base_var(node->lhs,ofs);
+    return find_base_var(node->lhs,off);
   }
   if (node->kind == ND_ADD
   &&  is_decay_type(node->lhs->ty)
   &&  is_integer_constant(node->rhs,&val)) {
-    *ofs += val;
-    return find_base_var(node->lhs,ofs);
+    *off += val;
+    return find_base_var(node->lhs,off);
   }
   if (node->kind != ND_VAR)
     return NULL;
@@ -1046,30 +1046,49 @@ static Obj *find_base_var(Node *node, int64_t *ofs)
   return node->var;
 }
 
+// Find the fixed address of an lvalue. The address of a local variable
+// depends on the frame pointer, so a local variable returns NULL.
+char *is_var_addr_constant(Node *node)
+{
+  int64_t off = 0;
+  Obj *var = find_base_var(node,&off);
+
+  if (var) {
+    char *p = calloc(1,strlen(var->name)+32);
+    if (off==0) {
+      sprintf(p,"_%s",var->name);
+    }else{
+      sprintf(p,"_%s%+ld",var->name,off);
+    }
+    return p;
+  }
+  return NULL;
+}
+
 // Find the global variable under an expression whose value is an address.
 // garr + 1     -> the array itself is an address
 // &gd.in.x + 1 -> the operand of '&' is an object, so find_base_var() takes over
-static Obj *find_base_addr(Node *node, int64_t *ofs)
+static Obj *find_base_addr(Node *node, int64_t *off)
 {
   int64_t val;
 
   if (node->kind == ND_ADDR)
-    return find_base_var(node->lhs,ofs);
+    return find_base_var(node->lhs,off);
   if (node->kind == ND_ADD
   &&  node->ty->kind == TY_PTR
   &&  is_integer_constant(node->rhs,&val)) {
-    *ofs += val;
-    return find_base_addr(node->lhs,ofs);
+    *off += val;
+    return find_base_addr(node->lhs,off);
   }
   if (node->kind == ND_SUB
   &&  node->ty->kind == TY_PTR
   &&  is_integer_constant(node->rhs,&val)) {
-    *ofs -= val;
-    return find_base_addr(node->lhs,ofs);
+    *off -= val;
+    return find_base_addr(node->lhs,off);
   }
   if (node->ty
   &&  node->ty->kind == TY_ARRAY)
-    return find_base_var(node,ofs);
+    return find_base_var(node,off);
   return NULL;
 }
 
@@ -1080,7 +1099,7 @@ static Obj *find_base_addr(Node *node, int64_t *ofs)
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 char *is_addr_constant(Node *node)
 {
-  int64_t ofs = 0;
+  int64_t off = 0;
   Obj *var = NULL;
 
   if (node->kind == ND_CAST
@@ -1100,32 +1119,13 @@ char *is_addr_constant(Node *node)
     sprintf(p,"_%s",node->lhs->var->name);
     return p;
   }
-  var = find_base_addr(node,&ofs);
+  var = find_base_addr(node,&off);
   if (var) {
     char *p = calloc(1,strlen(var->name)+32);
-    if (ofs==0) {
+    if (off==0) {
       sprintf(p,"_%s",var->name);
     }else{
-      sprintf(p,"_%s%+ld",var->name,ofs);
-    }
-    return p;
-  }
-  return NULL;
-}
-
-// Find the fixed address of an lvalue. The address of a local variable
-// depends on the frame pointer, so a local variable returns NULL.
-char *is_var_addr_constant(Node *node)
-{
-  int64_t ofs = 0;
-  Obj *var = find_base_var(node,&ofs);
-
-  if (var) {
-    char *p = calloc(1,strlen(var->name)+32);
-    if (ofs==0) {
-      sprintf(p,"_%s",var->name);
-    }else{
-      sprintf(p,"_%s%+ld",var->name,ofs);
+      sprintf(p,"_%s%+ld",var->name,off);
     }
     return p;
   }
