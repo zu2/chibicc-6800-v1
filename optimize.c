@@ -589,8 +589,10 @@ Node *optimize_expr(Node *node)
         return optimize_expr(node->lhs);
       }
     }
+    // (int)float and (char)float may cause undefined behavior.
     if (node->ty->kind  == TY_CHAR
     &&  node->lhs->kind == ND_CAST
+    &&  !is_flonum(node->lhs->lhs->ty)
     &&  (node->lhs->ty->kind == TY_SHORT
       || node->lhs->ty->kind == TY_INT
       || node->lhs->ty->kind == TY_LONG)) {
