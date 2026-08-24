@@ -9,29 +9,8 @@
 #define W_PI_4       0x3f80u   // 1.0
 #define W_INF        0x7f80u   // NaN and infinity are at or above this
 
-int __rem_pio2f(float x, float *rp);
+int __reduce_pio2f(float x, unsigned int w, float *rp);
 float __polyf(float x, const float *c, int n);
-
-// n * pi/2 for n = 1 to NSMALL, split so that each subtraction is exact.
-// TB holds the top and low halves of the boundary B(n+0.5) in turn, and
-// ends with a sentinel so the walk needs no counter
-#define NSMALL  4
-#define W_SMALL 0x40e2u
-
-static const float SA[3*NSMALL] = {
-  1.570796371e+00f, -4.371138829e-08f, -1.715124510e-15f,
-  3.141592741e+00f, -8.742277657e-08f, -3.430249020e-15f,
-  4.712388992e+00f, -1.192488064e-08f, 1.836970147e-16f,
-  6.283185482e+00f, -1.748455531e-07f, -6.860498040e-15f,
-};
-
-static const unsigned int TB[2*NSMALL] = {
-  0x4016u, 0xcbe4u,
-  0x407bu, 0x53d1u,
-  0x40afu, 0xeddfu,
-  0xffffu, 0x0000u,
-};
-
 
 // sin(r) = r + r*u*S(u) on |r| < 1, u = r*r, fpminimax fit over that range
 // Zero tails on purpose: the software multiply costs 25 cycles per 1 bit
@@ -77,44 +56,6 @@ static float kernel_cos(float r)
   return 1.0f - (hz - p);
 }
 
-// Returns the quadrant and leaves the reduced argument in *rp
-static int reduce(float x, unsigned int w, float *rp)
-{
-  // For small n the reduction needs no multiply: walk the boundaries with
-  // 16 bit compares, then subtract the three words of n * pi/2. The
-  // subtractions are exact. TB ends in a sentinel, so the walk needs no
-  // counter, and the low half only decides the one ambiguous bucket.
-  // The locals are static by hand: reduce calls __rem_pio2f, so chibicc
-  // cannot promote them itself
-  if (w < W_SMALL) {
-    static const unsigned int *t;
-    static const float *p;
-    static float r;
-    static int n;
-    t = TB - 2;
-    p = SA;
-    n = 1;
-    while (w >= t[2]) {
-      t += 2;
-      p += 3;
-      n++;
-    }
-    if (n != 1 && w == t[0] && *((unsigned int *)&x + 1) < t[1]) {
-      p -= 3;
-      n--;
-    }
-    r = ((fabsf(x) - p[0]) - p[1]) - p[2];
-    *rp = r;
-    if (signbit(x)) {
-      *(unsigned char *)rp ^= 0x80u;
-      return -n;
-    }
-    return n;
-  }
-  // Payne-Hanek takes every w the small n table does not cover
-  return __rem_pio2f(x, rp);
-}
-
 float sinf(float x)
 {
   unsigned int w;
@@ -130,7 +71,7 @@ float sinf(float x)
     return kernel_sin(x);
   }
   float r;
-  int n = reduce(x, w, &r);
+  int n = __reduce_pio2f(x, w, &r);
 
   switch ((int)(n & 3)) {
   case 0:
@@ -159,7 +100,7 @@ float cosf(float x)
     return kernel_cos(x);
   }
   float r;
-  int n = reduce(x, w, &r);
+  int n = __reduce_pio2f(x, w, &r);
 
   switch ((int)(n & 3)) {
   case 0:
