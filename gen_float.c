@@ -9,6 +9,48 @@ gen_direct_pushf(double fval)
   gen_direct_pushl(u.u32);
 }
 
+typedef struct FloatLiteral FloatLiteral;
+struct FloatLiteral {
+  FloatLiteral *next;
+  uint32_t      bits;
+};
+
+static FloatLiteral *float_literals;
+
+// Return the label of the .data entry that holds a float constant.
+static char *float_literal_label(double fval)
+{
+  union { float f32; uint32_t u32; } u = { fval };
+  FloatLiteral *fl;
+
+  for (fl = float_literals; fl; fl = fl->next) {
+    if (fl->bits == u.u32) {
+      return format("CF_%08x",u.u32);
+    }
+  }
+  fl = calloc(1,sizeof(FloatLiteral));
+  fl->bits = u.u32;
+  fl->next = float_literals;
+  float_literals = fl;
+  return format("CF_%08x",u.u32);
+}
+
+void emit_float_literals(void)
+{
+  if (!float_literals) {
+    return;
+  }
+  println("\t.data");
+  for (FloatLiteral *fl = float_literals; fl; fl = fl->next) {
+    union { float f32; uint32_t u32; } u = { .u32 = fl->bits };
+    println(";");
+    println("; float %e",u.f32);
+    println("CF_%08x:",fl->bits);
+    println("\t.word %d",(fl->bits>>16) & 0xffff);
+    println("\t.word %d",(fl->bits    ) & 0xffff);
+  }
+}
+
 void gen_expr_float(Node *node)
 {
   double fval;
@@ -23,7 +65,11 @@ void gen_expr_float(Node *node)
     return;
   case ND_ADD:
     if (is_flonum_constant(node->rhs, &fval)) {
-      gen_direct_pushf(fval);
+      gen_expr(node->lhs);
+      ldx_IMM_STR(float_literal_label(fval));
+      println("\tjsr __addf32x");
+      IX_invalidate();
+      return;
     }else if ((addr = is_var_addr_constant(node->rhs))) {
       gen_expr(node->lhs);
       ldx_IMM_STR(addr);
@@ -55,7 +101,11 @@ void gen_expr_float(Node *node)
     return;
   case ND_SUB:
     if (is_flonum_constant(node->rhs, &fval)) {
-      gen_direct_pushf(fval);
+      gen_expr(node->lhs);
+      ldx_IMM_STR(float_literal_label(fval));
+      println("\tjsr __subf32x");
+      IX_invalidate();
+      return;
     }else if ((addr = is_var_addr_constant(node->rhs))) {
       gen_expr(node->lhs);
       ldx_IMM_STR(addr);
@@ -87,7 +137,11 @@ void gen_expr_float(Node *node)
     return;
   case ND_MUL:
     if (is_flonum_constant(node->rhs, &fval)) {
-      gen_direct_pushf(fval);
+      gen_expr(node->lhs);
+      ldx_IMM_STR(float_literal_label(fval));
+      println("\tjsr __mulf32x");
+      IX_invalidate();
+      return;
     }else if ((addr = is_var_addr_constant(node->rhs))) {
       gen_expr(node->lhs);
       ldx_IMM_STR(addr);
@@ -119,7 +173,11 @@ void gen_expr_float(Node *node)
     return;
   case ND_DIV:
     if (is_flonum_constant(node->rhs, &fval)) {
-      gen_direct_pushf(fval);
+      gen_expr(node->lhs);
+      ldx_IMM_STR(float_literal_label(fval));
+      println("\tjsr __divf32x");
+      IX_invalidate();
+      return;
     }else if ((addr = is_var_addr_constant(node->rhs))) {
       gen_expr(node->lhs);
       ldx_IMM_STR(addr);

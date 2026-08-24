@@ -527,6 +527,8 @@ bool can_direct(Node *rhs);
 bool can_direct_char(Node *rhs);
 void gen_expr(Node *node);
 void gen_expr_float(Node *node);
+void emit_float_literals(void);
+char *long_literal_label(int64_t val);
 void gen_direct_pushl(int64_t val);
 void pushlx(int off);
 void pushf(void);

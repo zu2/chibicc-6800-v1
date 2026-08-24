@@ -7494,6 +7494,47 @@ static void emit_data(Obj *prog) {
   }
 }
 
+typedef struct LongLiteral LongLiteral;
+struct LongLiteral {
+  LongLiteral *next;
+  uint32_t     bits;
+};
+
+static LongLiteral *long_literals;
+
+// Return the label of the .data entry that holds a long constant.
+char *long_literal_label(int64_t val)
+{
+  uint32_t bits = (uint32_t)val;
+  LongLiteral *ll;
+
+  for (ll = long_literals; ll; ll = ll->next) {
+    if (ll->bits == bits) {
+      return format("CL_%08x",bits);
+    }
+  }
+  ll = calloc(1,sizeof(LongLiteral));
+  ll->bits = bits;
+  ll->next = long_literals;
+  long_literals = ll;
+  return format("CL_%08x",bits);
+}
+
+static void emit_long_literals(void)
+{
+  if (!long_literals) {
+    return;
+  }
+  println("\t.data");
+  for (LongLiteral *ll = long_literals; ll; ll = ll->next) {
+    println(";");
+    println("; long %ld",(long)(int32_t)ll->bits);
+    println("CL_%08x:",ll->bits);
+    println("\t.word %d",(ll->bits>>16) & 0xffff);
+    println("\t.word %d",(ll->bits    ) & 0xffff);
+  }
+}
+
 static void emit_text(Obj *prog) {
   for (Obj *fn = prog; fn; fn = fn->next) {
     if (!fn->is_function || !fn->is_definition)
@@ -7768,6 +7809,8 @@ void codegen(Obj *prog, FILE *out) {
     }
   }
   assign_lvar_offsets(prog);
-  emit_data(prog);
   emit_text(prog);
+  emit_data(prog);
+  emit_float_literals();
+  emit_long_literals();
 }
