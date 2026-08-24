@@ -31,8 +31,19 @@ void gen_expr_float(Node *node)
       IX_invalidate();
       return;
     }else if (test_addr_x(node->rhs)) {
+      gen_expr(node->lhs);
       int off = gen_addr_x(node->rhs);
-      pushlx(off);
+      if (off==0) {
+        println("\tjsr __addf32x");
+      }else if (1<=off && off<=255) {
+        ldab_i(off);
+        println("\tjsr __addf32bx");
+      }else{
+        ldd_i(off);
+        println("\tjsr __addf32dx");
+      }
+      IX_invalidate();
+      return;
     }else{
       gen_expr(node->rhs);	// xmm1
       pushf();
@@ -52,8 +63,19 @@ void gen_expr_float(Node *node)
       IX_invalidate();
       return;
     }else if (test_addr_x(node->rhs)) {
+      gen_expr(node->lhs);
       int off = gen_addr_x(node->rhs);
-      pushlx(off);
+      if (off==0) {
+        println("\tjsr __subf32x");
+      }else if (1<=off && off<=255) {
+        ldab_i(off);
+        println("\tjsr __subf32bx");
+      }else{
+        ldd_i(off);
+        println("\tjsr __subf32dx");
+      }
+      IX_invalidate();
+      return;
     }else{
       gen_expr(node->rhs);	// xmm1
       pushf();
@@ -73,8 +95,19 @@ void gen_expr_float(Node *node)
       IX_invalidate();
       return;
     }else if (test_addr_x(node->rhs)) {
+      gen_expr(node->lhs);
       int off = gen_addr_x(node->rhs);
-      pushlx(off);
+      if (off==0) {
+        println("\tjsr __mulf32x");
+      }else if (1<=off && off<=255) {
+        ldab_i(off);
+        println("\tjsr __mulf32bx");
+      }else{
+        ldd_i(off);
+        println("\tjsr __mulf32dx");
+      }
+      IX_invalidate();
+      return;
     }else{
       gen_expr(node->rhs);	// xmm1
       pushf();
@@ -94,8 +127,19 @@ void gen_expr_float(Node *node)
       IX_invalidate();
       return;
     }else if (test_addr_x(node->rhs)) {
+      gen_expr(node->lhs);
       int off = gen_addr_x(node->rhs);
-      pushlx(off);
+      if (off==0) {
+        println("\tjsr __divf32x");
+      }else if (1<=off && off<=255) {
+        ldab_i(off);
+        println("\tjsr __divf32bx");
+      }else{
+        ldd_i(off);
+        println("\tjsr __divf32dx");
+      }
+      IX_invalidate();
+      return;
     }else{
       gen_expr(node->rhs);	// xmm1
       pushf();

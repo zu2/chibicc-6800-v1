@@ -41,6 +41,14 @@
 	.export __subf32x
 	.export __mulf32x
 	.export __divf32x
+	.export __addf32bx
+	.export __subf32bx
+	.export __mulf32bx
+	.export __divf32bx
+	.export __addf32dx
+	.export __subf32dx
+	.export __mulf32dx
+	.export __divf32dx
 ;	MC6800 floating point arithmetic library
 ;
 ;	Copyright (c) 2025 by ZUKERAN, shin
@@ -726,6 +734,10 @@ __u16ffff:
 ;	@long	= @long - TOS
 ;	→	= @long + (-TOS)
 ;
+__subf32bx:
+	clra
+__subf32dx:
+	jsr	__adx
 __subf32x:
 	jsr	__fp_settos
 	ldab	0,x		; flip the sign of TOS
@@ -736,6 +748,10 @@ __subf32x:
 ;	@long = TOS + @long
 ;	pull TOS
 ;
+__addf32bx:
+	clra
+__addf32dx:
+	jsr	__adx
 __addf32x:
 	stx	__fp_ix
 	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
@@ -1196,6 +1212,10 @@ __pullret:
 ;
 ;	No arithmetic is required when multiplying by 1, but simply multiply it now.
 ;
+__mulf32bx:
+	clra
+__mulf32dx:
+	jsr	__adx
 __mulf32x:
 	stx	__fp_ix
 	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
@@ -1445,6 +1465,10 @@ __mulf32tos75:
 ;
 ;	@long = @long / TOS
 ;
+__divf32bx:
+	clra
+__divf32dx:
+	jsr	__adx
 __divf32x:
 	jsr	__fp_settos
 	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
