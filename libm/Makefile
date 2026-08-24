@@ -8,7 +8,7 @@ OBJ =	__float.o __floatlib.o __floatconst.o \
 	__fmaxf.o __fmodf.o __modff.o \
 	__ilogbf.o __frexpf.o __ldexpf.o \
 	__sqrtf.o \
-	atanf.o sincosf.o tanf.o __rem_pio2f.o __reduce_pio2f.o \
+	atanf.o atan2f.o sincosf.o tanf.o __rem_pio2f.o __reduce_pio2f.o \
 	sinhf.o coshf.o tanhf.o \
 	expf.o logf.o powf.o log1pf.o expm1f.o exp2f.o log2f.o log10f.o \
 	__copysignf.o __nearbyintf.o __nextafterf.o \
