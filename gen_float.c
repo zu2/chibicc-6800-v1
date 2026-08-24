@@ -231,18 +231,34 @@ void gen_expr_float(Node *node)
   case ND_GT:
   case ND_GE: { // float relop float
     if (is_flonum_constant(node->rhs, &fval)) {
-      gen_direct_pushf(fval);
+      gen_expr(node->lhs);
+      ldx_IMM_STR(float_literal_label(fval));
+      println("\tjsr __cmpf32x");
+    }else if ((addr = is_var_addr_constant(node->rhs))) {
+      gen_expr(node->lhs);
+      ldx_IMM_STR(addr);
+      println("\tjsr __cmpf32x");
     }else if (test_addr_x(node->rhs)) {
+      gen_expr(node->lhs);
       int off = gen_addr_x(node->rhs);
-      pushlx(off);
+      if (off==0) {
+        println("\tjsr __cmpf32x");
+      }else if (1<=off && off<=255) {
+        ldab_i(off);
+        println("\tjsr __cmpf32bx");
+      }else{
+        ldd_i(off);
+        println("\tjsr __cmpf32dx");
+      }
     }else{
       gen_expr(node->rhs);	// xmm1
       pushf();
+      gen_expr(node->lhs);	// xmm0
+      println("\tjsr __cmpf32tos");	// @long cmp  TOS");
+      depth -= 4;
     }
-    gen_expr(node->lhs);	// xmm0
     char *L_cmpf1 = new_jump_label();
     char *L_cmpf2 = new_jump_label();
-    println("\tjsr __cmpf32tos");	// @long cmp  TOS");
     IX_invalidate();
     println("\tbcc %s",L_cmpf1);	// when carry=1, compare NaN
     println("\tclra");
@@ -278,7 +294,6 @@ void gen_expr_float(Node *node)
       error_tok(node->tok, "invalid expression");
     }
     println("%s:",L_cmpf2);
-    depth -= 4;
     IX_invalidate();
     return;
     }

@@ -15,6 +15,9 @@
 	.export __divf32tos
 	.export __cmpf32tos
 	.export __cmpf32_x2
+	.export __cmpf32x
+	.export __cmpf32bx
+	.export __cmpf32dx
 	.export __load32x_addf
 	.export __load32x_subf
 	.export __load32x_mulf
@@ -1832,28 +1835,40 @@ __divf32tos:
 __load32x_cmpf:
 	jsr	__load32x
 __cmpf32tos:
-	jsr	__f32isNaNorInf	; if @long is NaN, C=1
-	jcs	__pullret
 	tsx
 	inx
 	inx
-	jsr	__f32isNaNorInfx ; if TOS is NaN, C=1
-	jcs	__pullret
+	jsr	__cmpf32x
+	jmp	__pullret
 ;
-        jsr     __f32iszero	; @long == 0.0 ?
-	bne	__cmpf32tos_10	; branch if @long!=0.0
-	tsx
-	inx
-	inx
+;	compare @long and (0-3,x)
+;	IX points to the 2nd operand
+;	NaN and ±0.0 are handled here
+;
+__cmpf32bx:
+	clra
+__cmpf32dx:
+	jsr	__adx
+__cmpf32x:
+	stx	__fp_ix
+	jsr	__f32isNaNorInf	; if @long is NaN, C=1. __f32isNaNorInf destroys IX.
+	bcs	__cmpf32x_ret
+	ldx	__fp_ix
+	jsr	__f32isNaNorInfx ; if (0-3,x) is NaN, C=1
+	bcs	__cmpf32x_ret
+;
+        jsr     __f32iszero	; @long == 0.0 ? __f32iszero keeps IX.
+	bne	__cmpf32x_10	; branch if @long!=0.0
         jsr     __f32iszerox
-	bne	__cmpf32tos_10
+	bne	__cmpf32x_10
 	clrb			; ±0.0==±0.0? return eq
 	clra
-	jmp	__pullret
-__cmpf32tos_10:
-	tsx
-	bsr	__cmpf32_x2
-	jmp	__pullret
+__cmpf32x_ret:
+	rts			; rts keeps the carry flag, only rti pulls the CCR
+__cmpf32x_10:
+	dex			; __cmpf32_x2 reads 2,x
+	dex
+	jmp	__cmpf32_x2
 __cmpf32_x2:			; compare @long and 2,x
 				; handle NaN and ±0.0 before you call this
 	ldab	@long
