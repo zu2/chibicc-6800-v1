@@ -74,7 +74,7 @@ __fmodf_01:
 	andb	#$7F
 	stab	2,x
 ;
-	jsr	__cmpf32x		; @long == TOS?
+	jsr	__cmpf32_x2		; @long == TOS?
 	beq	__fmodf_zeros		; return 0.0, sign: same as the @long
 	tstb				; @long < TOS? (b=$FF?)
 	bpl	__fmodf_02

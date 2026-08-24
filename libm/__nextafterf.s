@@ -37,7 +37,7 @@ _nextafterf_01:
         ins                             ; yes, return b
         bra     ret_tos
 _nextafterf_02:
-        jsr     __cmpf32x               ; a==b ?
+        jsr     __cmpf32_x2               ; a==b ?
         pula
         beq     ret_tos                 ; yes, return b;        (AccB=$00)
 ;                                       ; here, if a>b then B=$01 else if a<b B=$FF

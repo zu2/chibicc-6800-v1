@@ -62,18 +62,18 @@ __fmaxmin_ret_tos:			; return TOS
 __fmaxmin_ret:
 	rts
 ;
-;	__cmpf32x orders Inf like any other float, so Inf needs no special case.
+;	__cmpf32_x2 orders Inf like any other float, so Inf needs no special case.
 ;
 __fmaxmin_not_NaN:
 	tsx				; __setup_zin leaves IX on long
 	ldaa	__max_or_min
 	bmi	__fmin_comp
 __fmax_comp:
-	jsr	__cmpf32x		; compare @long and TOS
+	jsr	__cmpf32_x2		; compare @long and TOS
 	bmi	__fmaxmin_ret_tos	; @long < TOS (N=1)
 	bra	__fmaxmin_ret
 __fmin_comp:
-	jsr	__cmpf32x
+	jsr	__cmpf32_x2
 ;	bcs	XXX?			; C==1 if NaN; shouldn't occur
 	bpl	__fmaxmin_ret_tos	; @long >= TOS (N=0)
 	bra	__fmaxmin_ret

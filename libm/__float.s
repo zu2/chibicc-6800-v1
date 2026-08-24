@@ -14,7 +14,7 @@
 	.export __mulf32tos
 	.export __divf32tos
 	.export __cmpf32tos
-	.export __cmpf32x
+	.export __cmpf32_x2
 	.export __load32x_addf
 	.export __load32x_subf
 	.export __load32x_mulf
@@ -1852,54 +1852,55 @@ __cmpf32tos:
 	jmp	__pullret
 __cmpf32tos_10:
 	tsx
-	bsr	__cmpf32x
+	bsr	__cmpf32_x2
 	jmp	__pullret
-__cmpf32x:			; TODO: name?
+__cmpf32_x2:			; compare @long and 2,x
+				; handle NaN and ±0.0 before you call this
 	ldab	@long
-	bpl	__cmpf32_p	; jump if @long >= 0
+	bpl	__cmpf32_x2_p	; jump if @long >= 0
 	ldab	2,x
-	bpl	__cmpf32x_lt	; @long<0 LT TOS>=0
+	bpl	__cmpf32_x2_lt	; @long<0 LT TOS>=0
 ;
-	bsr	__cmpf32_s	; @long<0 && TOS<0
-	bcs	__cmpf32x_gt	; C=1
-	beq	__cmpf32x_eq	; Z=1
-	bra	__cmpf32x_lt
+	bsr	__cmpf32_x2_s	; @long<0 && TOS<0
+	bcs	__cmpf32_x2_gt	; C=1
+	beq	__cmpf32_x2_eq	; Z=1
+	bra	__cmpf32_x2_lt
 ;
-__cmpf32x_lt:			; @long < TOS
+__cmpf32_x2_lt:			; @long < TOS
 	clrb			; C=0
 	decb			; Z=0, N=1
 	tba
 	rts
 ;
-__cmpf32_p:			; if @long >= 0
+__cmpf32_x2_p:			; if @long >= 0
 	ldab	2,x
-	bmi	__cmpf32x_gt	; @long>=0 && TOS<0
-	bsr	__cmpf32_s
-	bcs	__cmpf32x_lt
-	beq	__cmpf32x_eq
-__cmpf32x_gt:			; @long > TOS
+	bmi	__cmpf32_x2_gt	; @long>=0 && TOS<0
+	bsr	__cmpf32_x2_s
+	bcs	__cmpf32_x2_lt
+	beq	__cmpf32_x2_eq
+__cmpf32_x2_gt:			; @long > TOS
 	clra			; C=0
 	ldab	#1		; Z=0, N=0
 	rts
-__cmpf32x_eq:			; @long == TOS
+__cmpf32_x2_eq:			; @long == TOS
 	clrb
 	clra			; Z=1,C=0, N=0
 	rts
 ;
-__cmpf32_s:
+__cmpf32_x2_s:
 	ldab	@long
 	cmpb	2,x
-	bne	__cmpf32_sret
+	bne	__cmpf32_x2_sret
 	ldab	@long+1
 	cmpb	3,x
-	bne	__cmpf32_sret
+	bne	__cmpf32_x2_sret
 	ldab	@long+2
 	cmpb	4,x
-	bne	__cmpf32_sret
+	bne	__cmpf32_x2_sret
 	ldab	@long+3
 	cmpb	5,x
-	bne	__cmpf32_sret
-__cmpf32_sret:
+	bne	__cmpf32_x2_sret
+__cmpf32_x2_sret:
 	rts			; when @long>0 && TOS>0
 				; @long == TOS : C=0, Z=1
 				; @long <  TOS : C=0, Z=0
