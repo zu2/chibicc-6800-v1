@@ -1921,6 +1921,7 @@ bool can_load_x(Type *ty)
   case TY_LDOUBLE:
     return false;
   case TY_PTR:
+  case TY_FLOAT:
     return true;
   }
   return is_integer(ty);
@@ -5426,6 +5427,12 @@ void gen_expr(Node *node)
       IX_invalidate();
       return;
     }
+    if (node->ty->size == 4
+    &&  (addr = is_var_addr_constant(node))) {
+      ldx_IMM_STR(addr);
+      println("\tjsr __load32x");
+      return;
+    }
     if (can_load_x(node->ty) && test_addr_x(node)) {
       off = gen_addr_x(node);
       load_x(node->ty,off);
@@ -5544,6 +5551,22 @@ void gen_expr(Node *node)
     }
     if (can_direct(node)) {
       gen_direct(node,"ldab","ldaa");
+      return;
+    }
+    if (opt('O','2')
+    &&  node->ty->size == 4
+    &&  (addr = is_var_addr_constant(node))) {
+      println("\tldx %s+2",addr);
+      println("\tstx @long+2");
+      println("\tldx %s",  addr);
+      println("\tstx @long");
+      IX_invalidate();
+      return;
+    }
+    if (node->ty->size == 4
+    &&  (addr = is_var_addr_constant(node))) {
+      ldx_IMM_STR(addr);
+      println("\tjsr __load32x");
       return;
     }
     if (can_load_x(node->ty) && test_decayed_x(lhs)){
