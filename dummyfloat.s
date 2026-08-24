@@ -24,6 +24,20 @@
 	.export __divf32tos
 	.export __cmpf32tos
 	.export __cmpf32x
+	.export __addf32x
+	.export __subf32x
+	.export __mulf32x
+	.export __divf32x
+	.export __addf32bx
+	.export __subf32bx
+	.export __mulf32bx
+	.export __divf32bx
+	.export __cmpf32bx
+	.export __addf32dx
+	.export __subf32dx
+	.export __mulf32dx
+	.export __divf32dx
+	.export __cmpf32dx
 	.export __load32x_addf
 	.export __load32x_subf
 	.export __load32x_mulf
@@ -74,6 +88,20 @@ __mulf32tos:
 __divf32tos:
 __cmpf32tos:
 __cmpf32x:
+__addf32x:
+__subf32x:
+__mulf32x:
+__divf32x:
+__addf32bx:
+__subf32bx:
+__mulf32bx:
+__divf32bx:
+__cmpf32bx:
+__addf32dx:
+__subf32dx:
+__mulf32dx:
+__divf32dx:
+__cmpf32dx:
 __load32x_addf:
 __load32x_subf:
 __load32x_mulf:
