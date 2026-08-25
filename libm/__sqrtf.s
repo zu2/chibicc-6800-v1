@@ -13,9 +13,8 @@
 	.export _sqrtf
 	.data
 __exp:	.byte	0		; exp
-__q:	.byte	0,0,0,0		; sqrt_mantissa
 __r:	.byte	0,0,0,0		; remainder
-__s:	.byte	0,0,0,0		; partial_sqrt
+__s:	.byte	0,0,0,0		; twice the partial sqrt_mantissa
 __t:	.byte	0,0,0,0		; trial
 ;
 	.code
@@ -87,29 +86,61 @@ __sqrtf_10:
 	stx	__r
 	ldx	#0
 	stx	__r+2
-	stx	__q
-	stx	__q+2
 	stx	__s
 	stx	__s+2
 ;
+	ldx	#9		; turns 0-8: __t's low 2 bytes stay zero and never borrow
+__sqrtf_12:
+	ldab	__r+1
+	addb	__s+1
+	stab	__t+1
+	ldab	__r
+	adcb	__s
+	stab	__t
+;
+	ldab	@long+1
+	subb	__t+1
+	ldaa	@long
+	sbca	__t
+	bmi	__sqrtf_15
+;
+	stab	@long+1
+	staa	@long
+;
+	ldab	__r+1
+	addb	__t+1
+	stab	__s+1
+	ldab	__r
+	adcb	__t
+	stab	__s
+;
+__sqrtf_15:
+	asl	@long+3
+	rol	@long+2
+	rol	@long+1
+	rol	@long
+;
+	lsr	__r		; __r falls into byte 2 on the last turn
+	ror	__r+1
+	ror	__r+2
+;
+	dex
+	bne	__sqrtf_12
+;
+	ldab	__s		; from turn 9 on, __s's top byte never moves again
+	stab	__t
+;
+	ldx	#16
 __sqrtf_20:
-	ldx	__r
-	bne	__sqrtf_21
-	ldx	__r+2
-	jeq	__sqrtf_29
-__sqrtf_21:
 	ldab	__r+3
 	addb	__s+3
 	stab	__t+3
 	ldab	__r+2
 	adcb	__s+2
 	stab	__t+2
-	ldab	__r+1
-	adcb	__s+1
+	ldab	__s+1
+	adcb	#0
 	stab	__t+1
-	ldab	__r
-	adcb	__s
-	stab	__t
 ;
 	ldab	@long+3
 	subb	__t+3
@@ -136,25 +167,9 @@ __sqrtf_21:
 	ldab	__r+2
 	adcb	__t+2
 	stab	__s+2
-	ldab	__r+1
-	adcb	__t+1
+	ldab	__t+1
+	adcb	#0
 	stab	__s+1
-	ldab	__r
-	adcb	__t
-	stab	__s
-;
-	ldab	__q+3
-	addb	__r+3
-	stab	__q+3
-	ldab	__q+2
-	adcb	__r+2
-	stab	__q+2
-	ldab	__q+1
-	adcb	__r+1
-	stab	__q+1
-	ldab	__q
-	adcb	__r
-	stab	__q
 ;
 	bra	__sqrtf_26
 ;
@@ -168,12 +183,11 @@ __sqrtf_26:
 	rol	@long+1
 	rol	@long
 ;
-	lsr	__r	
-	ror	__r+1
-	ror	__r+2
+	lsr	__r+2
 	ror	__r+3
 ;
-	jmp	__sqrtf_20
+	dex
+	bne	__sqrtf_20
 ;
 __sqrtf_29:
 ;
@@ -181,31 +195,36 @@ __sqrtf_29:
 	bne	__sqrtf_31
 	ldx	@long+2
 	beq	__sqrtf_32
-__sqrtf_31:
-	ldab	__q+3
-	bitb	#1
+__sqrtf_31:			; the root is __s>>1, so its bit 0 is __s's bit 1
+	ldab	__s+3
+	bitb	#2
 	beq	__sqrtf_32
-	addb	#1
-	stab	__q+3
-	ldab	__q+2
+	addb	#2
+	stab	__s+3
+	ldab	__s+2
 	adcb	#0
-	stab	__q+2
-	ldab	__q+1
+	stab	__s+2
+	ldab	__s+1
 	adcb	#0
-	stab	__q+1
-	ldab	__q
+	stab	__s+1
+	ldab	__s
 	adcb	#0
-	stab	__q
+	stab	__s
 ;
-__sqrtf_32:
-	lsr	__q
-	ror	__q+1
-	ror	__q+2
-	ror	__q+3
+__sqrtf_32:			; the result is __s>>2
+	lsr	__s
+	ror	__s+1
+	ror	__s+2
+	ror	__s+3
 ;
-	ldab	__q+3
+	lsr	__s
+	ror	__s+1
+	ror	__s+2
+	ror	__s+3
+;
+	ldab	__s+3
 	stab	@long+3
-	ldab	__q+2
+	ldab	__s+2
 	stab	@long+2
 ;
 	clra
@@ -213,9 +232,9 @@ __sqrtf_32:
 	lsrb
 	rora
 ;
-	adda	__q+1
+	adda	__s+1
 	staa	@long+1
-	adcb	__q
+	adcb	__s
 	addb	#$3F
 	andb	#$7F
 	stab	@long
