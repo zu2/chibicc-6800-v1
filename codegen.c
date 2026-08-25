@@ -7254,8 +7254,18 @@ static void gen_stmt(Node *node)
           println("\tjeq %s", n->label);
           break;
         case 2:
-          println("\tcpx #%ld",n->begin);
-          println("\tjeq %s", n->label);
+          if (has_case_ranges) {
+            int c = count();
+            println("\tcmpb #<%ld",n->begin);
+            println("\tbne L_case_%d",c);
+            println("\tcmpa #>%ld",n->begin);
+            println("\tjeq %s", n->label);
+            println("L_case_%d:",c);
+            IX_invalidate();
+          }else{
+            println("\tcpx #%ld",n->begin);
+            println("\tjeq %s", n->label);
+          }
           break;
         case 4: {
           int c = count();
@@ -7279,7 +7289,7 @@ static void gen_stmt(Node *node)
       case 1:
         println("\ttba");
         println("\tsuba #%ld", n->begin);
-        println("\tcmpa #%ld", n->end - n->begin);
+        println("\tcmpa #%ld", n->end - n->begin + 1);
         println("\tjcs %s",   n->label);
         break;
       case 2:
@@ -7287,8 +7297,8 @@ static void gen_stmt(Node *node)
         println("\tpsha");
         println("\tsubb #<%ld", n->begin);
         println("\tsbca #>%ld", n->begin);
-        println("\tsubb #<%ld", n->end - n->begin);
-        println("\tsbca #>%ld", n->end - n->begin);
+        println("\tsubb #<%ld", n->end - n->begin + 1);
+        println("\tsbca #>%ld", n->end - n->begin + 1);
         println("\tpula");
         println("\tpulb");
         println("\tjcs %s", n->label);
