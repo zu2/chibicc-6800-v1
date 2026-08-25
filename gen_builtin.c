@@ -129,23 +129,22 @@ bool builtin_strcpy(Node *node)
     size_t size = var->ty->size;  // Size includes the trailing \0
 
 //  ast_node_dump(arg1);
-    IX_invalidate();
-    int off = 0;
-    if (test_decayed_x(arg1)) {
-      off = gen_decayed_x(arg1);
-    }else if (test_expr_x(arg1)) {
-      gen_expr_x(arg1);
-    }else{
-      gen_expr(arg1);
-      tfr_dx();
-    }
-    IX_invalidate();
     if (size==0) {  // XXX ?
       error("strcpy literal size==0");
-    }else if (!opt('O','0')
-          ||  (opt('O','s') && size<=4)
+    }else if ((opt('O','s') && size<=4)
           ||  (opt('O','1') && size<=16)
           ||  (opt('O','2') && size<=32)){
+      IX_invalidate();
+      int off = 0;
+      if (test_decayed_x(arg1)) {
+        off = gen_decayed_x(arg1);
+      }else if (test_expr_x(arg1)) {
+        gen_expr_x(arg1);
+      }else{
+        gen_expr(arg1);
+        tfr_dx();
+      }
+      IX_invalidate();
       println("; ND_FUNCALL: builtin_strcpy(..., _%s)",var->name);
       if (size+off>=256) {
         ldab_i(off);
