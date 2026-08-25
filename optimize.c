@@ -687,9 +687,9 @@ Node *optimize_expr(Node *node)
         }
         if (is_compare_or_not(node->lhs->lhs)
         &&  is_compare_or_not(node->lhs->rhs)) {
-          node->lhs->lhs->ty = ty_uchar;
-          node->lhs->rhs->ty = ty_uchar;
-          node->lhs->ty      = ty_uchar;
+          node->lhs->lhs->ty = node->ty;
+          node->lhs->rhs->ty = node->ty;
+          node->lhs->ty      = node->ty;
           return optimize_const_expr(node->lhs);
         }
       }
