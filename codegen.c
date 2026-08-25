@@ -3671,6 +3671,18 @@ static void gen_funcall(Node *node)
   if (opt_fbuiltin_signbit && builtin_signbit(node)) {
     return;
   }
+  if (opt_fbuiltin_isnan && builtin_isnan(node)) {
+    return;
+  }
+  if (opt_fbuiltin_isinf && builtin_isinf(node)) {
+    return;
+  }
+  if (opt_fbuiltin_isfinite && builtin_isfinite(node)) {
+    return;
+  }
+  if (opt_fbuiltin_fabsf && builtin_fabsf(node)) {
+    return;
+  }
   if (opt_fbuiltin_copysignf && builtin_copysignf(node)) {
     return;
   }
