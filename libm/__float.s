@@ -1636,18 +1636,14 @@ __divf32_done:
 __divf32_rup_check:
 	ldab	@long+3	
 	bpl	__divf32_rup_none	; G==0, no round up
-	tba
-	anda	#$1F			; stick check
-	beq	__divf32_rup_nosticky
-	orab	#$20
-__divf32_rup_nosticky:
-	ldaa	@long+2
-	lsra
-	rorb				; AccB b7 LSB, b6 G, b5 R, b4-b0 S
-	andb	#$BF			; only G=1 and LSB,R,S == 0 ?
+	andb	#$7F
+	bne	__divf32_rup_yes
+	ldab	@long+2
+	andb	#1
 	beq	__divf32_rup_none
+__divf32_rup_yes:
 	sec
-	rts				; if LSB==0, no round up
+	rts
 __divf32_rup_none:
 	clc
 	rts
@@ -1730,8 +1726,8 @@ nextbyte:
         pshb
         ldab #1
         cpx #long+3
-        bne next4      ; the last byte takes 4 bits / 8*3+4 = 28bit (24+G+R+S+1)
-        ldab #$10
+        bne next4      ; the last byte takes 2 bits / 8*3+2 = 26bit (24+G+R)
+        ldab #$40
 next4:
         stab 0,x
         pulb
@@ -1739,11 +1735,11 @@ next4:
 next8:
 ;
         pshb
-        ldab @long+3    ; Last byte has only 4 bits; shift left by 4 bits.
-        aslb
-        aslb
-        aslb
-        aslb
+        ldab @long+3    ; only 2 bits are valid; move them to b7 G, b6 R
+        rorb
+        rorb
+        rorb
+        andb #$C0
         stab @long+3
         pulb
 ret:
