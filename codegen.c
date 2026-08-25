@@ -2457,11 +2457,11 @@ pushlx(int off)
   depth+=4;
 }
 
-static void push_args2(Node *args,bool is_variadic)
+static void push_args2(Node *args,Type *param_ty,bool is_variadic)
 {
   if (!args)
     return;
-  push_args2(args->next,is_variadic);
+  push_args2(args->next,param_ty? param_ty->next: NULL,is_variadic);
   if (opt('g','3')) {
     println("; push_args2");
     ast_node_dump(args);
@@ -2487,7 +2487,7 @@ static void push_args2(Node *args,bool is_variadic)
       gen_expr(args);
     }
     if (args->pass_by_stack){
-      if (is_variadic) {
+      if (is_variadic && !param_ty) {
         cast(args->ty, ty_int);
         push();
       }else{
@@ -2547,10 +2547,14 @@ static void push_args2(Node *args,bool is_variadic)
 //
 static int push_args(Node *node)
 {
-  // レジスタ渡しとスタック渡しを判別し、スタックサイズを計算する
+  // Determine register or stack passing and calculate the stack size
   int reg_passable = !node->ret_buffer;
   int stack = 0;
+  Type *param_ty = node->lhs->ty->params;
   for (Node *arg = node->args; arg; arg = arg->next) {
+    bool is_va_arg = !param_ty && node->lhs->ty->is_variadic;
+    if (param_ty)
+      param_ty = param_ty->next;
     // check first parameter
     switch (arg->ty->kind) {
     case TY_VOID:
@@ -2565,7 +2569,7 @@ static int push_args(Node *node)
       if (reg_passable) {
         reg_passable = 0;
         arg->pass_by_stack = 0;
-      }else if (node->lhs->ty->is_variadic) {
+      }else if (is_va_arg) {
         arg->pass_by_stack = 1;
         stack += ((arg->ty->kind==TY_ARRAY||arg->ty->kind==TY_VLA))?
 		2: (arg->ty->size==1? 2: arg->ty->size);
@@ -2577,7 +2581,7 @@ static int push_args(Node *node)
       break;
     }
   }
-  push_args2(node->args,node->lhs->ty->is_variadic);
+  push_args2(node->args,node->lhs->ty->params,node->lhs->ty->is_variadic);
 
   // If the return type is a struct/union, the caller passes
   // a pointer to a buffer as if it were the first argument (in Acc A,B).
