@@ -1,4 +1,5 @@
 #include "chibicc.h"
+#include <math.h>
 
 bool is_compare(Node *node)
 {
@@ -246,6 +247,63 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 }
 
 //
+// Test a float expression.
+//   Generate code that branches to if_false if the test result is false.
+//   Return true if code was generated.
+// For other types, generate no code and return false.
+//
+static bool gen_jump_if_false_float(Node *node, char *if_false)
+{
+  if (node->kind == ND_FUNCALL) {
+    if (node->lhs->kind == ND_VAR
+    && !strcmp(node->lhs->var->name, "isnan")
+    &&  node->args && !node->args->next) {
+      Node   *arg = node->args;
+      double  fval;
+
+      if (!is_flonum(arg->ty)) {
+        error_tok(arg->tok, "a non-floating point value as an argument");
+      }
+      if (is_flonum_constant(arg, &fval)) {
+        if (!isnan(fval)) {
+          println("\tjmp %s", if_false);
+        }
+        return true;
+      }
+      if (is_global_var(arg)) {
+        char *v = arg->var->name;
+        println("\tldaa _%s", v);
+        println("\toraa #$80");
+        println("\tinca");
+        println("\tjne %s", if_false);
+        println("\tldab _%s+1", v);
+        println("\taslb");
+        println("\tjcc %s", if_false);
+        println("\torab _%s+2", v);
+        println("\torab _%s+3", v);
+        println("\tjeq %s", if_false);
+        return true;
+      }
+      if (test_addr_x(arg)) {
+        int off = gen_addr_x(arg);
+        println("\tldaa %d,x", off);
+        println("\toraa #$80");
+        println("\tinca");
+        println("\tjne %s", if_false);
+        println("\tldab %d,x", off + 1);
+        println("\taslb");
+        println("\tjcc %s", if_false);
+        println("\torab %d,x", off + 2);
+        println("\torab %d,x", off + 3);
+        println("\tjeq %s", if_false);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+//
 // Compare two 8- or 16-bit integers.
 //   Generate code that branches to if_false if the comparison result is false.
 //   Return true if code was generated.
@@ -270,6 +328,9 @@ bool gen_jump_if_false(Node *node, char *if_false)
       
   if (node->kind == ND_NOT) {
     return gen_jump_if_true(lhs, if_false);
+  }
+  if (gen_jump_if_false_float(node, if_false)) {
+    return true;
   }
   if (isVAR(node) && is_byte(node)) {
     if (gen_jump_if_false_8bit(node, if_false)) {
@@ -770,6 +831,67 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 //   Return true if code was generated.
 // For other types, generate no code and return false.
 //
+//
+// Test a float expression.
+//   Generate code that branches to if_true if the test result is true.
+//   Return true if code was generated.
+// For other types, generate no code and return false.
+//
+static bool gen_jump_if_true_float(Node *node, char *if_true)
+{
+  if (node->kind == ND_FUNCALL) {
+    if (node->lhs->kind == ND_VAR
+    && !strcmp(node->lhs->var->name, "isnan")
+    &&  node->args && !node->args->next) {
+      Node   *arg = node->args;
+      double  fval;
+
+      if (!is_flonum(arg->ty)) {
+        error_tok(arg->tok, "a non-floating point value as an argument");
+      }
+      if (is_flonum_constant(arg, &fval)) {
+        if (isnan(fval)) {
+          println("\tjmp %s", if_true);
+        }
+        return true;
+      }
+      if (is_global_var(arg)) {
+        char *v = arg->var->name;
+        char *thru = new_label("L_thru_%d");
+        println("\tldaa _%s", v);
+        println("\toraa #$80");
+        println("\tinca");
+        println("\tbne %s", thru);
+        println("\tldab _%s+1", v);
+        println("\taslb");
+        println("\tbcc %s", thru);
+        println("\torab _%s+2", v);
+        println("\torab _%s+3", v);
+        println("\tjne %s", if_true);
+        println("%s:", thru);
+        return true;
+      }
+      if (test_addr_x(arg)) {
+        int off = gen_addr_x(arg);
+        char *thru = new_label("L_thru_%d");
+        println("\tldaa %d,x", off);
+        println("\toraa #$80");
+        println("\tinca");
+        println("\tbne %s", thru);
+        println("\tldab %d,x", off + 1);
+        println("\taslb");
+        println("\tbcc %s", thru);
+        println("\torab %d,x", off + 2);
+        println("\torab %d,x", off + 3);
+        println("\tjne %s", if_true);
+        println("%s:", thru);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool gen_jump_if_true(Node *node, char *if_true)
 {
   int64_t val;
@@ -788,6 +910,9 @@ bool gen_jump_if_true(Node *node, char *if_true)
   }
   if (node->kind == ND_NOT) {
     return (gen_jump_if_false(lhs, if_true));
+  }
+  if (gen_jump_if_true_float(node, if_true)) {
+    return true;
   }
 
   if (isVAR(node) && is_byte(node)) {
