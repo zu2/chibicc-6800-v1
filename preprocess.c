@@ -83,7 +83,7 @@ static Token *skip_line(Token *tok) {
   if (tok->at_bol)
     return tok;
   warn_tok(tok, "extra token");
-  while (tok->at_bol)
+  while (!tok->at_bol)
     tok = tok->next;
   return tok;
 }
@@ -789,8 +789,8 @@ static char *detect_include_guard(Token *tok) {
     if (equal(tok->next, "endif") && tok->next->next->kind == TK_EOF)
       return macro;
 
-    if (equal(tok, "if") || equal(tok, "ifdef") || equal(tok, "ifndef"))
-      tok = skip_cond_incl(tok->next);
+    if (equal(tok->next, "if") || equal(tok->next, "ifdef") || equal(tok->next, "ifndef"))
+      tok = skip_cond_incl2(tok->next->next);
     else
       tok = tok->next;
   }
