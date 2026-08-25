@@ -82,6 +82,7 @@ static HashEntry *get_or_insert_entry(HashMap *map, char *key, int keylen) {
   }
 
   uint64_t hash = fnv_hash(key, keylen);
+  HashEntry *tombstone = NULL;
 
   for (int i = 0; i < map->capacity; i++) {
     HashEntry *ent = &map->buckets[(hash + i) % map->capacity];
@@ -90,15 +91,18 @@ static HashEntry *get_or_insert_entry(HashMap *map, char *key, int keylen) {
       return ent;
 
     if (ent->key == TOMBSTONE) {
-      ent->key = key;
-      ent->keylen = keylen;
-      return ent;
+      if (!tombstone)
+        tombstone = ent;
+      continue;
     }
 
     if (ent->key == NULL) {
+      if (tombstone)
+        ent = tombstone;
+      else
+        map->used++;
       ent->key = key;
       ent->keylen = keylen;
-      map->used++;
       return ent;
     }
   }
