@@ -4305,7 +4305,7 @@ static void declare_builtin_functions(void) {
   new_gvar("__builtin_clz", ty5)->is_definition = false;
 
   // int __builtin_ctz(unsigned long)
-  Type *ty6 = func_type(ty_long);
+  Type *ty6 = func_type(ty_int);
   ty6->params = copy_type(ty_ulong);
   new_gvar("__builtin_ctz", ty6)->is_definition = false;
 }
