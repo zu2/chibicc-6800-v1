@@ -310,6 +310,24 @@ static void pushl(void) {
   depth+=4;
 }
 
+static void popl(void) {
+  if (opt('O','2')) {
+    println("\tpulb");
+    println("\tstab @long");
+    println("\tpulb");
+    println("\tstab @long+1");
+    println("\tpulb");
+    println("\tstab @long+2");
+    println("\tpulb");
+    println("\tstab @long+3");
+    depth-=4;
+    return;
+  }
+  println("\tjsr __pop32");
+  IX_invalidate();
+  depth-=4;
+}
+
 void pushf(void) {
   pushl();
 }
@@ -3765,8 +3783,7 @@ static void gen_funcall(Node *node)
       case TY_FLOAT:
       case TY_DOUBLE:
       case TY_LDOUBLE:
-        println("\tpush32");
-        depth+=4;
+        pushl();
         break;
       default:
         assert(0);
@@ -3793,8 +3810,7 @@ static void gen_funcall(Node *node)
       case TY_FLOAT:
       case TY_DOUBLE:
       case TY_LDOUBLE:
-        println("\tpop32");
-        depth-=4;
+        popl();
         break;
       default:
         assert(0);
