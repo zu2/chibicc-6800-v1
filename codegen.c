@@ -1456,6 +1456,7 @@ bool gen_expr_x_sub(Node *node,bool test)
       switch(val) {
       case 0:
         if (test) return true;
+        gen_expr_x(lhs);
         return false;
       case 1:
       case 2:
