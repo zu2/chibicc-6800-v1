@@ -137,12 +137,33 @@ void gen_expr_float(Node *node)
     return;
   case ND_MUL:
     if (is_flonum_constant(node->rhs, &fval)) {
+      int k;
+      // exp * 2^k
+      if (isfinite(fval) && fval != 0
+      &&  fabsf(frexpf((float)fval, &k)) == 0.5f) { // rhs == 0.5 * 2^k ?
+          gen_expr(node->lhs);
+        if (fval < 0) {
+          println("\tldab @long");
+          println("\teorb #$80");
+          println("\tstab @long");
+        }
+        if (k!=1) { // * 1.0f?
+          ldd_i(k-1);
+          push();
+          println("\tjsr _ldexpf");
+          IX_invalidate();
+          remove_args(2);
+        }
+        return;
+      }
+      // exp * const
       gen_expr(node->lhs);
       ldx_IMM_STR(float_literal_label(fval));
       println("\tjsr __mulf32x");
       IX_invalidate();
       return;
-    }else if ((addr = is_var_addr_constant(node->rhs))) {
+    }
+    if ((addr = is_var_addr_constant(node->rhs))) {
       gen_expr(node->lhs);
       ldx_IMM_STR(addr);
       println("\tjsr __mulf32x");

@@ -65,6 +65,7 @@
 	.export	_isfinite
         .export _signbit
         .export _frexpf
+        .export _ldexpf
         .export _modff
 ;
 	.export	__check_nan
@@ -129,6 +130,7 @@ _isnan:
 _isfinite:
 _signbit:
 _frexpf:
+_ldexpf:
 _modff:
 ;
 __check_nan:

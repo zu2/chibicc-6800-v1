@@ -139,7 +139,7 @@ void sign_extend()
 // 
 // Removes stack args (flags may be affected).
 //
-static void remove_args(int n)
+void remove_args(int n)
 {
   assert(depth>=n && n>=0);
   if (opt('g','2')) {

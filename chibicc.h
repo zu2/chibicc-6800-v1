@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <glob.h>
 #include <libgen.h>
+#include <limits.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -545,6 +547,7 @@ void popa(void);
 void popx(void);
 void ins(int n);
 void sign_extend(void);
+void remove_args(int n);
 void ldab_i(int n);
 void ldd_i(int n);
 void and_i(int n);
