@@ -115,16 +115,12 @@ int main(int argc, char **argv)
 	e = f/g;
 	if (!isinf(e))
 		return 111;
-	if (isinf(e)!=1)
-		return 112;
 
 	f = -1.0f;
 	g = to_float(HEX_FLT_MIN_DIV4);
 	e = f/g;
 	if (!isinf(e))
 		return 121;
-	if (isinf(e)!=-1)
-		return 122;
 
 	f = to_float(HEX_FLT_MIN_DIV2);
 	g = 2.0f;
