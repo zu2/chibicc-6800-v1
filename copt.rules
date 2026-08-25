@@ -182,27 +182,33 @@
 	clrb
 	aba
 	adca #0
+	j%1 %2
 =
 	clra
 	clrb
+	j%1 %2
 
 	clra
 	ldab #1
 	aba
 	adca #0
+	j%1 %2
 =
 	clra
 	ldab #1
+	j%1 %2
 
 	clra
 	ldab %1
 	andb #%2
 	aba
 	adca #0
+	j%3 %4
 =
 	clra
 	ldab %1
 	andb #%2
+	j%3 %4
 
 	addb #<%1
 	adca #>%1
@@ -468,8 +474,11 @@
 	andb %1
 	aba
 	adca #0
+	j%2 %3
 =
+	clra
 	andb %1
+	j%2 %3
 
 
 	jsr __ge16s
