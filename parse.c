@@ -2631,7 +2631,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (opeq_ok(node->ty,rhs->ty)) {
       return new_binary(ND_MODEQ, node, rhs, tok);
     }
-    return to_assign(new_binary(ND_MOD, node, assign(rest, tok->next), tok));
+    return to_assign(new_binary(ND_MOD, node, rhs, tok));
   }
 
   if (equal(tok, "&=")) {
