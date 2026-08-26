@@ -4,7 +4,9 @@
 ;	it's very slow
 ;
 	.export __mul32tos
-	.export __mul32x
+	.export __mul32x32x
+	.export __mul32x32bx
+	.export __mul32x32dx
 	.code
 ;
 ;  __mul32tos: @long = @long * TOS
@@ -20,20 +22,31 @@
 ;
 	.data
 	.code
-__mul32x:
+;
+;  __mul32x32x:  @long = @long * (0-3,x)
+;  __mul32x32bx: @long = @long * (b,x)
+;  __mul32x32dx: @long = @long * (d,x)
+;
+;  0-3,x:      Multiplier
+;
+;  long:       Multiplicand & result
+;  tmp2:       tmp2:accAB  32bit acc.
+;  tmp3:       Multiplier (copy from 0-1,x)
+;  tmp4:       Multiplier (copy from 2-3,x)
+;
+;  IX is destroyed.  The loop counter lives in it.
+;
+__mul32x32bx:
+        clra
+__mul32x32dx:
+        jsr __adx
+__mul32x32x:
         stx @tmp2
-        jsr __push32
+        ldx 0,x
+        stx @tmp3
         ldx @tmp2
-        jsr __load32x
-        bsr __mul32tos
-        rts
-__mul32tos:
-	tsx
-	ldx 4,x
-	stx @tmp4
-	tsx
-	ldx 2,x
-	stx @tmp3
+        ldx 2,x
+        stx @tmp4
 ;
         ldx #0
         stx tmp2
@@ -106,8 +119,15 @@ skip_4: rorb
 	bne loop_4
 ;
 	staa @long
+        rts
 ;
-        tsx
+
+__mul32tos:
+	tsx
+	inx
+	inx			; IX = &Multiplier (TOS)
+	jsr __mul32x32x
+	tsx
 	ldx 0,x
 	ins
 	ins
