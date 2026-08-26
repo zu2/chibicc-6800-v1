@@ -6270,6 +6270,44 @@ void gen_expr(Node *node)
       remove_args(4);
       return;
     case ND_DIV:
+      if (is_long_constant(rhs,&val)) {
+        gen_expr(lhs);
+        ldx_IMM_STR(long_literal_label(val));
+        if (node->ty->is_unsigned) {
+          println("\tjsr __div32x32ux");
+        }else{
+          println("\tjsr __div32x32sx");
+        }
+        IX_invalidate();
+        return;
+      }
+      if (test_addr_x(rhs)) {
+        gen_expr(lhs);
+        int off = gen_addr_x(rhs);
+        if (off == 0) {
+          if (node->ty->is_unsigned) {
+            println("\tjsr __div32x32ux");
+          }else{
+            println("\tjsr __div32x32sx");
+          }
+        }else if (off <= 255) {
+          ldab_i(off);
+          if (node->ty->is_unsigned) {
+            println("\tjsr __div32x32ubx");
+          }else{
+            println("\tjsr __div32x32sbx");
+          }
+        }else{
+          ldd_i(off);
+          if (node->ty->is_unsigned) {
+            println("\tjsr __div32x32udx");
+          }else{
+            println("\tjsr __div32x32sdx");
+          }
+        }
+        IX_invalidate();
+        return;
+      }
       gen_expr(node->rhs);
       pushl();
       gen_expr(node->lhs);
@@ -6282,6 +6320,44 @@ void gen_expr(Node *node)
       IX_invalidate();
       return;
     case ND_MOD:
+      if (is_long_constant(rhs,&val)) {
+        gen_expr(lhs);
+        ldx_IMM_STR(long_literal_label(val));
+        if (node->ty->is_unsigned) {
+          println("\tjsr __rem32x32ux");
+        }else{
+          println("\tjsr __rem32x32sx");
+        }
+        IX_invalidate();
+        return;
+      }
+      if (test_addr_x(rhs)) {
+        gen_expr(lhs);
+        int off = gen_addr_x(rhs);
+        if (off == 0) {
+          if (node->ty->is_unsigned) {
+            println("\tjsr __rem32x32ux");
+          }else{
+            println("\tjsr __rem32x32sx");
+          }
+        }else if (off <= 255) {
+          ldab_i(off);
+          if (node->ty->is_unsigned) {
+            println("\tjsr __rem32x32ubx");
+          }else{
+            println("\tjsr __rem32x32sbx");
+          }
+        }else{
+          ldd_i(off);
+          if (node->ty->is_unsigned) {
+            println("\tjsr __rem32x32udx");
+          }else{
+            println("\tjsr __rem32x32sdx");
+          }
+        }
+        IX_invalidate();
+        return;
+      }
       gen_expr(node->rhs);
       pushl();
       gen_expr(node->lhs);
