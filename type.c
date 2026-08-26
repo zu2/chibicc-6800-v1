@@ -552,6 +552,14 @@ void add_type(Node *node) {
     ||  node->rhs->ty->kind == TY_VOID) {
       error_tok(node->tok, "invalid operand");
     }
+    if (node->lhs->ty->kind == TY_STRUCT
+    ||  node->lhs->ty->kind == TY_UNION) {
+      error_tok(node->lhs->tok, "invalid operand");
+    }
+    if (node->rhs->ty->kind == TY_STRUCT
+    ||  node->rhs->ty->kind == TY_UNION) {
+      error_tok(node->rhs->tok, "invalid operand");
+    }
     usual_arith_conv(&node->lhs, &node->rhs);
     node->ty = ty_int;
     return;
