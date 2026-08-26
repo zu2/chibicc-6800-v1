@@ -1520,7 +1520,7 @@ int gen_decayed_x_sub(Node *node,bool test)
     if (lhs->ty->kind == TY_ARRAY
     &&  is_integer_constant(rhs,&val)) {
       off = addr_x_offset(lhs);
-      if (0 <= off && off + val <= 252) {
+      if (0 <= off && 0 <= val && off + val <= 252) {
         if (test) return 0;
         return gen_addr_x(lhs) + val;
       }
