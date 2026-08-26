@@ -438,6 +438,65 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
       return true;
     }
   }
+
+  if (is_compare(node) && is_flonum(node->lhs->ty)) {
+    double  fval;
+    char   *addr;
+
+    if (is_flonum_constant(node->rhs, &fval)) {
+      gen_expr(node->lhs);
+      if ((node->kind == ND_EQ || node->kind == ND_NE) && fval == 0.0) {
+        println("\tjsr __f32iszero");	// ±0.0: Z=1, NaN and others: Z=0
+        IX_invalidate();
+        if (node->kind == ND_EQ) {
+          println("\tjne %s", if_false);
+        } else {
+          println("\tjeq %s", if_false);
+        }
+        return true;
+      }
+      ldx_IMM_STR(float_literal_label(fval));
+      println("\tjsr __cmpf32x");
+    }else if ((addr = is_var_addr_constant(node->rhs))) {
+      gen_expr(node->lhs);
+      ldx_IMM_STR(addr);
+      println("\tjsr __cmpf32x");
+    }else if (test_addr_x(node->rhs)) {
+      gen_expr(node->lhs);
+      cmpf32x(gen_addr_x(node->rhs));
+    }else{
+      gen_expr(node->rhs);
+      pushf();
+      gen_expr(node->lhs);
+      println("\tjsr __cmpf32tos");
+      depth -= 4;
+    }
+    IX_invalidate();
+
+    char *thru = NULL;
+    if (node->kind == ND_NE) {		// NaN is true only for !=
+      thru = new_label("L_thru_%d");
+      println("\tbcs %s", thru);
+    } else {
+      println("\tjcs %s", if_false);
+    }
+    println("\ttstb");
+    switch (node->kind) {
+    case ND_EQ: println("\tjne %s", if_false); break;
+    case ND_NE: println("\tjeq %s", if_false); break;
+    case ND_LT: println("\tjpl %s", if_false); break;
+    case ND_LE: println("\tjgt %s", if_false); break;
+    case ND_GT: println("\tjle %s", if_false); break;
+    case ND_GE: println("\tjmi %s", if_false); break;
+    default: ;
+      assert(0);
+    }
+    if (thru) {
+      println("%s:", thru);
+      IX_invalidate();
+    }
+    return true;
+  }
   return false;
 }
 
@@ -1166,6 +1225,65 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
       println("\tjmi %s", if_true);
       return true;
     }
+  }
+
+  if (is_compare(node) && is_flonum(node->lhs->ty)) {
+    double  fval;
+    char   *addr;
+
+    if (is_flonum_constant(node->rhs, &fval)) {
+      gen_expr(node->lhs);
+      if ((node->kind == ND_EQ || node->kind == ND_NE) && fval == 0.0) {
+        println("\tjsr __f32iszero");	// ±0.0: Z=1, NaN and others: Z=0
+        IX_invalidate();
+        if (node->kind == ND_EQ) {
+          println("\tjeq %s", if_true);
+        } else {
+          println("\tjne %s", if_true);
+        }
+        return true;
+      }
+      ldx_IMM_STR(float_literal_label(fval));
+      println("\tjsr __cmpf32x");
+    }else if ((addr = is_var_addr_constant(node->rhs))) {
+      gen_expr(node->lhs);
+      ldx_IMM_STR(addr);
+      println("\tjsr __cmpf32x");
+    }else if (test_addr_x(node->rhs)) {
+      gen_expr(node->lhs);
+      cmpf32x(gen_addr_x(node->rhs));
+    }else{
+      gen_expr(node->rhs);
+      pushf();
+      gen_expr(node->lhs);
+      println("\tjsr __cmpf32tos");
+      depth -= 4;
+    }
+    IX_invalidate();
+
+    char *thru = NULL;
+    if (node->kind == ND_NE) {		// NaN is true only for !=
+      println("\tjcs %s", if_true);
+    } else {
+      thru = new_label("L_thru_%d");
+      println("\tbcs %s", thru);
+    }
+    println("\ttstb");
+    switch (node->kind) {
+    case ND_EQ: println("\tjeq %s", if_true); break;
+    case ND_NE: println("\tjne %s", if_true); break;
+    case ND_LT: println("\tjmi %s", if_true); break;
+    case ND_LE: println("\tjle %s", if_true); break;
+    case ND_GT: println("\tjgt %s", if_true); break;
+    case ND_GE: println("\tjge %s", if_true); break;
+    default: ;
+      assert(0);
+    }
+    if (thru) {
+      println("%s:", thru);
+      IX_invalidate();
+    }
+    return true;
   }
   return false;
 }

@@ -18,7 +18,7 @@ struct FloatLiteral {
 static FloatLiteral *float_literals;
 
 // Return the label of the .data entry that holds a float constant.
-static char *float_literal_label(double fval)
+char *float_literal_label(double fval)
 {
   union { float f32; uint32_t u32; } u = { fval };
   FloatLiteral *fl;
@@ -48,6 +48,21 @@ void emit_float_literals(void)
     println("CF_%08x:",fl->bits);
     println("\t.word %d",(fl->bits>>16) & 0xffff);
     println("\t.word %d",(fl->bits    ) & 0xffff);
+  }
+}
+
+void cmpf32x(int off)
+{
+  if (off==0) {
+    println("\tjsr __cmpf32x");
+  }else if (1<=off && off<=255) {
+    ldab_i(off);
+    println("\tjsr __cmpf32bx");
+    IX_invalidate();
+  }else{
+    ldd_i(off);
+    println("\tjsr __cmpf32dx");
+    IX_invalidate();
   }
 }
 
@@ -282,16 +297,7 @@ void gen_expr_float(Node *node)
       println("\tjsr __cmpf32x");
     }else if (test_addr_x(node->rhs)) {
       gen_expr(node->lhs);
-      int off = gen_addr_x(node->rhs);
-      if (off==0) {
-        println("\tjsr __cmpf32x");
-      }else if (1<=off && off<=255) {
-        ldab_i(off);
-        println("\tjsr __cmpf32bx");
-      }else{
-        ldd_i(off);
-        println("\tjsr __cmpf32dx");
-      }
+      cmpf32x(gen_addr_x(node->rhs));
     }else{
       gen_expr(node->rhs);	// xmm1
       pushf();
