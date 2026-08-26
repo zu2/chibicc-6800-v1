@@ -2120,6 +2120,8 @@ void store_x(Type *ty,int off) {
   switch (ty->kind) {
   case TY_STRUCT:
   case TY_UNION:
+    if (ty->size==0)
+      return;
     println("; store struct/union from *TOS to IX, size %d",ty->size);
     push();
     if (off!=0) {
@@ -2359,7 +2361,8 @@ static void push_struct(Type *ty) {
     println("; stack depth = %d",depth);
   }
   int sz = ty->size;
-  assert(sz != 0);
+  if (sz == 0)
+    return;
 
   tfr_dx();
   if (ty->size<=8) {
@@ -2628,21 +2631,23 @@ static void copy_struct_mem(void) {
 //         AccAB:size
 //         IX:   dest
 //         TOS:  src
-  push();
-  if (current_fn->stack_size<255) {
-    ldx_bp();
-    ldx_nX(current_fn->stack_size);
-  }else{
-    ldd_i(current_fn->stack_size);
-    ldx_bp();
-    adx();
-    ldx_nX(0);
+  if (ty->size) {
+    push();
+    if (current_fn->stack_size<255) {
+      ldx_bp();
+      ldx_nX(current_fn->stack_size);
+    }else{
+      ldd_i(current_fn->stack_size);
+      ldx_bp();
+      adx();
+      ldx_nX(0);
+    }
+    ldd_i(ty->size);
+    println("\tjsr __copy_struct2 ; copy_struct_mem");
+    depth -= 2; // copy_struct2 remove *TOS
+    //ins(2); // copy_struct2 already pops argument.
+    IX_invalidate();
   }
-  ldd_i(ty->size);
-  println("\tjsr __copy_struct2 ; copy_struct_mem");
-  depth -= 2; // copy_struct2 remove *TOS
-  //ins(2); // copy_struct2 already pops argument.
-  IX_invalidate();
   // reload dest addr
   if (current_fn->stack_size<255) {
     ldx_bp();
@@ -5892,6 +5897,8 @@ void gen_expr(Node *node)
     return;
   case ND_MEMZERO:
     // `rep stosb` is equivalent to `memset(%rdi, %al, %rcx)`.
+    if (node->var->ty->size == 0)
+      return;
     if (node->var->name) {
       println("; ND_MEMZERO %s size=%d, offset=%d,  %s %s %d",
                  node->var->name, node->var->ty->size, node->var->offset,
