@@ -1220,6 +1220,12 @@ bool gen_expr_x_sub(Node *node,bool test)
     }
     return false;
   case ND_MEMBER: {
+    if ((addr=is_var_addr_constant(node))) {
+      if (test) return true;
+      println("\tldx %s",addr);
+      IX_invalidate();
+      return false;
+    }
     if (test_addr_x(node)) {
       if (test) return true;
       ldx_nX(gen_addr_x(node));
