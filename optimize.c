@@ -728,10 +728,12 @@ Node *optimize_expr(Node *node)
     // (ND_CAST TY_CHAR(2) (<< TY_INT(4)
     if (node->ty->kind == TY_CHAR
     &&  node->lhs->kind == ND_SHL) {
-      node->lhs->ty = node->ty;
-      if (is_integral_promotion(node->lhs->lhs)) {
-        node->lhs->lhs = node->lhs->lhs->lhs;
+      if (is_integral_promotion_or_char(node->lhs->lhs)) {
+        node->lhs->lhs = skip_integral_promotion(node->lhs->lhs);
+      }else{
+        node->lhs->lhs = new_cast(node->lhs->lhs,node->ty);
       }
+      node->lhs->ty = node->ty;
       return optimize_expr(node->lhs);
     }
     // (ND_CAST TY_CHAR(2) (|&^ TY_INT(4) (int) (int)))
