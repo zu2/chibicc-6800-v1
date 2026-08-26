@@ -742,11 +742,12 @@ __subf32bx:
 __subf32dx:
 	jsr	__adx
 __subf32x:
-	jsr	__fp_settos
-	ldab	0,x		; flip the sign of TOS
-	eorb	#$80
-	stab	0,x
-	jmp	__addf32x
+	stx	__fp_ix
+	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
+;	ldab	__zin
+	eorb	#$80		; sub flips TOS's sign, so the two signs differ
+	stab	__zin
+	bra	__addf32_0
 ;
 ;	@long = TOS + @long
 ;	pull TOS
@@ -759,6 +760,7 @@ __addf32x:
 	stx	__fp_ix
 	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
 ;	ldab	__zin
+__addf32_0:
 	bitb	#$3F
 	beq	__addf32_1	; No,  normal calculation
 ;
@@ -771,7 +773,7 @@ __addf32x:
 	beq	__addf32_s10	; No, only TOS is Inf
 	bitb	#$08		; TOS is Inf too?
 	beq	__addf32_s05	; No, return Inf, sign is same as @long
-	ldab	__sign		; each sign are same?
+	tstb			; AccB is __zin. each sign are same?
 	bpl	__addf32_s05	; 
 __addf32_retNaN:
 	jmp	__f32retNaN	; No,  return NaN
@@ -780,8 +782,8 @@ __addf32_s05:
 	jmp	__f32retInf
 	;
 __addf32_s10:			; TOS is Inf, @long is not
-	ldx	__fp_ix
-	ldab	0,x
+	ldab	@long		; TOS's sign = @long's sign xor __zin's b7
+	eorb	__zin
 	jmp	__f32retInf	; return Inf, The sign is the same as TOS
 ;
 __addf32_s20:			; TOS and @long are not NaN,Inf.
@@ -789,15 +791,27 @@ __addf32_s20:			; TOS and @long are not NaN,Inf.
 	beq	__addf32_1	; No
 	cmpb	#$30		; TOS and @long == 0.0?
 	jne	__addf32_s50
-	tst	__sign		; Yes. same sign?
-	jne	__f32retpZero	; Not same sign. return +0.0
+	ldab	__zin		; Yes. same sign?
+	jmi	__f32retpZero	; Not same sign. return +0.0
 	jmp	__f32retZerol	; return 0.0, sign is same as @long
 ;
 __addf32_s50:			; TOS or @long == 0.0
 	cmpb	#$20		; TOS == 0.0?
 	beq	__addf32_s51	; Yes, return @long (do nothing)
+	ldab	@long		; TOS's sign = @long's sign xor __zin's b7
+	eorb	__zin
+	andb	#$80
+	stab	__sign
 	ldx	__fp_ix
-	jsr	__load32x	; @long <= (0-3,x)
+	ldx	2,x
+	stx	@long+2
+	ldx	__fp_ix
+	ldx	0,x
+	stx	@long
+	ldab	@long
+	andb	#$7F
+	orab	__sign
+	stab	@long
 __addf32_s51:
 	rts
 ;
@@ -808,22 +822,33 @@ __addf32_1:			; neither @long nor TOS is 0.0
 	bne	__addf32_3
 	tst	__zin		; equal size. b7 says the signs differ
 	jmi	__f32retpZero	; x + (-x) is +0.0
-	bra	__addf32_3
-;
-__addf32_2:			; the operand is bigger, so swap the two
-	ldx	#__fp_work+4
-	jsr	__store32x	; keep the smaller value
-	ldx	__fp_ix
-	jsr	__load32x	; @long <= the raw operand
-	ldx	#__fp_work+4
-	bra	__addf32_4
 ;
 __addf32_3:			; @long already holds the bigger value
+	ldab	@long		; the result takes @long's sign
+	bra	__addf32_4
 ;
-__addf32_4:
-	ldab	@long		; the result takes the sign of the bigger value
+__addf32_2:			; TOS is bigger, so swap the two
+	ldab	@long		; the result takes TOS's sign, which is
+	eorb	__zin		;   @long's sign xor __zin's b7
 	andb	#$80
 	stab	__sign
+	ldx	@long+2		; keep the smaller value
+	stx	__fp_work+6
+	ldx	@long
+	stx	__fp_work+4
+	ldx	__fp_ix
+	ldx	2,x		; @long <= the raw operand
+	stx	@long+2
+	ldx	__fp_ix
+	ldx	0,x
+	stx	@long
+	ldx	#__fp_work+4
+	bra	__addf32_41
+;
+__addf32_4:
+	andb	#$80
+	stab	__sign
+__addf32_41:
 	jsr	__setup_long
 ;
 ;	Unpack the smaller value into __fp_work and line it up with @long.
