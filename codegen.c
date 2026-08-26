@@ -2316,12 +2316,13 @@ static void cast(Type *from, Type *to) {
   int t2 = getTypeId(to);
 
   if (cast_table[t1][t2]){
-    println("\t%s", cast_table[t1][t2]);
-    if(strncmp("jsr",cast_table[t1][t2],3)==0)
-      if (strcmp(cast_table[t1][t2]+4, "__u8to32")
-      &&  strcmp(cast_table[t1][t2]+4, "__s8to32")
-      &&  strcmp(cast_table[t1][t2]+4, "__u16to32")
-      &&  strcmp(cast_table[t1][t2]+4, "__s16to32")) {
+    char *op = cast_table[t1][t2];
+    println("\t%s", op);
+    if(op[0]!=';' && strstr(op, "jsr"))
+      if (!strstr(op, "__u8to32")
+      &&  !strstr(op, "__s8to32")
+      &&  !strstr(op, "__u16to32")
+      &&  !strstr(op, "__s16to32")) {
         IX_invalidate();
       }
   }
