@@ -514,8 +514,17 @@ static void load32x(int off)
   if (off==0) {
     println("\tjsr __load32x");
   }else if (1<=off && off<=255) {
-    ldab_i(off);
-    println("\tjsr __load32bx");
+    if (!opt('O','s') && off<=252 && IX_Dest==IX_BP && current_fn->use_bp) {
+      println("\tldx %d,x",off+2);
+      println("\tstx @long+2");
+      IX_invalidate();
+      ldx_bp();
+      println("\tldx %d,x",off);
+      println("\tstx @long");
+    }else{
+      ldab_i(off);
+      println("\tjsr __load32bx");
+    }
     IX_invalidate();
   }else{
     ldd_i(off);
