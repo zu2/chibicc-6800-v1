@@ -219,7 +219,7 @@ static char *quote_string(char *str) {
 }
 
 static Token *new_str_token(char *str, Token *tmpl) {
-  char *buf = quote_string(str);
+  char *buf = format("%s\n", quote_string(str));
   return tokenize(new_file(tmpl->file->name, tmpl->file->file_no, buf));
 }
 
@@ -503,12 +503,13 @@ static void align_token(Token *tok1, Token *tok2) {
 // Concatenate two tokens to create a new token.
 static Token *paste(Token *lhs, Token *rhs) {
   // Paste the two tokens.
-  char *buf = format("%.*s%.*s", lhs->len, lhs->loc, rhs->len, rhs->loc);
+  char *buf = format("%.*s%.*s\n", lhs->len, lhs->loc, rhs->len, rhs->loc);
 
   // Tokenize the resulting string.
   Token *tok = tokenize(new_file(lhs->file->name, lhs->file->file_no, buf));
-  if (tok->next->kind != TK_EOF)
-    error_tok(lhs, "pasting forms '%s', an invalid token", buf);
+  if (tok->kind == TK_EOF || tok->next->kind != TK_EOF)
+    error_tok(lhs, "pasting forms '%.*s%.*s', an invalid token",
+              lhs->len, lhs->loc, rhs->len, rhs->loc);
   return tok;
 }
 
