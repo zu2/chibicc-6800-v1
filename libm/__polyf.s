@@ -43,18 +43,13 @@ __polyloop:
 	ldx	#__polyx
 	jsr	__mulf32x
 __polyadd:
-	bsr	__polyadv
-	ldx	__polyc
-	jsr	__addf32x
-	dec	__polyn
-	bne	__polyloop
-	rts
-;
-__polyadv:
 	ldx	__polyc
 	inx
 	inx
 	inx
 	inx
 	stx	__polyc
+	jsr	__addf32x
+	dec	__polyn
+	bne	__polyloop
 	rts
