@@ -259,6 +259,20 @@ static Token *read_string_literal(char *start, char *quote) {
   return tok;
 }
 
+// The target is big endian, so a wide character goes into memory
+// with its most significant byte first.
+static void put_be16(char *buf, uint32_t c) {
+  buf[0] = (c >> 8) & 0xff;
+  buf[1] = c & 0xff;
+}
+
+static void put_be32(char *buf, uint32_t c) {
+  buf[0] = (c >> 24) & 0xff;
+  buf[1] = (c >> 16) & 0xff;
+  buf[2] = (c >> 8) & 0xff;
+  buf[3] = c & 0xff;
+}
+
 // Read a UTF-8-encoded string literal and transcode it in UTF-16.
 //
 // UTF-16 is yet another variable-width encoding for Unicode. Code
@@ -266,32 +280,39 @@ static Token *read_string_literal(char *start, char *quote) {
 // equal to or larger than that are encoded in 4 bytes. Each 2 bytes
 // in the 4 byte sequence is called "surrogate", and a 4 byte sequence
 // is called a "surrogate pair".
-static Token *read_utf16_string_literal(char *start, char *quote) {
+static Token *read_utf16_string_literal(char *start, char *quote, Type *ty) {
   char *end = string_literal_end(quote + 1);
-  uint16_t *buf = calloc(2, end - start);
+  char *buf = calloc(2, end - start);
   int len = 0;
 
   for (char *p = quote + 1; p < end;) {
+    uint32_t c;
+
     if (*p == '\\') {
-      buf[len++] = read_escaped_char(&p, p + 1);
+      c = read_escaped_char(&p, p + 1);
+      put_be16(buf + len * 2, c);
+      len++;
       continue;
     }
 
-    uint32_t c = decode_utf8(&p, p);
+    c = decode_utf8(&p, p);
     if (c < 0x10000) {
       // Encode a code point in 2 bytes.
-      buf[len++] = c;
+      put_be16(buf + len * 2, c);
+      len++;
     } else {
       // Encode a code point in 4 bytes.
       c -= 0x10000;
-      buf[len++] = 0xd800 + ((c >> 10) & 0x3ff);
-      buf[len++] = 0xdc00 + (c & 0x3ff);
+      put_be16(buf + len * 2, 0xd800 + ((c >> 10) & 0x3ff));
+      len++;
+      put_be16(buf + len * 2, 0xdc00 + (c & 0x3ff));
+      len++;
     }
   }
 
   Token *tok = new_token(TK_STR, start, end + 1);
-  tok->ty = array_of(ty_ushort, len + 1);
-  tok->str = (char *)buf;
+  tok->ty = array_of(ty, len + 1);
+  tok->str = buf;
   return tok;
 }
 
@@ -301,19 +322,23 @@ static Token *read_utf16_string_literal(char *start, char *quote) {
 // encoded in 4 bytes.
 static Token *read_utf32_string_literal(char *start, char *quote, Type *ty) {
   char *end = string_literal_end(quote + 1);
-  uint32_t *buf = calloc(4, end - quote);
+  char *buf = calloc(4, end - quote);
   int len = 0;
 
   for (char *p = quote + 1; p < end;) {
+    uint32_t c;
+
     if (*p == '\\')
-      buf[len++] = read_escaped_char(&p, p + 1);
+      c = read_escaped_char(&p, p + 1);
     else
-      buf[len++] = decode_utf8(&p, p);
+      c = decode_utf8(&p, p);
+    put_be32(buf + len * 4, c);
+    len++;
   }
 
   Token *tok = new_token(TK_STR, start, end + 1);
   tok->ty = array_of(ty, len + 1);
-  tok->str = (char *)buf;
+  tok->str = buf;
   return tok;
 }
 
@@ -489,7 +514,7 @@ static void add_line_numbers(Token *tok) {
 Token *tokenize_string_literal(Token *tok, Type *basety) {
   Token *t;
   if (basety->size == 2)
-    t = read_utf16_string_literal(tok->loc, tok->loc);
+    t = read_utf16_string_literal(tok->loc, tok->loc, basety);
   else
     t = read_utf32_string_literal(tok->loc, tok->loc, basety);
   t->next = tok->next;
@@ -573,21 +598,21 @@ Token *tokenize(File *file) {
 
     // UTF-16 string literal
     if (startswith(p, "u\"")) {
-      cur = cur->next = read_utf16_string_literal(p, p + 1);
+      cur = cur->next = read_utf16_string_literal(p, p + 1, ty_ushort);
       p += cur->len;
       continue;
     }
 
     // Wide string literal
     if (startswith(p, "L\"")) {
-      cur = cur->next = read_utf32_string_literal(p, p + 1, ty_int);
+      cur = cur->next = read_utf16_string_literal(p, p + 1, ty_int);
       p += cur->len;
       continue;
     }
 
     // UTF-32 string literal
     if (startswith(p, "U\"")) {
-      cur = cur->next = read_utf32_string_literal(p, p + 1, ty_uint);
+      cur = cur->next = read_utf32_string_literal(p, p + 1, ty_ulong);
       p += cur->len;
       continue;
     }
@@ -617,7 +642,7 @@ Token *tokenize(File *file) {
 
     // UTF-32 character literal
     if (startswith(p, "U'")) {
-      cur = cur->next = read_char_literal(p, p + 1, ty_uint);
+      cur = cur->next = read_char_literal(p, p + 1, ty_ulong);
       p += cur->len;
       continue;
     }

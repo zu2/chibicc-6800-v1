@@ -1185,7 +1185,7 @@ typedef enum {
 } StringKind;
 
 static StringKind getStringKind(Token *tok) {
-  if (!strcmp(tok->loc, "u8"))
+  if (tok->len >= 3 && !strncmp(tok->loc, "u8\"", 3))
     return STR_UTF8;
 
   switch (tok->loc[0]) {
