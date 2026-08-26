@@ -2754,12 +2754,6 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         return 1;
       }
       if (strcmp(opb,"ldab")==0) {
-        if (node->ty->size == 1) {
-          ldab_i((uint16_t)node->val);
-        }else{
-          ldd_i((uint16_t)node->val);
-        }
-      } else if (strcmp(opb,"ldab")==0) {
         if (opa) ldd_i ((uint16_t)node->val);
         else     ldab_i((uint16_t)node->val);
       } else if (strcmp(opb,"andb")==0) {
