@@ -6236,6 +6236,28 @@ void gen_expr(Node *node)
           }
         }
       }
+      if (is_long_constant(rhs,&val)) {
+        gen_expr(lhs);
+        ldx_IMM_STR(long_literal_label(val));
+        println("\tjsr __mul32x32x");
+        IX_invalidate();
+        return;
+      }
+      if (test_addr_x(rhs)) {
+        gen_expr(lhs);
+        int off = gen_addr_x(rhs);
+        if (off == 0) {
+          println("\tjsr __mul32x32x");	// __mul32x32x messes IX
+        }else if (off <= 255) {
+          ldab_i(off);
+          println("\tjsr __mul32x32bx");
+        }else{
+          ldd_i(off);
+          println("\tjsr __mul32x32dx");
+        }
+        IX_invalidate();
+        return;
+      }
       if (node->lhs->kind == ND_NUM) {
         gen_direct_pushl(node->lhs->val);
       }else if (test_addr_x(node->lhs)){
