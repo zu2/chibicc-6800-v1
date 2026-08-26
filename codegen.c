@@ -6210,6 +6210,32 @@ void gen_expr(Node *node)
         IX_invalidate();
         return;
       }
+      if (node->lhs->kind     == ND_CAST
+      &&  node->lhs->ty->kind == TY_LONG
+      &&  is_int16(node->lhs->lhs->ty)
+      &&  is_long_constant(node->rhs,&val)) {
+        if (node->lhs->lhs->ty->is_unsigned) {
+          if (val >= 0 && val <= 65535) {
+            gen_expr(lhs->lhs);
+            push();
+            ldd_i((int)(val & 0xffff));
+            println("\tjsr __mul16x16u_32");
+            ins(2);
+            IX_invalidate();
+            return;
+          }
+        }else{
+          if (val >= -32768 && val <= 32767) {
+            gen_expr(lhs->lhs);
+            push();
+            ldd_i((int)(val & 0xffff));
+            println("\tjsr __mul16x16s_32");
+            ins(2);
+            IX_invalidate();
+            return;
+          }
+        }
+      }
       if (node->lhs->kind == ND_NUM) {
         gen_direct_pushl(node->lhs->val);
       }else if (test_addr_x(node->lhs)){
