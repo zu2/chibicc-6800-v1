@@ -1601,7 +1601,7 @@ write_gvar_data(Relocation *cur, Initializer *init, Type *ty, char *buf, int off
       if (mem->is_bitfield) {
         Node *expr = init->children[mem->idx]->expr;
         if (!expr)
-          break;
+          continue;
 
         // mem->bit_offset counts from the LSB of the 16-bit packing unit.
         char *loc = buf + offset + mem->offset;
