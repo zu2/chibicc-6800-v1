@@ -7,7 +7,6 @@
 	.export __rem32x32u
 	.export __rem32x32s
 	.export __div32x32	; @long / TOS
-	.export __div32x32x	; @long / (2-5,x)
 ;
         .data
 sign:   .blkb    1
@@ -32,7 +31,7 @@ __rem32x32s_10:
 	jsr __neg32
 __rem32x32s_20:
 	tsx
-	jsr __div32x32x
+	jsr __div32x32_x2
 	stab @long+3
 	staa @long+2
 	ldab @tmp1+1
@@ -48,7 +47,7 @@ __rem32x32s_20:
 ;
 __rem32x32u:
 	tsx
-	jsr __div32x32x
+	jsr __div32x32_x2
 	stab @long+3
 	staa @long+2
 	ldab @tmp1+1
@@ -75,7 +74,7 @@ __div32x32s_10:
 	jsr __neg32
 __div32x32s_20:
 	tsx
-	jsr __div32x32x
+	jsr __div32x32_x2
 	ldab sign
 	bpl __pullret
 	jsr __neg32
@@ -85,7 +84,7 @@ __div32x32s_20:
 ;
 __div32x32u:
 	tsx
-	jsr __div32x32x
+	jsr __div32x32_x2
 __pullret:
         tsx
 	ldx 0,x
@@ -98,6 +97,7 @@ __pullret:
 	jmp 0,x
 ;
 ;	@long = @long / (2-5,x)
+;	__div32x32_x2 is for internal use.
 ;	@tmp1:AccAB = @long % TOS
 ;	@tmp2:loop counter (bit) 8→0
 ;	@tmp2+1:loop counter (byte) 4→0
@@ -105,7 +105,7 @@ __pullret:
 ;
 __div32x32:
 	tsx
-__div32x32x:
+__div32x32_x2:
         stx @tmp1       ; 5 2
         ldx 4,x         ; 6 2
         stx @tmp4       ; 5 2
