@@ -388,27 +388,37 @@ static bool convert_pp_int(Token *tok) {
     if (l && u)
       ty = ty_ulong;
     else if (l)
-      ty = ty_long;
+      ty = (val >> 31) ? ty_ulong : ty_long;
     else if (u)
-      ty = (val >> 16) ? ty_ulong : ty_uint;	// XXX
+      ty = (val >> 16) ? ty_ulong : ty_uint;
+    else if (val >> 31)
+      ty = ty_ulong;
+    else if (val >> 15)
+      ty = ty_long;
     else
-      ty = (val >> 15) ? ty_long : ty_int;	// XXX
+      ty = ty_int;
   } else {
     if (l && u)
       ty = ty_ulong;
     else if (l)
-      ty = (val >> 63) ? ty_ulong : ty_long;	// TODO:
+      ty = (val >> 31) ? ty_ulong : ty_long;
     else if (u)
-      ty = (val >> 16) ? ty_ulong : ty_uint;	// TODO:
-    else if (val >> 63)				// TODO:
+      ty = (val >> 16) ? ty_ulong : ty_uint;
+    else if (val >> 31)
       ty = ty_ulong;
-    else if (val >> 16)				// TODO:
+    else if (val >> 16)
       ty = ty_long;
-    else if (val >> 15)				// TODO:
+    else if (val >> 15)
       ty = ty_uint;
     else
       ty = ty_int;
   }
+
+  // C11 6.4.4.1p5,p6: the list ends at long, this target has no long long.
+  // A decimal constant that does not fit in long falls back to unsigned long,
+  // the same way gcc and clang do.
+  if ((uint64_t)val > 0xffffffff)
+    error_tok(tok, "integer constant is too large to be represented in any integer type");
 
   tok->kind = TK_NUM;
   tok->val = val;

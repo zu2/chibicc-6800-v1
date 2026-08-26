@@ -40,14 +40,14 @@ int main(int argc, char **argv)
 	ul = ~0xffffffffL;
 	if (ul)		return 161;
 
-	ul = -0x100000000L;
-	if (ul)		return 162;
+//	ul = -0x100000000L;		// 0x100000000 does not fit in unsigned long
+//	if (ul)		return 162;
 
 	sl = ~0xffffffffL;
 	if (sl)		return 201;
 
-	sl = -0x100000000L;
-	if (sl)		return 202;
+//	sl = -0x100000000L;		// 0x100000000 does not fit in unsigned long
+//	if (sl)		return 202;
 
 	return 0;
 }
