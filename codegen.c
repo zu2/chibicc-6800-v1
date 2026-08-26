@@ -7166,8 +7166,7 @@ static void gen_stmt(Node *node)
       }
       if (is_integer_constant(node->cond,&val)) {
         if (val==0) {
-//        println("\tjmp %s", if_false);
-          return; // conditon always false, no code generated
+          println("\tjmp %s", if_false);
         }
       }else{
         if (!gen_jump_if_false(node->cond,if_false)){
