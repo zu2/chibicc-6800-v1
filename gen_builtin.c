@@ -12,6 +12,9 @@ bool builtin_memset(Node *node)
       println("; ND_FUNCALL: builtin_memset(0x%04x,%u,%u)",
                                 (uint16_t)dst,(uint16_t)val,(uint16_t)num);
       if (num==0) {
+        if (!node->retval_unused) {
+          ldd_i(dst);
+        }
         return true;
       }
       ldab_i((uint16_t)val);
@@ -21,6 +24,9 @@ bool builtin_memset(Node *node)
       }
       num &= ~3;
       if (num==0) {
+        if (!node->retval_unused) {
+          ldd_i(dst);
+        }
         return true;
       }
       char *loop = new_label("L_%d");
@@ -55,6 +61,9 @@ bool builtin_memcpy(Node *node)
       println("; ND_FUNCALL: builtin_memcpy(0x%04x,0x%04x,%u)",
                                 (uint16_t)dst,(uint16_t)src,(uint16_t)num);
       if (num==0) {
+        if (!node->retval_unused) {
+          ldd_i(dst);
+        }
         return true;
       }
       if (dst==src) {
