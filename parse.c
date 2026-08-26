@@ -736,9 +736,11 @@ static Type *array_dimensions(Token **rest, Token *tok, Type *ty) {
   if (ty->kind == TY_VLA || !is_const_expr(expr))
     return vla_of(ty, expr);
 
-  int len = eval(expr);
-  if (ty->size * len >= 0x10000)
-    error_tok(tok, "array is too large (%d bytes)", ty->size * len);
+  int64_t len = eval(expr);
+  if (len < 0)
+    error_tok(tok, "array size is negative");
+  if ((int64_t)ty->size * len >= 0x10000)
+    error_tok(tok, "array is too large (%lld bytes)", (long long)ty->size * len);
   return array_of(ty, len);
 }
 
@@ -1091,14 +1093,16 @@ static void string_initializer(Token **rest, Token *tok, Initializer *init) {
 //
 // The above initializer sets x.c to 5.
 static void array_designator(Token **rest, Token *tok, Type *ty, int *begin, int *end) {
-  *begin = const_expr(&tok, tok->next);
-  if (*begin >= ty->array_len)
+  int64_t v = const_expr(&tok, tok->next);
+  if (v < 0 || v >= ty->array_len)
     error_tok(tok, "array designator index exceeds array bounds");
+  *begin = v;
 
   if (equal(tok, "...")) {
-    *end = const_expr(&tok, tok->next);
-    if (*end >= ty->array_len)
+    v = const_expr(&tok, tok->next);
+    if (v < 0 || v >= ty->array_len)
       error_tok(tok, "array designator index exceeds array bounds");
+    *end = v;
     if (*end < *begin)
       error_tok(tok, "array designator range [%d, %d] is empty", *begin, *end);
   } else {
