@@ -98,6 +98,7 @@ bool opt(char op, char lv)
 static char *copt_rules_path;
 
 static StringArray ld_extra_args;
+static StringArray lib_paths;
 static StringArray as_extra_args;
 static StringArray std_include_paths;
 
@@ -477,14 +478,12 @@ static void parse_args(int argc, char **argv) {
     }
 
     if (!strcmp(argv[i], "-L")) {
-      strarray_push(&ld_extra_args, "-L");
-      strarray_push(&ld_extra_args, argv[++i]);
+      strarray_push(&lib_paths, argv[++i]);
       continue;
     }
 
     if (!strncmp(argv[i], "-L", 2)) {
-      strarray_push(&ld_extra_args, "-L");
-      strarray_push(&ld_extra_args, argv[i] + 2);
+      strarray_push(&lib_paths, argv[i] + 2);
       continue;
     }
 
@@ -692,7 +691,11 @@ static void run_subprocess(char **argv, char *redirect_in, char *redirect_out) {
     fprintf(stderr, "\n");
   }
 
-  if (fork() == 0) {
+  pid_t pid = fork();
+  if (pid < 0)
+    error("fork failed for %s: %s", argv[0], strerror(errno));
+
+  if (pid == 0) {
     // Child process. Run a new command.
     if (opt_v>1) {
       for (int i=0; argv[i]; i++) {
@@ -711,7 +714,7 @@ static void run_subprocess(char **argv, char *redirect_in, char *redirect_out) {
     if (redirect_out) {
       int fd = open(redirect_out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
       if (fd<0) {
-        error("can't open input file %s for %s",argv[0],redirect_in);
+        error("can't open output file %s for %s",argv[0],redirect_out);
       }
       dup2(fd, STDOUT_FILENO);
       close(fd);
@@ -1055,7 +1058,16 @@ static void run_linker(StringArray *inputs, char *output) {
     if (strlen(inputs->data[i])>=3 && strncmp(inputs->data[i],"-l",2)==0) {
       if (strchr(inputs->data[i],'/'))
         continue;
-      strarray_push(&arr, format("%s/lib%s.a",libpath,inputs->data[i]+2));
+      char *name = format("lib%s.a", inputs->data[i] + 2);
+      char *found = NULL;
+      for (int j = 0; j < lib_paths.len; j++) {
+        char *path = format("%s/%s", lib_paths.data[j], name);
+        if (file_exists(path)) {
+          found = path;
+          break;
+        }
+      }
+      strarray_push(&arr, found ? found : format("%s/%s", libpath, name));
     }
   }
 
@@ -1094,7 +1106,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (input_paths.len > 1 && opt_o && (opt_c || opt_S | opt_E))
+  if (input_paths.len > 1 && opt_o && (opt_c || opt_S || opt_E))
     error("cannot specify '-o' with '-c,' '-S' or '-E' with multiple files");
 
   StringArray ld_args = {};
