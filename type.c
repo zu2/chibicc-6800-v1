@@ -98,11 +98,14 @@ static bool is_bitfield2(Node *node, int *width) {
   case ND_COMMA:
     return is_bitfield2(node->rhs, width);
   case ND_STMT_EXPR: {
+    if (!node->body)
+      return false;
     Node *stmt = node->body;
     while (stmt->next)
       stmt = stmt->next;
     if (stmt->kind == ND_EXPR_STMT)
       return is_bitfield2(stmt->lhs, width);
+    return false;
   }
   case ND_MEMBER:
     if (!node->member->is_bitfield)
