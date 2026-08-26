@@ -7,31 +7,118 @@
 	.export __rem32x32u
 	.export __rem32x32s
 	.export __div32x32	; @long / TOS
+	.export __div32x32ux
+	.export __div32x32ubx
+	.export __div32x32udx
+	.export __div32x32sx
+	.export __div32x32sbx
+	.export __div32x32sdx
+	.export __rem32x32ux
+	.export __rem32x32ubx
+	.export __rem32x32udx
+	.export __rem32x32sx
+	.export __rem32x32sbx
+	.export __rem32x32sdx
 ;
         .data
 sign:   .blkb    1
 ;
 	.code
 ;
-;	@long = @long % TOS	signed
+;	@long = @long / (0-3,x)		unsigned
+;
+__div32x32ubx:
+	clra
+__div32x32udx:
+	jsr __adx
+__div32x32ux:
+	stx @tmp1
+	ldx 0,x
+	stx @tmp3
+	ldx @tmp1
+	ldx 2,x
+	stx @tmp4
+	jmp __div32x32_main
+;
+;	@long = @long / (0-3,x)		signed
+;
+__div32x32sbx:
+	clra
+__div32x32sdx:
+	jsr __adx
+__div32x32sx:
+	stx @tmp1
+	ldx 0,x
+	stx @tmp3
+	ldx @tmp1
+	ldx 2,x
+	stx @tmp4
+	ldab @tmp3
+	stab sign
+	bpl __div32x32sx_10
+	ldx #tmp3
+	jsr __neg32x
+__div32x32sx_10:
+	ldab @long
+	bpl __div32x32sx_20
+	com sign		; flip sign
+	jsr __neg32
+__div32x32sx_20:
+	jsr __div32x32_main
+	ldab sign
+	bpl __div32x32sx_30
+	jsr __neg32
+__div32x32sx_30:
+	rts
+;
+;	@long = @long % (0-3,x)		unsigned
+;
+__rem32x32ubx:
+	clra
+__rem32x32udx:
+	jsr __adx
+__rem32x32ux:
+	stx @tmp1
+	ldx 0,x
+	stx @tmp3
+	ldx @tmp1
+	ldx 2,x
+	stx @tmp4
+	jsr __div32x32_main
+	stab @long+3
+	staa @long+2
+	ldab @tmp1+1
+	ldaa @tmp1
+	stab @long+1
+	staa @long
+	rts
+;
+;	@long = @long % (0-3,x)		signed
 ;
 ;	remainder has the same sign as the dividend.
 ;
-__rem32x32s:
-	tsx
-	ldab 2,x
-	bpl __rem32x32s_10
-	inx
-	inx
+__rem32x32sbx:
+	clra
+__rem32x32sdx:
+	jsr __adx
+__rem32x32sx:
+	stx @tmp1
+	ldx 0,x
+	stx @tmp3
+	ldx @tmp1
+	ldx 2,x
+	stx @tmp4
+	ldab @tmp3
+	bpl __rem32x32sx_10
+	ldx #tmp3
 	jsr __neg32x
-__rem32x32s_10:
+__rem32x32sx_10:
 	ldab @long
 	stab sign		; save sign
-	bpl __rem32x32s_20
+	bpl __rem32x32sx_20
 	jsr __neg32
-__rem32x32s_20:
-	tsx
-	jsr __div32x32_x2
+__rem32x32sx_20:
+	jsr __div32x32_main
 	stab @long+3
 	staa @long+2
 	ldab @tmp1+1
@@ -39,52 +126,52 @@ __rem32x32s_20:
 	stab @long+1
 	staa @long
 	ldab sign
-	bpl __pullret
+	bpl __rem32x32sx_30
 	jsr __neg32
-	bra __pullret
+__rem32x32sx_30:
+	rts
 ;
-;	@long = @long % TOS	unsigned
+;	@long = @long / TOS,  @long = @long % TOS
+;
+;	The divisor stays on the stack.  __pullret removes it.
+;
+__rem32x32s:
+	tsx
+	inx
+	inx
+	jsr __rem32x32sx
+	bra __pullret
 ;
 __rem32x32u:
 	tsx
-	jsr __div32x32_x2
-	stab @long+3
-	staa @long+2
-	ldab @tmp1+1
-	ldaa @tmp1
-	stab @long+1
-	staa @long
+	inx
+	inx
+	jsr __rem32x32ux
 	bra __pullret
-;
-;	@long = @long / TOS	signed
-;	@tmp1+1: sign flag
 ;
 __div32x32s:
 	tsx
-	ldab 2,x
-	stab sign
-	bpl __div32x32s_10
 	inx
 	inx
-	jsr __neg32x
-__div32x32s_10:
-	ldab @long
-	bpl __div32x32s_20
-	com sign		; flip sign
-	jsr __neg32
-__div32x32s_20:
-	tsx
-	jsr __div32x32_x2
-	ldab sign
-	bpl __pullret
-	jsr __neg32
+	jsr __div32x32sx
 	bra __pullret
-;
-;	@long = @long / TOS	unsigned
 ;
 __div32x32u:
 	tsx
-	jsr __div32x32_x2
+	inx
+	inx
+	jsr __div32x32ux
+	bra __pullret
+;
+;	__div32x32 leaves the divisor for the caller.
+;
+__div32x32:
+	tsx
+	inx
+	inx
+	jmp __div32x32ux
+;
+
 __pullret:
         tsx
 	ldx 0,x
@@ -96,23 +183,14 @@ __pullret:
 	ins
 	jmp 0,x
 ;
-;	@long = @long / (2-5,x)
-;	__div32x32_x2 is for internal use.
-;	@tmp1:AccAB = @long % TOS
+;	@long = @long / @tmp3:@tmp4
+;	__div32x32_main is for internal use.
+;	@tmp1:AccAB = @long % @tmp3:@tmp4
 ;	@tmp2:loop counter (bit) 8→0
 ;	@tmp2+1:loop counter (byte) 4→0
 ;       @tmp3:tmp4: divisor
 ;
-__div32x32:
-	tsx
-__div32x32_x2:
-        stx @tmp1       ; 5 2
-        ldx 4,x         ; 6 2
-        stx @tmp4       ; 5 2
-        ldx @tmp1       ; 4 2
-        ldx 2,x         ; 6 2
-        stx @tmp3       ; 5 2   / ↑31cyc, 12bytes
-;
+__div32x32_main:
         ldx #long
 	clra		; work area clear
 	clrb
