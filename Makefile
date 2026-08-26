@@ -27,7 +27,7 @@ check:
 	done; \
 	test -z "$$fail"
 
-lib:
+lib: chibicc
 	(cd libc ; make)
 	(cd libm ; make)
 	(cd clibs ; make)
@@ -81,7 +81,7 @@ wtests:
 	(cd wtest/ ; ./runtests)
 
 ctests:
-	(cd c-compiler/ ; ././test_cases.sh )
+	(cd ctest/ ; ./test_cases.sh )
 
 ztests:
 	(cd ztest/ ; ./runall)
