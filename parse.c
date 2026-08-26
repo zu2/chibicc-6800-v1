@@ -2951,12 +2951,9 @@ static Node *new_sub(Node *lhs, Node *rhs, Token *tok) {
   if (is_numeric(lhs->ty) && is_numeric(rhs->ty))
     return new_binary(ND_SUB, lhs, rhs, tok);
 
-  // Canonicalize `num + ptr` to `ptr + num`.
-  if (!lhs->ty->base && rhs->ty->base) {
-    Node *tmp = lhs;
-    lhs = rhs;
-    rhs = tmp;
-  }
+  // `-` is not commutative, so `num - ptr` cannot be swapped.
+  if (!lhs->ty->base && rhs->ty->base)
+    error_tok(rhs->tok, "invalid operands to binary -");
 
   // VLA - num
   if (lhs->ty->base->kind == TY_VLA && is_integer(rhs->ty)) {
