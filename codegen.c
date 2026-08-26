@@ -172,34 +172,36 @@ void remove_args(int n)
       return;
     }
   }
-  if (opt('O','s') && n>4) {         // Smaller, but too slow
-    println("\tjsr __ins_i");
-    if (n>255) {
-      assert(0);
+  if (opt('O','s')) {
+    if (n<=8) {                      // Smaller than sts/lds
+      ins(n);
+      return;
     }
-    println("\t.byte  %d",n);
-    IX_invalidate();
-    depth-=n;
-    return;
-  }else if (n>20 ||                       // Both faster and smaller
-           (!opt('O','s') && n*4 > 34)) {  // Faster, but larger
-    println("; ins*%d",n);
-    println("\tstaa @tmp2");		// 4
-    println("\tsts @tmp1");		// 5
-    println("\tldaa @tmp1+1");	// 3
-    println("\tadda #<%d",n);// 2
-    println("\tstaa @tmp1+1"); 	// 4
-    println("\tldaa @tmp1");		// 3
-    println("\tadca #>%d",n);// 2
-    println("\tstaa @tmp1");		// 4
-    println("\tlds @tmp1");		// 4
-    println("\tldaa @tmp2");		// 3
-    depth-=n;
-    return;
+    if (n<=20) {                     // Smallest, but slower
+      println("\tjsr __ins_i");
+      println("\t.byte  %d",n);
+      IX_invalidate();
+      depth-=n;
+      return;
+    }
+  }else{
+    if (n*4 <= 34) {                 // Faster than sts/lds
+      ins(n);
+      return;
+    }
   }
-  ins(n);
-
-  return;
+  println("; ins*%d",n);
+  println("\tstaa @tmp2");		// 4
+  println("\tsts @tmp1");		// 5
+  println("\tldaa @tmp1+1");	// 3
+  println("\tadda #<%d",n);// 2
+  println("\tstaa @tmp1+1"); 	// 4
+  println("\tldaa @tmp1");		// 3
+  println("\tadca #>%d",n);// 2
+  println("\tstaa @tmp1");		// 4
+  println("\tlds @tmp1");		// 4
+  println("\tldaa @tmp2");		// 3
+  depth-=n;
 }
 
 static void des(int n)
