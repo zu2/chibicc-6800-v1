@@ -257,12 +257,6 @@ gen_mul8s(Node *node)
         println("\taslb");
         println("\trola");
         return true;
-      case 128:
-        println("\ttba");
-        println("\tclrb");
-        println("\tasra");
-        println("\trorb");
-        return true;
       }
     }
     if (can_direct_char(rhs)) {
