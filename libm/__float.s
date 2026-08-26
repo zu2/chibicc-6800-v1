@@ -961,7 +961,7 @@ __setup_work_61:
 __addf32_5:
 	ldaa	__lexp
 	tst	__zin		; the signs differ?
-	jmi	__addf32_61
+	jmi	__addf32_50
 __addf32_11:
 	ldab	@long+3		; @long = @long + __fp_work , 24bit version
 	addb	__fp_work+3
@@ -1027,54 +1027,7 @@ __addf32_30:
 ;
 ;	@long holds the bigger value, so the result is @long - __fp_work
 ;
-__addf32_54:
-	bmi	__addf32_543	; hidden bit on?
-	;
-__addf32_541:
-	deca
-	beq	__addf32_543	; subnormal number. stop shift
-	ldab	__fp_work+4	; b4-b0 are always 0, so no sticky fold is needed
-	aslb
-	stab	__fp_work+4
-	rol	@long+3
-	rol	@long+2
-	rol	@long+1
-	jpl	__addf32_541	; hidden bit become 1 ?
-;
-__addf32_543:
-	ldab	@long+3
-	lsrb			; LSB -> Carry
-	ldab	__fp_work+4
-	rorb			; b7:LSB, b6:G, b5:R, b4:S
-	bitb	#$40		; b6:G==0?
-	beq	__addf32_55	;   Yes, do nothng
-	andb	#$F0
-	cmpb	#$40		; 0100:only G is 1?
-	beq	__addf32_55	;   Yes, do nothng
-;
-	inc	@long+3		; round up
-	bne	__addf32_55
-	inc	@long+2
-	bne	__addf32_55
-	inc	@long+1
-	bne	__addf32_55
-;
-	inca
-	cmpa	#$FF
-	jeq	__f32retInfs
-	lsr	@long+1
-	ror	@long+2
-	ror	@long+3
-;
-__addf32_55:
-	asl	@long+1		; exp's LSB into @long+1
-	lsra
-	ror	@long+1
-	ora	__sign		; recover sign bit
-	staa	@long
-	rts
-;
-__addf32_61:
+__addf32_50:
 	neg	__fp_work+4	; C=1 when the guard byte borrows
 	ldab	@long+3		; @long = @long - __fp_work
 	sbcb	__fp_work+3
@@ -1086,8 +1039,52 @@ __addf32_61:
 	sbcb	__fp_work+1
 	stab	@long+1
 	;
-	jmp	__addf32_54
-
+__addf32_60:
+	bmi	__addf32_80	; hidden bit on?
+	;
+__addf32_70:
+	deca
+	beq	__addf32_80	; subnormal number. stop shift
+	ldab	__fp_work+4	; b4-b0 are always 0, so no sticky fold is needed
+	aslb
+	stab	__fp_work+4
+	rol	@long+3
+	rol	@long+2
+	rol	@long+1
+	jpl	__addf32_70	; hidden bit become 1 ?
+;
+__addf32_80:
+	ldab	@long+3
+	lsrb			; LSB -> Carry
+	ldab	__fp_work+4
+	rorb			; b7:LSB, b6:G, b5:R, b4:S
+	bitb	#$40		; b6:G==0?
+	beq	__addf32_90	;   Yes, do nothng
+	andb	#$F0
+	cmpb	#$40		; 0100:only G is 1?
+	beq	__addf32_90	;   Yes, do nothng
+;
+	inc	@long+3		; round up
+	bne	__addf32_90
+	inc	@long+2
+	bne	__addf32_90
+	inc	@long+1
+	bne	__addf32_90
+;
+	inca
+	cmpa	#$FF
+	jeq	__f32retInfs
+	lsr	@long+1
+	ror	@long+2
+	ror	@long+3
+;
+__addf32_90:
+	asl	@long+1		; exp's LSB into @long+1
+	lsra
+	ror	@long+1
+	ora	__sign		; recover sign bit
+	staa	@long
+	rts
 ;
 ;	compare: abs(tos) - abs(@long)
 ;
