@@ -5877,8 +5877,15 @@ void gen_expr(Node *node)
     opeq(node);
     return;
   case ND_STMT_EXPR:
-    for (Node *n = node->body; n; n = n->next)
-      gen_stmt(n);
+    for (Node *n = node->body; n; n = n->next) {
+      if (!n->next && n->kind == ND_EXPR_STMT) {
+        n->lhs = optimize_expr(n->lhs);
+        n->lhs->retval_unused = node->retval_unused;
+        gen_expr(n->lhs);
+      } else {
+        gen_stmt(n);
+      }
+    }
     return;
   case ND_COMMA:
     gen_expr(node->lhs);
