@@ -304,6 +304,9 @@ static void ast_dump(Node *node)
     }
     printout(")");
     return;
+  case ND_STMT_EXPR:
+    printout("(ND_STMT_EXPR ...)");
+    return;
 //43   ND_VLA_PTR,   // VLA designator
   case ND_NUM:
     switch(node->ty->kind){
