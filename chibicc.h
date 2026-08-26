@@ -477,7 +477,6 @@ void ast_node_dump(Node *node);
 bool is_integral_promotion(Node *node);
 bool is_integral_promotion_or_char(Node *node);
 Node *skip_integral_promotion(Node *node);
-Node *skip_bye_to_int(Node *node);
 bool is_u8num(Node *node);
 bool is_s8num(Node *node);
 bool is_uchar_or_u8num(Node *node);
@@ -626,12 +625,6 @@ void load_bitfield(Node *node);
 void assign_to_bitfield(Node *node);
 
 //
-// opt_O3.c
-//
-void load8u(void);
-void load8s(void);
-
-//
 // unicode.c
 //
 
@@ -672,7 +665,6 @@ void hashmap_test(void);
 bool file_exists(char *path);
 
 extern StringArray include_paths;
-extern bool opt_fpic;
 extern bool opt_fcommon;
 extern bool opt_nostatic_locals;
 extern char *base_file;
