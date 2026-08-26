@@ -23,13 +23,7 @@ static void extract_bitfield(Member *mem)
     }
     println("%s:", label);
   }
-  if (mem->ty->size == 4) {
-    if (mem->ty->is_unsigned) {
-      println("\tjsr __u16to32");
-    } else {
-      println("\tjsr __s16to32");
-    }
-  }
+  assert(mem->ty->size != 4);
 }
 
 void load_bitfield(Node *node)
@@ -72,11 +66,8 @@ void assign_to_bitfield(Node *node)
           mem->ty->size, mem->bit_width, mem->bit_offset,
           (mem->ty ? (mem->ty->is_unsigned ? "u" : "i") : "null"), __FILE__,
           __LINE__);
-  if (mem->ty->size == 4) {
-    println("\tldab @long+3");
-    println("\tldaa @long+2");
-  }
-  and_i((unsigned short)(1L << mem->bit_width) - 1);
+  assert(mem->ty->size != 4);
+  and_i(((unsigned int)(1L << mem->bit_width) - 1) & 0xffff);
   gen_shl(ty_uint, mem->bit_offset);
 
   uint16_t mask = ((1L << mem->bit_width) - 1) << mem->bit_offset;
