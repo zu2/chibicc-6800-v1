@@ -1251,6 +1251,12 @@ bool gen_expr_x_sub(Node *node,bool test)
         return false;
       }
     }
+    if ((addr=is_addr_constant(lhs))) {
+      if (test) return true;
+      println("\tldx %s",addr);
+      IX_invalidate();
+      return false;
+    }
     if (test_decayed_x(lhs)) {
       if (test) return true;
       ldx_nX(gen_decayed_x(lhs));
