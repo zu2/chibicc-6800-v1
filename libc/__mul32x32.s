@@ -1,25 +1,11 @@
 ;
-;	@long = TOS*@long
+;	@long = @long * (0-3,x)
 ;
 ;	it's very slow
 ;
-	.export __mul32tos
 	.export __mul32x32x
 	.export __mul32x32bx
 	.export __mul32x32dx
-	.code
-;
-;  __mul32tos: @long = @long * TOS
-;
-;  0-1,x:      return address
-;  2-5,x:      Multiplicand (TOS)
-;
-;  long:       Multiplicand & result
-;  tmp2:       tmp2:accAB  32bit acc.
-;  tmp3:       Multiplier (copy from TOS)
-;  tmp4:       Multiplier (copy from TOS)
-;
-;
 	.data
 	.code
 ;
@@ -120,19 +106,3 @@ skip_4: rorb
 ;
 	staa @long
         rts
-;
-
-__mul32tos:
-	tsx
-	inx
-	inx			; IX = &Multiplier (TOS)
-	jsr __mul32x32x
-	tsx
-	ldx 0,x
-	ins
-	ins
-	ins
-	ins
-	ins
-	ins
-	jmp	0,x

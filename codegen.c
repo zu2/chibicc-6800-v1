@@ -4265,15 +4265,11 @@ static void opeq(Node *node)
     case TY_LONG:
       gen_addr(lhs);
       push();
+      gen_expr(node->rhs);
       println("\ttsx");
       println("\tldx 0,x");
-      println("\tjsr __push32x");
+      println("\tjsr __mul32x32x");
       IX_invalidate();
-      depth+=4;
-      gen_expr(node->rhs);
-      println("\tjsr __mul32tos");
-      IX_invalidate();
-      depth-=4;
       store(node->ty);
       return;
     case TY_BOOL:
@@ -6268,9 +6264,10 @@ void gen_expr(Node *node)
         pushl();
       }
       gen_expr(node->rhs);
-      println("\tjsr __mul32tos");	// @long *= TOS, pull TOS");
+      println("\ttsx");
+      println("\tjsr __mul32x32x");
       IX_invalidate();
-      depth -= 4;
+      remove_args(4);
       return;
     case ND_DIV:
       gen_expr(node->rhs);
