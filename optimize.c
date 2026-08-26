@@ -230,27 +230,29 @@ static Node *optimize_demorgan(Node *node)
   return new;
 }
 
-Node *flip_condition(Node *node)
+NodeKind swap_lr_condition_kind(NodeKind kind)
 {
-  switch(node->kind){
+  switch(kind){
   case ND_EQ:
   case ND_NE:
-    break;
+    return kind;
   case ND_LT:
-    node->kind = ND_GT;
-    break;
+    return ND_GT;
   case ND_LE:
-    node->kind = ND_GE;
-    break;
+    return ND_GE;
   case ND_GT:
-    node->kind = ND_LT;
-    break;
+    return ND_LT;
   case ND_GE:
-    node->kind = ND_LE;
-    break;
+    return ND_LE;
   default:
     assert(0);
   }
+  return kind;
+}
+
+Node *swap_lr_condition(Node *node)
+{
+  node->kind = swap_lr_condition_kind(node->kind);
   return node;
 }
 
@@ -1194,7 +1196,7 @@ Node *optimize_expr(Node *node)
     node->rhs = optimize_expr(node->rhs);
 
     if (node_cost(node->lhs) < node_cost(node->rhs)) {
-      node = flip_condition(swap_lr(node));
+      node = swap_lr_condition(swap_lr(node));
     }
 //
 // For signed integer,
@@ -1291,7 +1293,7 @@ Node *optimize_expr(Node *node)
       && ( node_cost(node->lhs) == node_cost(node->rhs)
       ||   test_addr_x(node->lhs)
       || (is_addr_constant(node->lhs)!=NULL))) {
-        node = flip_condition(swap_lr(node));
+        node = swap_lr_condition(swap_lr(node));
       }
     }
     return optimize_const_expr(node);

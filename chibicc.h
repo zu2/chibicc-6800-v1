@@ -488,7 +488,8 @@ int  exact_log2(int64_t val);
 Node *optimize_expr(Node *node);
 Node *optimize_condition(Node *node);
 Obj *optimize(Obj *prog);
-Node *flip_condition(Node *node);
+Node *swap_lr_condition(Node *node);
+NodeKind swap_lr_condition_kind(NodeKind kind);
 Node *swap_lr(Node *node);
 
 //
@@ -535,6 +536,7 @@ void emit_float_literals(void);
 char *long_literal_label(int64_t val);
 void gen_direct_pushl(int64_t val);
 void pushlx(int off);
+void pushl(void);
 void pushf(void);
 int gen_addr_x(Node *node);
 void gen_addr(Node *node);

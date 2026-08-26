@@ -501,6 +501,112 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
 }
 
 //
+// Compare two longs.
+//   Generate code that branches to if_false if the comparison result is false.
+//   Return true if code was generated.
+// For other types, generate no code and return false.
+//
+static bool gen_jump_if_false_long(Node *node, char *if_false)
+{
+  Node    *lhs = node->lhs;
+  Node    *rhs = node->rhs;
+  int64_t  val;
+
+  if (!is_compare(node) || lhs->ty->kind != TY_LONG) {
+    return false;
+  }
+
+  Node    *v    = NULL;
+  NodeKind kind = node->kind;
+
+  if (is_integer_constant(rhs, &val) && val == 0) {
+    v = lhs;
+  }else if (is_integer_constant(lhs, &val) && val == 0) {
+    v = rhs;
+    kind = swap_lr_condition_kind(kind);
+  }
+  if (v) {
+    switch (kind) {
+    case ND_LT:
+      if (v->ty->is_unsigned) {
+        println("; ulong < 0 is always false");
+        if (!test_addr_x(v)) {
+          gen_expr(v);
+        }
+        println("\tjmp %s", if_false);
+        return true;
+      }
+      break;
+    case ND_GE:
+      if (v->ty->is_unsigned) {
+        println("; ulong >= 0 is always true");
+        if (!test_addr_x(v)) {
+          gen_expr(v);
+        }
+        return true;
+      }
+      break;
+    }
+    if ((kind == ND_LT || kind == ND_GE) && test_addr_x(v)) {
+      println("\tldab %d,x", gen_addr_x(v));
+      println("\t%s %s", (kind == ND_LT)? "jpl": "jmi", if_false);
+      return true;
+    }
+    gen_expr(v);
+    switch (kind) {
+    case ND_LT:
+      println("\tldab @long");
+      println("\tjpl %s", if_false);
+      return true;
+    case ND_GE:
+      println("\tldab @long");
+      println("\tjmi %s", if_false);
+      return true;
+    case ND_LE:
+    case ND_GT:
+      if (v->ty->is_unsigned) {
+        println("\tjsr __iszero32");
+      } else {
+        println("\tjsr __isLEzero32");
+      }
+      println("\t%s %s", (kind == ND_LE)? "jne": "jeq", if_false);
+      return true;
+    case ND_EQ:
+    case ND_NE:
+      println("\tjsr __iszero32");
+      println("\t%s %s", (kind == ND_EQ)? "jne": "jeq", if_false);
+      return true;
+    }
+    assert(0);
+  }
+
+  if (rhs->kind == ND_NUM && rhs->ty->kind == TY_LONG) {
+    gen_direct_pushl(rhs->val);
+  }else if (test_addr_x(rhs)) {
+    pushlx(gen_addr_x(rhs));
+  }else{
+    gen_expr(rhs);
+    pushl();
+  }
+  gen_expr(lhs);
+  char sc = (lhs->ty->is_unsigned)? 'u': 's';
+  switch (node->kind) {	// push order is rhs -> lhs, so the condition is reversed
+  case ND_EQ: println("\tjsr __eq32"); break;
+  case ND_NE: println("\tjsr __ne32"); break;
+  case ND_LT: println("\tjsr __gt32%c",sc); break;
+  case ND_LE: println("\tjsr __ge32%c",sc); break;
+  case ND_GT: println("\tjsr __lt32%c",sc); break;
+  case ND_GE: println("\tjsr __le32%c",sc); break;
+  default: ;
+    assert(0);
+  }
+  depth -= 4;
+  IX_invalidate();
+  println("\tjeq %s", if_false);
+  return true;
+}
+
+//
 // Compare two 8- or 16-bit integers.
 //   Generate code that branches to if_false if the comparison result is false.
 //   Return true if code was generated.
@@ -527,6 +633,9 @@ bool gen_jump_if_false(Node *node, char *if_false)
     return gen_jump_if_true(lhs, if_false);
   }
   if (gen_jump_if_false_float(node, if_false)) {
+    return true;
+  }
+  if (gen_jump_if_false_long(node, if_false)) {
     return true;
   }
   if (isVAR(node) && is_byte(node)) {
@@ -593,34 +702,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
     }
   }
 
-  // special long case
-  if (lhs->ty->kind == TY_LONG
-  && is_integer_constant(rhs,&val)
-  && val == 0
-  && test_addr_x(lhs)) {
-    switch(node->kind) {
-    case ND_LT:
-      if (lhs->ty->is_unsigned) {
-        println("; ulong < 0 is always false");
-        println("\tjmp %s",if_false);
-      }else{
-        int off = gen_addr_x(lhs);
-        println("\tldab %d,x",off);
-        println("\tjpl %s", if_false);
-      }
-      return true;
-    case ND_GE:
-      if (lhs->ty->is_unsigned) {
-        println("; ulong >= 0 is always true");
-      }else{
-        int off = gen_addr_x(lhs);
-        println("\tldab %d,x",off);
-        println("\tjmi %s", if_false);
-      }
-      return true;
-    }
-    goto fallback;
-  }
   if (!is_int16_or_ptr(lhs->ty)) {
     goto fallback;
   }
@@ -1289,6 +1370,112 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
 }
 
 //
+// Compare two longs.
+//   Generate code that branches to if_true if the comparison result is true.
+//   Return true if code was generated.
+// For other types, generate no code and return false.
+//
+static bool gen_jump_if_true_long(Node *node, char *if_true)
+{
+  Node    *lhs = node->lhs;
+  Node    *rhs = node->rhs;
+  int64_t  val;
+
+  if (!is_compare(node) || lhs->ty->kind != TY_LONG) {
+    return false;
+  }
+
+  Node    *v    = NULL;
+  NodeKind kind = node->kind;
+
+  if (is_integer_constant(rhs, &val) && val == 0) {
+    v = lhs;
+  }else if (is_integer_constant(lhs, &val) && val == 0) {
+    v = rhs;
+    kind = swap_lr_condition_kind(kind);
+  }
+  if (v) {
+    switch (kind) {
+    case ND_LT:
+      if (v->ty->is_unsigned) {
+        println("; ulong < 0 is always false");
+        if (!test_addr_x(v)) {
+          gen_expr(v);
+        }
+        return true;
+      }
+      break;
+    case ND_GE:
+      if (v->ty->is_unsigned) {
+        println("; ulong >= 0 is always true");
+        if (!test_addr_x(v)) {
+          gen_expr(v);
+        }
+        println("\tjmp %s", if_true);
+        return true;
+      }
+      break;
+    }
+    if ((kind == ND_LT || kind == ND_GE) && test_addr_x(v)) {
+      println("\tldab %d,x", gen_addr_x(v));
+      println("\t%s %s", (kind == ND_LT)? "jmi": "jpl", if_true);
+      return true;
+    }
+    gen_expr(v);
+    switch (kind) {
+    case ND_LT:
+      println("\tldab @long");
+      println("\tjmi %s", if_true);
+      return true;
+    case ND_GE:
+      println("\tldab @long");
+      println("\tjpl %s", if_true);
+      return true;
+    case ND_LE:
+    case ND_GT:
+      if (v->ty->is_unsigned) {
+        println("\tjsr __iszero32");
+      } else {
+        println("\tjsr __isLEzero32");
+      }
+      println("\t%s %s", (kind == ND_LE)? "jeq": "jne", if_true);
+      return true;
+    case ND_EQ:
+    case ND_NE:
+      println("\tjsr __iszero32");
+      println("\t%s %s", (kind == ND_EQ)? "jeq": "jne", if_true);
+      return true;
+    }
+    assert(0);
+  }
+
+  if (rhs->kind == ND_NUM && rhs->ty->kind == TY_LONG) {
+    gen_direct_pushl(rhs->val);
+  }else if (test_addr_x(rhs)) {
+    pushlx(gen_addr_x(rhs));
+  }else{
+    gen_expr(rhs);
+    pushl();
+  }
+  gen_expr(lhs);
+  char sc = (lhs->ty->is_unsigned)? 'u': 's';
+  switch (node->kind) {	// push order is rhs -> lhs, so the condition is reversed
+  case ND_EQ: println("\tjsr __eq32"); break;
+  case ND_NE: println("\tjsr __ne32"); break;
+  case ND_LT: println("\tjsr __gt32%c",sc); break;
+  case ND_LE: println("\tjsr __ge32%c",sc); break;
+  case ND_GT: println("\tjsr __lt32%c",sc); break;
+  case ND_GE: println("\tjsr __le32%c",sc); break;
+  default: ;
+    assert(0);
+  }
+  depth -= 4;
+  IX_invalidate();
+  println("\tjne %s", if_true);
+  return true;
+}
+
+//
 // Compare two 8- or 16-bit integers.
 //   Generate code that branches to if_true if the comparison result is true.
 //   Return true if code was generated.
@@ -1314,6 +1501,9 @@ bool gen_jump_if_true(Node *node, char *if_true)
     return (gen_jump_if_false(lhs, if_true));
   }
   if (gen_jump_if_true_float(node, if_true)) {
+    return true;
+  }
+  if (gen_jump_if_true_long(node, if_true)) {
     return true;
   }
 
@@ -1381,34 +1571,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
     }
   }
 
-  // special long case
-  if (lhs->ty->kind == TY_LONG
-  && is_integer_constant(rhs,&val)
-  && val == 0
-  && test_addr_x(lhs)) {
-    switch(node->kind) {
-    case ND_GE:
-      if (lhs->ty->is_unsigned) {
-        println("; ulong >= 0 is always true");
-        println("\tjmp %s",if_true);
-      }else{
-        int off = gen_addr_x(lhs);
-        println("\tldab %d,x",off);
-        println("\tjpl %s", if_true);
-      }
-      return true;
-    case ND_LT:
-      if (lhs->ty->is_unsigned) {
-        println("; ulong < 0 is always false");
-      }else{
-        int off = gen_addr_x(lhs);
-        println("\tldab %d,x",off);
-        println("\tjmi %s", if_true);
-      }
-      return true;
-    }
-    goto fallback;
-  }
 
   if (!is_int16_or_ptr(lhs->ty)) {
     goto fallback;

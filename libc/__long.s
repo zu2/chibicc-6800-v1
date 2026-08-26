@@ -8,6 +8,7 @@
 	.export	__s8to32
 	.export	__s16to32
 	.export	__iszero32
+	.export	__isLEzero32
 
 	.code
 ;
@@ -65,6 +66,22 @@ __iszero32:
         orab    @long+2
         orab    @long+1
         orab    @long
+	rts
+;
+;	if (@long <= zero)		; signed
+;		Z=1, AccB==0
+;	else
+;		Z=0, AccB!=0
+;
+__isLEzero32:
+	ldab	@long
+	bmi	__isLEzero32_10
+	orab	@long+1
+	orab	@long+2
+	orab	@long+3
+	rts
+__isLEzero32_10:
+	clrb
 	rts
 
  

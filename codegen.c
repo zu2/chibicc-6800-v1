@@ -290,7 +290,7 @@ void eor_i(int n)
   }
 }
 
-static void pushl(void) {
+void pushl(void) {
   // push32/32x/32bx/32dx destroy IX, which may require reloading IX later.
   // Generating the value directly at -O2 can reduce this overhead.
   if (opt('O','2')) {
