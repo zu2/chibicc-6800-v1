@@ -87,7 +87,7 @@
 __zin:	.byte	0	; TOS & @long are Zero? Inf? NaN?
 __sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
 __lexp:	.byte	0	; @long's exp
-__expdiff:.byte	0	; TOS's exp - @long's exp
+__expdiff:.word	0	; @long's exp - TOS's exp
 __exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
 __fp_ix:.word	0	; address of the operand the routines read
 __fp_op:.word	0	; working copy of that operand
