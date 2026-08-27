@@ -1618,20 +1618,20 @@ __divf32tos06:
 	bra	__divf32_done
 ;
 __divf32tos20:				; round up check (normal)
-	ldx	__expdiff		; the left shift did not happen, so 128 is still possible
+	ldx	__expdiff
 	cpx	#128
 	jeq	__f32retInfs
-	bsr	__divf32_rup_check	; C==1, need round up
 	ldab	__expdiff+1		; ldab and ldaa keep C
 	ldaa	__expdiff
-	bcc	__divf32_done
+	tst	@long+3			; if normal numbers, only G needed
+	bpl	__divf32_done		; G==0, skip round up.
 ;
 __divf32_rup:
 	inc	@long+2
 	bne	__divf32_done
 	inc	@long+1
 	bne	__divf32_done
-	inc	@long		; the mantissa is never all ones here, so no carry out
+	inc	@long			; the mantissa is never all 11..11 here
 ;
 __divf32_done:
 	addb	#127
