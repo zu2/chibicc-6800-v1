@@ -6,17 +6,11 @@
 ;	https://github.com/zu2/chibicc-6800-v1?tab=License-1-ov-file#readme
 ;
 
-;	Note: This program was created for chibicc-6800-v1, 
-;
+;	+, -, *, / are correctly rounded to nearest, ties to even.
+;	Inf, NaN, +0.0, -0.0, and subnormals are handled correctly.
 ;
 ;	TODO:
-;		Changed variable names in division routines
-;		Improved accuracy of division routines
-;
-;		more test
-;		refactoring
 ;		Exception handling
-;		Speed up
 ;
 	.export	__i16tof32
 	.export	__u16tof32
