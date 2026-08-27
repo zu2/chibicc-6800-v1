@@ -6273,6 +6273,11 @@ void gen_expr(Node *node)
           return;
         }
       }
+      if (test_addr_x(rhs)) {
+        gen_expr(lhs);              // @long = lhs
+        op32x("add", gen_addr_x(rhs));  // @long += rhs
+        return;
+      }
       gen_long_tos(node);           // push lhs; @long += TOS (and remove TOS)
       return;
     case ND_SUB:
@@ -6291,6 +6296,11 @@ void gen_expr(Node *node)
           gen_direct_long(node);    // @long -= rhs
           return;
         }
+      }
+      if (test_addr_x(rhs)) {
+        gen_expr(lhs);              // @long = lhs
+        op32x("sub", gen_addr_x(rhs));  // @long -= rhs
+        return;
       }
       gen_long_tos(node);           // push lhs; @long -= TOS (and remove TOS)
       return;
@@ -6495,6 +6505,19 @@ void gen_expr(Node *node)
           gen_direct_long(node);      // @long op= rhs
           return;
         }
+      }
+      if (test_addr_x(rhs)) {
+        char *op;
+
+        switch (node->kind) {
+        case ND_BITAND: op="and"; break;
+        case ND_BITOR:  op="or";  break;
+        case ND_BITXOR: op="xor"; break;
+        default: assert(0);
+        }
+        gen_expr(lhs);                // @long = lhs
+        op32x(op, gen_addr_x(rhs));   // @long op= rhs
+        return;
       }
       gen_long_tos(node);           // push lhs; @long op= TOS (and remove TOS)
       return;
