@@ -4318,6 +4318,60 @@ static void opeq(Node *node)
   case ND_DIVEQ: {
     switch(node->ty->kind) {
     case TY_LONG:
+      if (is_long_constant(rhs,&val)) {
+        gen_addr(lhs);
+        push();
+        println("\ttsx");
+        println("\tldx 0,x");
+        IX_invalidate();
+        load32x(0);
+        ldx_IMM_STR(long_literal_label(val));
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __div32x32ux");
+        }else{
+          println("\tjsr __div32x32sx");
+        }
+        IX_invalidate();
+        cast(node->rhs->ty,node->ty);
+        IX_invalidate();
+        store(node->ty);
+        return;
+      }
+      if (test_addr_x(rhs)) {
+        gen_addr(lhs);
+        push();
+        println("\ttsx");
+        println("\tldx 0,x");
+        IX_invalidate();
+        load32x(0);
+        int off = gen_addr_x(rhs);
+        if (off == 0) {
+          if (rhs->ty->is_unsigned) {
+            println("\tjsr __div32x32ux");
+          }else{
+            println("\tjsr __div32x32sx");
+          }
+        }else if (off <= 255) {
+          ldab_i(off);
+          if (rhs->ty->is_unsigned) {
+            println("\tjsr __div32x32ubx");
+          }else{
+            println("\tjsr __div32x32sbx");
+          }
+        }else{
+          ldd_i(off);
+          if (rhs->ty->is_unsigned) {
+            println("\tjsr __div32x32udx");
+          }else{
+            println("\tjsr __div32x32sdx");
+          }
+        }
+        IX_invalidate();
+        cast(node->rhs->ty,node->ty);
+        IX_invalidate();
+        store(node->ty);
+        return;
+      }
       opeq_setup_operands(node);
       if (rhs->ty->is_unsigned) {
         println("\tjsr __div32x32u");
@@ -4463,6 +4517,60 @@ static void opeq(Node *node)
   case ND_MODEQ: {
     switch(node->ty->kind) {
     case TY_LONG:
+      if (is_long_constant(rhs,&val)) {
+        gen_addr(lhs);
+        push();
+        println("\ttsx");
+        println("\tldx 0,x");
+        IX_invalidate();
+        load32x(0);
+        ldx_IMM_STR(long_literal_label(val));
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __rem32x32ux");
+        }else{
+          println("\tjsr __rem32x32sx");
+        }
+        IX_invalidate();
+        cast(node->rhs->ty,node->ty);
+        IX_invalidate();
+        store(node->ty);
+        return;
+      }
+      if (test_addr_x(rhs)) {
+        gen_addr(lhs);
+        push();
+        println("\ttsx");
+        println("\tldx 0,x");
+        IX_invalidate();
+        load32x(0);
+        int off = gen_addr_x(rhs);
+        if (off == 0) {
+          if (rhs->ty->is_unsigned) {
+            println("\tjsr __rem32x32ux");
+          }else{
+            println("\tjsr __rem32x32sx");
+          }
+        }else if (off <= 255) {
+          ldab_i(off);
+          if (rhs->ty->is_unsigned) {
+            println("\tjsr __rem32x32ubx");
+          }else{
+            println("\tjsr __rem32x32sbx");
+          }
+        }else{
+          ldd_i(off);
+          if (rhs->ty->is_unsigned) {
+            println("\tjsr __rem32x32udx");
+          }else{
+            println("\tjsr __rem32x32sdx");
+          }
+        }
+        IX_invalidate();
+        cast(node->rhs->ty,node->ty);
+        IX_invalidate();
+        store(node->ty);
+        return;
+      }
       opeq_setup_operands(node);
       if (rhs->ty->is_unsigned) {
         println("\tjsr __rem32x32u");
