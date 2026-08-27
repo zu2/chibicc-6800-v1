@@ -75,7 +75,6 @@
 	jeq %2
 %1:
 
-
 #
 #
 #
@@ -1045,6 +1044,17 @@
 
 	oraa #0
 =
+
+#
+# remove redundant cmpb
+#
+
+	cmpb %1
+	j%2 L%3
+	cmpb %1
+=
+	cmpb %1
+	j%2 L%3
 
 #
 # remove redundant lda
