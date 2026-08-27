@@ -40,7 +40,7 @@
 ;
 ;	@long - (0-3,x), only cc affected
 ;
-__sublx:
+__sub_l_x:
 	ldab	@long+3
 	subb	3,x
 	ldab	@long+2
@@ -53,7 +53,7 @@ __sublx:
 ;
 ;	(0-3,x) - @long, only cc affected
 ;
-__subxl:
+__sub_x_l:
 	ldab	3,x
 	subb	@long+3
 	ldab	2,x
@@ -117,7 +117,7 @@ __lt32sbx:
 __lt32sdx:
 	jsr	__adx
 __lt32sx:
-	jsr	__sublx
+	jsr	__sub_l_x
 	blt	__lt32sx_1
 	clra
 	clrb
@@ -134,7 +134,7 @@ __lt32ubx:
 __lt32udx:
 	jsr	__adx
 __lt32ux:
-	jsr	__sublx
+	jsr	__sub_l_x
 	bcs	__lt32ux_1
 	clra
 	clrb
@@ -151,7 +151,7 @@ __ge32sbx:
 __ge32sdx:
 	jsr	__adx
 __ge32sx:
-	jsr	__sublx
+	jsr	__sub_l_x
 	bge	__ge32sx_1
 	clra
 	clrb
@@ -168,7 +168,7 @@ __ge32ubx:
 __ge32udx:
 	jsr	__adx
 __ge32ux:
-	jsr	__sublx
+	jsr	__sub_l_x
 	bcc	__ge32ux_1
 	clra
 	clrb
@@ -185,7 +185,7 @@ __gt32sbx:
 __gt32sdx:
 	jsr	__adx
 __gt32sx:
-	jsr	__subxl
+	jsr	__sub_x_l
 	blt	__gt32sx_1
 	clra
 	clrb
@@ -202,7 +202,7 @@ __gt32ubx:
 __gt32udx:
 	jsr	__adx
 __gt32ux:
-	jsr	__subxl
+	jsr	__sub_x_l
 	bcs	__gt32ux_1
 	clra
 	clrb
@@ -219,7 +219,7 @@ __le32sbx:
 __le32sdx:
 	jsr	__adx
 __le32sx:
-	jsr	__subxl
+	jsr	__sub_x_l
 	bge	__le32sx_1
 	clra
 	clrb
@@ -236,7 +236,7 @@ __le32ubx:
 __le32udx:
 	jsr	__adx
 __le32ux:
-	jsr	__subxl
+	jsr	__sub_x_l
 	bcc	__le32ux_1
 	clra
 	clrb
