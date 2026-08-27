@@ -89,7 +89,7 @@ __sqrtf_10:
 	stx	__s
 	stx	__s+2
 ;
-	ldx	#9		; turns 0-8: __t's low 2 bytes stay zero and never borrow
+	ldx	#9		; 1st loop. __t+2,__t+3 always 0
 __sqrtf_12:
 	ldab	__r+1
 	addb	__s+1
@@ -115,22 +115,22 @@ __sqrtf_12:
 	stab	__s
 ;
 __sqrtf_15:
-	asl	@long+3
+	asl	@long+3		; @long << 1
 	rol	@long+2
 	rol	@long+1
 	rol	@long
 ;
-	lsr	__r		; __r falls into byte 2 on the last turn
+	lsr	__r		; __r>>1
 	ror	__r+1
 	ror	__r+2
 ;
 	dex
 	bne	__sqrtf_12
 ;
-	ldab	__s		; from turn 9 on, __s's top byte never moves again
+	ldab	__s		; r+1,r are 0, move here.
 	stab	__t
 ;
-	ldx	#16
+	ldx	#16		; 2nd loop
 __sqrtf_20:
 	ldab	__r+3
 	addb	__s+3
@@ -141,6 +141,12 @@ __sqrtf_20:
 	ldab	__s+1
 	adcb	#0
 	stab	__t+1
+;	ldab	__r+1		; r+1,r are 0, move out of loop. ↑
+;	adcb	__s+1
+;	stab	__t+1
+;	ldab	__r
+;	adcb	__s		; __t < 2^26, so no carry reaches
+;	stab	__t
 ;
 	ldab	@long+3
 	subb	__t+3
@@ -191,52 +197,38 @@ __sqrtf_26:
 ;
 __sqrtf_29:
 ;
-	ldx	@long
-	bne	__sqrtf_31
-	ldx	@long+2
-	beq	__sqrtf_32
-__sqrtf_31:			; the root is __s>>1, so its bit 0 is __s's bit 1
 	ldab	__s+3
-	bitb	#2
-	beq	__sqrtf_32
-	addb	#2
-	stab	__s+3
-	ldab	__s+2
-	adcb	#0
-	stab	__s+2
-	ldab	__s+1
-	adcb	#0
-	stab	__s+1
-	ldab	__s
-	adcb	#0
-	stab	__s
+	ldaa	__s+2
 ;
-__sqrtf_32:			; the result is __s>>2
-	lsr	__s
+	lsr	__s		; __s>>1
 	ror	__s+1
-	ror	__s+2
-	ror	__s+3
-;
-	lsr	__s
-	ror	__s+1
-	ror	__s+2
-	ror	__s+3
-;
-	ldab	__s+3
-	stab	@long+3
-	ldab	__s+2
-	stab	@long+2
-;
-	clra
-	ldab	__exp
-	lsrb
 	rora
+	rorb
 ;
-	adda	__s+1
-	staa	@long+1
-	adcb	__s
-	addb	#$3F
-	andb	#$7F
-	stab	@long
+	lsr	__s		; __s>>1
+	ror	__s+1
+	rora
+	rorb
+	bcc	__sqrtf_32	; G==1?
+;
+	addb	#1		; yes, round up.
+	adca	#0
+	bcc	__sqrtf_32
+	inc	__s+1
+;
+__sqrtf_32:
+	stab	@long+3
+	staa	@long+2
+;
+	clrb
+	ldaa	__exp
+	lsra
+	rorb
+;
+	addb	__s+1
+	stab	@long+1
+	adca	#$3F
+	anda	#$7F
+	staa	@long
 ;
 	rts
