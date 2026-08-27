@@ -533,6 +533,7 @@ char *float_literal_label(double fval);
 void cmpf32x(int off);
 void emit_float_literals(void);
 char *long_literal_label(int64_t val);
+Type *is_long_constant(Node *node, int64_t *val);
 void gen_direct_pushl(int64_t val);
 void pushlx(int off);
 void pushl(void);

@@ -580,28 +580,55 @@ static bool gen_jump_if_false_long(Node *node, char *if_false)
     assert(0);
   }
 
-  if (rhs->kind == ND_NUM && rhs->ty->kind == TY_LONG) {
-    gen_direct_pushl(rhs->val);
-  }else if (test_addr_x(rhs)) {
-    pushlx(gen_addr_x(rhs));
-  }else{
-    gen_expr(rhs);
-    pushl();
-  }
-  gen_expr(lhs);
-  char sc = (lhs->ty->is_unsigned)? 'u': 's';
-  switch (node->kind) {	// push order is rhs -> lhs, so the condition is reversed
-  case ND_EQ: println("\tjsr __eq32"); break;
-  case ND_NE: println("\tjsr __ne32"); break;
-  case ND_LT: println("\tjsr __gt32%c",sc); break;
-  case ND_LE: println("\tjsr __ge32%c",sc); break;
-  case ND_GT: println("\tjsr __lt32%c",sc); break;
-  case ND_GE: println("\tjsr __le32%c",sc); break;
+  char *op;
+  char  sc[2] = "";
+
+  switch (node->kind) {
+  case ND_EQ: op="eq"; break;
+  case ND_NE: op="ne"; break;
+  case ND_LT: op="lt"; break;
+  case ND_LE: op="le"; break;
+  case ND_GT: op="gt"; break;
+  case ND_GE: op="ge"; break;
   default: ;
     assert(0);
   }
-  depth -= 4;
-  IX_invalidate();
+  if (node->kind != ND_EQ && node->kind != ND_NE) {
+    sc[0] = (lhs->ty->is_unsigned)? 'u': 's';
+  }
+  if (is_long_constant(rhs,&val)) {
+    gen_expr(lhs);
+    ldx_IMM_STR(long_literal_label(val));
+    println("\tjsr __%s32%sx",op,sc);
+    if (node->kind == ND_EQ || node->kind == ND_NE) {
+      IX_invalidate();      // __eq32x and __ne32x load through IX
+    }
+  }else if (test_addr_x(rhs)) {
+    gen_expr(lhs);
+    int off = gen_addr_x(rhs);
+    if (off == 0) {
+      println("\tjsr __%s32%sx",op,sc);
+      if (node->kind == ND_EQ || node->kind == ND_NE) {
+        IX_invalidate();    // __eq32x and __ne32x load through IX
+      }
+    }else if (off <= 255) {
+      ldab_i(off);
+      println("\tjsr __%s32%sbx",op,sc);
+      IX_invalidate();
+    }else{
+      ldd_i(off);
+      println("\tjsr __%s32%sdx",op,sc);
+      IX_invalidate();
+    }
+  }else{
+    gen_expr(rhs);
+    pushl();
+    gen_expr(lhs);
+    println("\ttsx");
+    println("\tjsr __%s32%sx",op,sc);
+    IX_invalidate();
+    ins(4);                 // ins keeps the flags, remove_args() does not
+  }
   println("\tjeq %s", if_false);
   return true;
 }
@@ -1449,28 +1476,55 @@ static bool gen_jump_if_true_long(Node *node, char *if_true)
     assert(0);
   }
 
-  if (rhs->kind == ND_NUM && rhs->ty->kind == TY_LONG) {
-    gen_direct_pushl(rhs->val);
-  }else if (test_addr_x(rhs)) {
-    pushlx(gen_addr_x(rhs));
-  }else{
-    gen_expr(rhs);
-    pushl();
-  }
-  gen_expr(lhs);
-  char sc = (lhs->ty->is_unsigned)? 'u': 's';
-  switch (node->kind) {	// push order is rhs -> lhs, so the condition is reversed
-  case ND_EQ: println("\tjsr __eq32"); break;
-  case ND_NE: println("\tjsr __ne32"); break;
-  case ND_LT: println("\tjsr __gt32%c",sc); break;
-  case ND_LE: println("\tjsr __ge32%c",sc); break;
-  case ND_GT: println("\tjsr __lt32%c",sc); break;
-  case ND_GE: println("\tjsr __le32%c",sc); break;
+  char *op;
+  char  sc[2] = "";
+
+  switch (node->kind) {
+  case ND_EQ: op="eq"; break;
+  case ND_NE: op="ne"; break;
+  case ND_LT: op="lt"; break;
+  case ND_LE: op="le"; break;
+  case ND_GT: op="gt"; break;
+  case ND_GE: op="ge"; break;
   default: ;
     assert(0);
   }
-  depth -= 4;
-  IX_invalidate();
+  if (node->kind != ND_EQ && node->kind != ND_NE) {
+    sc[0] = (lhs->ty->is_unsigned)? 'u': 's';
+  }
+  if (is_long_constant(rhs,&val)) {
+    gen_expr(lhs);
+    ldx_IMM_STR(long_literal_label(val));
+    println("\tjsr __%s32%sx",op,sc);
+    if (node->kind == ND_EQ || node->kind == ND_NE) {
+      IX_invalidate();      // __eq32x and __ne32x load through IX
+    }
+  }else if (test_addr_x(rhs)) {
+    gen_expr(lhs);
+    int off = gen_addr_x(rhs);
+    if (off == 0) {
+      println("\tjsr __%s32%sx",op,sc);
+      if (node->kind == ND_EQ || node->kind == ND_NE) {
+        IX_invalidate();    // __eq32x and __ne32x load through IX
+      }
+    }else if (off <= 255) {
+      ldab_i(off);
+      println("\tjsr __%s32%sbx",op,sc);
+      IX_invalidate();
+    }else{
+      ldd_i(off);
+      println("\tjsr __%s32%sdx",op,sc);
+      IX_invalidate();
+    }
+  }else{
+    gen_expr(rhs);
+    pushl();
+    gen_expr(lhs);
+    println("\ttsx");
+    println("\tjsr __%s32%sx",op,sc);
+    IX_invalidate();
+    ins(4);                 // ins keeps the flags, remove_args() does not
+  }
   println("\tjne %s", if_true);
   return true;
 }

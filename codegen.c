@@ -6527,36 +6527,58 @@ void gen_expr(Node *node)
     case ND_LT:
     case ND_LE:
     case ND_GT:
-    case ND_GE: // long relop long
-      if (node->rhs->kind == ND_NUM && node->rhs->ty->kind==TY_LONG) {
-        gen_direct_pushl(node->rhs->val);
-      }else if (test_addr_x(node->rhs)){
-        int off = gen_addr_x(node->rhs);
-        pushlx(off);
-      }else{
-        gen_expr(node->rhs);
-        pushl();
+    case ND_GE: { // long relop long
+      char *op;
+      char  sc[2] = "";
+
+      switch (node->kind) {
+      case ND_EQ: op="eq"; break;
+      case ND_NE: op="ne"; break;
+      case ND_LT: op="lt"; break;
+      case ND_LE: op="le"; break;
+      case ND_GT: op="gt"; break;
+      default:    op="ge"; break;
       }
-      gen_expr(node->lhs);
-      // Since push in the order is rhs -> lhs, the conditions are reversed.
-      // Should I change the name?
-      char sc = (node->lhs->ty->is_unsigned)? 'u': 's';
-      if (node->kind == ND_EQ) {
-        println("\tjsr __eq32");
-      } else if (node->kind == ND_NE) {
-        println("\tjsr __ne32");
-      } else if (node->kind == ND_LT) {
-        println("\tjsr __gt32%c",sc);
-      } else if (node->kind == ND_LE) {
-        println("\tjsr __ge32%c",sc);
-      } else if (node->kind == ND_GT) {
-        println("\tjsr __lt32%c",sc);
-      } else if (node->kind == ND_GE) {
-        println("\tjsr __le32%c",sc);
+      if (node->kind != ND_EQ && node->kind != ND_NE) {
+        sc[0] = (lhs->ty->is_unsigned)? 'u': 's';
       }
-      depth -= 4;
+      if (is_long_constant(rhs,&val)) {
+        gen_expr(lhs);
+        ldx_IMM_STR(long_literal_label(val));
+        println("\tjsr __%s32%sx",op,sc);
+        if (node->kind == ND_EQ || node->kind == ND_NE) {
+          IX_invalidate();      // __eq32x and __ne32x load through IX
+        }
+        return;
+      }
+      if (test_addr_x(rhs)) {
+        gen_expr(lhs);
+        int off = gen_addr_x(rhs);
+        if (off == 0) {
+          println("\tjsr __%s32%sx",op,sc);
+          if (node->kind == ND_EQ || node->kind == ND_NE) {
+            IX_invalidate();    // __eq32x and __ne32x load through IX
+          }
+        }else if (off <= 255) {
+          ldab_i(off);
+          println("\tjsr __%s32%sbx",op,sc);
+          IX_invalidate();
+        }else{
+          ldd_i(off);
+          println("\tjsr __%s32%sdx",op,sc);
+          IX_invalidate();
+        }
+        return;
+      }
+      gen_expr(rhs);
+      pushl();
+      gen_expr(lhs);
+      println("\ttsx");
+      println("\tjsr __%s32%sx",op,sc);
       IX_invalidate();
+      ins(4);                   // ins keeps the flags, remove_args() does not
       return;
+    } // long relop long
     //
     // Shift operations are not performed by usual_arith_conv() in type.c. 
     // The node and lhs are long, but the type of rhs is unknown.
