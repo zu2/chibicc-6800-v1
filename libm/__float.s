@@ -1,3 +1,22 @@
+;	MC6800 floating point arithmetic library
+;
+;	Copyright (c) 2025-2026 by ZUKERAN, shin
+;	Released under the MIT license
+;
+;	https://github.com/zu2/chibicc-6800-v1?tab=License-1-ov-file#readme
+;
+
+;	Note: This program was created for chibicc-6800-v1, 
+;
+;
+;	TODO:
+;		Changed variable names in division routines
+;		Improved accuracy of division routines
+;
+;		more test
+;		refactoring
+;		Exception handling
+;		Speed up
 ;
 	.export	__i16tof32
 	.export	__u16tof32
@@ -15,6 +34,7 @@
 	.export __divf32tos
 	.export __cmpf32tos
 	.export __cmpf32_x2
+	.export __cmpf32_x
 	.export __cmpf32x
 	.export __cmpf32bx
 	.export __cmpf32dx
@@ -52,30 +72,6 @@
 	.export __subf32dx
 	.export __mulf32dx
 	.export __divf32dx
-;	MC6800 floating point arithmetic library
-;
-;	Copyright (c) 2025 by ZUKERAN, shin
-;	Released under the MIT license
-;
-;	https://github.com/zu2/chibicc-6800-v1?tab=License-1-ov-file#readme
-;
-
-
-;
-;	Note: This program was created for testing chibicc-6800-v1, 
-;	and does not pay attention to speed, accuracy, or exception handling.
-;
-
-;
-;	TODO:
-;		Changed variable names in division routines
-;		Improved accuracy of division routines
-;
-;		more test
-;		refactoring
-;		Exception handling
-;		Speed up
-;
 
 	.zp
 	.data
@@ -176,21 +172,21 @@ __i16tof32_1:
 	sbca	#0
 	;
 __i16tof32_05:
-        bne     __i16tof32_10   ; i32 in ±0〜255
-        ldaa    #$87            ; exp ($86+1), if i32>=128 then exp=$86
+	bne     __i16tof32_10   ; i32 in ±0〜255
+	ldaa    #$87            ; exp ($86+1), if i32>=128 then exp=$86
 __i16tof32_06:                  ; Shift left until the MSB becomes 1
-        deca
-        aslb
-        bcc     __i16tof32_06 
+	deca
+	aslb
+	bcc     __i16tof32_06 
 ;
-        asl     __sign
-        rora
-        rorb
-        stab    @long+1
-        staa    @long
-        clr     @long+3
-        clr     @long+2
-        rts
+	asl     __sign
+	rora
+	rorb
+	stab    @long+1
+	staa    @long
+	clr     @long+3
+	clr     @long+2
+	rts
 ;
 __i16tof32_10:                  ; i32 in ±256〜32768
 	stab	@long+2
@@ -818,9 +814,9 @@ __addf32_s51:
 __addf32_1:			; neither @long nor TOS is 0.0
 	ldx	__fp_ix
 	jsr	__abscmp	; abs(TOS) - abs(@long)
-	bhi	__addf32_2	; abs(TOS) > abs(@long), so swap the two
+	bhi	__addf32_2	; abs(TOS) > abs(@long), swap @long <-> TOS
 	bne	__addf32_3
-	tst	__zin		; equal size. b7 says the signs differ
+	tst	__zin		; b7:signs differ
 	jmi	__f32retpZero	; x + (-x) is +0.0
 ;
 __addf32_3:			; @long already holds the bigger value
@@ -1767,18 +1763,6 @@ next8:
 ret:
 	rts
 ;
-;	@long cmp TOS
-;
-;	condition:	return AccAB and carry
-;	C=1		unordered relation (NaN)
-;	C=0:
-;	  @long<TOS	-1
-;	  @long==TOS	0
-;	  @long>TOS	1
-;
-;
-
-;
 ;	if float is subnormal, mantissa into normal form.
 ;	unbiased exp is returned in AccAB.
 ;	bit 23 turn on (| 0x00800000)
@@ -1859,81 +1843,91 @@ __cmpf32tos:
 	jsr	__cmpf32x
 	jmp	__pullret
 ;
-;	compare @long and (0-3,x)
-;	IX points to the 2nd operand
-;	NaN and ±0.0 are handled here
+;	@long cmp (0-3,x)
+;	return AccAB and carry
+;
+;	C=1:	NaN		AccAB:don't care
+;	C=0:	@long<TOS	AccAB:-1
+;		@long==TOS	AccAB:0
+;		@long>TOS	AccAB:1
 ;
 __cmpf32bx:
 	clra
 __cmpf32dx:
 	jsr	__adx
 __cmpf32x:
-	stx	__fp_ix
-	jsr	__f32isNaNorInf	; if @long is NaN, C=1. __f32isNaNorInf destroys IX.
+	stx	__fp_ix		;  __f32isNaNorInf destroys IX.
+	jsr	__f32isNaNorInf	; if @long is NaN, C=1
 	bcs	__cmpf32x_ret
 	ldx	__fp_ix
 	jsr	__f32isNaNorInfx ; if (0-3,x) is NaN, C=1
 	bcs	__cmpf32x_ret
 ;
-        jsr     __f32iszero	; @long == 0.0 ? __f32iszero keeps IX.
-	bne	__cmpf32x_10	; branch if @long!=0.0
+        jsr     __f32iszero	; @long == 0.0 ?
+	bne	__cmpf32_x	; branch if @long!=0.0
         jsr     __f32iszerox
-	bne	__cmpf32x_10
+	bne	__cmpf32_x
 	clrb			; ±0.0==±0.0? return eq
 	clra
 __cmpf32x_ret:
-	rts			; rts keeps the carry flag, only rti pulls the CCR
-__cmpf32x_10:
-	dex			; __cmpf32_x2 reads 2,x
-	dex
-	jmp	__cmpf32_x2
-__cmpf32_x2:			; compare @long and 2,x
-				; handle NaN and ±0.0 before you call this
+	rts
+
+;
+;	cmpf32_x:  @long cmp (0-3,x)
+;	cmpf32_x2: @long cmp (2-5,x)
+;
+;	@long == (0,x)	B:$00	C=0,Z=1,N=0
+;	@long <  (0,x)	B:$FF	C=0,Z=0,N=1
+;	@long >  (0,x)	B:$01	C=0,Z=0,N=0
+;
+__cmpf32_x2:			; compare @long and 2,x. destroys IX
+	inx
+	inx
+				; handle NaN and ±0.0 before call cmpf32_x/x2
+__cmpf32_x:			; compare @long and 0,x
 	ldab	@long
-	bpl	__cmpf32_x2_p	; jump if @long >= 0
-	ldab	2,x
-	bpl	__cmpf32_x2_lt	; @long<0 LT TOS>=0
+	bpl	__cmpf32_x_p	; jump if @long >= 0
+	ldab	0,x
+	bpl	__cmpf32_x_lt	; @long<0 LT TOS>=0
 ;
-	bsr	__cmpf32_x2_s	; @long<0 && TOS<0
-	bcs	__cmpf32_x2_gt	; C=1
-	beq	__cmpf32_x2_eq	; Z=1
-	bra	__cmpf32_x2_lt
+	bsr	__cmpf32_x_s	; @long<0 && TOS<0
+	bcs	__cmpf32_x_gt	; C=1
+	beq	__cmpf32_x_eq	; Z=1
 ;
-__cmpf32_x2_lt:			; @long < TOS
+__cmpf32_x_lt:			; @long < TOS
 	clrb			; C=0
 	decb			; Z=0, N=1
 	tba
 	rts
 ;
-__cmpf32_x2_p:			; if @long >= 0
-	ldab	2,x
-	bmi	__cmpf32_x2_gt	; @long>=0 && TOS<0
-	bsr	__cmpf32_x2_s
-	bcs	__cmpf32_x2_lt
-	beq	__cmpf32_x2_eq
-__cmpf32_x2_gt:			; @long > TOS
+__cmpf32_x_p:			; if @long >= 0
+	ldab	0,x
+	bmi	__cmpf32_x_gt	; @long>=0 && TOS<0
+	bsr	__cmpf32_x_s
+	bcs	__cmpf32_x_lt
+	beq	__cmpf32_x_eq
+__cmpf32_x_gt:			; @long > TOS
 	clra			; C=0
 	ldab	#1		; Z=0, N=0
 	rts
-__cmpf32_x2_eq:			; @long == TOS
+__cmpf32_x_eq:			; @long == TOS
 	clrb
 	clra			; Z=1,C=0, N=0
 	rts
 ;
-__cmpf32_x2_s:
+__cmpf32_x_s:
 	ldab	@long
-	cmpb	2,x
-	bne	__cmpf32_x2_sret
+	cmpb	0,x
+	bne	__cmpf32_x_sret
 	ldab	@long+1
-	cmpb	3,x
-	bne	__cmpf32_x2_sret
+	cmpb	1,x
+	bne	__cmpf32_x_sret
 	ldab	@long+2
-	cmpb	4,x
-	bne	__cmpf32_x2_sret
+	cmpb	2,x
+	bne	__cmpf32_x_sret
 	ldab	@long+3
-	cmpb	5,x
-	bne	__cmpf32_x2_sret
-__cmpf32_x2_sret:
+	cmpb	3,x
+__cmpf32_x_sret:
 	rts			; when @long>0 && TOS>0
 				; @long == TOS : C=0, Z=1
 				; @long <  TOS : C=0, Z=0
