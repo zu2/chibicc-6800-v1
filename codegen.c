@@ -2742,7 +2742,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     case TY_ARRAY:
       if (test) return true;
       println("\t%s #<%s", opb, addr);
-      println("\t%s #>%s",   opa, addr);
+      if (opa)
+        println("\t%s #>%s",   opa, addr);
       return 1;
     }
   }
@@ -2869,7 +2870,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
       case TY_ENUM:
       case TY_PTR:
         println("\t%s %ld+1",opb,node->lhs->val);
-        println("\t%s %ld",opa,node->lhs->val);
+        if (opa)
+          println("\t%s %ld",opa,node->lhs->val);
         return 1;
       } // ND_DEREF → ND_NUM
       break;
@@ -2890,7 +2892,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         case TY_ENUM:
         case TY_PTR:
           println("\t%s _%s+1",opb,node->lhs->var->name);
-          println("\t%s _%s",  opa,node->lhs->var->name);
+          if (opa)
+            println("\t%s _%s",  opa,node->lhs->var->name);
           invalidate_EXT(node->lhs);
           return 1;
         }
@@ -2914,7 +2917,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
         case TY_ENUM:
         case TY_PTR:
           println("\t%s %ld+1",opb,node->lhs->lhs->val);
-          println("\t%s %ld",  opa,node->lhs->lhs->val);
+          if (opa)
+            println("\t%s %ld",  opa,node->lhs->lhs->val);
           return 1;
         }
       }
@@ -3030,7 +3034,8 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
       case TY_ENUM:
       case TY_PTR:
         println("\t%s #<%s", opb,addr);
-        println("\t%s #>%s", opa,addr);
+        if (opa)
+          println("\t%s #>%s", opa,addr);
         return 1;
       }
       return 0;
