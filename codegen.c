@@ -6784,6 +6784,13 @@ void gen_expr(Node *node)
           return;
         assert(0);
       }
+      if (can_direct_char(node->lhs)){
+        gen_expr(node->rhs);
+        println("\tnegb");
+        if(gen_direct_char(node->lhs,"addb",NULL))
+          return;
+        assert(0);
+      }
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
