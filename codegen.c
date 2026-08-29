@@ -2728,10 +2728,7 @@ static void builtin_alloca(void) {
   println(";");	          // return alloca(size);
 }
 
-//
-// If node is a simple expression, it is computed directly without pushing it onto the stack.
-//
-static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_char)
+static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test, bool is_char)
 {
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
   char *addr;
@@ -2805,24 +2802,6 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
           println("\t%s #>%d",opa,node->var->offset);
         return 1;
       }
-      if (!test_addr_x(node)) return 0;
-      if (is_int8(node->ty)) {
-        if (test) {
-          return is_char || node->ty->is_unsigned;
-        }
-        int off = gen_addr_x(node);
-        println("\t%s %d,x",opb,off);
-        if (!is_store && opa) {
-          println("\t%s #0",opa);
-        }
-      }else{
-        if (test) return 1;
-        int off = gen_addr_x(node);
-        println("\t%s %d,x",opb,off+1);
-        if (opa)
-          println("\t%s %d,x",opa,off);
-      }
-      return 1;
     }else{
       // global
       if (node->ty->kind==TY_FUNC)
@@ -2999,16 +2978,16 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     return 0;
   case ND_CAST:
     if (is_empty_cast(node->lhs->ty, node->ty)
-    &&  gen_direct_sub(node->lhs, opb, opa, test,0))
+    &&  gen_direct_imm_ext_sub(node->lhs, opb, opa, test,0))
       return 1;
     if (is_int16(node->ty)
     &&  node->lhs->ty->kind == TY_CHAR
     &&  node->lhs->ty->is_unsigned
-    &&  gen_direct_sub(node->lhs, opb, opa, test,0)) {
+    &&  gen_direct_imm_ext_sub(node->lhs, opb, opa, test,0)) {
       return 1;
     }
     if (node->ty->kind      == TY_PTR
-    &&  gen_direct_sub(node->lhs, opb, opa, test, 0))
+    &&  gen_direct_imm_ext_sub(node->lhs, opb, opa, test, 0))
       return 1;
     // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) m +0 )
     if (node->ty->kind == TY_PTR
@@ -3077,6 +3056,65 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
           return 1;
         }
       }
+    }
+    return 0;
+  }
+  return 0;
+}
+
+static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test, bool is_char)
+{
+  int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
+
+  switch(node->kind){
+  case ND_NUM:
+  case ND_DEREF:
+    return 0;
+  case ND_VAR: {
+    if (node->var->ty->kind == TY_VLA ) {
+      return 0;
+    }
+    if (!node->var->is_local) {
+      return 0;
+    }
+    if (node->ty->kind==TY_ARRAY) {
+      return 0;
+    }
+    if (!test_addr_x(node)) return 0;
+    if (is_int8(node->ty)) {
+      if (test) {
+        return is_char || node->ty->is_unsigned;
+      }
+      int off = gen_addr_x(node);
+      println("\t%s %d,x",opb,off);
+      if (!is_store && opa) {
+        println("\t%s #0",opa);
+      }
+    }else{
+      if (test) return 1;
+      int off = gen_addr_x(node);
+      println("\t%s %d,x",opb,off+1);
+      if (opa)
+        println("\t%s %d,x",opa,off);
+    }
+    return 1;
+  } // ND_VAR
+  case ND_CAST:
+    if (is_empty_cast(node->lhs->ty, node->ty)
+    &&  gen_direct_ix_sub(node->lhs, opb, opa, test,0))
+      return 1;
+    if (is_int16(node->ty)
+    &&  node->lhs->ty->kind == TY_CHAR
+    &&  node->lhs->ty->is_unsigned
+    &&  gen_direct_ix_sub(node->lhs, opb, opa, test,0)) {
+      return 1;
+    }
+    if (node->ty->kind      == TY_PTR
+    &&  gen_direct_ix_sub(node->lhs, opb, opa, test, 0))
+      return 1;
+    return 0;
+  default:
+    if (test_addr_x(node)) {
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
@@ -3105,6 +3143,14 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
     return 0;
   }
   return 0;
+}
+
+static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_char)
+{
+  if (gen_direct_imm_ext_sub(node,opb,opa,test,is_char))
+    return 1;
+
+  return gen_direct_ix_sub(node,opb,opa,test,is_char);
 }
 
 bool can_direct(Node *rhs)
