@@ -1,3 +1,12 @@
+//
+// expm1f(x) = e^x - 1
+//
+// Cody-Waite range reduction
+//
+// e^x - 1 = 2^n * (1 + t) - 1,  t = e^r - 1,  r = x - n * ln2
+//
+// 2^n * (1 + t) - 1 = 2^n * ((1 - 2^-n) + t)
+//
 #include <math.h>
 
 // Cody-Waite: LN2_HI holds the top 24 bits of ln2, LN2_LO the rest
@@ -18,13 +27,12 @@ float expm1f(float x)
     return x;
   if (isnan(x))
     return x;
-  if (x > 0x1.62e430p+6f)
+  if (x > 0x1.62e430p+6f)     // ln(FLT_MAX)
     return INFINITY;
-  if (x < -0x1.154246p+4f)
+  if (x < -0x1.154246p+4f)    // e^x - 1 rounds to -1.0f
     return -1.0f;
 
-  // No reduction: the leading x must stay free of a rounding error
-  if (fabsf(x) <= 0x1.62e430p-2f) {
+  if (fabsf(x) <= 0x1.62e430p-2f) { // ln2 / 2
     float x2 = x * x;
     float p = P0 + x * (P1 + x * (P2 + x * (P3 + x * P4)));
     return x + x2 * p;
@@ -41,6 +49,7 @@ float expm1f(float x)
 
   if (n >= 25)
     return ldexpf(1.0f + t, n);
+
   // 1 - 2^-n is exact for n <= 24, so t stays inside the last rounding
   if (n >= 1)
     return ldexpf((1.0f - ldexpf(1.0f, -n)) + t, n);
