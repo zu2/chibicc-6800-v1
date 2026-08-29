@@ -5509,20 +5509,6 @@ void gen_expr(Node *node)
       load_bitfield(node);
       return;
     }
-    if (is_global_var(node->lhs)
-    &&  is_integer_or_ptr(node->ty)) {
-      char *name = node->lhs->var->name;
-      int moff = mem->offset;
-      if (node->ty->size == 1) {
-        println("\tldab _%s+%d",name,moff);
-        return;
-      }
-      if (node->ty->size == 2) {
-        println("\tldab _%s+%d",name,moff+1);
-        println("\tldaa _%s+%d",name,moff);
-        return;
-      }
-    }
     if (opt('O','2')
     &&  node->ty->size == 4
     &&  (addr = is_var_addr_constant(node))) {
@@ -5537,6 +5523,12 @@ void gen_expr(Node *node)
     &&  (addr = is_var_addr_constant(node))) {
       ldx_IMM_STR(addr);
       println("\tjsr __load32x");
+      return;
+    }
+    if (is_int8(node->ty)) {
+      if (gen_direct_char(node,"ldab",NULL))
+        return;
+    }else if (gen_direct(node,"ldab","ldaa")) {
       return;
     }
     if (can_load_x(node->ty) && test_addr_x(node)) {
