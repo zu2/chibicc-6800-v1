@@ -3174,6 +3174,13 @@ bool can_direct_imm_ext(Node *rhs)
   return r;
 }
 
+bool can_direct_char_imm_ext(Node *rhs)
+{
+  int r = gen_direct_imm_ext_sub(rhs,NULL,NULL,1,1);	// test mode
+
+  return r;
+}
+
 bool gen_direct(Node *rhs,char *opb, char *opa)
 {
   return gen_direct_sub(rhs,opb,opa,0,0);
@@ -3187,6 +3194,11 @@ bool gen_direct_char(Node *rhs,char *opb, char *opa)
 bool gen_direct_imm_ext(Node *rhs,char *opb, char *opa)
 {
   return gen_direct_imm_ext_sub(rhs,opb,opa,0,0);
+}
+
+bool gen_direct_char_imm_ext(Node *rhs,char *opb, char *opa)
+{
+  return gen_direct_imm_ext_sub(rhs,opb,opa,0,1);
 }
 
 int gen_direct_lr_8bit(Node *node, char *opb)
