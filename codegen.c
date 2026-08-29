@@ -2995,7 +2995,6 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test, bool i
 
   switch(node->kind){
   case ND_NUM:
-  case ND_DEREF:
     return 0;
   case ND_VAR: {
     if (node->var->ty->kind == TY_VLA ) {
@@ -5648,8 +5647,10 @@ void gen_expr(Node *node)
         return;
       }
     }
-    if (can_direct(node)) {
-      gen_direct(node,"ldab","ldaa");
+    if (is_int8(node->ty)) {
+      if (gen_direct_char(node,"ldab",NULL))
+        return;
+    }else if (gen_direct(node,"ldab","ldaa")) {
       return;
     }
     if (opt('O','2')
