@@ -3057,6 +3057,7 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test, bool i
       case TY_INT:
       case TY_SHORT:
       case TY_ENUM:
+      case TY_PTR:
         if (test) return 1;
         off = gen_addr_x(node);
         println("\t%s %d,x",opb,off+1);
