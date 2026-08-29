@@ -3131,9 +3131,23 @@ bool gen_direct_char(Node *rhs,char *opb, char *opa)
   return gen_direct_sub(rhs,opb,opa,0,1);
 }
 
-//
-// Commutative 16-bit arithmetic processing
-//
+int gen_direct_lr_8bit(Node *node, char *opb)
+{
+    if (can_direct_char(node->rhs)){
+      gen_expr(node->lhs);
+      if (gen_direct_char(node->rhs,opb,NULL))
+        return 1;
+      assert(0);
+    }
+    if (can_direct_char(node->lhs)){
+      gen_expr(node->rhs);
+      if (gen_direct_char(node->lhs,opb,NULL))
+        return 1;
+      assert(0);
+    }
+    return 0;
+}
+
 int gen_direct_lr(Node *node, char *opb, char *opa)
 {
     int can_direct_lhs = can_direct(node->lhs);
@@ -6628,12 +6642,8 @@ void gen_expr(Node *node)
   switch (node->kind) {
   case ND_ADD: {
     if (is_int8(node->ty)) {
-      if (can_direct_char(node->rhs)){
-        gen_expr(node->lhs);
-        if(gen_direct_char(node->rhs,"addb",NULL))
-          return;
-        assert(0);
-      }
+      if (gen_direct_lr_8bit(node,"addb"))
+        return;
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
@@ -6997,18 +7007,8 @@ void gen_expr(Node *node)
     default: assert(0);
     }
     if (is_int8(node->ty)) {
-      if (can_direct_char(node->rhs)){
-        gen_expr(node->lhs);
-        if (gen_direct_char(node->rhs, opb, NULL))
-          return;
-        assert(0);
-      }
-      if (can_direct_char(node->lhs)){
-        gen_expr(node->rhs);
-        if (gen_direct_char(node->lhs, opb, NULL))
-          return;
-        assert(0);
-      }
+      if (gen_direct_lr_8bit(node, opb))
+        return;
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
