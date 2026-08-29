@@ -280,6 +280,8 @@ static int node_cost(Node *node)
     return 150+sign;
   }else if (is_var_addr_constant(node)) {
     return 160+sign;
+  }else if (can_direct_imm_ext(node)) {
+    return 180+sign;
   }else if (can_direct(node)) {
     return 200+sign;
   }else if (test_addr_x(node)) {
