@@ -115,9 +115,6 @@ void popx(void) {
   depth-=2;
 }
 
-//
-// Use ins_only(n) to preserve flags.
-//
 void ins(int n)
 {
   for (int i=0; i<n; i++) {
@@ -292,9 +289,12 @@ void eor_i(int n)
   }
 }
 
+//
+// push @long
+//
+// push32/32x/32bx/32dx destroy IX
+//
 void pushl(void) {
-  // push32/32x/32bx/32dx destroy IX, which may require reloading IX later.
-  // Generating the value directly at -O2 can reduce this overhead.
   if (opt('O','2')) {
     println("\tldab @long+3");
     println("\tpshb");
@@ -334,10 +334,13 @@ void pushf(void) {
   pushl();
 }
 
-// Round up `n` to the nearest multiple of `align`. For instance,
-// align_to(5, 8) returns 8 and align_to(11, 8) returns 16.
+//
+//  align_to(n, align) returns n.
+//  6800 has no alignment restriction.
+//  the original formula is kept below.
+//
 int align_to(int n, int align) {
-  return n;	// 6800 has no alignment restrictions.
+  return n;
 //  return (n + align - 1) / align * align;
 }
 
@@ -6994,8 +6997,18 @@ void gen_expr(Node *node)
     default: assert(0);
     }
     if (is_int8(node->ty)) {
-      if (gen_direct_lr(node, opb, NULL))
-        return;
+      if (can_direct_char(node->rhs)){
+        gen_expr(node->lhs);
+        if (gen_direct_char(node->rhs, opb, NULL))
+          return;
+        assert(0);
+      }
+      if (can_direct_char(node->lhs)){
+        gen_expr(node->rhs);
+        if (gen_direct_char(node->lhs, opb, NULL))
+          return;
+        assert(0);
+      }
       gen_expr(node->lhs);
       push1();
       gen_expr(node->rhs);
