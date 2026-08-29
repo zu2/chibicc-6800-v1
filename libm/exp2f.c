@@ -1,45 +1,47 @@
+//
+// exp2f(x) = 2^x
+//
+// 2^x = e^(r * ln2) * 2^n,  r = x - n,  n = round(x)
+//
+// r = x - n_f is exact. only r * LN2 rounds
+//
+
 #include <math.h>
 
+#define LN2 0x1.62e430p-1f
+#define QLN2 744261120L   // = LN2 * 2^30 = 0x2C5C8600
 
-// 2^r = 1 + r*P(r) on |r| <= 0.5, minimax fit
-#define P0  0x1.62e430p-1f
-#define P1  0x1.ebfbccp-3f
-#define P2  0x1.c6af86p-5f
-#define P3  0x1.3b3b8ap-7f
-#define P4  0x1.5f08e4p-10f
-#define P5  0x1.3820d6p-13f
-
-static const float PP[6] = {
-  P5, P4, P3, P2, P1, P0,
-};
-
-#define HIGH16(v) (*(unsigned int *)&(v))
-
-// p holds exponent 126 or 127, so n<<7 keeps the field inside 1..254 only here
-#define N_LO  (-125)
-#define N_HI  127
+static float n_f, r;
+static long z;
+static unsigned long y;
+static int n;
 
 float exp2f(float x)
 {
-  if (isnan(x)) {
+  if (isnan(x))
     return x;
-  }
-  if (x >= 128.0f) {
+  if (x >= 128.0f)
     return INFINITY;
-  }
-  if (x < -150.0f) {
+  if (x < -150.0f)
     return 0.0f;
+
+  n_f = roundf(x);
+
+  r = x - n_f;
+
+  // |r| <= 0.5, so |z| <= 0.5 * ln2 * 2^30
+  z = (long)ldexpf(r * LN2, 30);
+
+  // __u32exp needs 0 <= z < ln2 * 2^30
+  // e^z * 2^n = e^(z + ln2) * 2^(n - 1)
+  if (z < 0) {
+    z += QLN2;
+    n_f = n_f - 1.0f;
   }
+  n = (int)n_f;
 
-  float n_f = roundf(x);
-  int n = (int)n_f;
-  float r = x - n_f;
+  // y = e^(z / 2^30) in Q30. 1 <= y < 2
+  y = __u32exp((unsigned long)z);
 
-  float p = 1.0f + r * __polyf(r, PP, 5);
-
-  if (n < N_LO || n > N_HI) {
-    return ldexpf(p, n);
-  }
-  HIGH16(p) += (unsigned int)(n << 7);
-  return p;
+  return ldexpf((float)y, n - 30);
 }
