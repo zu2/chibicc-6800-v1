@@ -6028,8 +6028,7 @@ void gen_expr(Node *node)
       store_x(node->ty,off);
       return;
     }
-    if (is_global_var(node->rhs)
-    &&  can_direct(node->rhs)) {
+    if (can_direct_imm_ext(node->rhs)) {
       gen_addr(node->lhs);
       tfr_dx();
       gen_direct_imm_ext(node->rhs,"ldab","ldaa");
