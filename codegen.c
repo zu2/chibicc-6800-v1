@@ -3046,6 +3046,7 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test, b
         case TY_INT:
         case TY_SHORT:
         case TY_ENUM:
+        case TY_PTR:
           if (test) return 1;
           println("\t%s _%s+%d",opb,name,moff+1);
           if (opa)
