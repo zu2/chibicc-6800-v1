@@ -6875,13 +6875,6 @@ void gen_expr(Node *node)
         return;
       assert(0);
     }
-    if (can_direct(node->lhs)){
-      gen_expr(node->rhs);
-      negd();
-      if(gen_direct(node->lhs,"addb","adca"))
-        return;
-      assert(0);
-    }
     // A decayed VLA keeps its pointer value in a slot, so the value is read
     // from the slot and not from the array the slot points to.
     if (node->rhs->kind == ND_VAR
@@ -6891,6 +6884,13 @@ void gen_expr(Node *node)
       ldx_bp();
       println("\tsubb %d+1,x",node->rhs->var->offset);
       println("\tsbca %d,x",node->rhs->var->offset);
+      return;
+    }
+    if (test_addr_x(node->rhs)){
+      gen_expr(node->lhs);
+      int off = gen_addr_x(node->rhs);
+      println("\tsubb %d+1,x",off);
+      println("\tsbca %d,x",off);
       return;
     }
     if (node->lhs->kind == ND_VAR
@@ -6903,12 +6903,12 @@ void gen_expr(Node *node)
       println("\tadca %d,x",node->lhs->var->offset);
       return;
     }
-    if (test_addr_x(node->rhs)){
-      gen_expr(node->lhs);
-      int off = gen_addr_x(node->rhs);
-      println("\tsubb %d+1,x",off);
-      println("\tsbca %d,x",off);
-      return;
+    if (can_direct(node->lhs)){
+      gen_expr(node->rhs);
+      negd();
+      if(gen_direct(node->lhs,"addb","adca"))
+        return;
+      assert(0);
     }
     if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
