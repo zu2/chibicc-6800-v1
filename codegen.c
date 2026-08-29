@@ -2679,6 +2679,10 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test, b
     case TY_BOOL:
     case TY_CHAR:		// TODO:
       if (test) return 1;
+      if (strcmp(opb,"ldab")==0) {
+        ldab_i((uint16_t)node->val);
+        return 1;
+      }
       println("\t%s #<%u", opb, (uint16_t)node->val);
       return 1;
     case TY_SHORT:
@@ -5820,14 +5824,6 @@ void gen_expr(Node *node)
     &&  is_integer_constant(node->lhs->lhs->lhs,&val)) {
       gen_expr(node->rhs);
       gen_direct(node->lhs,"stab","staa");
-      return;
-    }
-    if (is_global_var(node->lhs)
-    &&  node->lhs->ty->size <= 2
-    &&  can_direct(node->lhs)) {
-      gen_expr(node->rhs);
-      gen_direct(node->lhs,"stab","staa");
-      invalidate_EXT(node->lhs);
       return;
     }
     if ((ty = is_integer_constant(node->rhs,&val))

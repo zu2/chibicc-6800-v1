@@ -51,6 +51,18 @@ XXX_%M:
 	stab @tmp1+1
 	staa @tmp1
 	ldx @tmp1
+	clrb
+	stab 0,x
+=
+	stab XXX_%M+2
+	staa XXX_%M+1
+	clrb
+XXX_%M: 
+	stab $FFFF
+
+	stab @tmp1+1
+	staa @tmp1
+	ldx @tmp1
 	ldab #<%1
 	stab 0,x
 =
