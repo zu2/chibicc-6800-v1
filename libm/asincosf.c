@@ -1,6 +1,5 @@
 #include <math.h>
 
-float __polyf(float x, const float *c, int n);
 
 // asin(t) = t + t*v*Q(v), v = t*t, minimax fit on |t| <= 0.5
 #define Q0  0x1.5555c6p-3f

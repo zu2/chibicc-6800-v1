@@ -8,12 +8,16 @@ OBJ =	__float.o __floatlib.o __floatconst.o \
 	__fmaxf.o __fmodf.o __modff.o \
 	__ilogbf.o __frexpf.o __ldexpf.o \
 	__sqrtf.o \
-	atanf.o atan2f.o asincosf.o sincosf.o tanf.o __rem_pio2f.o __reduce_pio2f.o \
+	sincosf.o tanf.o \
+	atanf.o atan2f.o asincosf.o \
 	sinhf.o coshf.o tanhf.o \
-	expf.o logf.o powf.o log1pf.o expm1f.o exp2f.o log2f.o log10f.o \
+	expf.o logf.o powf.o \
+	log1pf.o log2f.o log10f.o \
+	expm1f.o exp2f.o exp10f.o \
 	__copysignf.o __nearbyintf.o __nextafterf.o \
 	__fracmask.o __get_lexp_sign.o __add_trunc.o \
-	__polyf.o __u32exp.o
+	__polyf.o __u32exp.o \
+	__rem_pio2f.o __reduce_pio2f.o
 
 .s.o:
 	as6800 $<

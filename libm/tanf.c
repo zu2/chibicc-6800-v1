@@ -19,8 +19,6 @@
 #define W_TAN_SMALL  0x3f86u   // 1.0469, well past pi/4: see the fit range
 #define W_INF        0x7f80u   // NaN and infinity are at or above this
 
-int __reduce_pio2f(float x, unsigned int w, float *rp);
-float __polyf(float x, const float *c, int n);
 
 static const float AA[2] = {
   A1, A0,

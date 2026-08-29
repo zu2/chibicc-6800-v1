@@ -1,6 +1,5 @@
 #include <math.h>
 
-float __polyf(float x, const float *c, int n);
 
 // log2(m) = s*Q(s*s), s = (m-1)/(m+1), minimax fit over the reduced range
 #define L0  0x1.715476p+1f

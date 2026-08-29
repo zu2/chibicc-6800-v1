@@ -1,6 +1,5 @@
 #include <math.h>
 
-float __polyf(float x, const float *c, int n);
 
 // 2^r = 1 + r*P(r) on |r| <= 0.5, minimax fit
 #define P0  0x1.62e430p-1f

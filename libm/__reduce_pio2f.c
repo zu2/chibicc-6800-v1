@@ -20,7 +20,6 @@ static const unsigned int TB[2*NSMALL] = {
   0xffffu, 0x0000u,
 };
 
-int __rem_pio2f(float x, float *rp);
 
 // Returns the quadrant and leaves the reduced argument in *rp. The locals
 // are static by hand: __reduce_pio2f calls __rem_pio2f, so chibicc cannot

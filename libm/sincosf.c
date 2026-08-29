@@ -9,8 +9,6 @@
 #define W_PI_4       0x3f80u   // 1.0
 #define W_INF        0x7f80u   // NaN and infinity are at or above this
 
-int __reduce_pio2f(float x, unsigned int w, float *rp);
-float __polyf(float x, const float *c, int n);
 
 // sin(r) = r + r*u*S(u) on |r| < 1, u = r*r, fpminimax fit over that range
 // Zero tails on purpose: the software multiply costs 25 cycles per 1 bit

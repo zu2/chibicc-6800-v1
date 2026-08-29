@@ -54,9 +54,10 @@ float	tanhf(float x);
 
 float	expf(float x);
 float	logf(float x);
-float	log10f(float x);
 float	exp2f(float x);
 float	log2f(float x);
+float	exp10f(float x);
+float	log10f(float x);
 
 float	powf(float base, float exponent);
 float	log1pf(float x);
@@ -100,6 +101,16 @@ float	ldexpf(float x, int exp);
 #define fmin(x,y)	fminf(x,y)
 #define fmod(x,y)	fmodf(x,y)
 #define	modf(x,iptr)	modff(x,iptr)
+#endif
+
+#ifdef __CHIBICC_6800__
+//
+// libm internal
+//
+float	__polyf(float x, const float *c, int n);
+int	__reduce_pio2f(float x, unsigned int w, float *rp);
+int	__rem_pio2f(float x, float *rp);
+unsigned long	__u32exp(unsigned long z);
 #endif
 
 #endif // MATH_H
