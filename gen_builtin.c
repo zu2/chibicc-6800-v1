@@ -135,7 +135,7 @@ bool builtin_strcpy(Node *node)
     if (!var->is_literal) {
       return false;
     }
-    size_t size = var->ty->size;  // Size includes the trailing \0
+    size_t size = var->ty->size;
 
 //  ast_node_dump(arg1);
     if (size==0) {  // XXX ?

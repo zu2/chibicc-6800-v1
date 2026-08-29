@@ -3,7 +3,6 @@
 
 //
 // signbit(x):
-//    return (x<0);
 //
 bool builtin_signbit(Node *node)
 {
@@ -48,7 +47,6 @@ bool builtin_signbit(Node *node)
 
 //
 // isnan(x):
-//    return (x != x);
 //
 bool builtin_isnan(Node *node)
 {
@@ -127,7 +125,6 @@ bool builtin_isnan(Node *node)
 
 //
 // isinf(x):
-//    return (x == INFINITY || x == -INFINITY);
 //
 bool builtin_isinf(Node *node)
 {
@@ -206,7 +203,6 @@ bool builtin_isinf(Node *node)
 
 //
 // isfinite(x):
-//    return (x is not NaN and not Inf);
 //
 bool builtin_isfinite(Node *node)
 {
@@ -270,7 +266,6 @@ bool builtin_isfinite(Node *node)
 
 //
 // fabsf(x):
-//    return the value of x without the sign;
 //
 bool builtin_fabsf(Node *node)
 {
@@ -291,7 +286,6 @@ bool builtin_fabsf(Node *node)
 
 //
 // copysignf(x, y):
-//    return the value of x with the sign of y;
 //
 bool builtin_copysignf(Node *node)
 {

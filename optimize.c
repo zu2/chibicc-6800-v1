@@ -69,7 +69,6 @@ Node *skip_byte_to_int(Node *node)
 }
 
 
-// the value is 0..255, so "op uchar" is enough: a comparison, or a cast up from uchar
 static bool can_op_uchar(Node *node)
 {
   if (is_compare_or_not(node)) {
@@ -143,7 +142,6 @@ bool is_char_or_8num(Node *node)
   return false;
 }
 
-// for a power of 2, return the shift count. -1 for any other value
 int exact_log2(int64_t val)
 {
   int n = 0;
@@ -526,7 +524,6 @@ Node *optimize_expr(Node *node)
     node->lhs = optimize_expr(node->lhs);
     if (node->lhs->kind == ND_DEREF) {
       Node *lhs = node->lhs->lhs;
-      /* keep the T* type. an outer pointer cast folds this away */
       if (lhs->ty->kind == TY_ARRAY)
         return new_cast(lhs, node->ty);
       return lhs;
@@ -569,7 +566,7 @@ Node *optimize_expr(Node *node)
       return node;
     }
     node->lhs = optimize_expr(node->lhs);
-    // optimize_expr() may have replaced the operand with a wider one
+
     if (is_integer(node->lhs->ty) && is_integer(node->ty)
     &&  node->ty->kind != TY_BOOL
     &&  node->lhs->ty->size == node->ty->size
@@ -817,9 +814,7 @@ Node *optimize_expr(Node *node)
     return node;
   case ND_LABEL_VAL:
     return node;
-  // If the ND_NOT negates the result of a relational operator,
-  // Rewrite !(node) into the negated related op.
-  // when float compare, only == and != rewrited.
+
   case ND_NOT: {
     node->lhs = optimize_expr(node->lhs);
     node->lhs = skip_integral_promotion(node->lhs);
@@ -898,7 +893,6 @@ Node *optimize_expr(Node *node)
         node->ty = ty_int;
         return node;
       }else{
-        // C99 6.5.14p3: || yields int 0 or 1 (6.3.1.2: scalar to _Bool) 
         return optimize_expr(new_cast(new_cast(node->rhs,ty_bool),ty_int));
       }
     }
@@ -910,7 +904,7 @@ Node *optimize_expr(Node *node)
     Node *base;
 
     node = optimize_lr_swap(node);
-    // a comparison gives 0 or 1, so the operation fits in a uchar
+
     if (is_int16(node->ty)
     &&  is_compare_or_not(node->lhs)
     &&  is_compare_or_not(node->rhs)) {
@@ -1081,7 +1075,7 @@ Node *optimize_expr(Node *node)
       new->rhs->ty = node->ty;
       return optimize_expr(new);
     }
-    // (x ± c1) * c2 -> x * c2 ± c1 * c2  (arr[i+1] makes this tree)
+    //  arr[i+1]:  (x ± c1) * c2 -> x * c2 ± c1 * c2
     if (is_integer_constant(node->rhs,&val)
     && (node->lhs->kind == ND_ADD || node->lhs->kind == ND_SUB)
     &&  is_integer_constant(node->lhs->rhs,&val2)) {
@@ -1131,7 +1125,6 @@ Node *optimize_expr(Node *node)
       new->rhs->ty = node->rhs->ty;
       return optimize_expr(new);
     }
-    // both sides are 0..255, so the quotient fits in a uchar
     if (node->kind == ND_DIV
     &&  is_int16(node->ty)
     &&  can_op_uchar(node->lhs)
@@ -1150,7 +1143,6 @@ Node *optimize_expr(Node *node)
     int64_t val;
 
     node = optimize_lr_swap(node);
-    // both sides are 0..255, so the bit operation fits in a uchar
     if (is_int16(node->ty)
     &&  can_op_uchar(node->lhs)
     &&  can_op_uchar(node->rhs)) {
@@ -1177,7 +1169,6 @@ Node *optimize_expr(Node *node)
   case ND_BITOR:
   case ND_BITXOR:
     node = optimize_lr_swap(node);
-    // both sides are 0..255, so the bit operation fits in a uchar
     if (is_int16(node->ty)
     &&  can_op_uchar(node->lhs)
     &&  can_op_uchar(node->rhs)) {
@@ -1202,14 +1193,6 @@ Node *optimize_expr(Node *node)
     if (node_cost(node->lhs) < node_cost(node->rhs)) {
       node = swap_lr_condition(swap_lr(node));
     }
-//
-// For signed integer,
-//   x+1 invokes UB at INT_MAX,
-//   x-1 invokes UB at INT_MIN.
-// Assuming no UB, fold comparisons involving x +/- 1.
-//
-// Unsigned wraparound changes the semantics.
-//
 //  lhs -1 <  rhs → lhs<=rhs
 //  lhs +1 <= rhs → lhs< rhs
     if (!opt_fwrapv) {
@@ -1429,8 +1412,6 @@ Node *optimize_condition(Node *node)
   &&  node->ty->kind == TY_BOOL) {
     node = optimize_condition(node->lhs);
   }
-  // In conditions, drop cast to wider integer types.
-  // The boolean result is the same, but it costs more.
   if (node->kind == ND_CAST
   &&  is_integer(node->ty)
   &&  is_integer(node->lhs->ty)

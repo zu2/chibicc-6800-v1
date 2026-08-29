@@ -17,7 +17,6 @@ struct FloatLiteral {
 
 static FloatLiteral *float_literals;
 
-// Return the label of the .data entry that holds a float constant.
 char *float_literal_label(double fval)
 {
   union { float f32; uint32_t u32; } u = { fval };

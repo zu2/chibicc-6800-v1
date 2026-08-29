@@ -68,7 +68,6 @@ Type *is_byte(Node *node)
   return NULL;
 }
 
-// Return the inner ND_ADD of (ND_CAST TY_PTR (+ ...)), or NULL.
 Node *is_array_base(Node *node)
 {
   if (node->kind == ND_CAST
@@ -100,12 +99,6 @@ Node *skip_redundant_ptr_cast(Node *node)
 
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
 
-//
-// Compare two 8-bit signed/unsigned integers.
-//   Generate code that branches to if_false if the comparison result is false.
-//   Return true if code was generated.
-// For other types, generate no code and return false.
-//
 static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 {
   Node *lhs = node->lhs;
@@ -246,12 +239,6 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
   return true;
 }
 
-//
-// Test a float expression.
-//   Generate code that branches to if_false if the test result is false.
-//   Return true if code was generated.
-// For other types, generate no code and return false.
-//
 static bool gen_jump_if_false_float(Node *node, char *if_false)
 {
   if (node->kind == ND_FUNCALL) {
@@ -446,7 +433,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
     if (is_flonum_constant(node->rhs, &fval)) {
       gen_expr(node->lhs);
       if ((node->kind == ND_EQ || node->kind == ND_NE) && fval == 0.0) {
-        println("\tjsr __f32iszero");	// ±0.0: Z=1, NaN and others: Z=0
+        println("\tjsr __f32iszero");	// ±0.0: Z=1, others: Z=0
         IX_invalidate();
         if (node->kind == ND_EQ) {
           println("\tjne %s", if_false);
@@ -474,7 +461,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
     IX_invalidate();
 
     char *thru = NULL;
-    if (node->kind == ND_NE) {		// NaN is true only for !=
+    if (node->kind == ND_NE) {
       thru = new_label("L_thru_%d");
       println("\tbcs %s", thru);
     } else {
@@ -500,12 +487,6 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
   return false;
 }
 
-//
-// Compare two longs.
-//   Generate code that branches to if_false if the comparison result is false.
-//   Return true if code was generated.
-// For other types, generate no code and return false.
-//
 static bool gen_jump_if_false_long(Node *node, char *if_false)
 {
   Node    *lhs = node->lhs;
@@ -601,7 +582,7 @@ static bool gen_jump_if_false_long(Node *node, char *if_false)
     ldx_IMM_STR(long_literal_label(val));
     println("\tjsr __%s32%sx",op,sc);
     if (node->kind == ND_EQ || node->kind == ND_NE) {
-      IX_invalidate();      // __eq32x and __ne32x load through IX
+      IX_invalidate();
     }
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
@@ -609,7 +590,7 @@ static bool gen_jump_if_false_long(Node *node, char *if_false)
     if (off == 0) {
       println("\tjsr __%s32%sx",op,sc);
       if (node->kind == ND_EQ || node->kind == ND_NE) {
-        IX_invalidate();    // __eq32x and __ne32x load through IX
+        IX_invalidate();
       }
     }else if (off <= 255) {
       ldab_i(off);
@@ -627,18 +608,12 @@ static bool gen_jump_if_false_long(Node *node, char *if_false)
     println("\ttsx");
     println("\tjsr __%s32%sx",op,sc);
     IX_invalidate();
-    ins(4);                 // ins keeps the flags, remove_args() does not
+    ins(4);
   }
   println("\tjeq %s", if_false);
   return true;
 }
 
-//
-// Compare two 8- or 16-bit integers.
-//   Generate code that branches to if_false if the comparison result is false.
-//   Return true if code was generated.
-// For other types, generate no code and return false.
-//
 bool gen_jump_if_false(Node *node, char *if_false)
 {
   int64_t val;
@@ -739,7 +714,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
   // if (expr op 0)
   if (is_integer_constant(rhs,&val) && val==0) {
     if (test_expr_x(lhs)) {
-      gen_expr_x(lhs); // Evaluate LHS anyway; no side-effect check yet.
+      gen_expr_x(lhs);
       println("\tcpx #0");
       switch (node->kind) {
       case ND_EQ:
@@ -792,7 +767,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         break;
       }
     } else {
-      gen_expr(lhs);  // Evaluate LHS anyway; no side-effect check yet.
+      gen_expr(lhs);
       switch (node->kind) {
       case ND_EQ:
       case ND_NE:
@@ -803,7 +778,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
           println("\tjmp %s", if_false);
           return true;
         }
-        // 'subb #0 / sbca #0' can be substituted with 'tsta'.
         println("\ttsta");
         break;
       case ND_GT:
@@ -884,7 +858,7 @@ bool gen_jump_if_false(Node *node, char *if_false)
         assert(0);    // It's strange to fail
       }
     // ↑ rhs==const/var && EQ or NE
-  } else if ((addr=is_addr_constant(rhs))    // rhs == addr const
+  } else if ((addr=is_addr_constant(rhs))
          && (node->kind==ND_EQ || node->kind==ND_NE)
          && (test_expr_x(lhs))) {
       gen_expr_x(lhs);
@@ -917,10 +891,6 @@ bool gen_jump_if_false(Node *node, char *if_false)
     depth -= 2;
   }
   switch (node->kind) {
-  // aba/adca #0/jne	5bytes, 8cycle
-  // tstb/jne/tsta/jne	6bytes, 6 or 12cycle
-  // aba/jne/jcs	5bytes, 6 or 10cycle
-  // jxx may be converted to bxx/jmp, fewer jxx instructions are preferable.
   case ND_EQ:
     println("\taba");
     println("\tadca #0");
@@ -984,12 +954,6 @@ fallback:
   return true;
 }
 
-//
-// Compare two 8-bit signed/unsigned integers.
-//   Generate code that branches to if_true if the comparison result is true.
-//   Return true if code was generated.
-// For other types, generate no code and return false.
-//
 static bool gen_jump_if_true_8bit(Node *node, char *if_true)
 {
   Node *lhs = node->lhs;
@@ -1130,12 +1094,6 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
   return true;
 }
 
-//
-// Test a float expression.
-//   Generate code that branches to if_true if the test result is true.
-//   Return true if code was generated.
-// For other types, generate no code and return false.
-//
 static bool gen_jump_if_true_float(Node *node, char *if_true)
 {
   if (node->kind == ND_FUNCALL) {
@@ -1396,12 +1354,6 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
   return false;
 }
 
-//
-// Compare two longs.
-//   Generate code that branches to if_true if the comparison result is true.
-//   Return true if code was generated.
-// For other types, generate no code and return false.
-//
 static bool gen_jump_if_true_long(Node *node, char *if_true)
 {
   Node    *lhs = node->lhs;
@@ -1497,7 +1449,7 @@ static bool gen_jump_if_true_long(Node *node, char *if_true)
     ldx_IMM_STR(long_literal_label(val));
     println("\tjsr __%s32%sx",op,sc);
     if (node->kind == ND_EQ || node->kind == ND_NE) {
-      IX_invalidate();      // __eq32x and __ne32x load through IX
+      IX_invalidate();
     }
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
@@ -1505,7 +1457,7 @@ static bool gen_jump_if_true_long(Node *node, char *if_true)
     if (off == 0) {
       println("\tjsr __%s32%sx",op,sc);
       if (node->kind == ND_EQ || node->kind == ND_NE) {
-        IX_invalidate();    // __eq32x and __ne32x load through IX
+        IX_invalidate();
       }
     }else if (off <= 255) {
       ldab_i(off);
@@ -1523,18 +1475,12 @@ static bool gen_jump_if_true_long(Node *node, char *if_true)
     println("\ttsx");
     println("\tjsr __%s32%sx",op,sc);
     IX_invalidate();
-    ins(4);                 // ins keeps the flags, remove_args() does not
+    ins(4);
   }
   println("\tjne %s", if_true);
   return true;
 }
 
-//
-// Compare two 8- or 16-bit integers.
-//   Generate code that branches to if_true if the comparison result is true.
-//   Return true if code was generated.
-// For other types, generate no code and return false.
-//
 bool gen_jump_if_true(Node *node, char *if_true)
 {
   int64_t val;
@@ -1636,7 +1582,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
  // if (expr op 0)
   if (is_integer_constant(rhs,&val) && val==0) {
     if (test_expr_x(lhs)) {
-      gen_expr_x(lhs); // Evaluate LHS anyway; no side-effect check yet.
+      gen_expr_x(lhs);
       println("\tcpx #0");
       switch (node->kind) {
       case ND_EQ:
@@ -1689,7 +1635,7 @@ bool gen_jump_if_true(Node *node, char *if_true)
         break;
       }
     } else {
-      gen_expr(lhs);  // Evaluate LHS anyway; no side-effect check yet.
+      gen_expr(lhs);
       switch (node->kind) {
       case ND_EQ:
       case ND_NE:
@@ -1699,7 +1645,6 @@ bool gen_jump_if_true(Node *node, char *if_true)
           println("; uint < 0 is always false");
           return true;
         }
-        // 'subb #0 / sbca #0' can be substituted with 'tsta'.
         println("\ttsta");
         break;
       case ND_GT:

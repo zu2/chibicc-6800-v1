@@ -58,8 +58,6 @@ void assign_to_bitfield(Node *node)
   gen_expr(node->rhs);
   popx();
 
-  // If the lhs is a bitfield, we need to read the current value
-  // from memory and merge it with a new value.
   Member *mem = node->lhs->member;
   println("; bitfieled mem->ty->size=%d, mem->bit_width=%d, "
           "mem->bit_offset=%d, %s, %s %d",

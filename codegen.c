@@ -336,8 +336,7 @@ void pushf(void) {
 
 //
 //  align_to(n, align) returns n.
-//  6800 has no alignment restriction.
-//  the original formula is kept below.
+//  6800: no alignment
 //
 int align_to(int n, int align) {
   return n;
@@ -395,7 +394,7 @@ void ldx_bp()
         println("\tinx");
       }
     }else{
-      println("\tldx @bp");	// TSX cannot be used because of VLA/alloca
+      println("\tldx @bp");	// can't use tsx for VLA/alloca
     }
   }
   IX_Dest = IX_BP;
@@ -412,7 +411,6 @@ void ldx_nX(int off)
   IX_PTR_off = off;
 }
 
-// C11 6.3.2.1p3,p4: an array or a function is converted to a pointer, so the value is the address
 bool is_decay_type(Type *ty)
 {
   switch (ty->kind) {
@@ -584,8 +582,6 @@ bool is_local_array(Node *node)
 }
 
 //
-// node is local array with constant subscript
-//
 // (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) g global) 0))
 //
 bool is_local_array_with_constant(Node *node)
@@ -602,9 +598,7 @@ bool is_local_array_with_constant(Node *node)
   return 0;
 }
 
-//
-// node is global variable?
-//
+
 bool is_global_var(Node *node)
 {
   if (node->kind != ND_VAR)
@@ -621,9 +615,6 @@ bool is_global_var(Node *node)
   return 1;
 }
 
-//
-// node is global array?
-//
 bool is_global_array(Node *node)
 {
    if (node->kind != ND_VAR)
@@ -640,8 +631,6 @@ bool is_global_array(Node *node)
    return 0;
 }
 
-//
-// node is global variable or global array with constant subscript
 //
 // (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) g global) 0))
 //
@@ -754,8 +743,8 @@ void gen_shl(Type *ty, uint64_t val)
       println("\taslb");
     } 
     return;
-  case 2: {                 // short and int
-    switch(val) {           // Tricky but fast and compact
+  case 2: {
+    switch(val) {
     case 6:                 // 22cyc, 10bytes
       println("\tpsha");    // exchange A<->B
       println("\ttba");
@@ -799,7 +788,7 @@ void gen_shl(Type *ty, uint64_t val)
     return;
   }
   }
-  assert(0); // 1 and 2 bytes only. gen_direct_shl_long does long.
+  assert(0); // ty->size!=1 && !=2
 }
 
 void gen_shr(Type *ty, uint64_t val)
@@ -960,8 +949,6 @@ void gen_shr(Type *ty, uint64_t val)
 }
 
 
-// Compute the absolute address of a given node.
-// It's an error if a given node does not reside in memory.
 void gen_addr(Node *node)
 {
   switch (node->kind) {
@@ -990,9 +977,6 @@ void gen_addr(Node *node)
       }
       return;
     }
-
-    // Here, we generate an absolute address of a function or a global
-    // variable.
 
     // Function and Global variable
     println("\tldab #<_%s", node->var->name);
@@ -1044,9 +1028,10 @@ bool test_decayed_x(Node *node);
 bool test_expr_x(Node *node);
 static int addr_x_offset(Node *node);
 
-// Find the global variable at the bottom of an address constant.
-// &gd.in.arr[1] -> Obj *gd, *off = 0 + 4 + 2
+//
+// &gd.in.arr[1] -> IX=&gd; off = 0 + 4 + 2
 // (ND_ADD (ND_MEMBER arr:4 (ND_MEMBER in:0 (ND_VAR gd))) 2)
+//
 static Obj *find_base_var(Node *node, int64_t *off)
 {
   int64_t val;
@@ -1078,8 +1063,6 @@ static Obj *find_base_var(Node *node, int64_t *off)
   return node->var;
 }
 
-// Find the fixed address of an lvalue. The address of a local variable
-// depends on the frame pointer, so a local variable returns NULL.
 char *is_var_addr_constant(Node *node)
 {
   int64_t off = 0;
@@ -1097,9 +1080,6 @@ char *is_var_addr_constant(Node *node)
   return NULL;
 }
 
-// Find the global variable under an expression whose value is an address.
-// garr + 1     -> the array itself is an address
-// &gd.in.x + 1 -> the operand of '&' is an object, so find_base_var() takes over
 static Obj *find_base_addr(Node *node, int64_t *off)
 {
   int64_t val;
@@ -1124,8 +1104,6 @@ static Obj *find_base_addr(Node *node, int64_t *off)
   return NULL;
 }
 
-// Return a constant expression usable after '#', or NULL.
-// The value must be an address, not the contents of one.
 // (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 0)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
@@ -1508,9 +1486,6 @@ void gen_expr_x(Node *node)
   gen_expr_x_sub(node,false);
 }
 
-// C11 6.3.2.1p3,p4: an array or a function is converted to a pointer, so the
-// value is the address itself. The 6800 has no LEA, so the address is left at
-// IX+off instead of being materialized in IX. Returns off, or -1 if not applicable.
 int gen_decayed_x_sub(Node *node,bool test)
 {
   Node *lhs = node->lhs;
@@ -1577,7 +1552,6 @@ bool test_expr_x(Node *node)
 }
 
 
-// Offset from the base address that gen_addr_x() loads into IX, or -1 if unknown.
 static int addr_x_offset(Node *node)
 {
   int64_t val;
@@ -1615,7 +1589,6 @@ static int addr_x_offset(Node *node)
         return (off < 0) ? -1 : off + val;
       }
     }
-    // gen_expr_x() loads the pointer itself into IX and returns 0
     if (can_load_x(node->lhs->ty) && test_expr_x(node->lhs)) {
       return 0;
     }
@@ -1625,8 +1598,6 @@ static int addr_x_offset(Node *node)
 
 static Node *skip_empty_cast(Node *node);
 
-// Compute the absolute address of a given node in IX.
-// Returns the offset from that address, or -1 if the node does not reside in memory.
 int gen_addr_x_sub(Node *node,bool test)
 {
   Node *lhs = node->lhs;
@@ -1752,7 +1723,7 @@ int gen_addr_x_sub(Node *node,bool test)
         if (off+val <= 252) {
           return  off + val;
         }
-        assert(0); // gen_addr_x() must not be called when the offset is over 252
+        assert(0);
       }
     }
     if (test_decayed_x(node->lhs)) {
@@ -1789,7 +1760,7 @@ int gen_addr_x_sub(Node *node,bool test)
     if (off<=252) {
       return off;
     }
-    assert(0); // gen_addr_x() must not be called when the offset is over 252
+    assert(0); // off>252
   case ND_FUNCALL:
     return -1;
   case ND_ASSIGN:
@@ -1910,12 +1881,6 @@ static void load32i(uint32_t val)
   IX_invalidate();
 }
 
-// Load a value from where AccA:B is pointing to.
-//
-//   __load8 sets AccB only. Treat AccA as undefined.
-//   __load16 sets AccA:B.
-//   __load32 sets @long.
-//   All of them leave the address in IX, but this compiler does not use it.
 void load(Type *ty) {
   switch (ty->kind) {
   case TY_ARRAY:
@@ -1923,8 +1888,6 @@ void load(Type *ty) {
   case TY_UNION:
   case TY_FUNC:
   case TY_VLA:
-    // These cannot fit in a register, so the address becomes the value.
-    // This is where "an array becomes a pointer to its first element" happens.
     return;
   case TY_FLOAT:
   case TY_DOUBLE:
@@ -1973,19 +1936,12 @@ bool can_load_x(Type *ty)
 }
 
 void load_x(Type *ty,int off) {
-  // Note: Do not destroy IX in this routine.
   switch (ty->kind) {
   case TY_ARRAY:
   case TY_STRUCT:
   case TY_UNION:
   case TY_FUNC:
   case TY_VLA:
-    // If it is an array, do not attempt to load a value to the
-    // register because in general we can't load an entire array to a
-    // register. As a result, the result of an evaluation of an array
-    // becomes not the array itself but the address of the array.
-    // This is where "array is automatically converted to a pointer to
-    // the first element of the array in C" occurs.
     return;
   case TY_LONG:
   case TY_FLOAT:
@@ -1995,11 +1951,6 @@ void load_x(Type *ty,int off) {
     return;
   }
 
-  // When we load a char or a short value to a register, we always
-  // extend them to the size of int, so we can assume the lower half of
-  // a register always contains a valid value. The upper half of a
-  // register for char, short and int may contain garbage. When we load
-  // a long value to a register, it simply occupies the entire register.
   if (ty->size == 1){
     println("\tldab %d,x",off);
   }else if (ty->size == 2){
@@ -2059,7 +2010,6 @@ void load_var(Node *node)
   return;
 }
 
-// Store D to an address that the stack top is pointing to.
 static void store(Type *ty) {
 
   switch (ty->kind) {
@@ -2213,8 +2163,6 @@ static int getTypeId(Type *ty) {
   return U16; // TY_PTR
 }
 
-// The table for type casts
-// signed char to:
 static char i8i16[]  = "clra\n\tasrb\n\trolb\n\tsbca #0";
 static char i8u16[]  = "clra\n\tasrb\n\trolb\n\tsbca #0";
 static char i8i32[]  = "jsr __s8to32";
@@ -2223,7 +2171,7 @@ static char i8i64[]  = ";jsr __s8to64";
 //static char i8u64[]  = ";jsr __s8to64";
 static char i8f32[]  = "clra\n\tasrb\n\trolb\n\tsbca #0\n\tjsr __i16tof32";
 static char i8f64[]  = ";jsr __u8tof64";
-// unsigned char to:
+
 static char u8i16[]  = "clra";
 static char u8u16[]  = "clra";
 static char u8i32[]  = "jsr __u8to32";
@@ -2232,19 +2180,19 @@ static char u8i64[]  = ";jsr __u8to64";
 //static char u8u64[]  = ";jsr __u8to64";
 static char u8f32[]  = "clra\n\tjsr __u16tof32";
 static char u8f64[]  = ";jsr __u8tof64";
-// signed int to:
+
 static char i16i32[] = "jsr __s16to32";
 static char i16u32[] = "jsr __s16to32";
 static char i16i64[] = ";jsr __i16i64 " __FILE__;
 static char i16f32[] = "jsr __i16tof32";
 static char i16f64[] = "; jsr __i16f64 " __FILE__;
-// unsigned int to:
+
 static char u16i32[] = "jsr __u16to32";
 static char u16i64[] = ";jsr __u16i64 " __FILE__;
 //static char u16u32[] = "jsr __u16to32";
 static char u16f32[] = "jsr __u16tof32";
 static char u16f64[] = ";jsr __u16tof32" __FILE__;
-// signed long to:
+
 static char i32i8[] = "ldab @long+3";
 static char i32u8[] = "ldab @long+3";
 static char i32i16[] = "ldab @long+3\n\tldaa @long+2";
@@ -2252,11 +2200,11 @@ static char i32u16[] = "ldab @long+3\n\tldaa @long+2";
 static char i32f32[] = "jsr __i32tof32";
 static char i32i64[] = "; movsxd %eax, %rax";
 static char i32f64[] = "; cvtsi2sdl %eax, %xmm0";
-// unsigned long to:
+
 static char u32f32[] = "jsr __u32tof32";
 static char u32i64[] = "; mov %eax, %eax";
 static char u32f64[] = "; mov %eax, %eax; cvtsi2sdq %rax, %xmm0";
-// float to:
+
 static char f32i8[] = "jsr __f32toi8";
 static char f32u8[] = "jsr __f32tou8";
 static char f32i16[] = "jsr __f32toi16";
@@ -2266,7 +2214,7 @@ static char f32u32[] = "jsr __f32tou32";
 static char f32i64[] = "; cvttss2siq %xmm0, %rax";
 static char f32u64[] = "; cvttss2siq %xmm0, %rax";
 static char f32f64[] = "; cvtss2sd %xmm0, %xmm0";
-// long long not supported.
+
 static char i64i32[] = "; i64i32 " __FILE__;
 static char i64u32[] = "; i64u32 " __FILE__;
 static char i64f32[] = "; cvtsi2ssq %rax, %xmm0";
@@ -2276,7 +2224,7 @@ static char u64f64[] =
   "; test %rax,%rax; js 1f; pxor %xmm0,%xmm0; cvtsi2sd %rax,%xmm0; jmp 2f; "
   "1: mov %rax,%rdi; and $1,%eax; pxor %xmm0,%xmm0; shr %rdi; "
   "or %rax,%rdi; cvtsi2sd %rdi,%xmm0; addsd %xmm0,%xmm0; 2:";
-// double not supported
+
 static char f64i8[] = "; cvttsd2sil %xmm0, %eax; movsbl %al, %eax";
 static char f64u8[] = "; cvttsd2sil %xmm0, %eax; movzbl %al, %eax";
 static char f64i16[] = "; cvttsd2sil %xmm0, %eax; movswl %ax, %eax";
@@ -2314,8 +2262,8 @@ static void cast(Type *from, Type *to) {
       return;
     if (from->kind == TY_CHAR) {
       println("\tnegb");    // if AccB==0 then C=0 else C=1
-      println("\trolb");    // C to AccB:b0
-      println("\tandb #1"); // drop b7-b1
+      println("\trolb");
+      println("\tandb #1");
       return;
     }
     if (is_int16_or_ptr(from)) {
@@ -2329,8 +2277,8 @@ static void cast(Type *from, Type *to) {
     cmp_zero(from);         // if zero, Z=1 AccB=0 else Z=0 AccB!=0
     println("\tclra");
     println("\tnegb");      // if AccB==0 then C=0 else C=1
-    println("\ttab");       // Zero AccB preserving carry flag
-    println("\trolb");      // C to AccB
+    println("\ttab");
+    println("\trolb");
     return;
   }
 
@@ -2447,8 +2395,6 @@ void
 pushlx(int off)
 {
   if (opt('O','2')) {
-    // push32/32x/32bx/32dx destroy IX, which may require reloading IX later.
-    // Generating the value directly at -O2 can reduce this overhead.
     if (off==0) {
       println("\tldab 3,x");
       println("\tpshb");
@@ -2566,18 +2512,8 @@ static void push_args2(Node *args,Type *param_ty,bool is_variadic)
   }
 }
 
-// Load function call arguments. Arguments are already evaluated and
-// stored to the stack as local variables. What we need to do in this
-// function is to load them to registers or push them to the stack as
-// specified by the chibicc-6800 API.
-//
-// - Only first one argument passed by AccAB or @long: (1/2/4bytes)
-// - No alignment
-// - Other arguments are pushed onto the stack from right to left.
-//
 static int push_args(Node *node)
 {
-  // Determine register or stack passing and calculate the stack size
   int reg_passable = !node->ret_buffer;
   int stack = 0;
   Type *param_ty = node->lhs->ty->params;
@@ -2613,9 +2549,6 @@ static int push_args(Node *node)
   }
   push_args2(node->args,node->lhs->ty->params,node->lhs->ty->is_variadic);
 
-  // If the return type is a struct/union, the caller passes
-  // a pointer to a buffer as if it were the first argument (in Acc A,B).
-  // MC6800: all struct/union passes the pointer
   if (node->ret_buffer) { // && node->ty->size > 16)
     println("; return type is struct/union, the caller passes a pointer");
     println("\tldab @bp+1	; %d",node->ret_buffer->offset);
@@ -2657,10 +2590,8 @@ static void copy_struct_mem(void) {
     ldd_i(ty->size);
     println("\tjsr __copy_struct2 ; copy_struct_mem");
     depth -= 2; // copy_struct2 remove *TOS
-    //ins(2); // copy_struct2 already pops argument.
     IX_invalidate();
   }
-  // reload dest addr
   if (current_fn->stack_size<255) {
     ldx_bp();
     println("\tldab %d+1,x",current_fn->stack_size);
@@ -2677,12 +2608,9 @@ static void copy_struct_mem(void) {
 static void builtin_alloca(void) {
   assert(current_fn->alloca_bottom);
 
-  // Shift the temporary area by %rdi.
-  // println("; %%di has alloca size");
   println("\tstab @tmp4+1	; alloca size");
   println("\tstaa @tmp4");
-  // println(";	__alloca_bottom__ -> cx");
-  // The area between alloca_bottom and SP is the stack currently in use. Move this.
+
   if (current_fn->alloca_bottom->offset) {
     println("\tldab @bp+1	; IX =  &__alloca_bottom");
     println("\tldaa @bp");
@@ -2703,9 +2631,7 @@ static void builtin_alloca(void) {
   println("\tlds @tmp3	; get new SP");
   char *loop = new_jump_label();
   char *skip = new_jump_label();
-  // The program moved the stack pointer to implement alloca,
-  //     so the original stack data must be copied.
-  // Push the data from __alloca_bottom to @tmp2 onto the new SP
+
   println("\tldx 0,x");		// get old alloca bottom
   println("%s:",loop);
   println("\tdex");
@@ -2751,7 +2677,7 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test, b
   case ND_NUM: {
     switch (node->ty->kind) {
     case TY_BOOL:
-    case TY_CHAR:		// TODO: Avoid unnecessary type promotion
+    case TY_CHAR:		// TODO:
       if (test) return 1;
       println("\t%s #<%u", opb, (uint16_t)node->val);
       return 1;
@@ -3156,28 +3082,28 @@ static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_c
 
 bool can_direct(Node *rhs)
 {
-  int r = gen_direct_sub(rhs,NULL,NULL,1,0);	// test mode
+  int r = gen_direct_sub(rhs,NULL,NULL,true,0);
 
   return r;
 }
 
 bool can_direct_char(Node *rhs)
 {
-  int r = gen_direct_sub(rhs,NULL,NULL,1,1);	// test mode
+  int r = gen_direct_sub(rhs,NULL,NULL,true,1);
 
   return r;
 }
 
 bool can_direct_imm_ext(Node *rhs)
 {
-  int r = gen_direct_imm_ext_sub(rhs,NULL,NULL,1,0);	// test mode
+  int r = gen_direct_imm_ext_sub(rhs,NULL,NULL,true,0);
 
   return r;
 }
 
 bool can_direct_char_imm_ext(Node *rhs)
 {
-  int r = gen_direct_imm_ext_sub(rhs,NULL,NULL,1,1);	// test mode
+  int r = gen_direct_imm_ext_sub(rhs,NULL,NULL,true,1);
 
   return r;
 }
@@ -3269,7 +3195,6 @@ static int long_location_type(Node *node)
   }
 
   if (node->kind == ND_VAR) {
-    // A VLA variable holds a pointer at var->offset, not the data.
     if (node->var->ty->kind == TY_VLA)
       return 0;
     if (node->var->is_local && test_addr_x(node))
@@ -3287,10 +3212,6 @@ static int long_location_type(Node *node)
   return 0;
 }
 
-//
-//
-// shift operation
-//
 int gen_direct_shl_long(Node *node,int64_t val)
 {
   if (node->kind != ND_SHL) {
@@ -3394,15 +3315,6 @@ int gen_direct_shr_long(Node *node,int64_t val)
   return 0;
 }
 
-//
-// @long op= val
-//
-//  - val of 1 or -1 becomes inc32 or dec32. add and sub swap them.
-//  - At -O2 and above it makes the code for each byte. Bytes are tied
-//    by the carry, so go LSB to MSB. Low bytes of 0 are skipped and
-//    the first byte emitted uses AccB.
-//  - IX is not touched. jsr __op32i breaks it.
-//
 static void gen_direct_long_addsub_imm(Node *node, int64_t val)
 {
   char *opb, *opa;
@@ -3453,20 +3365,12 @@ static void gen_direct_long_addsub_imm(Node *node, int64_t val)
   }
 }
 
-//
-// @long op= val
-//
-//  - -O2 does it one byte at a time. Bytes are free of each other, so
-//    clr and com may touch the C flag.
-//  - CLR and COM have no direct mode, so they are 3 bytes here.
-//  - IX is not touched. jsr __op32i breaks it.
-//
 static void gen_direct_long_bitop_imm(Node *node, int64_t val)
 {
   char *opb;
-  char *fmt;      // does the whole byte
-  uint8_t keep;   // leave this byte alone
-  uint8_t whole;  // use fmt for this byte
+  char *fmt;
+  uint8_t keep;
+  uint8_t whole;
 
   if (!opt('O','2')) {
     switch (node->kind) {
@@ -3503,11 +3407,6 @@ static void gen_direct_long_bitop_imm(Node *node, int64_t val)
   }
 }
 
-//
-// off,x op= val, one byte at a time.
-// add and sub: bytes are tied by the carry, so go LSB to MSB.
-// Low bytes of 0 are skipped. The first byte emitted uses AccB.
-//
 static void gen_opeq32_addsub(Node *node, int off, int64_t val)
 {
   char *opb;
@@ -3539,14 +3438,12 @@ static void gen_opeq32_addsub(Node *node, int off, int64_t val)
   }
 }
 
-// off,x op= val, one byte at a time.
-// Bytes are free of each other, so clr and com may touch the C flag.
 static void gen_opeq32_bitop(NodeKind kind, int off, int64_t val)
 {
   char *opb;
-  char *fmt;      // the instructions that do the whole byte
-  uint8_t keep;   // this byte stays as it is
-  uint8_t whole;  // this byte is done by fmt
+  char *fmt;
+  uint8_t keep;
+  uint8_t whole;
 
   switch (kind) {
   case ND_ANDEQ: opb="andb"; keep=0xFF; whole=0x00; fmt="\tclr %d,x"; break;
@@ -3570,12 +3467,6 @@ static void gen_opeq32_bitop(NodeKind kind, int off, int64_t val)
   }
 }
 
-//
-// @long op= (off,IX)
-//
-// op is the stem. for example,
-// when op == "add", op32x makes jsr __add32x, __add32bx, __add32dx
-//
 static void op32x(char *op, int off)
 {
   if (off == 0) {
@@ -3592,11 +3483,6 @@ static void op32x(char *op, int off)
   IX_invalidate();
 }
 
-//
-// @long = (lhs op= rhs)
-//
-//  - sub uses rsub, so that @long = lhs - @long.
-//
 static void gen_opeq32(Node *node)
 {
   char *op;
@@ -3611,23 +3497,20 @@ static void gen_opeq32(Node *node)
   }
 
   if (test_addr_x(node->lhs)) {
-    gen_expr(node->rhs);                       // @long = rhs
-    op32x(op, gen_addr_x(node->lhs));    // @long op= lhs
-    store32x(0);                               // lhs = @long
+    gen_expr(node->rhs);
+    op32x(op, gen_addr_x(node->lhs));
+    store32x(0);
     return;
   }
 
-  gen_addr(node->lhs);   // AB = &lhs
-  push();                // save &lhs
-  gen_expr(node->rhs);   // @long = rhs
-  popx();                // IX = &lhs
-  op32x(op, 0);          // @long op= [IX]
-  store32x(0);           // [IX] = @long
+  gen_addr(node->lhs);
+  push();
+  gen_expr(node->rhs);
+  popx();
+  op32x(op, 0);
+  store32x(0);
 }
 
-//
-// @long op= rhs, expanded byte by byte.
-//
 static void gen_direct_long(Node *node)
 {
   Node *rhs = skip_empty_cast(node->rhs);
@@ -3654,7 +3537,6 @@ static void gen_direct_long(Node *node)
     raddr = is_var_addr_constant(rhs);
   }
 
-  // ldab -> op -> stab
   println("\tldab @long+3");
   if (R == 3) {
     println("\t%s %s+3", opb, raddr);
@@ -3663,7 +3545,6 @@ static void gen_direct_long(Node *node)
   }
   println("\tstab @long+3");
 
-  // ldaa -> op -> staa
   for (int nth = 2; nth >= 0; nth--) {
     println("\tldaa @long+%d", nth);
     if (R == 3) {
@@ -3680,15 +3561,6 @@ static bool can_direct_long(Node *node)
   return long_location_type(skip_empty_cast(node->rhs)) != 0;
 }
 
-//
-// @long = lhs op rhs
-//
-//  - 32-bit work is a stack machine whose top is @long. push and pop
-//    of four bytes costs more than the op itself, so here we read
-//    both sides where they are and only the result goes into @long.
-//  - opb is for the lowest byte, opa for the upper three. add and sub
-//    have to carry.
-//
 bool gen_direct_long2(Node *node)
 {
   Node *lhs = skip_empty_cast(node->lhs);
@@ -3715,7 +3587,6 @@ bool gen_direct_long2(Node *node)
   if (L == 1) is_long_constant(lhs,&lv);
   if (R == 1) is_long_constant(rhs,&rv);
 
-  // lhs,rhs: local or other var
   if (L==2 || L==4) loff = gen_addr_x(lhs);
   if (R==2 || R==4) roff = gen_addr_x(rhs);
   if (L==3)         laddr = is_var_addr_constant(lhs);
@@ -3748,8 +3619,6 @@ bool gen_direct_long2(Node *node)
   return true;
 }
 
-// The MC6800 has only one IX, so 2 and 4 cannot be used at the same time.
-// Two 2's are fine because they share @bp.
 bool can_direct_long2(Node *node)
 {
   Node *lhs = skip_empty_cast(node->lhs);
@@ -3758,16 +3627,13 @@ bool can_direct_long2(Node *node)
   int R = long_location_type(rhs);
 
   if (!L || !R)             return false;
-  if (L==1 || L==3)         return true;   // lhs does not need IX
-  if (R==1 || R==3)         return true;   // rhs does not need IX
-  if (L==2 && R==2)         return true;   // share @bp
+  if (L==1 || L==3)         return true;
+  if (R==1 || R==3)         return true;
+  if (L==2 && R==2)         return true;
 
   return false;
 }
 
-//
-// @long op= rhs, through the stack
-//
 static void gen_long_tos(Node *node)
 {
   char *op;
@@ -3839,7 +3705,7 @@ static void gen_funcall(Node *node)
     if (!current_fn->ty->is_variadic) {
       error_tok(node->tok, "__builtin_va_start_addr: not variadic function");
     }
-    // The arg must be the last named parameter.
+
     Obj *last = current_fn->params;
     while (last && last->next)
       last = last->next;
@@ -3848,7 +3714,7 @@ static void gen_funcall(Node *node)
     ||  node->args->var != last) {
       error_tok(node->tok, "_builtin_va_start_addr: not the last named parameter");
     }
-    // var is the first parameter and pass-by-register ?
+
     int passed_by_reg = 0;
     if (!strcmp(current_fn->params->name,node->args->var->name)) {
       passed_by_reg = 1;
@@ -3862,12 +3728,6 @@ static void gen_funcall(Node *node)
         passed_by_reg = 0;
       }
     }
-    // If the specified variable is passed in a register,
-    //    the remaining variable arguments (varargs) are located
-    //    at the top of the stack.
-    // If the specified variable is passed on the stack, 
-    //   the remaining variable arguments (varargs) reside in the stack memory
-    //   starting at its address plus the size of the variable.
     int next_offset = node->args->var->offset
 	            + node->args->var->ty->size
 		    + (passed_by_reg? 4: 0);	// skip @bp and return address
@@ -3944,7 +3804,6 @@ static void gen_funcall(Node *node)
   }
   IX_invalidate();
   
-  // Removes pushed arguments before calling a function for speed
   remove_args(stack_args);
 
   return;
@@ -4004,7 +3863,6 @@ static void opeq_cleanup_operands(Node *node)
   switch (node->kind) {
   case ND_SHLEQ:
   case ND_SHREQ:
-    // the right side is the shift count, not the width of the operation
     break;
   default:
     cast(node->rhs->ty,node->ty);
@@ -4035,7 +3893,6 @@ static void opeq_float(Node *node)
     depth += 4;
     gen_expr(node->rhs);
   }else{
-    // sub and div need the left side in @long and the right side on the stack
     opeq_setup_operands(node);
   }
   println("\tjsr %s",op);
@@ -4078,7 +3935,6 @@ static void opeq(Node *node)
     case TY_BOOL:
       switch (rhs->ty->kind) {
       case TY_LONG: {
-        // walk b + rhs one byte at a time; leave as soon as a byte is not zero
         char *label = new_label("L_%d");
         gen_addr(lhs);
         push();
@@ -4212,8 +4068,6 @@ static void opeq(Node *node)
     case TY_BOOL:
       switch (rhs->ty->kind) {
       case TY_LONG:
-        // bool(b - rhs) == bool(rhs - b); a borrow leaves D != 0,
-        // so the upper 16 bits can be ORed in as they are
         gen_addr(lhs);
         push();
         gen_expr(rhs);
@@ -4849,7 +4703,6 @@ static void opeq(Node *node)
         return;
       } // bool ^= rhs
     case TY_CHAR: 
-      // is_simple_var() sends a global var lhs to x = x op y, so it never gets here
       if (node->lhs->ty->is_unsigned && test_addr_x(node->lhs)) {
         gen_expr(node->rhs);
         cast(node->rhs->ty,ty_int);
@@ -6350,51 +6203,51 @@ void gen_expr(Node *node)
     switch (node->kind) {
     case ND_ADD:
       if (is_long_constant(rhs,&val)) {
-        gen_expr(lhs);                         // @long = lhs
-        gen_direct_long_addsub_imm(node,val);  // @long += val
+        gen_expr(lhs);
+        gen_direct_long_addsub_imm(node,val);
         return;
       }
       if (can_direct_long2(node)){
-        gen_direct_long2(node);     // @long = lhs + rhs
+        gen_direct_long2(node);
         return;
       }
       if (!opt('O','s')) {
         if (can_direct_long(node)){
           gen_expr(lhs);
-          gen_direct_long(node);   // @long += rhs
+          gen_direct_long(node);
           return;
         }
       }
       if (test_addr_x(rhs)) {
-        gen_expr(lhs);              // @long = lhs
-        op32x("add", gen_addr_x(rhs));  // @long += rhs
+        gen_expr(lhs);
+        op32x("add", gen_addr_x(rhs));
         return;
       }
-      gen_long_tos(node);           // push lhs; @long += TOS (and remove TOS)
+      gen_long_tos(node);
       return;
     case ND_SUB:
       if (is_long_constant(rhs,&val)) {
-        gen_expr(lhs);              // @long = lhs
-        gen_direct_long_addsub_imm(node,val);  // @long -= val
+        gen_expr(lhs);
+        gen_direct_long_addsub_imm(node,val);
         return;
       }
       if (can_direct_long2(node)){
-        gen_direct_long2(node);     // @long = lhs - rhs
+        gen_direct_long2(node);
         return;
       }
       if (!opt('O','s')) {
         if (can_direct_long(node)){
           gen_expr(lhs);
-          gen_direct_long(node);    // @long -= rhs
+          gen_direct_long(node);
           return;
         }
       }
       if (test_addr_x(rhs)) {
-        gen_expr(lhs);              // @long = lhs
-        op32x("sub", gen_addr_x(rhs));  // @long -= rhs
+        gen_expr(lhs);
+        op32x("sub", gen_addr_x(rhs));
         return;
       }
-      gen_long_tos(node);           // push lhs; @long -= TOS (and remove TOS)
+      gen_long_tos(node);
       return;
     case ND_MUL:
       if (node->lhs->kind     == ND_CAST
@@ -6453,7 +6306,7 @@ void gen_expr(Node *node)
         gen_expr(lhs);
         int off = gen_addr_x(rhs);
         if (off == 0) {
-          println("\tjsr __mul32x32x");	// __mul32x32x messes IX
+          println("\tjsr __mul32x32x");
         }else if (off <= 255) {
           ldab_i(off);
           println("\tjsr __mul32x32bx");
@@ -6522,9 +6375,9 @@ void gen_expr(Node *node)
       pushl();
       gen_expr(node->lhs);
       if (node->ty->is_unsigned) {
-        println("\tjsr __div32x32u");	// @long /= TOS, pull TOS");
+        println("\tjsr __div32x32u");
       }else{
-        println("\tjsr __div32x32s");	// @long /= TOS, pull TOS");
+        println("\tjsr __div32x32s");
       }
       depth -= 4;
       IX_invalidate();
@@ -6572,9 +6425,9 @@ void gen_expr(Node *node)
       pushl();
       gen_expr(node->lhs);
       if (node->ty->is_unsigned) {
-        println("\tjsr __rem32x32u");	// @long %%= TOS, pull TOS");
+        println("\tjsr __rem32x32u");
       }else{
-        println("\tjsr __rem32x32s");	// @long %%= TOS, pull TOS");
+        println("\tjsr __rem32x32s");
       }
       depth -= 4;
       IX_invalidate();
@@ -6583,18 +6436,18 @@ void gen_expr(Node *node)
     case ND_BITOR:
     case ND_BITXOR: {
       if (is_long_constant(rhs,&val)) {
-        gen_expr(lhs);                        // @long = lhs
-        gen_direct_long_bitop_imm(node,val);  // @long op= val
+        gen_expr(lhs);
+        gen_direct_long_bitop_imm(node,val);
         return;
       }
       if (can_direct_long2(node)) {
-        gen_direct_long2(node);       // @long = lhs op rhs
+        gen_direct_long2(node);
         return;
       }
       if (!opt('O','s')) {
         if (can_direct_long(node)){
           gen_expr(lhs);
-          gen_direct_long(node);      // @long op= rhs
+          gen_direct_long(node);
           return;
         }
       }
@@ -6607,13 +6460,14 @@ void gen_expr(Node *node)
         case ND_BITXOR: op="xor"; break;
         default: assert(0);
         }
-        gen_expr(lhs);                // @long = lhs
-        op32x(op, gen_addr_x(rhs));   // @long op= rhs
+        gen_expr(lhs);
+        op32x(op, gen_addr_x(rhs));
         return;
       }
-      gen_long_tos(node);           // push lhs; @long op= TOS (and remove TOS)
+      gen_long_tos(node);
       return;
     } // ND_BITAND, ND_BITOR, ND_BITXOR
+
     case ND_EQ:
     case ND_NE:
     case ND_LT:
@@ -6649,7 +6503,7 @@ void gen_expr(Node *node)
         if (off == 0) {
           println("\tjsr __%s32%sx",op,sc);
           if (node->kind == ND_EQ || node->kind == ND_NE) {
-            IX_invalidate();    // __eq32x and __ne32x load through IX
+            IX_invalidate();
           }
         }else if (off <= 255) {
           ldab_i(off);
@@ -6668,15 +6522,10 @@ void gen_expr(Node *node)
       println("\ttsx");
       println("\tjsr __%s32%sx",op,sc);
       IX_invalidate();
-      ins(4);                   // ins keeps the flags, remove_args() does not
+      ins(4);
       return;
     } // long relop long
-    //
-    // Shift operations are not performed by usual_arith_conv() in type.c. 
-    // The node and lhs are long, but the type of rhs is unknown.
-    // Modify type.c to shift by 1 byte (char) to reduce the size.
-    // When calling the helper function, provide the shift amount in AccB.
-    //
+
     case ND_SHL:
     case ND_SHR:
       if (is_integer_constant(node->rhs,&val)) {
@@ -6708,7 +6557,7 @@ void gen_expr(Node *node)
     }
   } // TY_LONG:
   }
-  // The following is a binary operator, length less than or equal to an int
+
   switch (node->kind) {
   case ND_ADD: {
     if (is_int8(node->ty)) {
@@ -6875,11 +6724,10 @@ void gen_expr(Node *node)
         return;
       assert(0);
     }
-    // A decayed VLA keeps its pointer value in a slot, so the value is read
-    // from the slot and not from the array the slot points to.
+
     if (node->rhs->kind == ND_VAR
     &&  node->rhs->var->ty->kind == TY_VLA
-    &&  node->rhs->var->offset <= 254){	// the slot read is two bytes
+    &&  node->rhs->var->offset <= 254){
       gen_expr(node->lhs);
       ldx_bp();
       println("\tsubb %d+1,x",node->rhs->var->offset);
@@ -6982,8 +6830,6 @@ void gen_expr(Node *node)
     cast(node->rhs->ty, node->ty);
     push();
     gen_expr(node->lhs);
-//  cast(node->lhs->ty, node->ty);
-//    println("  sub %s, %s", di, ax);
     println("\ttsx");
     println("\tsubb 1,x");
     println("\tsbca 0,x");
@@ -7192,7 +7038,6 @@ void gen_expr(Node *node)
       }
       return;
     }
-    // must be 16bit op 16bit
     // must be 16bit op 16bit
     if (!is_int16_or_ptr_or_array(node->lhs->ty)
     ||  !is_int16_or_ptr_or_array(node->rhs->ty))
@@ -7465,7 +7310,7 @@ void stmt_dump(char *p)
       }
       p++;
       while (isspace(*p)) {
-	p++;
+        p++;
       }
     }
   }
@@ -7481,11 +7326,7 @@ void stmt_dump(char *p)
 
 static void gen_stmt(Node *node)
 {
-  // When the -g option is added, 
-  // the original C source code is embeddedwithin the assembly source.
   stmt_dump(node->loc);
-  // With -g2 or higher, AST node details are also embedded;
-  // Assembly may sometimes fail in such cases.
   if (opt('g','3')) {
     ast_node_dump(node);
   }
@@ -7800,19 +7641,14 @@ static void gen_stmt(Node *node)
   error_tok(node->tok, "invalid statement");
 }
 
-// Assign offsets to local variables.
 static void assign_lvar_offsets(Obj *prog) {
   for (Obj *fn = prog; fn; fn = fn->next) {
     if (!fn->is_function)
       continue;
 
-    // If a function has many parameters, only first one parameters is
-    // passed by register (AB or @long).
-    // The first passed-by-stack parameter resides at SP+2
     int top = 0;
-
     int gp = 0;	// if gp==0 can use reg_param.
-		//
+
     fn->stack_size = 0;
     int has_implicit_reg_param = 0;
     switch (fn->ty->return_ty->kind){
@@ -7822,7 +7658,6 @@ static void assign_lvar_offsets(Obj *prog) {
       gp++;
     }
 
-    // list of param
     for (Obj *var = fn->params; var; var = var->next) {
       Type *ty = var->ty;
 
@@ -7849,7 +7684,7 @@ static void assign_lvar_offsets(Obj *prog) {
     for (Obj *var = fn->locals; var; var = var->next) { // locals & args
       if (var->offset>0)
         continue;
-      if (var->offset == -1) {	// レジスタ引数
+      if (var->offset == -1) {	// register param
         fn->stack_size = top;
         var->offset = top;
         top += var->ty->size + 4;	// skip old @bp, ret addr
@@ -7864,7 +7699,7 @@ static void assign_lvar_offsets(Obj *prog) {
         var->offset = top;
         top += var->ty->size;
         continue;
-      }else{ // ローカル変数の割り当て
+      }else{ // allocate local vars
         var->offset = top;
         top += var->ty->size;
         fn->stack_size = top;
@@ -7902,10 +7737,6 @@ static void emit_data(Obj *prog) {
       continue;
     }
 
-    // .data or .tdata in x64
-    //   .section .data  ; 初期化済み静的データ
-    //   .section .tdata ; Thread Local Storage
-    //   .section .rodata ; 書き換え不可能データ
     if (var->init_data) {
       println(";");
       println(";\t.type %s, @object", var->name);
@@ -7939,7 +7770,6 @@ static void emit_data(Obj *prog) {
       continue;
     }
 
-    // .bss or .tbss
     println("\t.bss");
     println("_%s:\n\t.ds %d", var->name,var->ty->size);
   }
@@ -7953,7 +7783,6 @@ struct LongLiteral {
 
 static LongLiteral *long_literals;
 
-// Return the label of the .data entry that holds a long constant.
 char *long_literal_label(int64_t val)
 {
   uint32_t bits = (uint32_t)val;
@@ -7991,8 +7820,6 @@ static void emit_text(Obj *prog) {
     if (!fn->is_function || !fn->is_definition)
       continue;
 
-    // No code is emitted for "static inline" functions
-    // if no one is referencing them.
     if (!fn->is_live)
       continue;
 
@@ -8032,9 +7859,10 @@ static void emit_text(Obj *prog) {
     fn->use_bp = true;
 
     // only one argument pass via Acc A,B, @long
-    // save passed-by-register arguments to the stack
+    // save passed-by-register arguments to stack
     int reg_param_size = 0;
-    // 返り値がSTRUCT/UNIONの場合は、レジスタ引数に返り値のアドレスが入る
+
+    // return struct/union
     switch (fn->ty->return_ty->kind){
     case TY_STRUCT:
     case TY_UNION:
@@ -8078,7 +7906,7 @@ static void emit_text(Obj *prog) {
         assert(0);
       }
     }
-    // make base pointer
+    // make new base pointer
     if (fn->stack_size<=5){			// 5 for speed, 13 for size
       des(fn->stack_size);
       println("\ttsx");	 	      // 4 1
@@ -8093,7 +7921,7 @@ static void emit_text(Obj *prog) {
         println("\tjsr __sub_bp_d");
       } 
       println("\ttxs");
-    }else{					// make new bp
+    }else{
       println("\tsts @bp");     // 5 2	total 31cyc,17bytes
       println("\tldab @bp+1");	// 3 2
       println("\tldaa @bp");		// 3 2
@@ -8122,7 +7950,7 @@ static void emit_text(Obj *prog) {
     // Emit code
 no_params_locals:
     gen_stmt(fn->body);
-//    assert(depth == 0);
+//  assert(depth == 0);
 
     // [https://www.sigbus.info/n1570#5.1.2.2.3p1] The C spec defines
     // a special rule for the main function. Reaching the end of the
@@ -8208,7 +8036,7 @@ no_params_locals:
       default:
         println("\tpulb");
       }
-      println("\tlds @bp");		// remove local variables // 4 2
+      println("\tlds @bp");
     }
     switch (fn->ty->return_ty->kind){
     case TY_VOID:
