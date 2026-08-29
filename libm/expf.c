@@ -1,21 +1,30 @@
-#include <math.h>
-
+//
+// expf(x) = e^x
 //
 // Cody–Waite range reduction
-// 
-// LN2_HI: top 24 bits of ln2
+//
+// e^x = e^r * 2^n,  r = x - n * ln2
+//
+// LN2_HI: top bits of ln2
 // LN2_LO: the remaining part of ln2
 //
+
+#include <math.h>
+
+// LN2_HI has 12 mantissa bits. n_f * LN2_HI is exact
+// LN2_LO holds the rest of ln2
 #define LN2_HI   0x1.62e000p-1f
 #define LN2_LO   0x1.0bfbe8p-15f
-#define INV_LN2  0x1.715476p+0f
+#define INV_LN2  0x1.715470p+0f
 
-// exp(r) = 1 + r + r*r*P(r) on |r| <= ln2/2, minimax fit
-#define P0  0x1.000000p-1f
-#define P1  0x1.5554dcp-3f
-#define P2  0x1.55551ap-5f
-#define P3  0x1.120b6cp-7f
-#define P4  0x1.6d1106p-10f
+// __u32exp truncates. QLN2 rounds up by 2 to cancel the bias
+// ln2 * 2^30 = 0x2C5C85FD.F4
+#define QLN2    0x2C5C8600L
+
+static float n_f, r;
+static long z;
+static unsigned long y;
+static int n;
 
 float expf(float x)
 {
@@ -23,21 +32,24 @@ float expf(float x)
     return 1.0f;
   if (isnan(x))
     return x;
-  if (x > 0x1.62e430p+6f)
+
+  // 0x1.62e430p+6f is the smallest float such that e^x rounds to infinity
+  if (x >= 0x1.62e430p+6f)
     return INFINITY;
+
+  // -0x1.9fe368p+6f is the smallest float such that e^x > 2^-150
   if (x < -0x1.9fe368p+6f)
     return 0.0f;
 
-  // n = round(x / ln2)
-  float n_f = roundf(x * INV_LN2);
-  int n = (int)n_f;
+  n_f = roundf(x * INV_LN2);
+  r = (x - n_f * LN2_HI) - n_f * LN2_LO;
+  z = (long)ldexpf(r, 30);
+  if (z < 0) {
+    z += QLN2;
+    n_f = n_f - 1.0f;
+  }
+  n = (int)n_f;
+  y = __u32exp((unsigned long)z);
 
-  // r = x - n*ln2, Cody–Waite range reduction
-  float r = (x - n_f * LN2_HI) - n_f * LN2_LO;
-
-  float r2 = r * r;
-  float p = P0 + r * (P1 + r * (P2 + r * (P3 + r * P4)));
-  float e = 1.0f + (r + r2 * p);
-
-  return ldexpf(e, n);
+  return ldexpf((float)y, n - 30);
 }
