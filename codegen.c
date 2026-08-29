@@ -5385,6 +5385,16 @@ void gen_expr(Node *node)
         break;
        case TY_LONG:
          ldx_IMM_VAR(var);
+         if (node->retval_unused) {
+           invalidate_EXT(node->lhs);
+           if (val==1) {
+             println("\tjsr __inc32x");
+             return;
+           }else if (val==-1) {
+             println("\tjsr __dec32x");
+             return;
+           }
+         }
          load32x(0);
          println("\tjsr __add32i");
          word32i(val);
