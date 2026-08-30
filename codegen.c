@@ -5836,10 +5836,10 @@ void gen_expr(Node *node)
           return;
         assert(0);
       }
-      if (can_direct_char(node->lhs)){
+      if (can_direct_8bit(node->lhs)){
         gen_expr(node->rhs);
         println("\tnegb");
-        if(gen_direct_char(node->lhs,"addb",NULL))
+        if(gen_direct_8bit(node->lhs,"addb"))
           return;
         assert(0);
       }
