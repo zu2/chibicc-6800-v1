@@ -4660,11 +4660,17 @@ void gen_expr(Node *node)
       println("\tjsr __load32x");
       return;
     }
-    if (is_int8(node->ty)) {
-      if (gen_direct_char(node,"ldab",NULL))
+    if (is_int8(node->ty) && can_direct_8bit(node)) {
+      if (gen_direct_8bit(node,"ldab")) {
         return;
-    }else if (gen_direct(node,"ldab","ldaa")) {
-      return;
+      }
+      assert(0);
+    }
+    if (is_int16(node->ty) && can_direct(node)) {
+      if (gen_direct(node,"ldab","ldaa")) {
+        return;
+      }
+      assert(0);
     }
     if (can_load_x(node->ty) && test_addr_x(node)) {
       off = gen_addr_x(node);
