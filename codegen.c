@@ -6338,9 +6338,9 @@ void gen_expr(Node *node)
     case TY_CHAR:
       char *skip = new_jump_label();
       char *loop = new_jump_label();
-      if (can_direct_char(node->rhs)) {
+      if (can_direct_8bit(node->rhs)) {
         gen_expr(node->lhs);
-        if(!gen_direct_char(node->rhs,"ldaa",NULL)) {
+        if(!gen_direct_8bit(node->rhs,"ldaa")) {
           assert(0);
         }
       }else{
