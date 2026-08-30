@@ -6123,9 +6123,9 @@ void gen_expr(Node *node)
           }
         }
       }
-      if (can_direct_char(node->rhs)){
+      if (can_direct_8bit(node->rhs)){
         gen_expr(node->lhs);
-        if(!gen_direct_char(node->rhs,"subb",NULL)) {
+        if(!gen_direct_8bit(node->rhs,"subb")) {
           assert(0);
         }
       }else{
