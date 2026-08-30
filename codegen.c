@@ -5830,9 +5830,9 @@ void gen_expr(Node *node)
   case ND_SUB:
     // (- TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
     if (is_int8(node->ty)) {
-      if (can_direct_char(node->rhs)){
+      if (can_direct_8bit(node->rhs)){
         gen_expr(node->lhs);
-        if(gen_direct_char(node->rhs,"subb",NULL))
+        if(gen_direct_8bit(node->rhs,"subb"))
           return;
         assert(0);
       }
