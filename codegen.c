@@ -4666,7 +4666,7 @@ void gen_expr(Node *node)
       }
       assert(0);
     }
-    if (is_int16(node->ty) && can_direct(node)) {
+    if (is_int16_or_ptr(node->ty) && can_direct(node)) {
       if (gen_direct(node,"ldab","ldaa")) {
         return;
       }
@@ -4788,11 +4788,17 @@ void gen_expr(Node *node)
         return;
       }
     }
-    if (is_int8(node->ty)) {
-      if (gen_direct_char(node,"ldab",NULL))
+    if (is_int8(node->ty) && can_direct_8bit(node)) {
+      if (gen_direct_8bit(node,"ldab")) {
         return;
-    }else if (gen_direct(node,"ldab","ldaa")) {
-      return;
+      }
+      assert(0);
+    }
+    if (is_int16_or_ptr(node->ty) && can_direct(node)) {
+      if (gen_direct(node,"ldab","ldaa")) {
+        return;
+      }
+      assert(0);
     }
     if (opt('O','2')
     &&  node->ty->size == 4
