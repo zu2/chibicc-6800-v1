@@ -728,16 +728,16 @@ bool gen_direct(Node *rhs,char *opb, char *opa)
 
 int gen_direct_lr_8bit(Node *node, char *opb)
 {
-    if (can_direct_char(node->rhs)){
+    if (can_direct_8bit(node->rhs)){
       gen_expr(node->lhs);
-      if (gen_direct_char(node->rhs,opb,NULL)) {
+      if (gen_direct_8bit(node->rhs,opb)) {
         return 1;
       }
       assert(0);
     }
-    if (can_direct_char(node->lhs)){
+    if (can_direct_8bit(node->lhs)){
       gen_expr(node->rhs);
-      if (gen_direct_char(node->lhs,opb,NULL)) {
+      if (gen_direct_8bit(node->lhs,opb)) {
         return 1;
       }
       assert(0);
