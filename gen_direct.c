@@ -514,22 +514,6 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test, b
       }
       return 1;
     }
-    char *addr;
-    if ((addr=is_addr_constant(node))!=NULL) {
-      if (test) return 1;
-      switch(node->ty->kind) {
-      case TY_SHORT:
-      case TY_INT:
-      case TY_ENUM:
-      case TY_PTR:
-        println("\t%s #<%s", opb,addr);
-        if (opa) {
-          println("\t%s #>%s", opa,addr);
-        }
-        return 1;
-      }
-      return 0;
-    }
     return 0;
   default:
     if (test_addr_x(node)) {
