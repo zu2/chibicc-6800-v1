@@ -5084,6 +5084,12 @@ void gen_expr(Node *node)
       load32i(val);
       return;
     }
+    if (is_int8(node->ty) && can_direct_8bit(node)) {
+      if (gen_direct_8bit(node,"ldab")) {
+        return;
+      }
+      assert(0);
+    }
     gen_expr(node->lhs);
     cast(node->lhs->ty, node->ty);
     return;
