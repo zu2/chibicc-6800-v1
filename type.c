@@ -339,6 +339,29 @@ void usual_arith_conv(Node **lhs, Node **rhs) {
   *rhs = new_cast(*rhs, ty);
 }
 
+static bool is_modifiable_lvalue(Node *node)
+{
+  switch (node->kind) {
+  case ND_VLA_PTR:
+    return true;
+  case ND_VAR:
+  case ND_DEREF:
+  case ND_MEMBER:
+  case ND_COMMA:
+    break;
+  default:
+    return false;
+  }
+  switch (node->ty->kind) {
+  case TY_VOID:
+  case TY_FUNC:
+  case TY_ARRAY:
+  case TY_VLA:
+    return false;
+  }
+  return node->ty->size >= 0;
+}
+
 void add_type(Node *node) {
   if (!node || node->ty)
     return;
@@ -403,8 +426,8 @@ void add_type(Node *node) {
   case ND_ASSIGN:
     // check error.
     // int a[3]; a = 0;
-    if (node->lhs->ty->kind == TY_ARRAY) {
-      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_modifiable_lvalue(node->lhs)) {
+      error_tok(node->lhs->tok, "not a modifiable lvalue");
     }
     // void v(void); int x; x = v();
     if (node->rhs->ty->kind == TY_VOID) {
@@ -451,8 +474,8 @@ void add_type(Node *node) {
     return;
   case ND_ADDEQ:
   case ND_SUBEQ:
-    if (node->lhs->ty->kind == TY_ARRAY)
-      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_modifiable_lvalue(node->lhs))
+      error_tok(node->lhs->tok, "not a modifiable lvalue");
     if (node->lhs->ty->kind == TY_PTR) {
       if (!is_integer(node->rhs->ty)) {
         error_tok(node->lhs->tok, "invalid operands");
@@ -472,8 +495,8 @@ void add_type(Node *node) {
     return;
   case ND_MULEQ:
   case ND_DIVEQ:
-    if (node->lhs->ty->kind == TY_ARRAY)
-      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_modifiable_lvalue(node->lhs))
+      error_tok(node->lhs->tok, "not a modifiable lvalue");
     if (!is_numeric(node->lhs->ty))
       error_tok(node->lhs->tok, "invalid operand");
     if (!is_numeric(node->rhs->ty))
@@ -482,8 +505,8 @@ void add_type(Node *node) {
     node->ty = node->lhs->ty;
     return;
   case ND_MODEQ:
-    if (node->lhs->ty->kind == TY_ARRAY)
-      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_modifiable_lvalue(node->lhs))
+      error_tok(node->lhs->tok, "not a modifiable lvalue");
     if (!is_integer(node->lhs->ty))
       error_tok(node->lhs->tok, "invalid operand");
     if (!is_integer(node->rhs->ty))
@@ -495,8 +518,8 @@ void add_type(Node *node) {
   case ND_ANDEQ:
   case ND_OREQ:
   case ND_XOREQ:
-    if (node->lhs->ty->kind == TY_ARRAY)
-      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_modifiable_lvalue(node->lhs))
+      error_tok(node->lhs->tok, "not a modifiable lvalue");
     if (!is_integer(node->lhs->ty))
       error_tok(node->lhs->tok, "invalid operand");
     if (!is_integer(node->rhs->ty))
@@ -514,8 +537,8 @@ void add_type(Node *node) {
     return;
   case ND_SHLEQ:
   case ND_SHREQ:
-    if (node->lhs->ty->kind == TY_ARRAY)
-      error_tok(node->lhs->tok, "not an lvalue");
+    if (!is_modifiable_lvalue(node->lhs))
+      error_tok(node->lhs->tok, "not a modifiable lvalue");
     if (!is_integer(node->lhs->ty))
       error_tok(node->lhs->tok, "invalid operand");
     if (!is_integer(node->rhs->ty))
