@@ -468,23 +468,24 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
     // (ND_DEREF ty_char (ND_NUM TY_PTR e000))
     case ND_NUM:
       assert (node->lhs->ty->kind == TY_PTR);
-      if (test) return true;
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
+        if (test) return true;
         println("\t%s %ld",opb,node->lhs->val);
         return true;
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
       case TY_PTR:
+        if (test) return true;
         println("\t%s %ld+1",opb,node->lhs->val);
         if (opa) {
           println("\t%s %ld",opa,node->lhs->val);
         }
         return true;
       } // ND_DEREF → ND_NUM
-      break;
+      return false;
     // (ND_DEREF ty_int (ND_VAR TY_ARRAY(12) _L_1 global)
     case ND_VAR: {
       if (!is_integer(node->ty) || node->ty->kind==TY_LONG) {
@@ -553,10 +554,11 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
       &&  rhs->kind == ND_CAST
       &&  rhs->ty->kind == TY_PTR
       &&  is_integer_constant(rhs->lhs,&val)) {
-        if (test) return true;
+
         switch(node->ty->kind) {
         case TY_BOOL:
         case TY_CHAR:
+          if (test) return true;
           if (val==0) {
             println("\t%s _%s",opb,lhs->lhs->var->name);
           }else{
@@ -567,6 +569,7 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
         case TY_INT:
         case TY_ENUM:
         case TY_PTR:
+          if (test) return true;
           if (val==0) {
             println("\t%s _%s+1",opb,lhs->lhs->var->name);
             if (opa) {
@@ -580,6 +583,7 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
           }
           return true;
         }
+        return false;
       }
       if (is_global_array(lhs)
       &&  is_integer_constant(rhs,&val)) {
