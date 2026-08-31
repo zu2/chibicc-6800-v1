@@ -533,8 +533,6 @@ bool can_direct_8bit_imm_ext(Node *rhs);
 bool gen_direct_8bit_imm_ext(Node *rhs, char *opb);
 bool can_direct_8bit_ix(Node *rhs);
 bool gen_direct_8bit_ix(Node *rhs, char *opb);
-bool can_direct_ix(Node *rhs, bool is_char);
-bool gen_direct_ix(Node *rhs, char *opb, char *opa, bool is_char);
 int gen_direct_lr_8bit(Node *node, char *opb);
 int gen_direct_lr(Node *node, char *opb, char *opa);
 int is_empty_cast(Type *from, Type *to);

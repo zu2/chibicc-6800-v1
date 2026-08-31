@@ -670,16 +670,6 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test, bool i
   return 0;
 }
 
-bool can_direct_ix(Node *rhs, bool is_char)
-{
-  return gen_direct_ix_sub(rhs,NULL,NULL,true,is_char);
-}
-
-bool gen_direct_ix(Node *rhs, char *opb, char *opa, bool is_char)
-{
-  return gen_direct_ix_sub(rhs,opb,opa,false,is_char);
-}
-
 static bool gen_direct_sub(Node *node,char *opb, char *opa, bool test, bool is_char)
 {
   if (gen_direct_imm_ext_sub(node,opb,opa,test,is_char)) {
