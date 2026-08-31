@@ -182,14 +182,18 @@ The following projects by kwhr0 utilize this compiler:
 ---
 # Performance
 
+Benchmark performance continues to improve with ongoing compiler development.
+
 ## Integer Operations
 
 - **Dhrystone benchmark:** 234 seconds at 1MHz on MC6800, equivalent to approximately 0.05 DMIPS.
   - Update: 183.56 seconds, 0.062 DMIPS (2025/09/17).
   - Update: 179.84 seconds, 0.063 DMIPS (2025/11/13).
   - Update: 160.84 seconds, 0.070 DMIPS (2026/01/10).
+  - Update: 134.04 seconds, 0.076 DMIPS (2026/09/01).
 
-If running on 2MHz MC68B00: 0.1407 DMIPS, comparable to HITECH C CPM V309-15 (0.1278 DMIPS).
+If running on 2MHz MC68B00: 0.1526 DMIPS, faster than HITECH C CPM V309-15 (0.1278 DMIPS) and IAR Z80 V4.06A (0.14838 DMIPS)
+
 MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
 
 - **Source code:** z88dk/support/benchmarks/dhrystone21 at master · z88dk/z88dk : https://github.com/z88dk/z88dk/tree/master/support/benchmarks/dhrystone21
@@ -198,12 +202,16 @@ MC6800 has no block transfer instructions (unlike Z80), yet sufficiently fast.
 - **Mandelbrot ASCII renderer (`asciiartf`):** 266 seconds at **1MHz on MC6800**.
   - Update: 198.8 seconds (2025/08/09)
   - Update: 182.0 seconds (2025/11/12)
+  - Update: 132.8 seconds (2026/09/01)
+
 - **Source code:** [`ztest/9018-asciiartf.c`](https://github.com/zu2/chibicc-6800-v1/blob/main/ztest/9018-asciiartf.c)  
 
 - **Whetstone benchmark:** 449.5355 seconds at **1MHz on MC6800**, equivalent to approximately 2.2245 KWIPS, .0022245 MWIPS
+
   - Update: 2.7544 KWIPS, 0.027544 MWIPS (2025/06/12)
   - Update: 358.0215 seconds, 2.793 KWIPS, .002793 MWIPS (2025/08/09)
   - Update: 317.2384 seconds, 3.152 KWIPS, .003152 MWIPS (2025/11/13)
+  - Update: 164.6542 seconds, 6.073 KWIPS, .006073 MWIPS (2026/09/01)
 
 - **Source code:** [z88dk/support/benchmarks/whetstone at master · z88dk/z88dk](https://github.com/z88dk/z88dk/tree/master/support/benchmarks/whetstone)
 
