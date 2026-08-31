@@ -188,10 +188,6 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
       gen_expr(lhs);
       gen_direct_8bit(rhs, "cmpb");
     }
-  }else if (test_addr_x(rhs)) {
-    gen_expr(lhs);
-    int off = gen_addr_x(rhs);
-    println("\tcmpb %d,x",off);
   }else{
     gen_expr(lhs);
     push1();
@@ -1043,10 +1039,6 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
       gen_expr(lhs);
       gen_direct_8bit(rhs, "cmpb");
     }
-  }else if (test_addr_x(rhs)) {
-    gen_expr(lhs);
-    int off = gen_addr_x(rhs);
-    println("\tcmpb %d,x",off);
   }else{
     gen_expr(lhs);
     push1();
