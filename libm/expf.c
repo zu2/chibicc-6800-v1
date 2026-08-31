@@ -11,7 +11,7 @@
 
 #include <math.h>
 
-// LN2_HI has 12 mantissa bits. n_f * LN2_HI is exact
+// LN2_HI has 11 mantissa bits. n_f * LN2_HI is exact
 // LN2_LO holds the rest of ln2
 #define LN2_HI   0x1.62e000p-1f
 #define LN2_LO   0x1.0bfbe8p-15f

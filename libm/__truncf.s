@@ -6,8 +6,11 @@
 ;
 ;	https://github.com/zu2/chibicc-6800-v1?tab=License-1-ov-file#readme
 ;
-;	Note: This program was created for testing chibicc-6800-v1, 
-;	and does not pay attention to speed, accuracy, or exception handling.
+;	Note: written for chibicc-6800-v1.
+;	The code favors small size and speed on the MC6800.
+;	Results are exact.
+;	Inf, NaN, +0.0, -0.0, and subnormals are handled correctly.
+;	IEEE 754 exceptions are not handled.
 ;
 ;
         .export	_truncf

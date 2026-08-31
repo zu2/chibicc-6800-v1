@@ -1,14 +1,16 @@
 ;
 ;	float __polyf(float x, const float *c, int n)
 ;
-;	Horner: r = c[0]; while (n--) r = r * x + *++c;
+;	Horner's method
 ;
-;	n is the degree. c[] holds n+1 coefficients, c[0] first. n >= 1.
+;	r = c[0];
+;	while (n--) {
+;		r = r * x + *++c;
+;	}
+;	return r;
 ;
-;	entry:	@long = x, stack: ret(2), c(2), n(2)
-;	exit:	@long = r
-;
-;	The first stage is c[0] * x, so @long already holds a valid operand.
+;	entry:	@long = x, c[0..n], n>=1
+;	exit:	@long = r;
 ;
 	.setcpu 6800
 	.export ___polyf
@@ -35,9 +37,11 @@ ___polyf:
 	ldx	@long+2
 	stx	__polyx+2
 ;
+;	1st stage: c[0] * x, using @long
+;
 	ldx	__polyc
 	jsr	__mulf32x
-	bra	__polyadd
+	bra	__polyadd	; c[0] * @long
 ;
 __polyloop:
 	ldx	#__polyx

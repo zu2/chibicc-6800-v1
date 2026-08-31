@@ -79,22 +79,15 @@ __sign:	.byte	0	; sign (TOS & @long sign are different? 1:differ,0:same)
 __lexp:	.byte	0	; @long's exp
 __expdiff:.word	0	; @long's exp - TOS's exp
 __exp2: .word	0	; exp work. subnormal use 2byte (127 to -149)
-__fp_ix:.word	0	; address of the operand the routines read
-__fp_op:.word	0	; working copy of that operand
+__fp_ix:.word	0	; IX save
+__fp_op:.word	0	; working copy
 	.word	0
-;
-;	__fp_work: 8 byte scratch area.
-;
-;	Only one routine uses __fp_work at a time. Add, subtract, multiply
-;	and divide never run together, so the routines share the area.
-;	Each routine picks its own layout. The layout sits at the top of
-;	the routine that uses __fp_work.
-;
-__fp_work: .word	0
+__fp_work:
 	.word	0
 	.word	0
 	.word	0
-	
+	.word	0
+
 	.code
 ;
 ;	(0-3,x) is NaN? (exp==255)
@@ -110,7 +103,7 @@ __f32isNaNorInfx:
 	ldaa	0,x
 	aslb
 	rola			; AccA=exp, b=(b22-b16)<<1, don't care sign.
-	adda	#1		; Use adda to update the carry flag (not inca).
+	adda	#1
 	bne	__f32isNaN_1	; if exp!=$FF, not NaN and Inf. C=0,Z=0
 	;			; exp == 255, check mantissa
 	;			; Here, a is zero
@@ -118,13 +111,15 @@ __f32isNaNorInfx:
 	bne	__f32isNaN_1	; if b!=0 then jump Z=0 C=1
 	cmpa	2,x		; Here, a==0, cmpa is faster than tst
 	bne	__f32isNaN_1	; ditto
-	cmpa	3,x		
+	cmpa	3,x	
 __f32isNaN_1:			; Z=0, C=0 not NaN,Inf
 	rts			; Z=1, C=0 Inf
 				; Z=0, C=1 NaN
 ;
-;	(0-3,x) == 0.0 ?
-;		== 0x0000 0000 or 0x8000 0000	
+;	__f32iszero:	@long	== 0.0 ?
+;	__f32iszerox:	(0-3.x)	== 0.0?
+;
+;	0.0 == 0x0000 0000 or 0x8000 0000
 ;	if 0.0 then Z=1 else Z=0
 ;
 __f32iszero:
@@ -138,7 +133,7 @@ iszero_ret:
 	rts
 
 __f32iszerox:
-	ldab	0,x		; exponent on the MSB side, to check from the top is faster
+	ldab	0,x
 	andb	#$7F
 	bne	iszerox_ret
 				; Here, b is zero
@@ -166,8 +161,8 @@ __i16tof32_1:
 	sbca	#0
 	;
 __i16tof32_05:
-	bne     __i16tof32_10   ; i32 in ±0〜255
-	ldaa    #$87            ; exp ($86+1), if i32>=128 then exp=$86
+	bne     __i16tof32_10   ; i16 in ±0〜255
+	ldaa    #$87            ; exp ($86+1), if i16>=128 then exp=$86
 __i16tof32_06:                  ; Shift left until the MSB becomes 1
 	deca
 	aslb
@@ -182,15 +177,14 @@ __i16tof32_06:                  ; Shift left until the MSB becomes 1
 	clr     @long+2
 	rts
 ;
-__i16tof32_10:                  ; i32 in ±256〜32768
+__i16tof32_10:                  ; i16 in ±256〜32768
 	stab	@long+2
-	ldab	#$8f		; exp ($8e+1), if i32>=32768 then exp=$8E
+	ldab	#$8f		; exp ($8e+1), if i16>=32768 then exp=$8E
 __i16tof32_20:			; Shift left until the MSB becomes 1
 	decb
 	asl	@long+2
 	rola
 	bcc	__i16tof32_20	; loop until C=1
-				; MSB overflows to C, but it’s a hidden bit
 __i16tof32_21:
 	asl	__sign
 	rorb
@@ -274,7 +268,7 @@ __i32tof32_right:		; right shift is required until the MSB byte becomes 0
 	ldaa	3,x
 	lsra
 	bcc	__i32tof32_done	; LSB==0?
-;				; R==1 && (sticy || LSB==1)
+;				; R==1 && (sticky || LSB==1)
 __i32tof32_rup:
 	inc	3,x
 	bne	__i32tof32_done
@@ -283,7 +277,7 @@ __i32tof32_rup:
 	inc	1,x
 	bne	__i32tof32_done
 ;				; carry occurred from rounding. Shift 1bit
-;	sec			; MSB is hidden bit, it doesn't need to be set.
+;	sec
 	ror	1,x
 	ror	2,x
 	ror	3,x
@@ -341,7 +335,7 @@ __u32tof32_right:		; right shift is required until the MSB byte becomes 0
 	ldaa	3,x
 	lsra
 	bcc	__u32tof32_done	; LSB==0?
-;				; R==1 && (sticy || LSB==1)
+;				; R==1 && (sticky || LSB==1)
 __u32tof32_rup:
 	inc	3,x
 	bne	__u32tof32_done
@@ -376,7 +370,7 @@ __u32tof32_left2:
 ;
 ;	float to unsigned long
 ;		@long -> @long
-;	
+;
 __f32tou32:
 	ldx	#long
 	jsr	__f32iszerox
@@ -389,8 +383,7 @@ __f32tou32:
 	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
 	jcs	__u32zero
 __f32tou32_1:
-; Undefined behavior when the value is out of the integer range. C17 §6.3.1.4
-; This implementation, 0xffffffff was chosen intentionally for consistency.
+; Undefined behavior: out of the integer range. return ULONG_MAX
 	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
 	bcs	__f32tou32_2
 	jmp	__u32ffffffff	; return 4,294,967,295
@@ -482,7 +475,7 @@ __f32mOne:
 ;
 __f32retInfs:
 	ldab	__sign
-__f32retInf:		; AccB(Sign)+7f80 0000
+__f32retInf:		; return signbit(AccB)? 7f80 0000: ff80 0000;
 	tstb
 	bmi	__f32retmInf
 __f32retpInf:		; 7f80 0000
@@ -551,7 +544,7 @@ __f32retTOS:
 ;
 ;	float to signed long
 ;		@long -> @long
-;	
+;
 __f32toi32:
 	ldab	@long
 	pshb
@@ -573,7 +566,7 @@ __f32tou8:
 ;
 ;	float to unsigned int
 ;		@long -> AccA:B
-;	
+;
 __f32tou16:
 	ldx	#long
 __f32tou16x:
@@ -613,7 +606,7 @@ __f32tou16_ret:
 ;
 ;	float to signed short/int
 ;		@long -> AccA:B
-;	
+;
 __f32toi16:
 	ldx	#long
 __f32toi16x:
@@ -667,7 +660,7 @@ __f32toi16_ret2:
 ;
 ;	float to signed char
 ;		@long -> AccB
-;	
+;
 __f32toi8:
 	ldx	#long
 __f32toi8x:
@@ -690,7 +683,7 @@ __f32toi8_1:
 	cmpb	#$86		; if exp>=$86 (x > 127)
 	bcs	__f32toi8_2
 	ldaa	0,x		; check sign
-	bmi	__s8_80		; x <= -32768
+	bmi	__s8_80		; x <= -128
 __s8_7f:			; x > 127, return 127
 	ldab	#$7F
 	clra
@@ -735,7 +728,7 @@ __subf32x:
 	stx	__fp_ix
 	jsr	__setup_zin_x	; TOS & @long is zero/Inf/NaN?
 ;	ldab	__zin
-	eorb	#$80		; sub flips TOS's sign, so the two signs differ
+	eorb	#$80
 	stab	__zin
 	bra	__addf32_0
 ;
@@ -878,7 +871,7 @@ __setup_work_01:
 __setup_work_10:		; 0 to 7
 	stab	__fp_work+1
 	stx	__fp_work+2
-	clrb			; nothing falls off the guard byte here
+	clrb
 	tsta
 	beq	__setup_work_60
 __setup_work_11:
@@ -963,12 +956,12 @@ __addf32_11:
 	adcb	__fp_work+1
 	stab	@long+1
 	bcc	__addf32_20	; over flow?
-        ror     @long+1		; shift one bit with carry
+        ror     @long+1
         ror     @long+2
         ror     @long+3
         ldab	__fp_work+4	; sticky
 	rorb
-	bitb	#$3F	
+	bitb	#$3F
 	beq	__addf32_12
 	orab	#$20
 __addf32_12:
@@ -982,10 +975,10 @@ __addf32_20:			; even number rounding
 	ldab	__fp_work+4
 	rorb			; b7:LSB, b6:G, b5:R, b4:S
 	bitb	#$40		; b6:G==0?
-	beq	__addf32_29	;   Yes, do nothng
+	beq	__addf32_29	;   Yes, do nothing
 	andb	#$F0
 	cmpb	#$40		; 0100:only G is 1?
-	beq	__addf32_29	;   Yes, do nothng
+	beq	__addf32_29	;   Yes, do nothing
 ;
 	inc	@long+3		; round up
 	bne	__addf32_29
@@ -1035,7 +1028,7 @@ __addf32_60:
 __addf32_70:
 	deca
 	beq	__addf32_80	; subnormal number. stop shift
-	ldab	__fp_work+4	; b4-b0 are always 0, so no sticky fold is needed
+	ldab	__fp_work+4	; b4-b0 always 0, no sticky
 	aslb
 	stab	__fp_work+4
 	rol	@long+3
@@ -1049,10 +1042,10 @@ __addf32_80:
 	ldab	__fp_work+4
 	rorb			; b7:LSB, b6:G, b5:R, b4:S
 	bitb	#$40		; b6:G==0?
-	beq	__addf32_90	;   Yes, do nothng
+	beq	__addf32_90	;   Yes, do nothing
 	andb	#$F0
 	cmpb	#$40		; 0100:only G is 1?
-	beq	__addf32_90	;   Yes, do nothng
+	beq	__addf32_90	;   Yes, do nothing
 ;
 	inc	@long+3		; round up
 	bne	__addf32_90
@@ -1237,7 +1230,7 @@ __mulf32x:
 	;
 ;	ldab	__zin
 	bitb	#$3F		;
-	beq	__mulf32tos4	; No, nomal calculation
+	beq	__mulf32tos4	; No, normal calculation
 ;
 	bitb	#$03		; TOS or @long is NaN?
 	jne	__f32retNaN	; Yes: return NaN
@@ -1251,26 +1244,25 @@ __mulf32_s10:			; TOS and @long is not Inf,NaN
 	andb	#$30
 	jne	__f32retZeros	; TOS or @long is zero
 __mulf32tos4_s:
-	jsr	__fp_settos	; shift a private copy instead
+	jsr	__fp_settos
 	jsr	__adj_subnormal
 	bra	__mulf32tos4_e
 ;
-__mulf32tos4:			; like __adj_subnormal, but keeps a normal operand intact
+__mulf32tos4:
 	ldx	__fp_ix
 	ldaa	1,x
 	ldab	0,x
 	asla
 	rolb			; get exp in b
-	beq	__mulf32tos4_s	; subnormal needs the shifting loop
+	beq	__mulf32tos4_s
 	clra
 	subb	#127		; un bias
 	sbca	#0
 __mulf32tos4_e:
 	stab	__exp2+1
 	staa	__exp2
-;                               ; IX still points at the operand on both paths
         ldab    1,x
-	orab	#$80		; hidden bit, the normal path does not write it back
+	orab	#$80
 	stab	__fp_work+3
         ldx     2,x
         stx     __fp_work+4
@@ -1294,10 +1286,9 @@ __mulf32tos4_e:
 	jlt	__f32retZeros	; Underflow, return zero with __sign.
 ;
 __mulf32tos03:
-;                               ; To improve performance, use AccAB insted of work+4,5
 ;                       	; setup working area 48bit
-;	clr	__fp_work+2        ; use AccB
-;	clr	__fp_work+1        ; use AccA
+;	clr	__fp_work+2     ; use AccB
+;	clr	__fp_work+1     ; use AccA
         clra                    ; __fp_work+1
         staa    __fp_work
 ;
@@ -1329,7 +1320,7 @@ __mulf32tos32:
         ror     __fp_work
 	rora
 	rorb
-        ror     0,x             ; Carry used by by __mulf32tos34. Must preserve
+        ror     0,x
 ;
         bcc     __mulf32tos34
         addb    @long+3
@@ -1344,9 +1335,9 @@ __mulf32tos34:
         ror     __fp_work
 	rora
 	rorb
-        ror     0,x             ; Carry used by by __mulf32tos30. Must preserve
+        ror     0,x
 	dec     @tmp2
-	bne	__mulf32tos30   ; ↑ C flag must not be modified until here
+	bne	__mulf32tos30
         dex
         cpx     #__fp_work+2
         bne     __mulf32tos29
@@ -1431,7 +1422,7 @@ __mulf32tos721:
 	lsra
 	rorb			; b7:ULP, b6:G, b5:R, b4-0:S
 	andb	#$BF		; 1011 1111:ULP,R,S are all 0 ?
-	beq	__mulf32tos72	;   Yes, do nothng
+	beq	__mulf32tos72	;   Yes, do nothing
 ;
 	inc	__fp_work+2	; round up
 	bne	__mulf32tos72
@@ -1445,18 +1436,18 @@ __mulf32tos721:
         stx     __exp2
         cpx     #128            ; Recheck for overflow
 	jeq	__f32retInfs	; Overflow, returns Inf with __sign.
-	ldaa	#$80		; the mantissa is all 0 by now, put the hidden bit back
+	ldaa	#$80
 	staa	__fp_work+0
 ;
 __mulf32tos72:
 	ldab	__exp2+1
 	cmpb	#<-127		; subnormal ?
-	bne	__mulf32tos75	; a normal result keeps the hidden bit, so it is never 0
+	bne	__mulf32tos75
 	tst	__fp_work		; round up carried into the hidden bit
 	bpl	__mulf32tos74
 	ldab	#<-126
 	stab	__exp2+1
-	bra	__mulf32tos75	; the round up just set the hidden bit, so it is never 0
+	bra	__mulf32tos75
 __mulf32tos74:
 	ldab	__fp_work+2
 	orab	__fp_work+1
@@ -1515,7 +1506,7 @@ __divf32_s20:
 	jeq     __f32retInfs	; Yes, returns Inf with __sign
 	cmpb	#$10		; 0.0/num?
 	jeq	__f32retZeros	; Yes, returns 0.0 with __sign
-;	
+;
 __divf32tos01:
 ;
 	ldx	__fp_ix
@@ -1594,7 +1585,7 @@ __divf32tos06:
 	ldab	#<-127			; subnormal's exp. ldab and ldaa keep C
 	ldaa	#>-127
 	bcc	__divf32_done
-;	
+;
 	inc	@long+2
 	bne	__divf32_done
 	inc	@long+1
@@ -1625,7 +1616,7 @@ __divf32_rup:
 	bne	__divf32_done
 	inc	@long+1
 	bne	__divf32_done
-	inc	@long			; the mantissa is never all 11..11 here
+	inc	@long			; here, @long not all 11..11
 ;
 __divf32_done:
 	addb	#127
@@ -1646,7 +1637,7 @@ __divf32_done:
 ;	round up check, @tmp4 and @tmp4+1
 ;
 __divf32_rup_check:
-	ldab	@long+3	
+	ldab	@long+3
 	bpl	__divf32_rup_none	; G==0, no round up
 	andb	#$7F
 	bne	__divf32_rup_yes
@@ -1660,13 +1651,21 @@ __divf32_rup_none:
 	clc
 	rts
 ;
-;	@long			= @long / TOS
-;	@tmp1+1:AccA:AccB	= @long % TOS
-;       @tmp3:@tmp4     copy of 2-4,x
-;	mess @long
+;	float division body
+;
+;	entry:	1-3,x   = divisor mant 24bit
+;		@long+1 = dividend mant 24bit
+;	exit:	@long		  = quotient 26bit (24 + G + R)
+;		@tmp1+1:AccA:AccB = remainder
+;		@tmp3:@tmp4	  = copy of 1-3,x
+;
+;	loop 26 times, 8 + 8 + 8 + 2.
+;	0,x sintinel:	$01 -> 8 times loop
+;			$40 -> 2 times loop
+;
 ;
 __fdiv32x32:
-        ldab 3,x	; the mantissa sits at 1-3,x, so no byte shift is needed
+        ldab 3,x
         stab @tmp4
         ldab 2,x
         stab @tmp3+1
@@ -1724,7 +1723,7 @@ loop_begin:
         sec
 	bra  next
 skip:
-	pulb		; can't substract. pull it back.
+	pulb		; can't subtract. pull it back.
 	addb @tmp4
 	adca @tmp3+1
         clc
@@ -1738,8 +1737,8 @@ nextbyte:
         pshb
         ldab #1
         cpx #long+3
-        bne next4      ; the last byte takes 2 bits / 8*3+2 = 26bit (24+G+R)
-        ldab #$40
+        bne next4     
+        ldab #$40	; loop twice. 40->80->end
 next4:
         stab 0,x
         pulb
@@ -1769,7 +1768,7 @@ __adj_subnormal:
 	asla
 	rolb		; get exp in b
 	bne	__adj_subn_ret
-	ldab	#<-126	; least minimum nomal number
+	ldab	#<-126	; least minimum normal number
 	ldaa	#>-126
 __adj_subn_01:
 	subb	#1
@@ -1780,7 +1779,7 @@ __adj_subn_01:
 	bpl	__adj_subn_01
 	rts
 __adj_subn_ret:
-	lsra		; asla left 1,x here. bit7 is the exp LSB and the hidden bit takes it
+	lsra
 	ora	#$80
 	staa	1,x
 	clra
@@ -1789,8 +1788,7 @@ __adj_subn_ret:
 	rts
 
 ;
-;	stack calling convention: the operand sits on the stack,
-;	so point X at it and let __pullret drop it on the way back
+;
 ;
 __load32x_addf:
 	jsr	__load32x

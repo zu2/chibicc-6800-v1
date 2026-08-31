@@ -6,8 +6,11 @@
 ;
 ;	https://github.com/zu2/chibicc-6800-v1?tab=License-1-ov-file#readme
 ;
-;	Note: This program was created for testing chibicc-6800-v1, 
-;	and does not pay attention to speed, accuracy, or exception handling.
+;	Note: written for chibicc-6800-v1.
+;	The code favors small size and speed on the MC6800.
+;	Results are correctly rounded to nearest.
+;	Inf, NaN, +0.0, -0.0, and subnormals are handled correctly.
+;	IEEE 754 exceptions are not handled.
 ;
 ;
 	.export _sqrtf
@@ -22,10 +25,10 @@ __t:	.byte	0,0,0,0		; trial
 ;	@long = sqrtf(@long)
 ;
 _sqrtf:
-	jsr	__f32isNaNorInf	; @long is NaN or Inf?
-	bcs	__sqrtf_ret	; @long is NaN, return @long
+	jsr	__f32isNaNorInf	; @long is NaN or Inf? C:NaN, Z:Inf
+	bcs	__sqrtf_ret	; NaN, return @long
 	bne	__sqrtf_01
-	ldab	@long		; @long is Inf, sign?
+	ldab	@long		; Inf, check sign
         bpl     __sqrtf_ret     ;   +Inf, return @long
 __sqrtf_NaN:
 	jmp	__f32NaN	;   -Inf, return NaN
@@ -145,7 +148,7 @@ __sqrtf_20:
 ;	adcb	__s+1
 ;	stab	__t+1
 ;	ldab	__r
-;	adcb	__s		; __t < 2^26, so no carry reaches
+;	adcb	__s		; __t < 2^26, so no carry reaches __t
 ;	stab	__t
 ;
 	ldab	@long+3

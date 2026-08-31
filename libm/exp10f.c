@@ -21,7 +21,7 @@
 #define LOG10_2_LO   0x1.3509f8p-18f
 #define LN10_C       0x1.35d8dep-2f
 
-#define QLN2 744261120L
+#define QLN2 0x2C5C8600     // ln2 * 2^30
 
 static float n_f, r;
 static long z;
