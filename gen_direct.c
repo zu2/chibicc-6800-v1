@@ -518,10 +518,6 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test, b
     if ((addr=is_addr_constant(node))!=NULL) {
       if (test) return 1;
       switch(node->ty->kind) {
-      case TY_BOOL:
-      case TY_CHAR:
-        println("\t%s #%s",opb,addr);
-        return 1;
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
