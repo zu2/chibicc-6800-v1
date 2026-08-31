@@ -273,7 +273,7 @@ static int node_cost(Node *node)
   }else if (is_pointer_constant(node,NULL)) {
     return 5;
   }else if (is_addr_constant(node)) {
-    return 5+sign;
+    return 5;
   }else if (is_global_var(node)) {
     return 150+sign;
   }else if (is_var_addr_constant(node)) {
