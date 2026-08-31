@@ -127,7 +127,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
     return false;
   }
 
-  if (can_direct_char(rhs)) {
+  if (can_direct_8bit(rhs)) {
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
       if (val == 0) {
@@ -186,7 +186,7 @@ static bool gen_jump_if_false_8bit(Node *node, char *if_false)
       }
     } else {
       gen_expr(lhs);
-      gen_direct_char(rhs, "cmpb", NULL);
+      gen_direct_8bit(rhs, "cmpb");
     }
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
@@ -982,7 +982,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
     return false;
   }
 
-  if (can_direct_char(rhs)) {
+  if (can_direct_8bit(rhs)) {
     if (is_integer_constant(rhs, &val)) {
       gen_expr(lhs);
       if (val == 0) {
@@ -1041,7 +1041,7 @@ static bool gen_jump_if_true_8bit(Node *node, char *if_true)
       }
     } else {
       gen_expr(lhs);
-      gen_direct_char(rhs, "cmpb", NULL);
+      gen_direct_8bit(rhs, "cmpb");
     }
   }else if (test_addr_x(rhs)) {
     gen_expr(lhs);
