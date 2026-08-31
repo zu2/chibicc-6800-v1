@@ -259,8 +259,8 @@ gen_mul8s(Node *node)
         return true;
       }
     }
-    if (can_direct_char(rhs)) {
-      gen_direct_char(rhs,"ldaa",NULL);
+    if (can_direct_8bit(rhs)) {
+      gen_direct_8bit(rhs,"ldaa");
     }else if (test_addr_x(rhs)) {
       int off = gen_addr_x(rhs);
       println("\tldaa %d,x",off);
