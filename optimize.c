@@ -491,6 +491,8 @@ Node *optimize_expr(Node *node)
   if (!node)
     return node;
 
+  if (!opt_foptimize) return node;
+
   node = optimize_const_expr(node);
 
   switch (node->kind) {
@@ -1373,6 +1375,8 @@ Node *optimize_condition(Node *node)
 
   if (!node)
     return node;
+
+  if (!opt_foptimize) return node;
 
   node = optimize_expr(node);
 

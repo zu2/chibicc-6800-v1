@@ -722,3 +722,4 @@ bool builtin_copysignf(Node *node);
 
 extern bool opt_fwrapv;
 extern bool opt_fdouble_as_float;
+extern bool opt_foptimize;

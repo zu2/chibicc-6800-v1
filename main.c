@@ -49,6 +49,7 @@ bool opt_fbuiltin_fabsf = true;
 bool opt_fbuiltin_copysignf = true;
 bool opt_fwrapv = false;
 bool opt_fdouble_as_float = true;
+bool opt_foptimize = true;
 
 bool opt(char op, char lv)
 {
@@ -289,6 +290,14 @@ static void parse_args(int argc, char **argv) {
     if (!strcmp(argv[i], "-fno-double-as-float")) {
       opt_fdouble_as_float = false;
       undef_macro("__CHIBICC_6800_DOUBLE_AS_FLOAT__");
+      continue;
+    }
+    if (!strcmp(argv[i], "-foptimize")) {
+      opt_foptimize = true;
+      continue;
+    }
+    if (!strcmp(argv[i], "-fno-optimize")) {
+      opt_foptimize = false;
       continue;
     }
 
