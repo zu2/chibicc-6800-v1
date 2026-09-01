@@ -636,6 +636,10 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
     } // ND_DEREF
     return false;
   case ND_CAST:
+    if (!is_int8(node->lhs->ty)
+    &&  !is_int16_or_ptr_or_array(node->lhs->ty)) {
+      return false;
+    }
     if (is_empty_cast(node->lhs->ty, node->ty)
     &&  gen_direct_imm_ext_sub(node->lhs, opb, opa, test))
       return true;
