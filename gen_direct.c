@@ -473,6 +473,9 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
       case TY_CHAR:
         if (test) return true;
         println("\t%s %ld",opb,node->lhs->val);
+        if (!is_store && opa) {
+          println("\t%s #0",opa);
+        }
         return true;
       case TY_SHORT:
       case TY_INT:
@@ -497,6 +500,9 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
         case TY_BOOL:
         case TY_CHAR:
           println("\t%s _%s",opb,node->lhs->var->name);
+          if (!is_store && opa) {
+            println("\t%s #0",opa);
+          }
           if (is_store) {
             invalidate_EXT(node->lhs);
           }
@@ -529,6 +535,9 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
         case TY_BOOL:
         case TY_CHAR:
           println("\t%s %ld",opb,node->lhs->lhs->val);
+          if (!is_store && opa) {
+            println("\t%s #0",opa);
+          }
           return true;
         case TY_SHORT:
         case TY_INT:
@@ -564,6 +573,9 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
           }else{
             println("\t%s _%s+%ld",opb,lhs->lhs->var->name,val);
           }
+          if (!is_store && opa) {
+            println("\t%s #0",opa);
+          }
           return true;
         case TY_SHORT:
         case TY_INT:
@@ -595,6 +607,9 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
             println("\t%s _%s",opb,lhs->var->name);
           }else{
             println("\t%s _%s+%ld",opb,lhs->var->name,val);
+          }
+          if (!is_store && opa) {
+            println("\t%s #0",opa);
           }
           return true;
         case TY_SHORT:
@@ -631,6 +646,7 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
       return true;
     }
     if (node->ty->kind      == TY_PTR
+    &&  (!is_int8(node->lhs->ty) || node->lhs->ty->is_unsigned) // !signed char
     &&  gen_direct_imm_ext_sub(node->lhs, opb, opa, test))
       return true;
     // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) m +0 )
