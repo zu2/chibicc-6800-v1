@@ -697,9 +697,8 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
         switch(node->ty->kind) {
         case TY_BOOL:
         case TY_CHAR:
-          if (test) {
-            return node->ty->is_unsigned;
-          }
+          if (!node->ty->is_unsigned) return false;
+          if (test) return true;
           println("\t%s _%s+%d",opb,name,moff);
           if (!is_store && opa) {
             println("\t%s #0",opa);
@@ -762,9 +761,8 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
     }
     if (!test_addr_x(node)) return false;
     if (is_int8(node->ty)) {
-      if (test) {
-        return node->ty->is_unsigned;
-      }
+      if (!node->ty->is_unsigned) return false;
+      if (test) return true;
       int off = gen_addr_x(node);
       println("\t%s %d,x",opb,off);
       if (!is_store && opa) {
@@ -799,9 +797,8 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
-        if (test) {
-          return node->ty->is_unsigned;
-        }
+        if (!node->ty->is_unsigned) return false;
+        if (test) return true;
         int off = gen_addr_x(node);
         println("\t%s %d,x",opb,off);
         if (!is_store && opa) {
