@@ -4959,16 +4959,6 @@ void gen_expr(Node *node)
       gen_direct(lhs,"stab","staa");
       return;
     }
-    if (node->lhs->kind == ND_DEREF
-    &&  is_integer(node->lhs->ty)
-    &&  node->lhs->ty->size <= 2
-    &&  node->lhs->lhs->kind == ND_CAST
-    &&  node->lhs->lhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->lhs->lhs->lhs,&val)) {
-      gen_expr(node->rhs);
-      gen_direct(node->lhs,"stab","staa");
-      return;
-    }
     if ((ty = is_integer_constant(node->rhs,&val))
     &&  ty->size <= 2
     &&  is_integer_or_ptr(node->ty)
@@ -5004,9 +4994,9 @@ void gen_expr(Node *node)
       }
       return;
     }
-    if (can_direct(node->lhs)) {
+    if (can_direct_ext_ix(node->lhs)) {
       gen_expr(node->rhs);
-      gen_direct(node->lhs,"stab","staa");
+      gen_direct_ext_ix(node->lhs,"stab","staa");
       return;
     }
     if (test_addr_x(node->lhs)){
