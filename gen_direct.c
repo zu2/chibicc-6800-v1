@@ -368,7 +368,7 @@ int gen_direct_lr_8bit(Node *node, char *opb)
     return false;
 }
 
-static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
+static bool gen_direct_imm_sub(Node *node,char *opb, char *opa, bool test)
 {
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
   char *addr;
@@ -450,10 +450,83 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
         return true;
       }
     }else{
+      if (node->ty->kind==TY_FUNC) return false;
+      if (node->ty->kind==TY_ARRAY) {
+        if (test) return true;
+        println("\t%s #<_%s",opb,node->var->name);
+        if (opa) {
+          println("\t%s #>_%s",opa,node->var->name);
+        }
+	      return true;
+      }
+    }
+    return false;
+  } // ND_VAR
+  case ND_CAST:
+    if (!is_int8(node->lhs->ty)
+    &&  !is_int16_or_ptr_or_array(node->lhs->ty)) {
+      return false;
+    }
+    if (is_empty_cast(node->lhs->ty, node->ty)
+    &&  gen_direct_imm_sub(node->lhs, opb, opa, test))
+      return true;
+    if (is_int16(node->ty)
+    &&  node->lhs->ty->kind == TY_CHAR
+    &&  node->lhs->ty->is_unsigned
+    &&  gen_direct_imm_sub(node->lhs, opb, opa, test)) {
+      return true;
+    }
+    if (node->ty->kind      == TY_PTR
+    &&  (!is_int8(node->lhs->ty) || node->lhs->ty->is_unsigned) // !signed char
+    &&  gen_direct_imm_sub(node->lhs, opb, opa, test))
+      return true;
+    // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) m +0 )
+    if (node->ty->kind == TY_PTR
+    &&  node->lhs->kind == ND_VAR
+    &&  is_local_array(node->lhs)) {
+       if (test) return true;
+      println("\taddb @bp+1");
+      println("\tadca @bp");
+      if (node->lhs->var->offset){
+        println("\taddb #<%d",node->lhs->var->offset);
+        println("\tadca #>%d",node->lhs->var->offset);
+      }
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+bool can_direct_imm(Node *node)
+{
+  return gen_direct_imm_sub(node,NULL,NULL,true);
+}
+
+bool gen_direct_imm(Node *node,char *opb, char *opa)
+{
+  return gen_direct_imm_sub(node,opb,opa,false);
+}
+
+static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
+{
+  int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
+
+  switch(node->kind){
+  case ND_NUM:
+    return false;
+  case ND_VAR: {
+    if (node->var->ty->kind == TY_VLA ) {
+      return false;
+    }
+    if(node->var->is_local){
+      return false;
+    }else{
       // global
       if (node->ty->kind==TY_FUNC) return false;
 //    if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned && !opa)
 //        return false;
+      if (node->ty->kind==TY_ARRAY) return false;
       if (test) return true;
       if (is_int8(node->ty)) {
         println("\t%s _%s",opb,node->var->name);
@@ -465,13 +538,6 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
         }
 	      return true;
 	    }
-      if (node->ty->kind==TY_ARRAY) {
-        println("\t%s #<_%s",opb,node->var->name);
-        if (opa) {
-          println("\t%s #>_%s",opa,node->var->name);
-        }
-	      return true;
-      }
       println("\t%s _%s+1",opb,node->var->name);
       if (opa) {
         println("\t%s _%s",opa,node->var->name);
@@ -661,31 +727,18 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
       return false;
     }
     if (is_empty_cast(node->lhs->ty, node->ty)
-    &&  gen_direct_imm_ext_sub(node->lhs, opb, opa, test))
+    &&  gen_direct_ext_sub(node->lhs, opb, opa, test))
       return true;
     if (is_int16(node->ty)
     &&  node->lhs->ty->kind == TY_CHAR
     &&  node->lhs->ty->is_unsigned
-    &&  gen_direct_imm_ext_sub(node->lhs, opb, opa, test)) {
+    &&  gen_direct_ext_sub(node->lhs, opb, opa, test)) {
       return true;
     }
     if (node->ty->kind      == TY_PTR
     &&  (!is_int8(node->lhs->ty) || node->lhs->ty->is_unsigned) // !signed char
-    &&  gen_direct_imm_ext_sub(node->lhs, opb, opa, test))
+    &&  gen_direct_ext_sub(node->lhs, opb, opa, test))
       return true;
-    // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) m +0 )
-    if (node->ty->kind == TY_PTR
-    &&  node->lhs->kind == ND_VAR
-    &&  is_local_array(node->lhs)) {
-       if (test) return true;
-      println("\taddb @bp+1");
-      println("\tadca @bp");
-      if (node->lhs->var->offset){
-        println("\taddb #<%d",node->lhs->var->offset);
-        println("\tadca #>%d",node->lhs->var->offset);
-      }
-      return true;
-    }
     return false;
   default:
     if (test_addr_x(node)) {
@@ -728,9 +781,20 @@ static bool gen_direct_imm_ext_sub(Node *node,char *opb, char *opa, bool test)
   return false;
 }
 
+bool can_direct_ext(Node *node)
+{
+  return gen_direct_ext_sub(node,NULL,NULL,true);
+}
+
+bool gen_direct_ext(Node *node,char *opb, char *opa)
+{
+  return gen_direct_ext_sub(node,opb,opa,false);
+}
+
 bool can_direct_imm_ext(Node *node)
 {
-  if (gen_direct_imm_ext_sub(node,NULL,NULL,true)) {
+  if (can_direct_imm(node)
+  ||  can_direct_ext(node)) {
     return true;
   }
 
@@ -739,7 +803,14 @@ bool can_direct_imm_ext(Node *node)
 
 bool gen_direct_imm_ext(Node *node,char *opb, char *opa)
 {
-  return gen_direct_imm_ext_sub(node,opb,opa,0);
+  if (can_direct_imm(node)) {
+    return gen_direct_imm(node,opb,opa);
+  }
+  if (can_direct_ext(node)) {
+    return gen_direct_ext(node,opb,opa);
+  }
+
+  return false;
 }
 
 static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
@@ -833,6 +904,26 @@ bool can_direct_ix(Node *node)
 bool gen_direct_ix(Node *node,char *opb, char *opa)
 {
   return gen_direct_ix_sub(node,opb,opa,false);
+}
+
+bool can_direct_ext_ix(Node *node)
+{
+  if (can_direct_ext(node)
+  ||  can_direct_ix (node)) {
+    return true;
+  }
+  return false;
+}
+
+bool gen_direct_ext_ix(Node *node,char *opb, char *opa)
+{
+  if (can_direct_ext(node)) {
+    return gen_direct_ext(node, opb, opa);
+  }
+  if (can_direct_ix(node)) {
+    return gen_direct_ix(node, opb, opa);
+  }
+  return false;
 }
 
 bool can_direct(Node *node)
