@@ -786,6 +786,16 @@ bool can_direct_ext(Node *node)
   return gen_direct_ext_sub(node,NULL,NULL,true);
 }
 
+bool can_direct_store_ext(Node *node)
+{
+  return gen_direct_ext_sub(node,NULL,NULL,true);
+}
+
+bool gen_direct_store_ext(Node *node,char *opb, char *opa)
+{
+  return gen_direct_ext_sub(node,opb,is_int8(node->ty)?NULL:opa,false);
+}
+
 bool gen_direct_ext(Node *node,char *opb, char *opa)
 {
   return gen_direct_ext_sub(node,opb,opa,false);
@@ -906,6 +916,16 @@ bool gen_direct_ix(Node *node,char *opb, char *opa)
   return gen_direct_ix_sub(node,opb,opa,false);
 }
 
+bool can_direct_store_ix(Node *node)
+{
+  return gen_direct_ix_sub(node,NULL,NULL,true);
+}
+
+bool gen_direct_store_ix(Node *node,char *opb, char *opa)
+{
+  return gen_direct_ix_sub(node,opb,is_int8(node->ty)?NULL:opa,false);
+}
+
 bool can_direct_ext_ix(Node *node)
 {
   if (can_direct_ext(node)
@@ -922,6 +942,26 @@ bool gen_direct_ext_ix(Node *node,char *opb, char *opa)
   }
   if (can_direct_ix(node)) {
     return gen_direct_ix(node, opb, opa);
+  }
+  return false;
+}
+
+bool can_direct_store_ext_ix(Node *node)
+{
+  if (can_direct_store_ext(node)
+  ||  can_direct_store_ix (node)) {
+    return true;
+  }
+  return false;
+}
+
+bool gen_direct_store_ext_ix(Node *node,char *opb, char *opa)
+{
+  if (can_direct_store_ext(node)) {
+    return gen_direct_store_ext(node, opb, opa);
+  }
+  if (can_direct_store_ix(node)) {
+    return gen_direct_store_ix(node, opb, opa);
   }
   return false;
 }
