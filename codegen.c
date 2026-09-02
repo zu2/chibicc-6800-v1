@@ -4922,8 +4922,8 @@ void gen_expr(Node *node)
       if (is_integer_constant(rhs, &val)) {
         if (val==0) {
           if (node->retval_unused) {
-            if (can_direct(lhs)) {
-              gen_direct(lhs,"clr","clr");
+            if (can_direct_store_ext_ix(lhs)) {
+              gen_direct_store_ext_ix(lhs,"clr","clr");
               return;
             }else if (test_addr_x(lhs)) {
               int off = gen_addr_x(node->lhs);
@@ -4935,9 +4935,9 @@ void gen_expr(Node *node)
           if (lhs->ty->kind == TY_BOOL) {
             val = !!val;
           }
-          if (can_direct(lhs)) {
+          if (can_direct_store_ext_ix(lhs)) {
             ldab_i(val);
-            gen_direct(node->lhs,"stab","staa");
+            gen_direct_store_ext_ix(node->lhs,"stab","staa");
             return;
           }else if (test_addr_x(lhs)) {
             ldab_i(val);
@@ -4948,24 +4948,24 @@ void gen_expr(Node *node)
         }
       }
     }
-    if (can_direct(lhs) && lhs->ty->size == 2) {
+    if (can_direct_store_ext_ix(lhs) && lhs->ty->size == 2) {
       if (node->retval_unused && is_integer_constant(rhs, &val)) {
         if (val==0) {
-          gen_direct(lhs,"clr","clr");
+          gen_direct_store_ext_ix(lhs,"clr","clr");
           return;
         }
       }
       gen_expr(rhs);
-      gen_direct(lhs,"stab","staa");
+      gen_direct_store_ext_ix(lhs,"stab","staa");
       return;
     }
     if ((ty = is_integer_constant(node->rhs,&val))
     &&  ty->size <= 2
     &&  is_integer_or_ptr(node->ty)
     &&  node->lhs->ty->size <= 2) {
-      if (can_direct(node->lhs)) {
+      if (can_direct_store_ext_ix(node->lhs)) {
         gen_direct(node->rhs,"ldab","ldaa");
-        gen_direct(node->lhs,"stab","staa");
+        gen_direct_store_ext_ix(node->lhs,"stab","staa");
       }else if (test_addr_x(node->lhs)){
         int off = gen_addr_x(node->lhs);
         if (node->retval_unused && val==0) {
@@ -4994,9 +4994,9 @@ void gen_expr(Node *node)
       }
       return;
     }
-    if (can_direct_ext_ix(node->lhs)) {
+    if (can_direct_store_ext_ix(node->lhs)) {
       gen_expr(node->rhs);
-      gen_direct_ext_ix(node->lhs,"stab","staa");
+      gen_direct_store_ext_ix(node->lhs,"stab","staa");
       return;
     }
     if (test_addr_x(node->lhs)){
