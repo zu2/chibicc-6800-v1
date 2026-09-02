@@ -214,6 +214,19 @@ bool can_direct_8bit_ext(Node *node)
   return gen_direct_8bit_ext_sub(node,NULL,true);
 }
 
+bool can_direct_8bit_store_ext(Node *node)
+{
+  if (!is_int8(node->ty)) {
+    return false;
+  }
+  return gen_direct_8bit_ext_sub(node,NULL,true);
+}
+
+bool gen_direct_8bit_store_ext(Node *node, char *opb)
+{
+  return gen_direct_8bit_ext_sub(node,opb,false);
+}
+
 bool gen_direct_8bit_ext(Node *node, char *opb)
 {
   return gen_direct_8bit_ext_sub(node,opb,false);
@@ -317,6 +330,19 @@ bool gen_direct_8bit_ix(Node *node, char *opb)
   return gen_direct_8bit_ix_sub(node,opb,0);
 }
 
+bool can_direct_8bit_store_ix(Node *node)
+{
+  if (!is_int8(node->ty)) {
+    return false;
+  }
+  return gen_direct_8bit_ix_sub(node,NULL,true);
+}
+
+bool gen_direct_8bit_store_ix(Node *node, char *opb)
+{
+  return gen_direct_8bit_ix_sub(node,opb,0);
+}
+
 bool can_direct_8bit_ext_ix(Node *node)
 {
   if (can_direct_8bit_ext(node)
@@ -333,6 +359,26 @@ bool gen_direct_8bit_ext_ix(Node *node, char *opb)
   }
   if (can_direct_8bit_ix(node)) {
     return gen_direct_8bit_ix(node, opb);
+  }
+  return false;
+}
+
+bool can_direct_8bit_store_ext_ix(Node *node)
+{
+  if (can_direct_8bit_store_ext(node)
+  ||  can_direct_8bit_store_ix (node)) {
+    return true;
+  }
+  return false;
+}
+
+bool gen_direct_8bit_store_ext_ix(Node *node, char *opb)
+{
+  if (can_direct_8bit_store_ext(node)) {
+    return gen_direct_8bit_store_ext(node, opb);
+  }
+  if (can_direct_8bit_store_ix(node)) {
+    return gen_direct_8bit_store_ix(node, opb);
   }
   return false;
 }
