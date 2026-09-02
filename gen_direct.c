@@ -831,6 +831,10 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
 {
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
 
+  if (!is_integer_or_ptr(node->ty)) {
+    return false;
+  }
+
   switch(node->kind){
   case ND_NUM:
     return false;
