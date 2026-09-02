@@ -4922,8 +4922,8 @@ void gen_expr(Node *node)
       if (is_integer_constant(rhs, &val)) {
         if (val==0) {
           if (node->retval_unused) {
-            if (can_direct_store_ext_ix(lhs)) {
-              gen_direct_store_ext_ix(lhs,"clr","clr");
+            if (can_direct_8bit_store_ext_ix(lhs)) {
+              gen_direct_8bit_store_ext_ix(lhs,"clr");
               return;
             }else if (test_addr_x(lhs)) {
               int off = gen_addr_x(node->lhs);
@@ -4935,9 +4935,9 @@ void gen_expr(Node *node)
           if (lhs->ty->kind == TY_BOOL) {
             val = !!val;
           }
-          if (can_direct_store_ext_ix(lhs)) {
+          if (can_direct_8bit_store_ext_ix(lhs)) {
             ldab_i(val);
-            gen_direct_store_ext_ix(node->lhs,"stab","staa");
+            gen_direct_8bit_store_ext_ix(node->lhs,"stab");
             return;
           }else if (test_addr_x(lhs)) {
             ldab_i(val);
