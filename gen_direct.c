@@ -523,7 +523,8 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
 {
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
 
-  if (!is_integer_or_ptr(node->ty)) {
+  if (!is_int8(node->ty)
+  &&  !is_int16_or_ptr(node->ty)) {
     return false;
   }
 
