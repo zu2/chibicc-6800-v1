@@ -65,7 +65,8 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
     assert(0);
   }
 
-  if (!is_integer_or_ptr(node->ty)) {
+  if (!is_int8(node->ty)
+  &&  !is_int16_or_ptr(node->ty)) {
     return false;
   }
 
@@ -249,7 +250,8 @@ static bool gen_direct_8bit_ix_sub(Node *node, char *opb, bool test)
     assert(0);
   }
 
-  if (!is_integer_or_ptr(node->ty)) {
+  if (!is_int8(node->ty)
+  &&  !is_int16_or_ptr(node->ty)) {
     return false;
   }
 
