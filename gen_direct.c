@@ -61,6 +61,10 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
   int is_store = ((opb!=NULL) && ((strncmp(opb,"sta",3)==0)
                                || (strcmp (opb,"clr")==0)));
 
+  if (is_store && !is_int8(node->ty)) {
+    assert(0);
+  }
+
   if (!is_integer_or_ptr(node->ty)) {
     return false;
   }
