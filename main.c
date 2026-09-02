@@ -529,6 +529,10 @@ static void parse_args(int argc, char **argv) {
       case '2':
       case '3':
         break;
+      case '-':
+        opt_O = '0';
+        opt_foptimize = false;
+        break;
       default:
         error("unknown optimize option: %s", argv[i]);
       }
@@ -600,7 +604,8 @@ static void parse_args(int argc, char **argv) {
       opt_nostartfiles = 1;
       continue;
     }
-    if (!strcmp(argv[i], "-nostatic-locals")) {
+    if (!strcmp(argv[i], "-nostatic-locals")
+    ||  !strcmp(argv[i], "-fno-static-locals")) {
       opt_nostatic_locals = 1;
       continue;
     }

@@ -8,7 +8,7 @@ OPT_g=""
 
 while true; do
   case "$1" in
-  -O0|-O1|-O2|-O3|-Os)
+  -O-|-O0|-O1|-O2|-O3|-Os)
     OPT_O=$1
     shift
     ;;
@@ -16,8 +16,12 @@ while true; do
     OPT_g=$1
     shift
     ;;
-  -nostatic-locals)
-    OPT="$OPT -nostatic-locals"
+  -fno-static-locals|-nostatic-locals)
+    OPT="$OPT -fno-static-locals"
+    shift
+    ;;
+  -fno-optimize)
+    OPT="$OPT -fno-optimize"
     shift
     ;;
   --)
