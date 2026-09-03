@@ -4984,9 +4984,7 @@ void gen_expr(Node *node)
         }
       }
       if ((ty = is_integer_constant(node->rhs,&val))
-      &&  ty->size <= 2
-      &&  is_integer_or_ptr(node->ty)
-      &&  node->lhs->ty->size <= 2) {
+      &&  ty->size <= 2) {
         if (can_direct_8bit_store_ext_ix(node->lhs)) {
           gen_direct(node->rhs,"ldab","ldaa");
           gen_direct_8bit_store_ext_ix(node->lhs,"stab");
@@ -5032,7 +5030,7 @@ void gen_expr(Node *node)
     }
 
     if (is_int16_or_ptr(lhs->ty) || lhs->ty->kind == TY_VLA) {
-      if (is_int16_or_ptr(lhs->ty) && can_direct_store_ext_ix(lhs)) {
+      if (can_direct_store_ext_ix(lhs)) {
         if (node->retval_unused && is_integer_constant(rhs, &val)) {
           if (val==0) {
             gen_direct_store_ext_ix(lhs,"clr","clr");
@@ -5044,9 +5042,7 @@ void gen_expr(Node *node)
         return;
       }
       if ((ty = is_integer_constant(node->rhs,&val))
-      &&  ty->size <= 2
-      &&  is_integer_or_ptr(node->ty)
-      &&  node->lhs->ty->size <= 2) {
+      &&  ty->size <= 2) {
         if (test_addr_array(node->lhs)) {
           int off = gen_addr_array(node->lhs);
           if (node->retval_unused && val==0) {
