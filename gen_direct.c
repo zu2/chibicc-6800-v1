@@ -519,8 +519,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     }else{
       // global
       if (node->ty->kind==TY_FUNC) return false;
-//    if (node->ty->kind==TY_CHAR && !node->ty->is_unsigned && !opa)
-//        return false;
+      if (is_int8(node->ty) && !node->ty->is_unsigned) return false;
       if (node->ty->kind==TY_ARRAY) return false;
       if (test) return true;
       if (is_int8(node->ty)) {
@@ -551,6 +550,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
+        if (!node->ty->is_unsigned) return false;
         if (test) return true;
         if (off == 0) {
           println("\t%s _%s",opb,name);
