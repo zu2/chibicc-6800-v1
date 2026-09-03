@@ -5854,7 +5854,7 @@ void gen_expr(Node *node)
       return;
     }
     if (node->lhs->kind == ND_MUL
-    &&  node->lhs->ty == ty_int
+    &&  is_int16(node->lhs->ty)
     &&  is_integer_constant(node->lhs->rhs, &val)
     &&  val==2
     &&  is_int16(node->lhs->lhs->ty)
@@ -6065,7 +6065,8 @@ void gen_expr(Node *node)
     }
     assert(0);
   case ND_DIV:
-    if (node->lhs->ty ==  node->ty){
+    if (is_int16(node->lhs->ty)
+    &&  is_int16(node->ty)){
       switch(node->rhs->kind){
       case ND_NUM:
         switch (node->rhs->ty->kind) {
