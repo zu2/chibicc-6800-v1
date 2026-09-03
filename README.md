@@ -190,7 +190,7 @@ Benchmark performance continues to improve with ongoing compiler development.
   - Update: 183.56 seconds, 0.062 DMIPS (2025/09/17).
   - Update: 179.84 seconds, 0.063 DMIPS (2025/11/13).
   - Update: 160.84 seconds, 0.070 DMIPS (2026/01/10).
-  - Update: 134.04 seconds, 0.076 DMIPS (2026/09/01).
+  - Update: 149.20 seconds, 0.076 DMIPS (2026/09/01).
 
 If running on 2MHz MC68B00: 0.1526 DMIPS, faster than HITECH C CPM V309-15 (0.1278 DMIPS) and IAR Z80 V4.06A (0.14838 DMIPS)
 
