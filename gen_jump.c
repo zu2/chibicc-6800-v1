@@ -869,6 +869,18 @@ bool gen_jump_if_false(Node *node, char *if_false)
       default: ;
         assert(0);    // It's strange to fail
       }
+  } else if ((node->kind==ND_EQ || node->kind==ND_NE)
+         && (can_addsub_local_array_addr(rhs))) {
+    gen_expr(lhs);
+    if (!gen_addsub_local_array_addr(rhs, "subb", "sbca")) {
+      assert(0);
+    }
+  } else if ((node->kind==ND_EQ || node->kind==ND_NE)
+         && (can_addsub_local_array_addr(lhs))) {
+    gen_expr(rhs);
+    if (!gen_addsub_local_array_addr(lhs, "subb", "sbca")) {
+      assert(0);
+    }
   } else if (can_direct(rhs)) {
     gen_expr(lhs);
     if (!gen_direct(rhs, "subb", "sbca")) {
@@ -1733,6 +1745,18 @@ bool gen_jump_if_true(Node *node, char *if_true)
       default: ;
         assert(0);    // It's strange to fail
       }
+  } else if ((node->kind==ND_EQ || node->kind==ND_NE)
+         && (can_addsub_local_array_addr(rhs))) {
+    gen_expr(lhs);
+    if (!gen_addsub_local_array_addr(rhs, "subb", "sbca")) {
+      assert(0);
+    }
+  } else if ((node->kind==ND_EQ || node->kind==ND_NE)
+         && (can_addsub_local_array_addr(lhs))) {
+    gen_expr(rhs);
+    if (!gen_addsub_local_array_addr(lhs, "subb", "sbca")) {
+      assert(0);
+    }
   } else if (can_direct(rhs)) {
     gen_expr(lhs);
     if (!gen_direct(rhs, "subb", "sbca")) {
