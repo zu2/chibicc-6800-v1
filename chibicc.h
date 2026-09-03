@@ -588,6 +588,8 @@ void pushlx(int off);
 void pushl(void);
 void pushf(void);
 int gen_addr_x(Node *node);
+bool can_addsub_local_array_addr(Node *node);
+bool gen_addsub_local_array_addr(Node *node, char *opb, char *opa);
 void gen_addr(Node *node);
 int count(void);
 char *new_label(char *fmt);

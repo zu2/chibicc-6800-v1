@@ -949,6 +949,34 @@ void gen_shr(Type *ty, uint64_t val)
 }
 
 
+static bool gen_addsub_local_array_addr_sub(Node *node, char *opb, char *opa, bool test)
+{
+  Node *var = skip_empty_cast(node);
+
+  if (!is_local_array(var)) {
+    return false;
+  }
+  if (test) return true;
+  println("\t%s @bp+1", opb);
+  println("\t%s @bp", opa);
+  if (var->var->offset == 0) {
+    return true;
+  }
+  println("\t%s #<%d", opb, var->var->offset);
+  println("\t%s #>%d", opa, var->var->offset);
+  return true;
+}
+
+bool can_addsub_local_array_addr(Node *node)
+{
+  return gen_addsub_local_array_addr_sub(node, NULL, NULL, true);
+}
+
+bool gen_addsub_local_array_addr(Node *node, char *opb, char *opa)
+{
+  return gen_addsub_local_array_addr_sub(node, opb, opa, false);
+}
+
 void gen_addr(Node *node)
 {
   switch (node->kind) {
