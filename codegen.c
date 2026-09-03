@@ -1589,6 +1589,11 @@ static int addr_x_offset(Node *node)
   &&  node->member->is_bitfield) {
     return -1;
   }
+  if (node->kind == ND_VAR
+  &&  node->var->ty->kind == TY_VLA
+  &&  node->var->offset <= 252) {
+    return 0;
+  }
   if (is_global_var(node) || is_global_array(node)) {
     return 0;
   }
