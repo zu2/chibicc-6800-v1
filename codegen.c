@@ -5728,8 +5728,21 @@ void gen_expr(Node *node)
       println("\ttab");
       return;
     }
-    if (gen_direct_lr(node,"addb","adca"))
+    if (can_addsub_local_array_addr(node->lhs)) {
+      gen_expr(node->rhs);
+      if (gen_addsub_local_array_addr(node->lhs,"addb","adca"))
+        return;
+      assert(0);
+    }
+    if (can_addsub_local_array_addr(node->rhs)) {
+      gen_expr(node->lhs);
+      if (gen_addsub_local_array_addr(node->rhs,"addb","adca"))
+        return;
+      assert(0);
+    }
+    if (gen_direct_lr(node,"addb","adca")) {
       return;
+    }
     if (node->lhs->kind == ND_CAST
     &&  is_int16(node->lhs->ty)
     &&  is_int8(node->lhs->lhs->ty)
@@ -5875,6 +5888,13 @@ void gen_expr(Node *node)
       println("\ttab");
       return;
     }
+
+    if (can_addsub_local_array_addr(node->rhs)) {
+      gen_expr(node->lhs);
+      if (gen_addsub_local_array_addr(node->rhs,"subb","sbca"))
+        return;
+      assert(0);
+    }
     if (can_direct(node->rhs)){
       gen_expr(node->lhs);
       if(gen_direct(node->rhs,"subb","sbca"))
@@ -5908,6 +5928,14 @@ void gen_expr(Node *node)
       println("\tadca %d,x",node->lhs->var->offset);
       return;
     }
+
+    if (can_addsub_local_array_addr(node->lhs)) {
+      gen_expr(node->rhs);
+      negd();
+      if (gen_addsub_local_array_addr(node->lhs,"addb","adca"))
+        return;
+      assert(0);
+    }
     if (can_direct(node->lhs)){
       gen_expr(node->rhs);
       negd();
@@ -5915,6 +5943,7 @@ void gen_expr(Node *node)
         return;
       assert(0);
     }
+
     if (test_addr_x(node->lhs)){
       gen_expr(node->rhs);
       negd();
