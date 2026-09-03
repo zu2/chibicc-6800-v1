@@ -4970,10 +4970,6 @@ void gen_expr(Node *node)
             if (can_direct_8bit_store_ext_ix(lhs)) {
               gen_direct_8bit_store_ext_ix(lhs,"clr");
               return;
-            }else if (test_addr_x(lhs)) {
-              int off = gen_addr_x(node->lhs);
-              println("\tclr %d,x",off);
-              return;
             }
           }
         }else{ // val!=0
@@ -4984,11 +4980,6 @@ void gen_expr(Node *node)
             ldab_i(val);
             gen_direct_8bit_store_ext_ix(node->lhs,"stab");
             return;
-          }else if (test_addr_x(lhs)) {
-            ldab_i(val);
-            int off = gen_addr_x(node->lhs);
-            println("\tstab %d,x",off);
-            return;
           }
         }
       }
@@ -4996,21 +4987,9 @@ void gen_expr(Node *node)
       &&  ty->size <= 2
       &&  is_integer_or_ptr(node->ty)
       &&  node->lhs->ty->size <= 2) {
-        if (is_int8(node->lhs->ty)
-        &&  can_direct_8bit_store_ext_ix(node->lhs)) {
+        if (can_direct_8bit_store_ext_ix(node->lhs)) {
           gen_direct(node->rhs,"ldab","ldaa");
           gen_direct_8bit_store_ext_ix(node->lhs,"stab");
-        }else if (can_direct_store_ext_ix(node->lhs)) {
-          gen_direct(node->rhs,"ldab","ldaa");
-          gen_direct_store_ext_ix(node->lhs,"stab","staa");
-        }else if (test_addr_x(node->lhs)){
-          int off = gen_addr_x(node->lhs);
-          if (node->retval_unused && val==0) {
-            clr_x(node->ty,off);
-          }else{
-            gen_expr(node->rhs);
-            store_x(node->ty,off);
-          }
         }else if (test_addr_array(node->lhs)) {
           int off = gen_addr_array(node->lhs);
           if (node->retval_unused && val==0) {
@@ -5034,17 +5013,6 @@ void gen_expr(Node *node)
       if (can_direct_8bit_store_ext_ix(node->lhs)) {
         gen_expr(node->rhs);
         gen_direct_8bit_store_ext_ix(node->lhs,"stab");
-        return;
-      }
-      if (can_direct_store_ext_ix(node->lhs)) {
-        gen_expr(node->rhs);
-        gen_direct_store_ext_ix(node->lhs,"stab","staa");
-        return;
-      }
-      if (test_addr_x(node->lhs)){
-        gen_expr(node->rhs);
-        int off = gen_addr_x(node->lhs);
-        store_x(node->ty,off);
         return;
       }
       if (can_direct_imm_ext(node->rhs)) {
@@ -5079,22 +5047,7 @@ void gen_expr(Node *node)
       &&  ty->size <= 2
       &&  is_integer_or_ptr(node->ty)
       &&  node->lhs->ty->size <= 2) {
-        if (is_int8(node->lhs->ty)
-        &&  can_direct_8bit_store_ext_ix(node->lhs)) {
-          gen_direct(node->rhs,"ldab","ldaa");
-          gen_direct_8bit_store_ext_ix(node->lhs,"stab");
-        }else if (can_direct_store_ext_ix(node->lhs)) {
-          gen_direct(node->rhs,"ldab","ldaa");
-          gen_direct_store_ext_ix(node->lhs,"stab","staa");
-        }else if (test_addr_x(node->lhs)){
-          int off = gen_addr_x(node->lhs);
-          if (node->retval_unused && val==0) {
-            clr_x(node->ty,off);
-          }else{
-            gen_expr(node->rhs);
-            store_x(node->ty,off);
-          }
-        }else if (test_addr_array(node->lhs)) {
+        if (test_addr_array(node->lhs)) {
           int off = gen_addr_array(node->lhs);
           if (node->retval_unused && val==0) {
             clr_x(node->ty,off);
@@ -5114,17 +5067,6 @@ void gen_expr(Node *node)
         }
         return;
       }
-      if (can_direct_store_ext_ix(node->lhs)) {
-        gen_expr(node->rhs);
-        gen_direct_store_ext_ix(node->lhs,"stab","staa");
-        return;
-      }
-      if (test_addr_x(node->lhs)){
-        gen_expr(node->rhs);
-        int off = gen_addr_x(node->lhs);
-        store_x(node->ty,off);
-        return;
-      }
       if (can_direct_imm_ext(node->rhs)) {
         gen_addr(node->lhs);
         tfr_dx();
@@ -5142,11 +5084,7 @@ void gen_expr(Node *node)
       return;
     }
 
-    gen_addr(node->lhs);
-    push();
-    gen_expr(node->rhs);
-    store(node->ty);
-    return;
+    assert(0);
   } // ND_ASSIGN
   case ND_ADDEQ:
   case ND_SUBEQ:
