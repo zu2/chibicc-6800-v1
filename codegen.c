@@ -1859,7 +1859,7 @@ int gen_addr_array_sub(Node *node,bool test)
   &&  is_local_array(node->lhs->rhs)
   &&  node->lhs->rhs->var->offset <=252
   &&  node->lhs->lhs->kind == ND_MUL
-  &&  node->lhs->lhs->ty == ty_int
+  &&  is_int16(node->lhs->lhs->ty)
   &&  is_integer_constant(node->lhs->lhs->rhs,&val)
   &&  val==2
   &&  is_local_var(node->lhs->lhs->lhs)
