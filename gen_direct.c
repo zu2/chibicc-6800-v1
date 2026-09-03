@@ -794,6 +794,17 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
     return true;
   } // ND_VAR
   case ND_CAST:
+    if (is_int16(node->ty)
+    &&  node->lhs->ty->kind == TY_LONG
+    &&  test_addr_x(node->lhs)) {
+      if (test) return true;
+      int off = gen_addr_x(node->lhs);
+      println("\t%s %d,x",opb,off+node->lhs->ty->size-1);
+      if (opa) {
+        println("\t%s %d,x",opa,off+node->lhs->ty->size-2);
+      }
+      return true;
+    }
     if (!is_int8(node->lhs->ty)
     &&  !is_int16_or_ptr_or_array(node->lhs->ty)) {
       return false;
