@@ -5002,7 +5002,7 @@ void gen_expr(Node *node)
           if (node->retval_unused && val==0) {
             clr_x(node->ty,0);
           }else{
-            gen_direct_imm_ext(node->rhs,"ldab","ldaa");
+            ldab_i(val);
             store_x(node->ty,0);
           }
         }
@@ -5057,7 +5057,7 @@ void gen_expr(Node *node)
           if (node->retval_unused && val==0) {
             clr_x(node->ty,0);
           }else{
-            gen_direct_imm_ext(node->rhs,"ldab","ldaa");
+            ldd_i(val);
             store_x(node->ty,0);
           }
         }
