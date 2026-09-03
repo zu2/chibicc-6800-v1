@@ -612,9 +612,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       return false;
     // (ND_DEREF ty_int (ND_VAR TY_ARRAY(12) _L_1 global)
     case ND_VAR: {
-      if (!is_integer(node->ty) || node->ty->kind==TY_LONG) {
-        return false;
-      }
+      assert(is_integer_or_ptr(node->ty));
       if (is_global_array(node->lhs)) {
         if (test) return true;
         switch(node->ty->kind) {
@@ -645,9 +643,8 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     } // ND_DEREF → ND_VAR
       break;
     case ND_CAST: {
-      if (!is_integer_or_ptr(node->ty) || node->ty->kind==TY_LONG) {
-        return false;
-      }
+      assert(is_integer_or_ptr(node->ty));
+
       if (node->lhs->ty->kind  == TY_PTR
       &&  node->lhs->lhs->kind == ND_NUM
       &&  is_integer(node->lhs->lhs->ty)) {
