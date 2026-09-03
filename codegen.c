@@ -4976,7 +4976,7 @@ void gen_expr(Node *node)
         }
       }
     }
-    if (can_direct_store_ext_ix(lhs) && lhs->ty->size == 2) {
+    if (is_int16_or_ptr(lhs->ty) && can_direct_store_ext_ix(lhs)) {
       if (node->retval_unused && is_integer_constant(rhs, &val)) {
         if (val==0) {
           gen_direct_store_ext_ix(lhs,"clr","clr");
