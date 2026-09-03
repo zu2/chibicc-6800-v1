@@ -782,43 +782,44 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     &&  gen_direct_ext_sub(node->lhs, opb, opa, test))
       return true;
     return false;
-  default:
-    if (test_addr_x(node)) {
-      if (node->kind == ND_MEMBER
-      &&  !node->member->is_bitfield
-      &&  is_global_var(node->lhs)) {
-        char *name = node->lhs->var->name;
-        int moff = node->member->offset;
-        switch(node->ty->kind) {
-        case TY_BOOL:
-        case TY_CHAR:
-          if (!node->ty->is_unsigned) return false;
-          if (test) return true;
-          println("\t%s _%s+%d",opb,name,moff);
-          if (!is_store && opa) {
-            println("\t%s #0",opa);
-          }
-          if (is_store) {
-            invalidate_EXT(node->lhs);
-          }
-          return true;
-        case TY_INT:
-        case TY_SHORT:
-        case TY_ENUM:
-        case TY_PTR:
-          if (test) return true;
-          println("\t%s _%s+%d",opb,name,moff+1);
-          if (opa) {
-            println("\t%s _%s+%d",opa,name,moff);
-          }
-          if (is_store) {
-            invalidate_EXT(node->lhs);
-          }
-          return true;
-        }
+  case ND_MEMBER: {
+    if (node->member->is_bitfield) {
+      return false;
+    }
+    if (!is_global_var(node->lhs)) {
+      return false;
+    }
+    char *name = node->lhs->var->name;
+    int moff = node->member->offset;
+    switch(node->ty->kind) {
+    case TY_BOOL:
+    case TY_CHAR:
+      if (!node->ty->is_unsigned) return false;
+      if (test) return true;
+      println("\t%s _%s+%d",opb,name,moff);
+      if (!is_store && opa) {
+        println("\t%s #0",opa);
       }
+      if (is_store) {
+        invalidate_EXT(node->lhs);
+      }
+      return true;
+    case TY_INT:
+    case TY_SHORT:
+    case TY_ENUM:
+    case TY_PTR:
+      if (test) return true;
+      println("\t%s _%s+%d",opb,name,moff+1);
+      if (opa) {
+        println("\t%s _%s+%d",opa,name,moff);
+      }
+      if (is_store) {
+        invalidate_EXT(node->lhs);
+      }
+      return true;
     }
     return false;
+  } // ND_MEMBER
   }
   return false;
 }
