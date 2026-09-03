@@ -60,6 +60,8 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
 {
   int is_store = ((opb!=NULL) && ((strncmp(opb,"sta",3)==0)
                                || (strcmp (opb,"clr")==0)));
+  Node   *base;
+  int64_t off = 0;
 
   if (is_store && !is_int8(node->ty)) {
     assert(0);
@@ -129,66 +131,22 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
       return true;
     }
 
-    if (node->lhs->kind == ND_VAR
-    &&  is_global_array(node->lhs)) {
+    if ((base = find_base_var(node,&off))) {
+      char *name = base->var->name;
+      int   d    = off + node->ty->size-1;
 
       if (test) return true;
 
-      if (node->ty->size == 1) {
-        println("\t%s _%s",opb,node->lhs->var->name);
+      if (d == 0) {
+        println("\t%s _%s",opb,name);
       } else {
-        println("\t%s _%s+%d",opb,node->lhs->var->name,node->ty->size-1);
+        println("\t%s _%s+%d",opb,name,d);
       }
 
       if (is_store) {
-        invalidate_EXT(node->lhs);
+        invalidate_EXT(base);
       }
       return true;
-    }
-    if (node->lhs->kind == ND_ADD) {
-      Node *lhs = node->lhs->lhs;
-      Node *rhs = node->lhs->rhs;
-      int64_t val;
-
-      if (lhs->kind == ND_CAST
-      &&  lhs->ty->kind == TY_PTR
-      &&  is_global_array(lhs->lhs)
-      &&  rhs->kind == ND_CAST
-      &&  rhs->ty->kind == TY_PTR
-      &&  is_integer_constant(rhs->lhs,&val)) {
-
-        if (test) return true;
-
-        if (val + node->ty->size-1 == 0) {
-          println("\t%s _%s",opb,lhs->lhs->var->name);
-        } else {
-          println("\t%s _%s+%ld",opb,lhs->lhs->var->name,val + node->ty->size-1);
-        }
-
-        if (is_store) {
-          invalidate_EXT(lhs->lhs);
-        }
-
-        return true;
-      }
-
-      if (is_global_array(lhs)
-      &&  is_integer_constant(rhs,&val)) {
-
-        if (test) return true;
-
-        if (val + node->ty->size-1 == 0) {
-          println("\t%s _%s",opb,lhs->var->name);
-        } else {
-          println("\t%s _%s+%ld",opb,lhs->var->name,val + node->ty->size-1);
-        }
-
-        if (is_store) {
-          invalidate_EXT(lhs);
-        }
-
-        return true;
-      }
     }
     return false;
   } // ND_DEREF
@@ -540,6 +498,8 @@ bool gen_direct_imm(Node *node,char *opb, char *opa)
 static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
 {
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
+  Node   *base;
+  int64_t off = 0;
   char *addr;
 
   if (!is_int8(node->ty)
@@ -585,6 +545,45 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     return false;
   } // ND_VAR
   case ND_DEREF:
+    if ((base = find_base_var(node,&off))) {
+      char *name = base->var->name;
+
+      switch(node->ty->kind) {
+      case TY_BOOL:
+      case TY_CHAR:
+        if (test) return true;
+        if (off == 0) {
+          println("\t%s _%s",opb,name);
+        } else {
+          println("\t%s _%s+%ld",opb,name,off);
+        }
+        if (!is_store && opa) {
+          println("\t%s #0",opa);
+        }
+        if (is_store) {
+          invalidate_EXT(base);
+        }
+        return true;
+      case TY_SHORT:
+      case TY_INT:
+      case TY_ENUM:
+      case TY_PTR:
+        if (test) return true;
+        println("\t%s _%s+%ld",opb,name,off+1);
+        if (opa) {
+          if (off == 0) {
+            println("\t%s _%s",opa,name);
+          } else {
+            println("\t%s _%s+%ld",opa,name,off);
+          }
+        }
+        if (is_store) {
+          invalidate_EXT(base);
+        }
+        return true;
+      }
+      return false;
+    }
     switch(node->lhs->kind){
     // (ND_DEREF ty_char (ND_NUM TY_PTR e000))
     case ND_NUM:
@@ -610,38 +609,6 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
         return true;
       } // ND_DEREF → ND_NUM
       return false;
-    // (ND_DEREF ty_int (ND_VAR TY_ARRAY(12) _L_1 global)
-    case ND_VAR: {
-      assert(is_integer_or_ptr(node->ty));
-      if (is_global_array(node->lhs)) {
-        if (test) return true;
-        switch(node->ty->kind) {
-        case TY_BOOL:
-        case TY_CHAR:
-          println("\t%s _%s",opb,node->lhs->var->name);
-          if (!is_store && opa) {
-            println("\t%s #0",opa);
-          }
-          if (is_store) {
-            invalidate_EXT(node->lhs);
-          }
-          return true;
-        case TY_SHORT:
-        case TY_INT:
-        case TY_ENUM:
-        case TY_PTR:
-          println("\t%s _%s+1",opb,node->lhs->var->name);
-          if (opa) {
-            println("\t%s _%s",  opa,node->lhs->var->name);
-          }
-          if (is_store) {
-            invalidate_EXT(node->lhs);
-          }
-          return true;
-        }
-      }
-    } // ND_DEREF → ND_VAR
-      break;
     case ND_CAST: {
       assert(is_integer_or_ptr(node->ty));
 
@@ -670,87 +637,6 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       }
     } // ND_DEREF → ND_CAST
       break;
-    case ND_ADD: { // ND_DEREF → ND_ADD
-      // global array[const]
-      Node *lhs = node->lhs->lhs;
-      Node *rhs = node->lhs->rhs;
-      int64_t val;
-      if (lhs->kind == ND_CAST
-      &&  lhs->ty->kind  == TY_PTR
-      &&  is_global_array(lhs->lhs)
-      &&  rhs->kind == ND_CAST
-      &&  rhs->ty->kind == TY_PTR
-      &&  is_integer_constant(rhs->lhs,&val)) {
-
-        switch(node->ty->kind) {
-        case TY_BOOL:
-        case TY_CHAR:
-          if (test) return true;
-          if (val==0) {
-            println("\t%s _%s",opb,lhs->lhs->var->name);
-          }else{
-            println("\t%s _%s+%ld",opb,lhs->lhs->var->name,val);
-          }
-          if (!is_store && opa) {
-            println("\t%s #0",opa);
-          }
-          return true;
-        case TY_SHORT:
-        case TY_INT:
-        case TY_ENUM:
-        case TY_PTR:
-          if (test) return true;
-          if (val==0) {
-            println("\t%s _%s+1",opb,lhs->lhs->var->name);
-            if (opa) {
-              println("\t%s _%s",opa,lhs->lhs->var->name);
-            }
-          }else{
-            println("\t%s _%s+%ld+1",opb,lhs->lhs->var->name,val);
-            if (opa) {
-              println("\t%s _%s+%ld",opa,lhs->lhs->var->name,val);
-            }
-          }
-          return true;
-        }
-        return false;
-      }
-      if (is_global_array(lhs)
-      &&  is_integer_constant(rhs,&val)) {
-        switch(node->ty->kind) {
-        case TY_BOOL:
-        case TY_CHAR:
-          if (test) return true;
-          if (val==0) {
-            println("\t%s _%s",opb,lhs->var->name);
-          }else{
-            println("\t%s _%s+%ld",opb,lhs->var->name,val);
-          }
-          if (!is_store && opa) {
-            println("\t%s #0",opa);
-          }
-          return true;
-        case TY_SHORT:
-        case TY_INT:
-        case TY_ENUM:
-        case TY_PTR:
-          if (test) return true;
-          if (val==0) {
-            println("\t%s _%s+1",opb,lhs->var->name);
-            if (opa) {
-              println("\t%s _%s",  opa,lhs->var->name);
-            }
-          }else{
-            println("\t%s _%s+%ld+1",opb,lhs->var->name,val);
-            if (opa) {
-              println("\t%s _%s+%ld",  opa,lhs->var->name,val);
-            }
-          }
-          return true;
-        }
-      }
-    } // ND_DEREF → ND_ADD
-    break;
     } // ND_DEREF
     return false;
   case ND_CAST:
