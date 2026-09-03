@@ -1060,7 +1060,7 @@ static int addr_x_offset(Node *node);
 // &gd.in.arr[1] -> IX=&gd; off = 0 + 4 + 2
 // (ND_ADD (ND_MEMBER arr:4 (ND_MEMBER in:0 (ND_VAR gd))) 2)
 //
-static Obj *find_base_var(Node *node, int64_t *off)
+Node *find_base_var(Node *node, int64_t *off)
 {
   int64_t val;
 
@@ -1073,6 +1073,16 @@ static Obj *find_base_var(Node *node, int64_t *off)
   &&  (node->lhs->ty->kind == TY_ARRAY
     || (node->lhs->kind == ND_ADD && is_decay_type(node->lhs->lhs->ty)))) {
     return find_base_var(node->lhs,off);
+  }
+  if (node->kind == ND_DEREF) {
+    Node *addr = node->lhs;
+    if (addr->kind == ND_CAST
+    &&  addr->ty->kind == TY_PTR) {
+      addr = addr->lhs;
+    }
+    if (addr->kind == ND_ADDR) {
+      return find_base_var(addr->lhs,off);
+    }
   }
   if (node->kind == ND_ADD
   &&  is_decay_type(node->lhs->ty)
@@ -1088,15 +1098,16 @@ static Obj *find_base_var(Node *node, int64_t *off)
     return NULL;
   if (node->ty->kind == TY_FUNC)
     return NULL;
-  return node->var;
+  return node;
 }
 
 char *is_var_addr_constant(Node *node)
 {
   int64_t off = 0;
-  Obj *var = find_base_var(node,&off);
+  Node *base = find_base_var(node,&off);
 
-  if (var) {
+  if (base) {
+    Obj *var = base->var;
     char *p = calloc(1,strlen(var->name)+32);
     if (off==0) {
       sprintf(p,"_%s",var->name);
@@ -1108,7 +1119,7 @@ char *is_var_addr_constant(Node *node)
   return NULL;
 }
 
-static Obj *find_base_addr(Node *node, int64_t *off)
+static Node *find_base_addr(Node *node, int64_t *off)
 {
   int64_t val;
 
@@ -1138,7 +1149,7 @@ static Obj *find_base_addr(Node *node, int64_t *off)
 char *is_addr_constant(Node *node)
 {
   int64_t off = 0;
-  Obj *var = NULL;
+  Node *base = NULL;
 
   if (node->kind == ND_CAST
   &&  node->ty->kind == TY_PTR) {
@@ -1157,8 +1168,9 @@ char *is_addr_constant(Node *node)
     sprintf(p,"_%s",node->lhs->var->name);
     return p;
   }
-  var = find_base_addr(node,&off);
-  if (var) {
+  base = find_base_addr(node,&off);
+  if (base) {
+    Obj *var = base->var;
     char *p = calloc(1,strlen(var->name)+32);
     if (off==0) {
       sprintf(p,"_%s",var->name);

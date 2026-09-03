@@ -658,6 +658,7 @@ bool is_compare_or_not(Node *node);
 bool is_boolean_result(Node *node);
 char *is_addr_constant(Node *node);
 char *is_var_addr_constant(Node *node);
+Node *find_base_var(Node *node, int64_t *off);
 Node *is_array_base(Node *node);
 bool gen_jump_if_false(Node *node,char *if_false);
 bool gen_jump_if_true(Node *node,char *if_true);
