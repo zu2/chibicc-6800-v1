@@ -4986,7 +4986,7 @@ void gen_expr(Node *node)
       if ((ty = is_integer_constant(node->rhs,&val))
       &&  ty->size <= 2) {
         if (can_direct_8bit_store_ext_ix(node->lhs)) {
-          gen_direct(node->rhs,"ldab","ldaa");
+          ldab_i(val);
           gen_direct_8bit_store_ext_ix(node->lhs,"stab");
         }else if (test_addr_array(node->lhs)) {
           int off = gen_addr_array(node->lhs);
