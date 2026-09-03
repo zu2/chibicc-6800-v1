@@ -493,21 +493,6 @@ static bool gen_direct_imm_sub(Node *node,char *opb, char *opa, bool test)
       return false;
     }
     if(node->var->is_local){
-      if (node->ty->kind==TY_ARRAY) {
-        if (test) return true;
-        println("\t%s @bp+1",opb);
-        if (opa) {
-          println("\t%s @bp",opa);
-        }
-        if (strcmp(opb,"addb")==0 && node->var->offset==0) {
-          return true;
-        }
-        println("\t%s #<%d",opb,node->var->offset);
-        if (opa) {
-          println("\t%s #>%d",opa,node->var->offset);
-        }
-        return true;
-      }
     }else{
       if (node->ty->kind==TY_FUNC) return false;
       if (node->ty->kind==TY_ARRAY) {
@@ -539,19 +524,6 @@ static bool gen_direct_imm_sub(Node *node,char *opb, char *opa, bool test)
     &&  (!is_int8(node->lhs->ty) || node->lhs->ty->is_unsigned) // !signed char
     &&  gen_direct_imm_sub(node->lhs, opb, opa, test))
       return true;
-    // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) m +0 )
-    if (node->ty->kind == TY_PTR
-    &&  node->lhs->kind == ND_VAR
-    &&  is_local_array(node->lhs)) {
-       if (test) return true;
-      println("\taddb @bp+1");
-      println("\tadca @bp");
-      if (node->lhs->var->offset){
-        println("\taddb #<%d",node->lhs->var->offset);
-        println("\tadca #>%d",node->lhs->var->offset);
-      }
-      return true;
-    }
     return false;
   }
   return false;
