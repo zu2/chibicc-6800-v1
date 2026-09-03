@@ -907,6 +907,10 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
     return true;
   } // ND_VAR
   case ND_CAST:
+    if (!is_int8(node->lhs->ty)
+    &&  !is_int16_or_ptr_or_array(node->lhs->ty)) {
+      return false;
+    }
     if (is_empty_cast(node->lhs->ty, node->ty)
     &&  gen_direct_ix_sub(node->lhs, opb, opa, test))
       return true;
@@ -917,6 +921,7 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
       return true;
     }
     if (node->ty->kind      == TY_PTR
+    &&  (!is_int8(node->lhs->ty) || node->lhs->ty->is_unsigned) // !signed char
     &&  gen_direct_ix_sub(node->lhs, opb, opa, test))
       return true;
     return false;
