@@ -65,8 +65,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
     assert(0);
   }
 
-  if (!is_int8(node->ty)
-  &&  !is_int16_or_ptr(node->ty)) {
+  if (!is_integer_or_ptr(node->ty)) {
     return false;
   }
 
@@ -263,8 +262,7 @@ static bool gen_direct_8bit_ix_sub(Node *node, char *opb, bool test)
     assert(0);
   }
 
-  if (!is_int8(node->ty)
-  &&  !is_int16_or_ptr(node->ty)) {
+  if (!is_integer_or_ptr(node->ty)) {
     return false;
   }
 
@@ -542,6 +540,7 @@ bool gen_direct_imm(Node *node,char *opb, char *opa)
 static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
 {
   int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
+  char *addr;
 
   if (!is_int8(node->ty)
   &&  !is_int16_or_ptr(node->ty)) {
@@ -758,6 +757,16 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     } // ND_DEREF
     return false;
   case ND_CAST:
+    if (is_int16(node->ty)
+    &&  node->lhs->ty->kind == TY_LONG
+    &&  (addr = is_var_addr_constant(node->lhs))) {
+      if (test) return true;
+      println("\t%s %s+%d",opb,addr,node->lhs->ty->size-1);
+      if (opa) {
+        println("\t%s %s+%d",opa,addr,node->lhs->ty->size-2);
+      }
+      return true;
+    }
     if (!is_int8(node->lhs->ty)
     &&  !is_int16_or_ptr_or_array(node->lhs->ty)) {
       return false;

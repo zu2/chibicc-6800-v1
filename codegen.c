@@ -5108,6 +5108,15 @@ void gen_expr(Node *node)
       }
       assert(0);
     }
+    if (is_int16_or_ptr(node->ty)
+    &&  is_integer(node->lhs->ty)
+    &&  node->ty->size < node->lhs->ty->size
+    &&  can_direct(node)) {
+      if (gen_direct(node,"ldab","ldaa")) {
+        return;
+      }
+      assert(0);
+    }
     gen_expr(node->lhs);
     cast(node->lhs->ty, node->ty);
     return;
