@@ -5022,6 +5022,12 @@ void gen_expr(Node *node)
       }
       return;
     }
+    if (is_int8(node->lhs->ty)
+    &&  can_direct_8bit_store_ext_ix(node->lhs)) {
+      gen_expr(node->rhs);
+      gen_direct_8bit_store_ext_ix(node->lhs,"stab");
+      return;
+    }
     if (can_direct_store_ext_ix(node->lhs)) {
       gen_expr(node->rhs);
       gen_direct_store_ext_ix(node->lhs,"stab","staa");
