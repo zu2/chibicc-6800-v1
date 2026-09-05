@@ -4689,21 +4689,20 @@ void gen_expr(Node *node)
       load_bitfield(node);
       return;
     }
-    if (opt('O','2')
-    &&  node->ty->size == 4
-    &&  (addr = is_var_addr_constant(node))) {
-      println("\tldx %s+2",addr);
-      println("\tstx @long+2");
-      println("\tldx %s",  addr);
-      println("\tstx @long");
-      IX_invalidate();
-      return;
-    }
     if (node->ty->size == 4
     &&  (addr = is_var_addr_constant(node))) {
-      ldx_IMM_STR(addr);
-      println("\tjsr __load32x");
-      return;
+      if (opt('O','2')) {
+        println("\tldx %s+2",addr);
+        println("\tstx @long+2");
+        println("\tldx %s",  addr);
+        println("\tstx @long");
+        IX_invalidate();
+        return;
+      } else {
+        ldx_IMM_STR(addr);
+        println("\tjsr __load32x");
+        return;
+      }
     }
     if (is_int8(node->ty) && can_direct_8bit(node)) {
       if (gen_direct_8bit(node,"ldab")) {
