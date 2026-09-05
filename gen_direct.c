@@ -407,14 +407,7 @@ static bool gen_direct_imm_sub(Node *node,char *opb, char *opa, bool test)
   case ND_NUM: {
     switch (node->ty->kind) {
     case TY_BOOL:
-    case TY_CHAR:		// TODO:
-      if (test) return true;
-      if (strcmp(opb,"ldab")==0) {
-        ldab_i((uint16_t)node->val);
-        return true;
-      }
-      println("\t%s #<%u", opb, (uint16_t)node->val);
-      return true;
+    case TY_CHAR:
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
