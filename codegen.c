@@ -3293,10 +3293,10 @@ static void opeq(Node *node)
             println("\tsubb #%ld",val);
             println("\tstab %d,x",off);
             return;
-          }else if (is_global_var(rhs) && rhs->ty->kind==TY_CHAR) {
+          } else if (is_int8(rhs->ty) && can_direct_8bit_ext(rhs)) {
             int off = gen_addr_x(lhs);
             println("\tldab %d,x",off);
-            println("\tsubb _%s",rhs->var->name);
+            gen_direct_8bit_ext(rhs,"subb");
             println("\tstab %d,x",off);
             return;
           }
