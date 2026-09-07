@@ -1,9 +1,25 @@
 #include "chibicc.h"
 
+bool is_store(char *opb)
+{
+  if (opb==NULL)  return false;
+  if (strncmp(opb,"sta",3)==0
+  ||  strcmp( opb,"clr")==0
+  ||  strcmp( opb,"inc")==0
+  ||  strcmp( opb,"dec")==0
+  ||  strcmp( opb,"asl")==0
+  ||  strcmp( opb,"rol")==0
+  ||  strcmp( opb,"asr")==0
+  ||  strcmp( opb,"lsr")==0
+  ||  strcmp( opb,"ror")==0) {
+    return true;
+  }
+  return false;
+}
+
 static bool gen_direct_8bit_imm_sub(Node *node, char *opb, bool test)
 {
-  if (opb!=NULL
-  && ((strncmp(opb,"sta",3)==0) || (strcmp(opb,"clr")==0))) {
+  if (is_store(opb)) {
     assert(0);
   }
 
@@ -58,12 +74,10 @@ bool gen_direct_8bit_imm(Node *rhs, char *opb)
 
 static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
 {
-  int is_store = ((opb!=NULL) && ((strncmp(opb,"sta",3)==0)
-                               || (strcmp (opb,"clr")==0)));
   Node   *base;
   int64_t off = 0;
 
-  if (is_store && !is_int8(node->ty)) {
+  if (is_store(opb) && !is_int8(node->ty)) {
     assert(0);
   }
 
@@ -87,7 +101,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
     } else {
       println("\t%s _%s+%d",opb,node->var->name,node->ty->size-1);
     }
-    if (is_store) {
+    if (is_store(opb)) {
       invalidate_EXT(node);
     }
     return true;
@@ -104,7 +118,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
 
     println("\t%s _%s+%d",opb,node->lhs->var->name,
                           node->member->offset + node->ty->size-1);
-    if (is_store) {
+    if (is_store(opb)) {
       invalidate_EXT(node->lhs);
     }
     return true;
@@ -143,7 +157,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
         println("\t%s _%s+%d",opb,name,d);
       }
 
-      if (is_store) {
+      if (is_store(opb)) {
         invalidate_EXT(base);
       }
       return true;
@@ -213,10 +227,7 @@ bool gen_direct_8bit_imm_ext(Node *node, char *opb)
 
 static bool gen_direct_8bit_ix_sub(Node *node, char *opb, bool test)
 {
-  int is_store = ((opb!=NULL) && ((strncmp(opb,"sta",3)==0)
-                               || (strcmp (opb,"clr")==0)));
-
-  if (is_store && !is_int8(node->ty)) {
+  if (is_store(opb) && !is_int8(node->ty)) {
     assert(0);
   }
 
@@ -385,10 +396,9 @@ int gen_direct_lr_8bit(Node *node, char *opb)
 
 static bool gen_direct_imm_sub(Node *node,char *opb, char *opa, bool test)
 {
-  int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
   char *addr;
 
-  if (!is_store && (addr=is_addr_constant(node))) {
+  if (!is_store(opb) && (addr=is_addr_constant(node))) {
     switch (node->ty->kind) {
     case TY_SHORT:
     case TY_INT:
@@ -490,7 +500,6 @@ bool gen_direct_imm(Node *node,char *opb, char *opa)
 
 static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
 {
-  int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
   Node   *base;
   int64_t off = 0;
   char *addr;
@@ -517,10 +526,10 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       if (test) return true;
       if (is_int8(node->ty)) {
         println("\t%s _%s",opb,node->var->name);
-        if (!is_store && opa) {
+        if (!is_store(opb) && opa) {
           println("\t%s #0",opa);
         }
-   	    if (is_store) {
+   	    if (is_store(opb)) {
           invalidate_EXT(node);
         }
 	      return true;
@@ -529,7 +538,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       if (opa) {
         println("\t%s _%s",opa,node->var->name);
       }
-      if (is_store) {
+      if (is_store(opb)) {
         invalidate_EXT(node);
       }
       return true;
@@ -550,10 +559,10 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
         } else {
           println("\t%s _%s+%ld",opb,name,off);
         }
-        if (!is_store && opa) {
+        if (!is_store(opb) && opa) {
           println("\t%s #0",opa);
         }
-        if (is_store) {
+        if (is_store(opb)) {
           invalidate_EXT(base);
         }
         return true;
@@ -570,7 +579,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
             println("\t%s _%s+%ld",opa,name,off);
           }
         }
-        if (is_store) {
+        if (is_store(opb)) {
           invalidate_EXT(base);
         }
         return true;
@@ -586,7 +595,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       case TY_CHAR:
         if (test) return true;
         println("\t%s %ld",opb,node->lhs->val);
-        if (!is_store && opa) {
+        if (!is_store(opb) && opa) {
           println("\t%s #0",opa);
         }
         return true;
@@ -613,7 +622,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
         case TY_BOOL:
         case TY_CHAR:
           println("\t%s %ld",opb,node->lhs->lhs->val);
-          if (!is_store && opa) {
+          if (!is_store(opb) && opa) {
             println("\t%s #0",opa);
           }
           return true;
@@ -676,10 +685,10 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       if (!node->ty->is_unsigned) return false;
       if (test) return true;
       println("\t%s _%s+%d",opb,name,moff);
-      if (!is_store && opa) {
+      if (!is_store(opb) && opa) {
         println("\t%s #0",opa);
       }
-      if (is_store) {
+      if (is_store(opb)) {
         invalidate_EXT(node->lhs);
       }
       return true;
@@ -692,7 +701,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       if (opa) {
         println("\t%s _%s+%d",opa,name,moff);
       }
-      if (is_store) {
+      if (is_store(opb)) {
         invalidate_EXT(node->lhs);
       }
       return true;
@@ -747,8 +756,6 @@ bool gen_direct_imm_ext(Node *node,char *opb, char *opa)
 
 static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
 {
-  int is_store = ((opb!=NULL) && ((strcmp(opb,"stab")==0) || (strcmp(opb,"clr")==0)));
-
   if (!is_int8(node->ty)
   &&  !is_int16_or_ptr(node->ty)) {
     return false;
@@ -773,7 +780,7 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
       if (test) return true;
       int off = gen_addr_x(node);
       println("\t%s %d,x",opb,off);
-      if (!is_store && opa) {
+      if (!is_store(opb) && opa) {
         println("\t%s #0",opa);
       }
     }else{
@@ -825,7 +832,7 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
         if (test) return true;
         int off = gen_addr_x(node);
         println("\t%s %d,x",opb,off);
-        if (!is_store && opa) {
+        if (!is_store(opb) && opa) {
           println("\t%s #0",opa);
         }
         return true;
