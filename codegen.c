@@ -3102,7 +3102,7 @@ static void opeq(Node *node)
       gen_opeq32(node);
       return;
     // Handle non-char/int RHS case? XXX
-    case TY_BOOL:
+    case TY_BOOL: {
       switch (rhs->ty->kind) {
       case TY_LONG: {
         char *label = new_label("L_%d");
@@ -3140,7 +3140,8 @@ static void opeq(Node *node)
         return;
       }
       error_tok(node->tok, "opeq: bad rhs type for _Bool +=");
-    case TY_CHAR:
+    } // TY_BOOL
+    case TY_CHAR: {
       if (can_direct_8bit_ext_ix(lhs)) {
         gen_expr(rhs);
         cast(rhs->ty,ty_int);
@@ -3156,6 +3157,7 @@ static void opeq(Node *node)
       println("\taddb 0,x");
       println("\tstab 0,x");
       return;
+    } // TY_CHAR
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
@@ -3167,13 +3169,12 @@ static void opeq(Node *node)
         gen_direct_store_ext_ix(lhs,"stab","staa");
         return;
       }
-      if (is_integer_constant(rhs,&val)) {
+      if (can_direct_imm_ext(rhs)) {
         gen_addr(lhs);
         tfr_dx();
         println("\tldab 1,x");
         println("\tldaa 0,x");
-        println("\taddb #<%ld",val);
-        println("\tadca #>%ld",val);
+        gen_direct_imm_ext(rhs,"addb","adca");
         println("\tstab 1,x");
         println("\tstaa 0,x");
         return;
@@ -3192,7 +3193,7 @@ static void opeq(Node *node)
       assert(0);
     }
     assert(0);
-  }
+  } // ND_ADDEQ
   case ND_SUBEQ: {
     switch(node->ty->kind) {
     case TY_LONG:
