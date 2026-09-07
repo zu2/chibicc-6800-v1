@@ -3249,42 +3249,34 @@ static void opeq(Node *node)
       }
       error_tok(node->tok, "opeq: bad rhs type for _Bool -=");
     case TY_CHAR: {
-        if (test_addr_x(lhs)) {
-          if (is_integer_constant(rhs,&val)) {
-            int off = gen_addr_x(lhs);
-            if (node->retval_unused) {
+        if (can_direct_8bit_ext_ix(lhs)) {
+          if (can_direct_8bit_imm_ext(rhs)) {
+            if (node->retval_unused && is_integer_constant(rhs,&val)) {
               switch(val) {
               case 1:   // -= 1;
-                println("\tdec %d,x",off);
+                gen_direct_8bit_store_ext_ix(lhs,"dec");
                 return;
               case -1:  // -= -1;
-                println("\tinc %d,x",off);
+                gen_direct_8bit_store_ext_ix(lhs,"inc");
                 return;
               case 2:   // -= 2;
                 if (opt('O','s')) {
-                  println("\tdec %d,x",off);
-                  println("\tdec %d,x",off);
+                  gen_direct_8bit_store_ext_ix(lhs,"dec");
+                  gen_direct_8bit_store_ext_ix(lhs,"dec");
                   return;
                 }
               }
             }
-            println("\tldab %d,x",off);
-            println("\tsubb #%ld",val);
-            println("\tstab %d,x",off);
-            return;
-          } else if (is_int8(rhs->ty) && can_direct_8bit_ext(rhs)) {
-            int off = gen_addr_x(lhs);
-            println("\tldab %d,x",off);
-            gen_direct_8bit_ext(rhs,"subb");
-            println("\tstab %d,x",off);
+            gen_direct_8bit_ext_ix(lhs,"ldab");
+            gen_direct_8bit_imm_ext(rhs,"subb");
+            gen_direct_8bit_store_ext_ix(lhs,"stab");
             return;
           }
           gen_expr(rhs);
           cast(rhs->ty,ty_int);
           println("\tnegb");
-          int off = gen_addr_x(lhs);
-          println("\taddb %d,x",off);
-          println("\tstab %d,x",off);
+          gen_direct_8bit_ext_ix(lhs,"addb");
+          gen_direct_8bit_store_ext_ix(lhs,"stab");
           return;
         }
         gen_addr(lhs);
