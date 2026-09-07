@@ -3141,20 +3141,11 @@ static void opeq(Node *node)
       }
       error_tok(node->tok, "opeq: bad rhs type for _Bool +=");
     case TY_CHAR:
-      if (is_global_var(lhs)) {
+      if (can_direct_8bit_ext_ix(lhs)) {
         gen_expr(rhs);
         cast(rhs->ty,ty_int);
-        println("\taddb _%s",lhs->var->name);
-        println("\tstab _%s",lhs->var->name);
-        invalidate_EXT(lhs);
-        return;
-      }
-      if (test_addr_x(lhs)) {
-        gen_expr(rhs);
-        cast(rhs->ty,ty_int);
-        int off = gen_addr_x(lhs);
-        println("\taddb %d,x",off);
-        println("\tstab %d,x",off);
+        gen_direct_8bit_ext_ix(lhs,"addb");
+        gen_direct_8bit_store_ext_ix(lhs,"stab");
         return;
       }
       gen_addr(lhs);
