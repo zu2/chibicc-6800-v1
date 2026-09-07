@@ -3160,24 +3160,11 @@ static void opeq(Node *node)
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
-      if (is_global_var(lhs)) {
+      if (can_direct_ext_ix(lhs)) {
         gen_expr(rhs);
         cast(rhs->ty,ty_int);
-        println("\taddb _%s+1",lhs->var->name);
-        println("\tadca _%s",lhs->var->name);
-        println("\tstab _%s+1",lhs->var->name);
-        println("\tstaa _%s",lhs->var->name);
-        invalidate_EXT(lhs);
-        return;
-      }
-      if (test_addr_x(lhs)) {
-        gen_expr(rhs);
-        cast(rhs->ty,ty_int);
-        int off = gen_addr_x(lhs);
-        println("\taddb %d,x",off+1);
-        println("\tadca %d,x",off);
-        println("\tstab %d,x",off+1);
-        println("\tstaa %d,x",off);
+        gen_direct_ext_ix(lhs,"addb","adca");
+        gen_direct_store_ext_ix(lhs,"stab","staa");
         return;
       }
       if (is_integer_constant(rhs,&val)) {
