@@ -5868,7 +5868,6 @@ void gen_expr(Node *node)
     return;
   } // ND_ADD
   case ND_SUB:
-    // (- TY_CHAR(2) (ND_VAR ty_char x +1 ) (ND_VAR ty_char x +1 ))
     if (is_int8(node->ty)) {
       if (can_direct_8bit(node->rhs)){
         gen_expr(node->lhs);
@@ -5890,7 +5889,7 @@ void gen_expr(Node *node)
       println("\tsba");
       println("\ttab");
       return;
-    }
+    } // is_int8
 
     if (can_addsub_local_array_addr(node->rhs)) {
       gen_expr(node->lhs);
@@ -5904,7 +5903,6 @@ void gen_expr(Node *node)
         return;
       assert(0);
     }
-
     if (node->rhs->kind == ND_VAR
     &&  node->rhs->var->ty->kind == TY_VLA
     &&  node->rhs->var->offset <= 254){
@@ -5912,13 +5910,6 @@ void gen_expr(Node *node)
       ldx_bp();
       println("\tsubb %d+1,x",node->rhs->var->offset);
       println("\tsbca %d,x",node->rhs->var->offset);
-      return;
-    }
-    if (test_addr_x(node->rhs)){
-      gen_expr(node->lhs);
-      int off = gen_addr_x(node->rhs);
-      println("\tsubb %d+1,x",off);
-      println("\tsbca %d,x",off);
       return;
     }
     if (node->lhs->kind == ND_VAR
@@ -5945,15 +5936,6 @@ void gen_expr(Node *node)
       if(gen_direct(node->lhs,"addb","adca"))
         return;
       assert(0);
-    }
-
-    if (test_addr_x(node->lhs)){
-      gen_expr(node->rhs);
-      negd();
-      int off = gen_addr_x(node->lhs);
-      println("\taddb %d+1,x",off);
-      println("\tadca %d,x",off);
-      return;
     }
     if (node->lhs->kind == ND_CAST
     &&  node->lhs->ty->kind == TY_INT
