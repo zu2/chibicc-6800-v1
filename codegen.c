@@ -3301,40 +3301,26 @@ static void opeq(Node *node)
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
-      if (test_addr_x(lhs)) {
-        if (node->ty->kind == TY_PTR
-        &&  rhs->kind == ND_CAST
-        &&  rhs->ty->kind == TY_PTR) {
-          rhs = rhs->lhs;
-        }
-        if (is_integer_constant(rhs,&val)) {
-          int off = gen_addr_x(lhs);
-          println("\tldab %d,x",off+1);
-          println("\tldaa %d,x",off);
-          println("\tsubb #<%ld",val);
-          println("\tsbca #>%ld",val);
-          println("\tstab %d,x",off+1);
-          println("\tstaa %d,x",off);
-          IX_invalidate();
+      if (can_direct_ext_ix(lhs)) {
+        if (can_direct_imm_ext(rhs)) {
+          gen_direct_ext_ix(lhs,"ldab","ldaa");
+          gen_direct_imm_ext(rhs,"subb","sbca");
+          gen_direct_store_ext_ix(lhs,"stab","staa");
           return;
         }
         gen_expr(rhs);
         cast(rhs->ty,ty_int);
         negd();
-        int off = gen_addr_x(lhs);
-        println("\taddb %d,x",off+1);
-        println("\tadca %d,x",off);
-        println("\tstab %d,x",off+1);
-        println("\tstaa %d,x",off);
-        IX_invalidate();
+        gen_direct_ext_ix(lhs,"addb","adca");
+        gen_direct_store_ext_ix(lhs,"stab","staa");
         return;
       }
-      if (can_direct_imm(rhs)) {
+      if (can_direct_imm_ext(rhs)) {
         gen_addr(lhs);
         tfr_dx();
         println("\tldab 1,x");
         println("\tldaa 0,x");
-        gen_direct_imm(rhs,"subb","sbca");
+        gen_direct_imm_ext(rhs,"subb","sbca");
         println("\tstab 1,x");
         println("\tstaa 0,x");
         return;
