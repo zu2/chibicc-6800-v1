@@ -3329,13 +3329,12 @@ static void opeq(Node *node)
         IX_invalidate();
         return;
       }
-      if (is_integer_constant(rhs,&val)) {
+      if (can_direct_imm(rhs)) {
         gen_addr(lhs);
         tfr_dx();
         println("\tldab 1,x");
         println("\tldaa 0,x");
-        println("\tsubb #<%ld",val);
-        println("\tsbca #>%ld",val);
+        gen_direct_imm(rhs,"subb","sbca");
         println("\tstab 1,x");
         println("\tstaa 0,x");
         return;
