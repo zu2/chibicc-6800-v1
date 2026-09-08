@@ -3572,18 +3572,29 @@ static void opeq(Node *node)
     case TY_ENUM:
       if (node->lhs->ty->is_unsigned) {
         if (is_integer_constant(node->rhs, &val)){
+          int64_t off = 0;
+          Node *base;
           switch(val) {
           case 8:
           case 4:
           case 2:
-            if (is_global_var(node->lhs)) {
+            off = 0;
+            base = find_base_var(node->lhs,&off);
+            if (base) {
+              char *name = base->var->name;
               int n = exact_log2(val);
               for (int i=0; i<n; i++) {
-                println("\tlsr _%s",  node->lhs->var->name);
-                println("\tror _%s+1",node->lhs->var->name);
+                if (off == 0) {
+                  println("\tlsr _%s",name);
+                } else {
+                  println("\tlsr _%s+%ld",name,off);
+                }
+                println("\tror _%s+%ld",name,off+1);
               }
-              invalidate_EXT(node->lhs);
-            }else{
+              invalidate_EXT(base);
+              return;
+            }
+            if (test_addr_x(node->lhs)) {
               int off = gen_addr_x(node->lhs);
               int n = exact_log2(val);
               for (int i=0; i<n; i++) {
@@ -3591,8 +3602,9 @@ static void opeq(Node *node)
                 println("\tror %d,x",off+1);
               }
               IX_invalidate();
+              return;
             }
-            return;
+            break;
           }
         }
       }else if (is_integer_constant(node->rhs, &val)){
