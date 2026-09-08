@@ -3142,11 +3142,19 @@ static void opeq(Node *node)
       error_tok(node->tok, "opeq: bad rhs type for _Bool +=");
     } // TY_BOOL
     case TY_CHAR: {
-      if (can_direct_8bit_ext_ix(lhs)) {
+      if (can_direct_8bit_ext(lhs)) {
         gen_expr(rhs);
         cast(rhs->ty,ty_int);
-        gen_direct_8bit_ext_ix(lhs,"addb");
-        gen_direct_8bit_store_ext_ix(lhs,"stab");
+        gen_direct_8bit_ext(lhs,"addb");
+        gen_direct_8bit_store_ext(lhs,"stab");
+        return;
+      }
+      if (test_addr_x(lhs)) {
+        gen_expr(rhs);
+        cast(rhs->ty,ty_int);
+        int off = gen_addr_x(lhs);
+        println("\taddb %d,x",off);
+        println("\tstab %d,x",off);
         return;
       }
       gen_addr(lhs);
@@ -3162,11 +3170,21 @@ static void opeq(Node *node)
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
-      if (can_direct_ext_ix(lhs)) {
+      if (can_direct_ext(lhs)) {
         gen_expr(rhs);
         cast(rhs->ty,ty_int);
-        gen_direct_ext_ix(lhs,"addb","adca");
-        gen_direct_store_ext_ix(lhs,"stab","staa");
+        gen_direct_ext(lhs,"addb","adca");
+        gen_direct_store_ext(lhs,"stab","staa");
+        return;
+      }
+      if (test_addr_x(lhs)) {
+        gen_expr(rhs);
+        cast(rhs->ty,ty_int);
+        int off = gen_addr_x(lhs);
+        println("\taddb %d,x",off+1);
+        println("\tadca %d,x",off);
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
         return;
       }
       if (can_direct_imm_ext(rhs)) {
@@ -3249,34 +3267,70 @@ static void opeq(Node *node)
       }
       error_tok(node->tok, "opeq: bad rhs type for _Bool -=");
     case TY_CHAR: {
-        if (can_direct_8bit_ext_ix(lhs)) {
+        if (can_direct_8bit_ext(lhs)) {
           if (can_direct_8bit_imm_ext(rhs)) {
             if (node->retval_unused && is_integer_constant(rhs,&val)) {
               switch(val) {
               case 1:   // -= 1;
-                gen_direct_8bit_store_ext_ix(lhs,"dec");
+                gen_direct_8bit_store_ext(lhs,"dec");
                 return;
               case -1:  // -= -1;
-                gen_direct_8bit_store_ext_ix(lhs,"inc");
+                gen_direct_8bit_store_ext(lhs,"inc");
                 return;
               case 2:   // -= 2;
                 if (opt('O','s')) {
-                  gen_direct_8bit_store_ext_ix(lhs,"dec");
-                  gen_direct_8bit_store_ext_ix(lhs,"dec");
+                  gen_direct_8bit_store_ext(lhs,"dec");
+                  gen_direct_8bit_store_ext(lhs,"dec");
                   return;
                 }
               }
             }
-            gen_direct_8bit_ext_ix(lhs,"ldab");
+            gen_direct_8bit_ext(lhs,"ldab");
             gen_direct_8bit_imm_ext(rhs,"subb");
-            gen_direct_8bit_store_ext_ix(lhs,"stab");
+            gen_direct_8bit_store_ext(lhs,"stab");
             return;
           }
           gen_expr(rhs);
           cast(rhs->ty,ty_int);
           println("\tnegb");
-          gen_direct_8bit_ext_ix(lhs,"addb");
-          gen_direct_8bit_store_ext_ix(lhs,"stab");
+          gen_direct_8bit_ext(lhs,"addb");
+          gen_direct_8bit_store_ext(lhs,"stab");
+          return;
+        }
+        if (test_addr_x(lhs)) {
+          int off;
+          if (can_direct_8bit_imm_ext(rhs)) {
+            if (node->retval_unused && is_integer_constant(rhs,&val)) {
+              switch(val) {
+              case 1:   // -= 1;
+                off = gen_addr_x(lhs);
+                println("\tdec %d,x",off);
+                return;
+              case -1:  // -= -1;
+                off = gen_addr_x(lhs);
+                println("\tinc %d,x",off);
+                return;
+              case 2:   // -= 2;
+                if (opt('O','s')) {
+                  off = gen_addr_x(lhs);
+                  println("\tdec %d,x",off);
+                  println("\tdec %d,x",off);
+                  return;
+                }
+              }
+            }
+            off = gen_addr_x(lhs);
+            println("\tldab %d,x",off);
+            gen_direct_8bit_imm_ext(rhs,"subb");
+            println("\tstab %d,x",off);
+            return;
+          }
+          gen_expr(rhs);
+          cast(rhs->ty,ty_int);
+          println("\tnegb");
+          off = gen_addr_x(lhs);
+          println("\taddb %d,x",off);
+          println("\tstab %d,x",off);
           return;
         }
         gen_addr(lhs);
@@ -3293,18 +3347,39 @@ static void opeq(Node *node)
     case TY_INT:
     case TY_ENUM:
     case TY_PTR:
-      if (can_direct_ext_ix(lhs)) {
+      if (can_direct_ext(lhs)) {
         if (can_direct_imm_ext(rhs)) {
-          gen_direct_ext_ix(lhs,"ldab","ldaa");
+          gen_direct_ext(lhs,"ldab","ldaa");
           gen_direct_imm_ext(rhs,"subb","sbca");
-          gen_direct_store_ext_ix(lhs,"stab","staa");
+          gen_direct_store_ext(lhs,"stab","staa");
           return;
         }
         gen_expr(rhs);
         cast(rhs->ty,ty_int);
         negd();
-        gen_direct_ext_ix(lhs,"addb","adca");
-        gen_direct_store_ext_ix(lhs,"stab","staa");
+        gen_direct_ext(lhs,"addb","adca");
+        gen_direct_store_ext(lhs,"stab","staa");
+        return;
+      }
+      if (test_addr_x(lhs)) {
+        int off;
+        if (can_direct_imm_ext(rhs)) {
+          off = gen_addr_x(lhs);
+          println("\tldab %d,x",off+1);
+          println("\tldaa %d,x",off);
+          gen_direct_imm_ext(rhs,"subb","sbca");
+          println("\tstab %d,x",off+1);
+          println("\tstaa %d,x",off);
+          return;
+        }
+        gen_expr(rhs);
+        cast(rhs->ty,ty_int);
+        negd();
+        off = gen_addr_x(lhs);
+        println("\taddb %d,x",off+1);
+        println("\tadca %d,x",off);
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
         return;
       }
       if (can_direct_imm_ext(rhs)) {
