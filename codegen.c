@@ -5826,21 +5826,11 @@ void gen_expr(Node *node)
     &&  is_int16(node->rhs->ty)
     &&  is_int8(node->rhs->lhs->ty)
     &&  !node->rhs->lhs->ty->is_unsigned ) {
-      if ((test_addr_x(node->lhs->lhs) || is_var_addr_constant(node->lhs->lhs))
-      &&  (test_addr_x(node->rhs->lhs) || is_var_addr_constant(node->rhs->lhs))) {
+      if (can_direct_8bit_ext_ix(node->lhs->lhs)
+      &&  can_direct_8bit_ext_ix(node->rhs->lhs)) {
         println("\tclra");
-        if ((addr = is_var_addr_constant(node->lhs->lhs))) {
-          println("\tldab %s",addr);
-        }else{
-          off = gen_addr_x(node->lhs->lhs);
-          println("\tldab %d,x",off);
-        }
-        if ((addr = is_var_addr_constant(node->rhs->lhs))) {
-          println("\taddb %s",addr);
-        }else{
-          off = gen_addr_x(node->rhs->lhs);
-          println("\taddb %d,x",off);
-        }
+        gen_direct_8bit_ext_ix(node->lhs->lhs,"ldab");
+        gen_direct_8bit_ext_ix(node->rhs->lhs,"addb");
         char *label = new_jump_label();
         println("\tbge %s",label);
         println("\tdeca");
@@ -6017,21 +6007,11 @@ void gen_expr(Node *node)
     &&  node->rhs->ty->kind == TY_INT
     &&  node->rhs->lhs->ty->kind == TY_CHAR
     &&  !node->rhs->lhs->ty->is_unsigned ) {
-      if ((test_addr_x(node->lhs->lhs) || is_var_addr_constant(node->lhs->lhs))
-      &&  (test_addr_x(node->rhs->lhs) || is_var_addr_constant(node->rhs->lhs))) {
+      if (can_direct_8bit_ext_ix(node->lhs->lhs)
+      &&  can_direct_8bit_ext_ix(node->rhs->lhs)) {
         println("\tclra");
-        if ((addr = is_var_addr_constant(node->lhs->lhs))) {
-          println("\tldab %s",addr);
-        }else{
-          off = gen_addr_x(node->lhs->lhs);
-          println("\tldab %d,x",off);
-        }
-        if ((addr = is_var_addr_constant(node->rhs->lhs))) {
-          println("\tsubb %s",addr);
-        }else{
-          off = gen_addr_x(node->rhs->lhs);
-          println("\tsubb %d,x",off);
-        }
+        gen_direct_8bit_ext_ix(node->lhs->lhs,"ldab");
+        gen_direct_8bit_ext_ix(node->rhs->lhs,"subb");
         char *label = new_jump_label();
         println("\tbge %s",label);
         println("\tdeca");
