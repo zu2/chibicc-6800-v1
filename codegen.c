@@ -1559,7 +1559,8 @@ int gen_decayed_x_sub(Node *node,bool test)
   case ND_ADD:
     //(+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +0 ) 6)
     if (lhs->ty->kind == TY_ARRAY
-    &&  is_integer_constant(rhs,&val)) {
+    &&  is_integer_constant(rhs,&val)
+    &&  test_addr_x(lhs)) {
       off = addr_x_offset(lhs);
       if (0 <= off && 0 <= val && off + val <= 252) {
         if (test) return 0;
