@@ -3608,22 +3608,36 @@ static void opeq(Node *node)
           }
         }
       }else if (is_integer_constant(node->rhs, &val)){
+        int64_t off = 0;
+        Node *base;
         switch(val){
         case 2:
-          if (is_global_var(node->lhs)) {
-            println("\tldab _%s+1", node->lhs->var->name);
-            println("\tldaa _%s",   node->lhs->var->name);
+          off = 0;
+          base = find_base_var(node->lhs,&off);
+          if (base) {
+            char *name = base->var->name;
+            println("\tldab _%s+%ld",name,off+1);
+            if (off == 0) {
+              println("\tldaa _%s",name);
+            } else {
+              println("\tldaa _%s+%ld",name,off);
+            }
             println("\tasra");
             println("\trola");
             println("\tadcb #0");
             println("\tadca #0");
             println("\tasra");
             println("\trorb");
-            println("\tstab _%s+1",node->lhs->var->name);
-            println("\tstaa _%s",  node->lhs->var->name);
-            invalidate_EXT(node->lhs);
+            println("\tstab _%s+%ld",name,off+1);
+            if (off == 0) {
+              println("\tstaa _%s",name);
+            } else {
+              println("\tstaa _%s+%ld",name,off);
+            }
+            invalidate_EXT(base);
             return;
-          }else if (test_addr_x(node->lhs)) {
+          }
+          if (test_addr_x(node->lhs)) {
             int off = gen_addr_x(node->lhs);
             println("\tldab %d,x",off+1);
             println("\tldaa %d,x",off);
