@@ -4545,9 +4545,18 @@ void gen_expr(Node *node)
       case TY_ENUM:
       case TY_PTR:
         if (node->retval_unused && val==1) {
-          ldx_EXT(node->lhs);
-          println("\tinx");
-          stx_EXT(node->lhs);
+          if (opt('O','s')) {
+            ldx_EXT(node->lhs);
+            println("\tinx");
+            stx_EXT(node->lhs);
+          }else{
+            char *label = new_jump_label();
+            println("\tinc _%s+1",var);
+            println("\tbne %s",label);
+            println("\tinc _%s",var);
+            println("%s:",label);
+            invalidate_EXT(node->lhs);
+          }
         }else if (node->retval_unused && val==2) {
           ldx_EXT(node->lhs);
           println("\tinx");
@@ -4676,6 +4685,13 @@ void gen_expr(Node *node)
         println("\tadca #>%d",val);
         println("\tstab %d,x",off+1);
         println("\tstaa %d,x",off);
+      }else if (node->retval_unused && val==-1) {
+        char *label = new_jump_label();
+        println("\ttst %d,x",off+1);
+        println("\tbne %s",label);
+        println("\tdec %d,x",off);
+        println("%s:",label);
+        println("\tdec %d,x",off+1);
       }else{ // val<0
         val = abs(val);
         println("\tldab %d,x",off+1);
