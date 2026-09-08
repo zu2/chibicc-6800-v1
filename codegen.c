@@ -3868,29 +3868,49 @@ static void opeq(Node *node)
         return;
       } // bool ^= rhs
     case TY_CHAR: 
-      if (can_direct_8bit_ext_ix(node->lhs)) {
+      if (can_direct_8bit_ext(node->lhs)) {
         gen_expr(node->rhs);
-        cast(node->rhs->ty,ty_int);
+        cast(node->rhs->ty,ty_uchar);
         switch(node->kind) {
         case ND_ANDEQ:
-          gen_direct_8bit_ext_ix(node->lhs,"andb");
+          gen_direct_8bit_ext(node->lhs,"andb");
           break;
         case ND_OREQ:
-          gen_direct_8bit_ext_ix(node->lhs,"orab");
+          gen_direct_8bit_ext(node->lhs,"orab");
           break;
         case ND_XOREQ:
-          gen_direct_8bit_ext_ix(node->lhs,"eorb");
+          gen_direct_8bit_ext(node->lhs,"eorb");
           break;
         default:
           assert(0);
         }
-        gen_direct_8bit_store_ext_ix(node->lhs,"stab");
+        gen_direct_8bit_store_ext(node->lhs,"stab");
+        return;
+      }
+      if (test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        cast(node->rhs->ty,ty_uchar);
+        int off = gen_addr_x(node->lhs);
+        switch(node->kind) {
+        case ND_ANDEQ:
+          println("\tandb %d,x",off);
+          break;
+        case ND_OREQ:
+          println("\torab %d,x",off);
+          break;
+        case ND_XOREQ:
+          println("\teorb %d,x",off);
+          break;
+        default:
+          assert(0);
+        }
+        println("\tstab %d,x",off);
         return;
       }
       gen_addr(node->lhs);
       push();
       gen_expr(node->rhs);
-      cast(node->rhs->ty,ty_int);
+      cast(node->rhs->ty,ty_uchar);
       println("\ttsx");
       println("\tldx 0,x");
       IX_invalidate();
@@ -3911,23 +3931,47 @@ static void opeq(Node *node)
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
-      if (can_direct_ext_ix(node->lhs)) {
+      if (can_direct_ext(node->lhs)) {
         gen_expr(node->rhs);
         cast(node->rhs->ty,ty_int);
         switch(node->kind) {
         case ND_ANDEQ:
-          gen_direct_ext_ix(node->lhs,"andb","anda");
+          gen_direct_ext(node->lhs,"andb","anda");
           break;
         case ND_OREQ:
-          gen_direct_ext_ix(node->lhs,"orab","oraa");
+          gen_direct_ext(node->lhs,"orab","oraa");
           break;
         case ND_XOREQ:
-          gen_direct_ext_ix(node->lhs,"eorb","eora");
+          gen_direct_ext(node->lhs,"eorb","eora");
           break;
         default:
           assert(0);
         }
-        gen_direct_store_ext_ix(node->lhs,"stab","staa");
+        gen_direct_store_ext(node->lhs,"stab","staa");
+        return;
+      }
+      if (test_addr_x(node->lhs)) {
+        gen_expr(node->rhs);
+        cast(node->rhs->ty,ty_int);
+        int off = gen_addr_x(node->lhs);
+        switch(node->kind) {
+        case ND_ANDEQ:
+          println("\tandb %d,x",off+1);
+          println("\tanda %d,x",off);
+          break;
+        case ND_OREQ:
+          println("\torab %d,x",off+1);
+          println("\toraa %d,x",off);
+          break;
+        case ND_XOREQ:
+          println("\teorb %d,x",off+1);
+          println("\teora %d,x",off);
+          break;
+        default:
+          assert(0);
+        }
+        println("\tstab %d,x",off+1);
+        println("\tstaa %d,x",off);
         return;
       }
       gen_addr(node->lhs);
