@@ -5175,10 +5175,10 @@ void gen_expr(Node *node)
         gen_direct_8bit_store_ext_ix(node->lhs,"stab");
         return;
       }
-      if (can_direct_imm_ext(node->rhs)) {
+      if (can_direct_8bit_imm_ext(node->rhs)) {
         gen_addr(node->lhs);
         tfr_dx();
-        gen_direct_imm_ext(node->rhs,"ldab","ldaa");
+        gen_direct_8bit_imm_ext(node->rhs,"ldab");
         store_x(node->ty,0);
         return;
       }
