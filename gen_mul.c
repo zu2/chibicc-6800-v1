@@ -291,10 +291,17 @@ gen_mul16(Node *node)
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
-  if (is_global_var(lhs)) {
+  Node   *base;
+  int64_t boff = 0;
+
+  if ((base = find_base_var(lhs,&boff))) {
     global = true;
-    sprintf(tb,"_%s+1",lhs->var->name);
-    sprintf(ta,"_%s",  lhs->var->name);
+    sprintf(tb,"_%s+%ld",base->var->name,boff+1);
+    if (boff == 0) {
+      sprintf(ta,"_%s",  base->var->name);
+    } else {
+      sprintf(ta,"_%s+%ld",base->var->name,boff);
+    }
     println("\tldab %s",tb);
     println("\tldaa %s",ta);
   } else if ((addr_x = test_addr_x(lhs))) {
