@@ -285,9 +285,6 @@ bool
 gen_mul16(Node *node)
 {
   int off;
-  bool addr_x = false; 
-  bool global = false; 
-  char ta[64], tb[64];
   Node *lhs = node->lhs;
   Node *rhs = node->rhs;
 
@@ -295,24 +292,315 @@ gen_mul16(Node *node)
   int64_t boff = 0;
 
   if ((base = find_base_var(lhs,&boff))) {
-    global = true;
-    sprintf(tb,"_%s+%ld",base->var->name,boff+1);
+    println("\tldab _%s+%ld",base->var->name,boff+1);
     if (boff == 0) {
-      sprintf(ta,"_%s",  base->var->name);
+      println("\tldaa _%s",base->var->name);
     } else {
-      sprintf(ta,"_%s+%ld",base->var->name,boff);
+      println("\tldaa _%s+%ld",base->var->name,boff);
     }
-    println("\tldab %s",tb);
-    println("\tldaa %s",ta);
-  } else if ((addr_x = test_addr_x(lhs))) {
-    off = gen_addr_x(lhs);
-    sprintf(tb,"%d,x",off+1);
-    sprintf(ta,"%d,x",off);
-    println("\tldab %s",tb);
-    println("\tldaa %s",ta);
-  }else{
-    gen_expr(lhs);
+    switch(rhs->kind){
+    case ND_NUM:
+      switch (rhs->ty->kind) {
+      case TY_INT:
+      case TY_SHORT:
+      case TY_ENUM:
+        switch(rhs->val){
+        case -4:
+          println("\taslb");
+          println("\trola");
+          // thru
+        case -2:
+          println("\taslb");
+          println("\trola");
+          // thru
+        case -1:
+          negd();
+          return true;
+        case 0:
+          println("\tclrb");
+          println("\tclra");
+          return true;
+        case 1:
+          return true;
+        case 2:
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 3:
+          println("\taslb");
+          println("\trola");
+          println("\taddb _%s+%ld",base->var->name,boff+1);
+          if (boff == 0) {
+            println("\tadca _%s",base->var->name);
+          } else {
+            println("\tadca _%s+%ld",base->var->name,boff);
+          }
+          return true;
+        case 4:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 5:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taddb _%s+%ld",base->var->name,boff+1);
+          if (boff == 0) {
+            println("\tadca _%s",base->var->name);
+          } else {
+            println("\tadca _%s+%ld",base->var->name,boff);
+          }
+          return true;
+        case 6:
+          println("\taslb");
+          println("\trola");
+          println("\taddb _%s+%ld",base->var->name,boff+1);
+          if (boff == 0) {
+            println("\tadca _%s",base->var->name);
+          } else {
+            println("\tadca _%s+%ld",base->var->name,boff);
+          }
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 7:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\tsubb _%s+%ld",base->var->name,boff+1);
+          if (boff == 0) {
+            println("\tsbca _%s",base->var->name);
+          } else {
+            println("\tsbca _%s+%ld",base->var->name,boff);
+          }
+          return true;
+        case 8:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 10:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taddb _%s+%ld",base->var->name,boff+1);
+          if (boff == 0) {
+            println("\tadca _%s",base->var->name);
+          } else {
+            println("\tadca _%s+%ld",base->var->name,boff);
+          }
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 16:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 32:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 64:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 100:
+          println("\tjsr __mul100");
+          return true;
+        }
+      }
+      if (rhs->val>0 && rhs->val<256) {
+        println("\tldx #%ld",rhs->val);
+        println("\tjsr __mul16x8x");
+        IX_invalidate();
+        return true;
+      }
+    }
+    push();
+    gen_expr(rhs);
+    println("\tjsr __mul16x16");
+    IX_invalidate();
+    ins(2);
+    return true;
   }
+  if (test_addr_x(lhs)) {
+    off = gen_addr_x(lhs);
+    println("\tldab %d,x",off+1);
+    println("\tldaa %d,x",off);
+    switch(rhs->kind){
+    case ND_NUM:
+      switch (rhs->ty->kind) {
+      case TY_INT:
+      case TY_SHORT:
+      case TY_ENUM:
+        switch(rhs->val){
+        case -4:
+          println("\taslb");
+          println("\trola");
+          // thru
+        case -2:
+          println("\taslb");
+          println("\trola");
+          // thru
+        case -1:
+          negd();
+          return true;
+        case 0:
+          println("\tclrb");
+          println("\tclra");
+          return true;
+        case 1:
+          return true;
+        case 2:
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 3:
+          println("\taslb");
+          println("\trola");
+          println("\taddb %d,x",off+1);
+          println("\tadca %d,x",off);
+          return true;
+        case 4:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 5:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taddb %d,x",off+1);
+          println("\tadca %d,x",off);
+          return true;
+        case 6:
+          println("\taslb");
+          println("\trola");
+          println("\taddb %d,x",off+1);
+          println("\tadca %d,x",off);
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 7:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\tsubb %d,x",off+1);
+          println("\tsbca %d,x",off);
+          return true;
+        case 8:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 10:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taddb %d,x",off+1);
+          println("\tadca %d,x",off);
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 16:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 32:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 64:
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          println("\taslb");
+          println("\trola");
+          return true;
+        case 100:
+          println("\tjsr __mul100");
+          return true;
+        }
+      }
+      if (rhs->val>0 && rhs->val<256) {
+        println("\tldx #%ld",rhs->val);
+        println("\tjsr __mul16x8x");
+        IX_invalidate();
+        return true;
+      }
+    }
+    push();
+    gen_expr(rhs);
+    println("\tjsr __mul16x16");
+    IX_invalidate();
+    ins(2);
+    return true;
+  }
+  gen_expr(lhs);
   switch(rhs->kind){
   case ND_NUM:
     switch (rhs->ty->kind) {
@@ -342,13 +630,6 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 3:
-        if (global || addr_x) {
-          println("\taslb");
-          println("\trola");
-          println("\taddb %s",tb);
-          println("\tadca %s",ta);
-          return true;
-        }
         println("\tstab @tmp1+1");
         println("\tstaa @tmp1");
         println("\taslb");
@@ -363,15 +644,6 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 5:
-        if (global || addr_x) {
-          println("\taslb");
-          println("\trola");
-          println("\taslb");
-          println("\trola");
-          println("\taddb %s",tb);
-          println("\tadca %s",ta);
-          return true;
-        }
         if (opt('O','s'))
           break;
         println("\tstab @tmp1+1");
@@ -384,15 +656,6 @@ gen_mul16(Node *node)
         println("\tadca @tmp1");
         return true;
       case 6:
-        if (global || addr_x) {
-          println("\taslb");
-          println("\trola");
-          println("\taddb %s",tb);
-          println("\tadca %s",ta);
-          println("\taslb");
-          println("\trola");
-          return true;
-        }
         if (opt('O','s'))
           break;
         println("\tstab @tmp1+1");
@@ -405,17 +668,6 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 7:
-        if (global || addr_x) {
-          println("\taslb");
-          println("\trola");
-          println("\taslb");
-          println("\trola");
-          println("\taslb");
-          println("\trola");
-          println("\tsubb %s",tb);
-          println("\tsbca %s",ta);
-          return true;
-        }
         if (opt('O','s'))
           break;
         println("\tstab @tmp1+1");
@@ -438,17 +690,6 @@ gen_mul16(Node *node)
         println("\trola");
         return true;
       case 10:
-        if (global || addr_x) {
-          println("\taslb");
-          println("\trola");
-          println("\taslb");
-          println("\trola");
-          println("\taddb %s",tb);
-          println("\tadca %s",ta);
-          println("\taslb");
-          println("\trola");
-          return true;
-        }
         if (opt('O','s'))
           break;
         println("\tstab @tmp1+1");
