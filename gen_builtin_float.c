@@ -23,9 +23,16 @@ bool builtin_signbit(Node *node)
       }
       return true;
     }
-    if (is_global_var(node->args)) {
+    Node   *base;
+    int64_t off = 0;
+
+    if ((base = find_base_var(node->args,&off))) {
       println("\tclra");
-      println("\tldab _%s",node->args->var->name);
+      if (off == 0) {
+        println("\tldab _%s",base->var->name);
+      } else {
+        println("\tldab _%s+%ld",base->var->name,off);
+      }
       println("\tandb #$80");
       return true;
     }
@@ -67,17 +74,23 @@ bool builtin_isnan(Node *node)
       }
       return true;
     }
-    if (is_global_var(node->args)) {
-      char *v = node->args->var->name;
-      println("\tldab _%s+1", v);
-      println("\tldaa _%s", v);
+    Node   *base;
+    int64_t off = 0;
+
+    if ((base = find_base_var(node->args,&off))) {
+      println("\tldab _%s+%ld", base->var->name, off+1);
+      if (off == 0) {
+        println("\tldaa _%s", base->var->name);
+      } else {
+        println("\tldaa _%s+%ld", base->var->name, off);
+      }
       println("\taslb");
       println("\trola");
       println("\tadda #1");
       char *thru = new_label("L_thru_%d");
       println("\tbne %s", thru);
-      println("\torab _%s+2", v);
-      println("\torab _%s+3", v);
+      println("\torab _%s+%ld", base->var->name, off+2);
+      println("\torab _%s+%ld", base->var->name, off+3);
       println("\tnegb");
       println("%s:", thru);
       println("\tldab #0");
@@ -145,17 +158,23 @@ bool builtin_isinf(Node *node)
       }
       return true;
     }
-    if (is_global_var(node->args)) {
-      char *v = node->args->var->name;
-      println("\tldab _%s+1", v);
-      println("\tldaa _%s", v);
+    Node   *base;
+    int64_t off = 0;
+
+    if ((base = find_base_var(node->args,&off))) {
+      println("\tldab _%s+%ld", base->var->name, off+1);
+      if (off == 0) {
+        println("\tldaa _%s", base->var->name);
+      } else {
+        println("\tldaa _%s+%ld", base->var->name, off);
+      }
       println("\taslb");
       println("\trola");
       println("\tadda #1");
       char *thru = new_label("L_thru_%d");
       println("\tbne %s", thru);
-      println("\torab _%s+2", v);
-      println("\torab _%s+3", v);
+      println("\torab _%s+%ld", base->var->name, off+2);
+      println("\torab _%s+%ld", base->var->name, off+3);
       println("\tsubb #1");
       println("%s:", thru);
       println("\tldab #0");
@@ -223,10 +242,16 @@ bool builtin_isfinite(Node *node)
       }
       return true;
     }
-    if (is_global_var(node->args)) {
-      char *v = node->args->var->name;
-      println("\tldab _%s+1", v);
-      println("\tldaa _%s", v);
+    Node   *base;
+    int64_t off = 0;
+
+    if ((base = find_base_var(node->args,&off))) {
+      println("\tldab _%s+%ld", base->var->name, off+1);
+      if (off == 0) {
+        println("\tldaa _%s", base->var->name);
+      } else {
+        println("\tldaa _%s+%ld", base->var->name, off);
+      }
       println("\taslb");
       println("\trola");
       println("\tinca");
@@ -292,9 +317,16 @@ bool builtin_copysignf(Node *node)
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "copysignf")
   && node->args && node->args->next) {
-    if (is_global_var(node->args->next)) {
+    Node   *base;
+    int64_t off = 0;
+
+    if ((base = find_base_var(node->args->next,&off))) {
       gen_expr(node->args);
-      println("\tldab _%s", node->args->next->var->name);
+      if (off == 0) {
+        println("\tldab _%s", base->var->name);
+      } else {
+        println("\tldab _%s+%ld", base->var->name, off);
+      }
       println("\tldaa @long");
       println("\tasla");
       println("\taslb");
