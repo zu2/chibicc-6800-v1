@@ -1083,6 +1083,18 @@ Node *find_base_var(Node *node, int64_t *off)
     if (addr->kind == ND_ADDR) {
       return find_base_var(addr->lhs,off);
     }
+    if (addr->kind == ND_ADD
+    &&  is_integer_constant(addr->rhs,&val)) {
+      Node *base = addr->lhs;
+      if (base->kind == ND_CAST
+      &&  base->ty->kind == TY_PTR) {
+        base = base->lhs;
+      }
+      if (base->kind == ND_ADDR) {
+        *off += val;
+        return find_base_var(base->lhs,off);
+      }
+    }
   }
   if (node->kind == ND_ADD
   &&  is_decay_type(node->lhs->ty)
