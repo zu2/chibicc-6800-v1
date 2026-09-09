@@ -110,16 +110,16 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
     if (node->member->is_bitfield) {
       return false;
     }
-    if (!is_global_var(node->lhs)) {
+    if (!(base = find_base_var(node,&off))) {
       return false;
     }
 
     if (test) return true;
 
-    println("\t%s _%s+%d",opb,node->lhs->var->name,
-                          node->member->offset + node->ty->size-1);
+    println("\t%s _%s+%ld",opb,base->var->name,
+                           off + node->ty->size-1);
     if (is_store(opb)) {
-      invalidate_EXT(node->lhs);
+      invalidate_EXT(base);
     }
     return true;
 
@@ -674,22 +674,22 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     if (node->member->is_bitfield) {
       return false;
     }
-    if (!is_global_var(node->lhs)) {
+    if (!(base = find_base_var(node,&off))) {
       return false;
     }
-    char *name = node->lhs->var->name;
-    int moff = node->member->offset;
+    char *name = base->var->name;
+    int64_t moff = off;
     switch(node->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
       if (!node->ty->is_unsigned) return false;
       if (test) return true;
-      println("\t%s _%s+%d",opb,name,moff);
+      println("\t%s _%s+%ld",opb,name,moff);
       if (!is_store(opb) && opa) {
         println("\t%s #0",opa);
       }
       if (is_store(opb)) {
-        invalidate_EXT(node->lhs);
+        invalidate_EXT(base);
       }
       return true;
     case TY_INT:
@@ -697,12 +697,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     case TY_ENUM:
     case TY_PTR:
       if (test) return true;
-      println("\t%s _%s+%d",opb,name,moff+1);
+      println("\t%s _%s+%ld",opb,name,moff+1);
       if (opa) {
-        println("\t%s _%s+%d",opa,name,moff);
+        println("\t%s _%s+%ld",opa,name,moff);
       }
       if (is_store(opb)) {
-        invalidate_EXT(node->lhs);
+        invalidate_EXT(base);
       }
       return true;
     }
