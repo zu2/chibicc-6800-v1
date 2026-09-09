@@ -464,6 +464,7 @@ Type *struct_type(void);
 Type *get_common_type(Type *ty1, Type *ty2);
 void usual_arith_conv(Node **lhs, Node **rhs);
 void add_type(Node *node);
+bool is_modifiable_lvalue(Node *node);
 
 //
 // ast_dump.c

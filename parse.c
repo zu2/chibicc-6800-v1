@@ -3109,6 +3109,8 @@ static Node *new_pre_inc_dec(Token **rest, Token *tok, int addend) {
 
   Node *node = unary(rest, tok->next);
   add_type(node);
+  if (!is_modifiable_lvalue(node))
+    error_tok(tok, "not a modifiable lvalue");
   if (!node->ty->is_atomic
   &&  !is_bitfield_member(node)
   &&  (node->ty->kind == TY_CHAR
@@ -3477,6 +3479,8 @@ static Node *new_post_inc_dec(Node *node, Token *tok, int addend) {
   Type *ty;
 
   add_type(node);
+  if (!is_modifiable_lvalue(node))
+    error_tok(tok, "not a modifiable lvalue");
   ty = node->ty;
   if (!ty->is_atomic
   &&  !is_bitfield_member(node)) {

@@ -339,7 +339,7 @@ void usual_arith_conv(Node **lhs, Node **rhs) {
   *rhs = new_cast(*rhs, ty);
 }
 
-static bool is_modifiable_lvalue(Node *node)
+bool is_modifiable_lvalue(Node *node)
 {
   switch (node->kind) {
   case ND_VLA_PTR:
@@ -347,7 +347,6 @@ static bool is_modifiable_lvalue(Node *node)
   case ND_VAR:
   case ND_DEREF:
   case ND_MEMBER:
-  case ND_COMMA:
     break;
   default:
     return false;
@@ -700,6 +699,8 @@ void add_type(Node *node) {
     node->ty = node->member->ty;
     return;
   case ND_ADDR: {
+    if (node->lhs->kind == ND_COMMA)
+      error_tok(node->lhs->tok, "not an lvalue");
     Type *ty = node->lhs->ty;
     if (ty->kind == TY_ARRAY)
       node->ty = pointer_to(ty->base);
