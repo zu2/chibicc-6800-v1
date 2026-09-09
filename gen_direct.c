@@ -113,8 +113,12 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
 
     if (test) return true;
 
-    println("\t%s _%s+%ld",opb,base->var->name,
-                           off + node->ty->size-1);
+    off += node->ty->size-1;
+    if (off == 0) {
+      println("\t%s _%s",opb,base->var->name);
+    } else {
+      println("\t%s _%s+%ld",opb,base->var->name,off);
+    }
     if (is_store(opb)) {
       invalidate_EXT(base);
     }
@@ -143,15 +147,13 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
     }
 
     if ((base = find_base_var(node,&off))) {
-      char *name = base->var->name;
-      int   d    = off + node->ty->size-1;
-
       if (test) return true;
 
-      if (d == 0) {
-        println("\t%s _%s",opb,name);
+      off += node->ty->size-1;
+      if (off == 0) {
+        println("\t%s _%s",opb,base->var->name);
       } else {
-        println("\t%s _%s+%d",opb,name,d);
+        println("\t%s _%s+%ld",opb,base->var->name,off);
       }
 
       if (is_store(opb)) {
@@ -529,17 +531,15 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
   } // ND_VAR
   case ND_DEREF:
     if ((base = find_base_var(node,&off))) {
-      char *name = base->var->name;
-
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
         if (!node->ty->is_unsigned) return false;
         if (test) return true;
         if (off == 0) {
-          println("\t%s _%s",opb,name);
+          println("\t%s _%s",opb,base->var->name);
         } else {
-          println("\t%s _%s+%ld",opb,name,off);
+          println("\t%s _%s+%ld",opb,base->var->name,off);
         }
         if (!is_store(opb) && opa) {
           println("\t%s #0",opa);
@@ -553,12 +553,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       case TY_ENUM:
       case TY_PTR:
         if (test) return true;
-        println("\t%s _%s+%ld",opb,name,off+1);
+        println("\t%s _%s+%ld",opb,base->var->name,off+1);
         if (opa) {
           if (off == 0) {
-            println("\t%s _%s",opa,name);
+            println("\t%s _%s",opa,base->var->name);
           } else {
-            println("\t%s _%s+%ld",opa,name,off);
+            println("\t%s _%s+%ld",opa,base->var->name,off);
           }
         }
         if (is_store(opb)) {
@@ -659,14 +659,16 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     if (!(base = find_base_var(node,&off))) {
       return false;
     }
-    char *name = base->var->name;
-    int64_t moff = off;
     switch(node->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
       if (!node->ty->is_unsigned) return false;
       if (test) return true;
-      println("\t%s _%s+%ld",opb,name,moff);
+      if (off == 0) {
+        println("\t%s _%s",opb,base->var->name);
+      } else {
+        println("\t%s _%s+%ld",opb,base->var->name,off);
+      }
       if (!is_store(opb) && opa) {
         println("\t%s #0",opa);
       }
@@ -679,9 +681,13 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     case TY_ENUM:
     case TY_PTR:
       if (test) return true;
-      println("\t%s _%s+%ld",opb,name,moff+1);
+      println("\t%s _%s+%ld",opb,base->var->name,off+1);
       if (opa) {
-        println("\t%s _%s+%ld",opa,name,moff);
+        if (off == 0) {
+          println("\t%s _%s",opa,base->var->name);
+        } else {
+          println("\t%s _%s+%ld",opa,base->var->name,off);
+        }
       }
       if (is_store(opb)) {
         invalidate_EXT(base);
