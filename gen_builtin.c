@@ -135,7 +135,11 @@ bool builtin_strcpy(Node *node)
     if (!var->is_literal) {
       return false;
     }
+    if (!node->retval_unused) {
+      return false;
+    }
     size_t size = var->ty->size;
+    size_t len = strlen((char *)var->init_data);
 
 //  ast_node_dump(arg1);
     if (size==0) {  // XXX ?
@@ -155,9 +159,10 @@ bool builtin_strcpy(Node *node)
       }
       IX_invalidate();
       println("; ND_FUNCALL: builtin_strcpy(..., _%s)",var->name);
-      if (size+off>=256) {
+      if (size+off>256) {
         ldab_i(off);
         println("\tjsr __abx");
+        off = 0;
       }
       // IX:dest
       bool done[256] = {false};
@@ -174,7 +179,7 @@ bool builtin_strcpy(Node *node)
             println("\tldaa #$%02x   ; '%c'", c, c);
           else
             println("\tldaa #$%02x", c);
-          for (int j = i; j < size - 1; j++) {
+          for (int j = i; j < len; j++) {
             if ((unsigned char)var->init_data[j] == c)
               println("\tstaa %u,x", j + off);
           }
