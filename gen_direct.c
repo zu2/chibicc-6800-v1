@@ -48,7 +48,8 @@ static bool gen_direct_8bit_imm_sub(Node *node, char *opb, bool test)
     }
     return true;
   case ND_CAST:
-    if (node->ty->kind == TY_BOOL) {
+    if (node->ty->kind == TY_BOOL
+    &&  node->lhs->ty->kind != TY_BOOL) {
       return false;
     }
     if (is_integer_or_ptr(node->lhs->ty)) {
@@ -165,7 +166,8 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
   } // ND_DEREF
 
   case ND_CAST:
-    if (node->ty->kind == TY_BOOL) {
+    if (node->ty->kind == TY_BOOL
+    &&  node->lhs->ty->kind != TY_BOOL) {
       return false;
     }
     if (is_integer_or_ptr(node->lhs->ty)) {
@@ -256,7 +258,8 @@ static bool gen_direct_8bit_ix_sub(Node *node, char *opb, bool test)
   } // ND_VAR
 
   case ND_CAST:
-    if (node->ty->kind == TY_BOOL) {
+    if (node->ty->kind == TY_BOOL
+    &&  node->lhs->ty->kind != TY_BOOL) {
       return false;
     }
 
