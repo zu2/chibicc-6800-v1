@@ -240,6 +240,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
   if (node->kind == ND_FUNCALL) {
     if (node->lhs->kind == ND_VAR
     && !strcmp(node->lhs->var->name, "isnan")
+    && !node->lhs->var->is_static
     &&  node->args && !node->args->next) {
       Node   *arg = node->args;
       double  fval;
@@ -299,6 +300,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
     }
     if (node->lhs->kind == ND_VAR
     && !strcmp(node->lhs->var->name, "isinf")
+    && !node->lhs->var->is_static
     &&  node->args && !node->args->next) {
       Node   *arg = node->args;
       double  fval;
@@ -358,6 +360,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
     }
     if (node->lhs->kind == ND_VAR
     && !strcmp(node->lhs->var->name, "isfinite")
+    && !node->lhs->var->is_static
     &&  node->args && !node->args->next) {
       Node   *arg = node->args;
       double  fval;
@@ -408,6 +411,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
     }
     if (node->lhs->kind == ND_VAR
     && !strcmp(node->lhs->var->name, "signbit")
+    && !node->lhs->var->is_static
     &&  node->args && !node->args->next) {
       Node   *arg = node->args;
       double  fval;
@@ -1127,6 +1131,7 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
   if (node->kind == ND_FUNCALL) {
     if (node->lhs->kind == ND_VAR
     && !strcmp(node->lhs->var->name, "isnan")
+    && !node->lhs->var->is_static
     &&  node->args && !node->args->next) {
       Node   *arg = node->args;
       double  fval;
@@ -1192,6 +1197,7 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
     }
     if (node->lhs->kind == ND_VAR
     && !strcmp(node->lhs->var->name, "isinf")
+    && !node->lhs->var->is_static
     &&  node->args && !node->args->next) {
       Node   *arg = node->args;
       double  fval;
@@ -1257,6 +1263,7 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
     }
     if (node->lhs->kind == ND_VAR
     && !strcmp(node->lhs->var->name, "isfinite")
+    && !node->lhs->var->is_static
     &&  node->args && !node->args->next) {
       Node   *arg = node->args;
       double  fval;
@@ -1307,6 +1314,7 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
     }
     if (node->lhs->kind == ND_VAR
     && !strcmp(node->lhs->var->name, "signbit")
+    && !node->lhs->var->is_static
     &&  node->args && !node->args->next) {
       Node   *arg = node->args;
       double  fval;

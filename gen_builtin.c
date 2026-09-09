@@ -4,6 +4,7 @@ bool builtin_memset(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "memset")
+  && !node->lhs->var->is_static
   && node->args && node->args->next && node->args->next->next) {
     int64_t dst, val, num;
     if (is_pointer_constant(node->args, &dst)
@@ -52,6 +53,7 @@ bool builtin_memcpy(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "memcpy")
+  && !node->lhs->var->is_static
   && node->args && node->args->next && node->args->next->next) {
     int64_t dst, src, num;
     if (is_pointer_constant(node->args, &dst)
@@ -109,6 +111,7 @@ bool builtin_strcpy(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "strcpy")
+  && !node->lhs->var->is_static
   && node->args && node->args->next) {
 // (ND_CAST TY_PTR(10) (ND_VAR TY_ARRAY(12) _L_45 global))
 //	ldab #<__L_45

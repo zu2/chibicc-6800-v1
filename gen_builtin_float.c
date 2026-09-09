@@ -8,6 +8,7 @@ bool builtin_signbit(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "signbit")
+  && !node->lhs->var->is_static
   && node->args && !node->args->next) {
     double  fval;
 
@@ -59,6 +60,7 @@ bool builtin_isnan(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "isnan")
+  && !node->lhs->var->is_static
   && node->args && !node->args->next) {
     double  fval;
 
@@ -143,6 +145,7 @@ bool builtin_isinf(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "isinf")
+  && !node->lhs->var->is_static
   && node->args && !node->args->next) {
     double  fval;
 
@@ -227,6 +230,7 @@ bool builtin_isfinite(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "isfinite")
+  && !node->lhs->var->is_static
   && node->args && !node->args->next) {
     double  fval;
 
@@ -296,6 +300,7 @@ bool builtin_fabsf(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "fabsf")
+  && !node->lhs->var->is_static
   && node->args && !node->args->next) {
     if (!is_flonum(node->args->ty)) {
       error_tok(node->args->tok, "a non-floating point value as an argument");
@@ -316,6 +321,7 @@ bool builtin_copysignf(Node *node)
 {
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "copysignf")
+  && !node->lhs->var->is_static
   && node->args && node->args->next) {
     if (!is_flonum(node->args->ty)) {
       return false;
