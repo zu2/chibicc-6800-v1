@@ -87,10 +87,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
 
   switch(node->kind){
   case ND_VAR:
-    if (node->var->ty->kind == TY_VLA) {
-      return false;
-    }
-    if (node->var->is_local) {
+    if (!is_global_var(node)) {
       return false;
     }
 
@@ -240,10 +237,7 @@ static bool gen_direct_8bit_ix_sub(Node *node, char *opb, bool test)
     return false;
 
   case ND_VAR: {
-    if (node->var->ty->kind == TY_VLA ) {
-      return false;
-    }
-    if (!node->var->is_local) {
+    if (!is_local_var(node)) {
       return false;
     }
     if (!test_addr_x(node)) {
@@ -448,20 +442,13 @@ static bool gen_direct_imm_sub(Node *node,char *opb, char *opa, bool test)
     }
   } // ND_NUM
   case ND_VAR: {
-    if (node->var->ty->kind == TY_VLA ) {
-      return false;
-    }
-    if(node->var->is_local){
-    }else{
-      if (node->ty->kind==TY_FUNC) return false;
-      if (node->ty->kind==TY_ARRAY) {
-        if (test) return true;
-        println("\t%s #<_%s",opb,node->var->name);
-        if (opa) {
-          println("\t%s #>_%s",opa,node->var->name);
-        }
-	      return true;
+    if (is_global_array(node)) {
+      if (test) return true;
+      println("\t%s #<_%s",opb,node->var->name);
+      if (opa) {
+        println("\t%s #>_%s",opa,node->var->name);
       }
+      return true;
     }
     return false;
   } // ND_VAR
@@ -513,16 +500,11 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
   case ND_NUM:
     return false;
   case ND_VAR: {
-    if (node->var->ty->kind == TY_VLA ) {
-      return false;
-    }
-    if(node->var->is_local){
+    if (!is_global_var(node)){
       return false;
     }else{
       // global
-      if (node->ty->kind==TY_FUNC) return false;
       if (is_int8(node->ty) && !node->ty->is_unsigned) return false;
-      if (node->ty->kind==TY_ARRAY) return false;
       if (test) return true;
       if (is_int8(node->ty)) {
         println("\t%s _%s",opb,node->var->name);
@@ -765,10 +747,7 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
   case ND_NUM:
     return false;
   case ND_VAR: {
-    if (node->var->ty->kind == TY_VLA ) {
-      return false;
-    }
-    if (!node->var->is_local) {
+    if (!is_local_var(node)) {
       return false;
     }
     if (node->ty->kind==TY_ARRAY) {
