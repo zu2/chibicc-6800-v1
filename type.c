@@ -468,6 +468,14 @@ void add_type(Node *node) {
         warn_tok(node->rhs->tok, "assignment between a void pointer and a function pointer");
       }
     }
+    if (node->lhs->ty->kind == TY_STRUCT
+    ||  node->lhs->ty->kind == TY_UNION
+    ||  node->rhs->ty->kind == TY_STRUCT
+    ||  node->rhs->ty->kind == TY_UNION  ) {
+      if (!is_compatible(node->lhs->ty, node->rhs->ty)) {
+        error_tok(node->rhs->tok, "incompatible struct or union assignment");
+      }
+    }
     if (node->lhs->ty->kind != TY_STRUCT && node->lhs->ty->kind != TY_UNION)
       node->rhs = new_cast(node->rhs, node->lhs->ty);
     node->ty = node->lhs->ty;
