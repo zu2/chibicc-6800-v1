@@ -2491,10 +2491,13 @@ static bool is_bitfield_member(Node *node)
 //
 static bool is_simple_var(Node *node)
 {
+  int64_t off = 0;
+
   if (is_local_var(node)
   ||  is_global_var(node)
   ||  is_local_array_with_constant(node)
-  ||  is_global_array_with_constant(node)) {
+  ||  is_global_array_with_constant(node)
+  ||  find_base_var(node,&off)) {
     return true;
   }
 
