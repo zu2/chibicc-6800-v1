@@ -560,6 +560,8 @@ bool is_local_var(Node *node)
 {
   if (node->kind == ND_VAR
   &&  node->var->ty->kind != TY_VLA
+  &&  node->ty->kind != TY_FUNC
+  &&  node->ty->kind != TY_ARRAY
   &&  node->var->is_local ) {
     return 1;
   }
@@ -1622,7 +1624,7 @@ static int addr_x_offset(Node *node)
   if (is_global_var(node) || is_global_array(node)) {
     return 0;
   }
-  if (is_local_var(node)) {
+  if (is_local_var(node) || is_local_array(node)) {
     return node->var->offset;
   }
   if (node->kind == ND_MEMBER) {
