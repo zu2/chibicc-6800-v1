@@ -317,6 +317,12 @@ bool builtin_copysignf(Node *node)
   if (node->lhs->kind == ND_VAR
   && !strcmp(node->lhs->var->name, "copysignf")
   && node->args && node->args->next) {
+    if (!is_flonum(node->args->ty)) {
+      return false;
+    }
+    if (!is_flonum(node->args->next->ty)) {
+      return false;
+    }
     Node   *base;
     int64_t off = 0;
 
