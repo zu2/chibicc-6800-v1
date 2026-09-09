@@ -253,16 +253,23 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
         }
         return true;
       }
-      if (is_global_var(arg)) {
-        char *v = arg->var->name;
-        println("\tldaa _%s", v);
-        println("\tldab _%s+1", v);
+      Node   *base;
+      int64_t off = 0;
+
+      if ((base = find_base_var(arg,&off))) {
+        char *v = base->var->name;
+        if (off == 0) {
+          println("\tldaa _%s", v);
+        } else {
+          println("\tldaa _%s+%ld", v, off);
+        }
+        println("\tldab _%s+%ld", v, off+1);
         println("\taslb");
         println("\trola");
         println("\tinca");
         println("\tjne %s", if_false);
-        println("\torab _%s+2", v);
-        println("\torab _%s+3", v);
+        println("\torab _%s+%ld", v, off+2);
+        println("\torab _%s+%ld", v, off+3);
         println("\tjeq %s", if_false);
         return true;
       }
@@ -306,16 +313,23 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
         }
         return true;
       }
-      if (is_global_var(arg)) {
-        char *v = arg->var->name;
-        println("\tldaa _%s", v);
-        println("\tldab _%s+1", v);
+      Node   *base;
+      int64_t off = 0;
+
+      if ((base = find_base_var(arg,&off))) {
+        char *v = base->var->name;
+        if (off == 0) {
+          println("\tldaa _%s", v);
+        } else {
+          println("\tldaa _%s+%ld", v, off);
+        }
+        println("\tldab _%s+%ld", v, off+1);
         println("\taslb");
         println("\trola");
         println("\tinca");
         println("\tjne %s", if_false);
-        println("\torab _%s+2", v);
-        println("\torab _%s+3", v);
+        println("\torab _%s+%ld", v, off+2);
+        println("\torab _%s+%ld", v, off+3);
         println("\tjne %s", if_false);
         return true;
       }
@@ -359,10 +373,17 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
         }
         return true;
       }
-      if (is_global_var(arg)) {
-        char *v = arg->var->name;
-        println("\tldaa _%s", v);
-        println("\tldab _%s+1", v);
+      Node   *base;
+      int64_t off = 0;
+
+      if ((base = find_base_var(arg,&off))) {
+        char *v = base->var->name;
+        if (off == 0) {
+          println("\tldaa _%s", v);
+        } else {
+          println("\tldaa _%s+%ld", v, off);
+        }
+        println("\tldab _%s+%ld", v, off+1);
         println("\taslb");
         println("\trola");
         println("\tinca");
@@ -403,9 +424,16 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
         }
         return true;
       }
-      if (is_global_var(arg)) {
-        char *v = arg->var->name;
-        println("\tldab _%s", v);
+      Node   *base;
+      int64_t off = 0;
+
+      if ((base = find_base_var(arg,&off))) {
+        char *v = base->var->name;
+        if (off == 0) {
+          println("\tldab _%s", v);
+        } else {
+          println("\tldab _%s+%ld", v, off);
+        }
         println("\tjpl %s", if_false);
         return true;
       }
@@ -1116,17 +1144,24 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
         }
         return true;
       }
-      if (is_global_var(arg)) {
-        char *v = arg->var->name;
+      Node   *base;
+      int64_t off = 0;
+
+      if ((base = find_base_var(arg,&off))) {
+        char *v = base->var->name;
         char *thru = new_label("L_thru_%d");
-        println("\tldaa _%s", v);
-        println("\tldab _%s+1", v);
+        if (off == 0) {
+          println("\tldaa _%s", v);
+        } else {
+          println("\tldaa _%s+%ld", v, off);
+        }
+        println("\tldab _%s+%ld", v, off+1);
         println("\taslb");
         println("\trola");
         println("\tinca");
         println("\tbne %s", thru);
-        println("\torab _%s+2", v);
-        println("\torab _%s+3", v);
+        println("\torab _%s+%ld", v, off+2);
+        println("\torab _%s+%ld", v, off+3);
         println("\tjne %s", if_true);
         println("%s:", thru);
         return true;
@@ -1175,17 +1210,24 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
         }
         return true;
       }
-      if (is_global_var(arg)) {
-        char *v = arg->var->name;
+      Node   *base;
+      int64_t off = 0;
+
+      if ((base = find_base_var(arg,&off))) {
+        char *v = base->var->name;
         char *thru = new_label("L_thru_%d");
-        println("\tldaa _%s", v);
-        println("\tldab _%s+1", v);
+        if (off == 0) {
+          println("\tldaa _%s", v);
+        } else {
+          println("\tldaa _%s+%ld", v, off);
+        }
+        println("\tldab _%s+%ld", v, off+1);
         println("\taslb");
         println("\trola");
         println("\tinca");
         println("\tbne %s", thru);
-        println("\torab _%s+2", v);
-        println("\torab _%s+3", v);
+        println("\torab _%s+%ld", v, off+2);
+        println("\torab _%s+%ld", v, off+3);
         println("\tjeq %s", if_true);
         println("%s:", thru);
         return true;
@@ -1234,10 +1276,17 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
         }
         return true;
       }
-      if (is_global_var(arg)) {
-        char *v = arg->var->name;
-        println("\tldaa _%s", v);
-        println("\tldab _%s+1", v);
+      Node   *base;
+      int64_t off = 0;
+
+      if ((base = find_base_var(arg,&off))) {
+        char *v = base->var->name;
+        if (off == 0) {
+          println("\tldaa _%s", v);
+        } else {
+          println("\tldaa _%s+%ld", v, off);
+        }
+        println("\tldab _%s+%ld", v, off+1);
         println("\taslb");
         println("\trola");
         println("\tinca");
@@ -1278,9 +1327,16 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
         }
         return true;
       }
-      if (is_global_var(arg)) {
-        char *v = arg->var->name;
-        println("\tldab _%s", v);
+      Node   *base;
+      int64_t off = 0;
+
+      if ((base = find_base_var(arg,&off))) {
+        char *v = base->var->name;
+        if (off == 0) {
+          println("\tldab _%s", v);
+        } else {
+          println("\tldab _%s+%ld", v, off);
+        }
         println("\tjmi %s", if_true);
         return true;
       }
