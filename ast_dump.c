@@ -280,7 +280,7 @@ static void ast_dump(Node *node)
     printout(")");
     return;
   case ND_FUNCALL:
-    printout("(ND_FUNCALL %s", type_str(node->ty));
+    printout("(ND_FUNCALL %s ", type_str(node->ty));
     ast_dump(node->lhs);
     printout(" ... )\n; ");
     return;
@@ -308,6 +308,9 @@ static void ast_dump(Node *node)
     printout("(ND_STMT_EXPR ...)");
     return;
 //43   ND_VLA_PTR,   // VLA designator
+  case ND_VLA_PTR:
+    printout("(ND_VLA_PTR %s +%d)",node->var->name,node->var->offset);
+    return;
   case ND_NUM:
     switch(node->ty->kind){
     case TY_BOOL:
