@@ -3,7 +3,7 @@
 ;
 	.export __and32i
         .export __and32bx
-        .export __and32bx
+        .export __and32dx
 	.export __and32x
 	.export __and32x_store32x
 
