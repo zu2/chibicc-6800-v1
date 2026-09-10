@@ -74,9 +74,9 @@ bool opt(char op, char lv)
     case '0':
       return opt_g == '0';
     case '1':
-      return opt_g == '1' || opt_g == '2' || opt_g == '3';
+      return opt_g == '1' || opt_g == '2' || opt_g == '3' || opt_g == '4';
     case '2':
-      return opt_g == '2' || opt_g == '3';
+      return opt_g == '2' || opt_g == '3' || opt_g == '4';
     case '3':
       return opt_g == '3' || opt_g == '4';
     case '4':
