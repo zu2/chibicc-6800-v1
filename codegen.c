@@ -6632,42 +6632,58 @@ void gen_expr(Node *node)
   error_tok(node->tok, "invalid expression");
 }
 
-void stmt_dump(char *p)
+void stmt_dump(Node *node)
 {
-  char s[1024];
-  char *q = s;
   static char *pp = NULL;
 
   if (!opt('g','2') && !opt('g','3')) {
     return;
   }
-  if (!p) {
+  if (node == NULL
+  ||  node->tok == NULL
+  ||  node->tok->loc == NULL) {
     return;
   }
+
+  char *p = node->tok->loc;
+
+  if (*p == ';') {
+    return;
+  }
+
   if (pp!=p) {
-    if(*p && *p!=';' && *p!='\r' && *p!='\n'){
-      while(*p && *p!=';' && *p!='\r' && *p!='\n'){
-        p--;
-      }
-      p++;
-      while (isspace(*p)) {
+    while (p > node->tok->file->contents) {
+      p--;
+      if (*p==';' || *p=='\r' || *p=='\n') {
         p++;
+        break;
       }
     }
+    while (isspace(*p)) {
+      p++;
+    }
   }
-  while(*p && *p!='\r' && *p!='\n'){
-    *q++ = *p++;
+  char *end = p;
+  while(*end && *end!='\r' && *end!='\n'){
+    end++;
   }
-  *q = '\0';
-  if (pp!=p && strcmp(s,";") && s[0]){
-    println("; %.75s",s);
-    pp = p;
+  int n = end - p;
+  if (n == 0) {
+    return;
   }
+  if (n == 1 && *p == ';') {
+    return;
+  }
+  if (pp == end) {
+    return;
+  }
+  println("; %.*s",MIN(n,75),p);
+  pp = end;
 }
 
 static void gen_stmt(Node *node)
 {
-  stmt_dump(node->loc);
+  stmt_dump(node);
   if (opt('g','3')) {
     ast_node_dump(node);
   }
@@ -6712,7 +6728,7 @@ static void gen_stmt(Node *node)
     sprintf(if_false,"%s",node->brk_label);
     if (node->init) {
       if (opt('g','3')) {
-        stmt_dump(node->init->loc);
+        stmt_dump(node->init);
         ast_node_dump(node->init);
       }
       gen_stmt(node->init);
@@ -6722,7 +6738,7 @@ static void gen_stmt(Node *node)
     if (node->cond) {
       node->cond = optimize_condition(node->cond);
       if (opt('g','3')) {
-        stmt_dump(node->cond->loc);
+        stmt_dump(node->cond);
         ast_node_dump(node->cond);
       }
       if (is_integer_constant(node->cond,&val)) {
@@ -6747,7 +6763,7 @@ static void gen_stmt(Node *node)
     if (node->inc) {
       node->inc = optimize_expr(node->inc);
       if (opt('g','3')) {
-        stmt_dump(node->inc->loc);
+        stmt_dump(node->inc);
         ast_node_dump(node->inc);
       }
       node->inc->retval_unused = true;
@@ -6770,7 +6786,7 @@ static void gen_stmt(Node *node)
       println("%s:", node->cont_label);
       IX_invalidate();
     }
-    stmt_dump(node->cond->loc);
+    stmt_dump(node->cond);
     node->cond = optimize_condition(node->cond);
     if (is_integer_constant(node->cond,&val)) {
       if (val!=0) {
@@ -6836,7 +6852,7 @@ static void gen_stmt(Node *node)
     }
     for (Node *n = node->case_next; n; n = n->case_next) {
       // TODO: 32bit case
-      stmt_dump(n->loc);
+      stmt_dump(n);
       if (n->begin == n->end) {
         switch (node->cond->ty->size) {
         case 1:
