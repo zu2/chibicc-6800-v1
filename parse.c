@@ -95,6 +95,7 @@ static Scope *scope = &(Scope){};
 
 // Points to the function object the parser is currently parsing.
 static Obj *current_fn;
+static Obj *current_func_name;
 
 // Lists of all goto statements and labels in the curent function.
 static Node *gotos;
@@ -3859,9 +3860,12 @@ static Node *primary(Token **rest, Token *tok) {
     // automatically defined as a local variable containing the
     // current function name.
     if (current_fn && (equal(tok, "__func__") || equal(tok, "__FUNCTION__"))) {
-      char *name = current_fn->name;
-      Obj *function_name_obj = 
-        new_string_literal(name, array_of(ty_char, strlen(name) + 1));
+      if (!current_func_name) {
+        char *name = current_fn->name;
+        current_func_name =
+          new_string_literal(name, array_of(ty_char, strlen(name) + 1));
+      }
+      Obj *function_name_obj = current_func_name;
 
       push_scope("__func__")->var = function_name_obj;
  
@@ -4133,6 +4137,7 @@ static Token *function(Token *tok, Type *basety, VarAttr *attr) {
     tok = skip(tok, ";");
 
   current_fn = fn;
+  current_func_name = NULL;
   locals = NULL;
   enter_scope();
   create_param_lvars(ty->params);
