@@ -4075,6 +4075,7 @@ static Obj *func_declarator(Type *ty, VarAttr *attr, Token *tok) {
     if (!fn->is_static && attr->is_static)
       error_tok(tok, "static declaration follows a non-static declaration");
     fn->is_definition = fn->is_definition || equal(tok, "{");
+    fn->is_inline = fn->is_inline || attr->is_inline;
     if (fn->inline_static && !scope->next && !attr->is_static &&
         !(attr->is_inline && !attr->is_extern)) {
       fn->is_static = false;
