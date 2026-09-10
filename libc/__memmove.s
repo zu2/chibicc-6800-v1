@@ -1,21 +1,21 @@
 ;
 ;	void *memmove(void *d,const void *s,size_t n)
 ;	{
-;         const char *p = s;
-;         char *q = d;
+;	  const char *p = s;
+;	  char *q = d;
 ;
-;         if (d<s) {
+;	  if (d<s) {
 ;	    while (n--) {
-;             *q++ = *p++;
-;           }
-;         }else{
-;           p+ = n;
-;           q+ = n;
+;	      *q++ = *p++;
+;	    }
+;	  }else{
+;	    p+ = n;
+;	    q+ = n;
 ;	    while (n--) {
-;             *--q = *--p;
-;           }
-;         }
-;         return d;
+;	      *--q = *--p;
+;	    }
+;	  }
+;	  return d;
 ;	}
 ;
 ;	AccAB: d
@@ -31,7 +31,7 @@
 _memmove:
 	tsx
 	ldx	4,x		; n==0 ?
-	beq	_memmove_ret
+	beq	ret
 	pshb			; save d, access to the stack will add two.
 	psha
 ;
@@ -40,16 +40,16 @@ _memmove:
 	stx	@tmp2
 	tsx
 	ldx	4,x		; s
+	cpx	@tmp2
+	beq	ret_d
 	stx	@tmp3
 ;
 	tsx
 	subb	@tmp3+1		; d - s
 	sbca	@tmp3
-	bcs	_memmove_inc	; if d<s
-	bhi	_memmove_dec	; if d>s
-	beq	_memmove_ret_d	; if d==s, return d
+	bcs	forward	; if d<s
 ;
-_memmove_dec:
+backward:
 	ldab	@tmp3+1		; s += n
 	ldaa	@tmp3
 	addb	7,x
@@ -64,9 +64,10 @@ _memmove_dec:
 	stab	@tmp2+1
 	staa	@tmp2
 ;
-	bsr	_adjust_n
+	bsr	adjust_n
+	ldx	@tmp3
 ;
-_memmove_dec_loop:
+backward_loop:
 	dex
 	ldaa	0,x
 	stx	@tmp3
@@ -76,18 +77,19 @@ _memmove_dec_loop:
 	stx	@tmp2
 	ldx	@tmp3
 	decb
-	bne	_memmove_dec_loop
+	bne	backward_loop
 	dec	@tmp1
-	bne	_memmove_dec_loop
-_memmove_ret_d:
+	bne	backward_loop
+ret_d:
 	pula
 	pulb
-_memmove_ret:
+ret:
 	rts
 ;
-_memmove_inc:
-	bsr	_adjust_n
-_memmove_inc_loop:
+forward:
+	bsr	adjust_n
+	ldx	@tmp3
+forward_loop:
 	ldaa	0,x
 	inx
 	stx	@tmp3
@@ -97,19 +99,19 @@ _memmove_inc_loop:
 	stx	@tmp2
 	ldx	@tmp3
 	decb
-	bne	_memmove_inc_loop
+	bne	forward_loop
 	dec	@tmp1
-	bne	_memmove_inc_loop
+	bne	forward_loop
 ;
 	pula
 	pulb
 	rts
 ;
-_adjust_n:
+adjust_n:
 	ldaa	6,x
 	ldab	7,x
-	bne	_adjust_n_ret
+	beq	adjust_ret
 	inca
-_adjust_n_ret:
+adjust_ret:
 	staa	@tmp1
 	rts
