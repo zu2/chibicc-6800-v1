@@ -22,7 +22,7 @@
 _strncmp:
 	tsx
 	ldx	4,x		; check n
-	beq	_strncmp_eq	; if n==0, return 0
+	beq	eq		; if n==0, return 0
 	stab	@tmp2+1		; save s1
 	staa	@tmp2
 ;
@@ -37,28 +37,33 @@ _strncmp:
 	ldx	2,x		; get s2
 	stx	@tmp3
 ;
-_strncmp_loop:
+loop:
 	ldx	@tmp2		; get s1
 	ldab	0,x
+	beq	nul		; *s1 == 0 ?
 	inx
 	stx	@tmp2
 	ldx	@tmp3
 	cmpb	0,x
-	bne	_strncmp_ne	; s1 - s2 !=0 ?
+	bne	ne		; *s1 - *s2 !=0 ?
 	inx
 	stx	@tmp3
 	cpx	@tmp4
-	bne	_strncmp_loop
-_strncmp_eq:
+	bne	loop
+eq:
 	clrb
 	clra
 	rts			; return 0
-_strncmp_ne:
-	bcs	_strncmp_lt
+;
+nul:	ldx	@tmp3
+	cmpb	0,x
+	beq	eq
+ne:
+	bcs	lt
 	ldab	#1		; return 1
 	clra
 	rts
-_strncmp_lt:
+lt:
 	ldab	#$FF		; return -1
 	tba
 	rts
