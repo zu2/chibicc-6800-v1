@@ -25,7 +25,7 @@ static float kernel_asin(float t)
   return t + (t * v) * __polyf(v, QQ, 4);
 }
 
-// 1-a is exact on [0.5, 1], and s lands in [0, 0.5], so one kernel serves both
+// entry: 0.5 < a <= 1 or NaN, 1 - a exact
 static float half_asin(float a)
 {
   static float t;
