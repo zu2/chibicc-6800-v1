@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 		return 44;
 
 
-	/* exact shift, 1.0f, k = 0 to 24 */
+	// exact shift, 1.0f, k = 0 to 24
 	if (ldexpf(1.0f, -126) != to_float(0x00800000))
 		return 51;
 	if (ldexpf(1.0f, -127) != to_float(0x00400000))
@@ -191,7 +191,7 @@ int main(int argc, char **argv)
 		return 75;
 
 
-	/* round up at every k, 2.0f - LSB */
+	// round up at every k, 2.0f - LSB
 	if (ldexpf(to_float(0x3FFFFFFF), -127) != to_float(0x00800000))
 		return 81;
 	if (ldexpf(to_float(0x3FFFFFFF), -128) != to_float(0x00400000))
@@ -242,7 +242,7 @@ int main(int argc, char **argv)
 		return 104;
 
 
-	/* negative side */
+	// negative side
 	if (ldexpf(-1.0f, -127) != to_float(0x80400000))
 		return 111;
 	if (ldexpf(-1.5f, -127) != to_float(0x80600000))
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
 		return 115;
 
 
-	/* subnormal in, and the tie in both directions */
+	// subnormal in, and the tie in both directions
 	if (ldexpf(to_float(0x00000001), 149) != 1.0f)
 		return 121;
 	if (ldexpf(to_float(0x00400000), 1) != to_float(0x00800000))
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
 		return 129;
 
 
-	/* overflow, and a 16bit exponent */
+	// overflow, and a 16bit exponent
 	if (ldexpf(1.0f, 127) != to_float(0x7F000000))
 		return 131;
 	if (ldexpf(to_float(0x3FFFFFFF), 127) != FLT_MAX)
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
 		return 139;
 
 
-	/* NaN, Inf and zero with a non zero exponent */
+	// NaN, Inf and zero with a non zero exponent
 	if (ldexpf(INFINITY, -200) != INFINITY)
 		return 141;
 	if (ldexpf(-INFINITY, 200) != -INFINITY)
@@ -308,6 +308,33 @@ int main(int argc, char **argv)
 		return 144;
 	if (!signbit(ldexpf(-0.0f, 100)))
 		return 145;
+
+  // exp overflow
+
+  if (ldexpf(2.0f, 32767) != INFINITY)
+    return 151;
+  if (ldexpf(-2.0f, 32767) != -INFINITY)
+    return 152;
+  if (ldexpf(FLT_MAX, 32767) != INFINITY)
+    return 153;
+  if (ldexpf(2.0f, 32766) != INFINITY)
+    return 154;
+
+  m = ldexpf(0.5f, -32768);
+  if (m != 0.0f || signbit(m))
+    return 155;
+
+  m = ldexpf(-0.5f, -32768);
+  if (m != 0.0f || !signbit(m))
+    return 156;
+
+  m = ldexpf(to_float(0x00000001), -32768);
+  if (m != 0.0f || signbit(m))
+    return 157;
+
+  m = ldexpf(0.5f, -32767);
+  if (m != 0.0f || signbit(m))
+    return 158;
 
 	return 0;
 }

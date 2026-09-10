@@ -56,11 +56,14 @@ __ldexpf_02:
         bpl     __ldexpf_02
 ;
 __ldexpf_03:
+        subb    #127            ; unbias
+        sbca    #0
         tsx
         addb    3,x             ; get new exp
         adca    2,x
-        subb    #127            ; unbias
-        sbca    #0
+        bvc     __ldexpf_07
+        coma
+__ldexpf_07:
         stab    @tmp2+1         ; save old exp (unbiased)
         staa    @tmp2
         subb    #128            ; exp>128 ?
