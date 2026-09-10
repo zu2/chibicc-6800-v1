@@ -2233,6 +2233,7 @@ int64_t eval2(Node *node, char ***label) {
   case ND_COND:
     return eval_bool(node->cond) ? eval2(node->then, label) : eval2(node->els, label);
   case ND_COMMA:
+  case ND_COMPLIT:
     return eval2(node->rhs, label);
   case ND_NOT:
     return !eval_bool(node->lhs);
@@ -2354,6 +2355,7 @@ double eval_double(Node *node) {
   case ND_COND:
     return eval_double(node->cond) ? eval_double(node->then) : eval_double(node->els);
   case ND_COMMA:
+  case ND_COMPLIT:
     return eval_double(node->rhs);
   case ND_CAST:
     if (is_flonum(node->lhs->ty))
@@ -3528,7 +3530,7 @@ static Node *postfix(Token **rest, Token *tok) {
     Obj *var = new_lvar("", ty);
     Node *lhs = lvar_initializer(rest, tok, var);
     Node *rhs = new_var_node(var, tok);
-    return new_binary(ND_COMMA, lhs, rhs, start);
+    return new_binary(ND_COMPLIT, lhs, rhs, start);
   }
 
   Node *node = primary(&tok, tok);

@@ -96,6 +96,7 @@ static bool is_bitfield2(Node *node, int *width) {
   case ND_POST_INCDEC:
     return is_bitfield2(node->lhs, width);
   case ND_COMMA:
+  case ND_COMPLIT:
     return is_bitfield2(node->rhs, width);
   case ND_STMT_EXPR: {
     if (!node->body)
@@ -347,6 +348,7 @@ bool is_modifiable_lvalue(Node *node)
   case ND_VAR:
   case ND_DEREF:
   case ND_MEMBER:
+  case ND_COMPLIT:
     break;
   default:
     return false;
@@ -693,6 +695,7 @@ void add_type(Node *node) {
     node->ty = node->func_ty->return_ty;
     return;
   case ND_COMMA:
+  case ND_COMPLIT:
     node->ty = node->rhs->ty;
     return;
   case ND_MEMBER:

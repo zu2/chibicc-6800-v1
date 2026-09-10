@@ -258,6 +258,7 @@ typedef enum {
   ND_SHLEQ,	// <<=
   ND_SHREQ,	// >>=
   ND_BULKINIT,	// bulk initialize a stack variable
+  ND_COMPLIT,
 } NodeKind;
 
 // AST node type

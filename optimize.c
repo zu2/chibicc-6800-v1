@@ -557,7 +557,8 @@ Node *optimize_expr(Node *node)
     //for (Node *n = node->body; n; n = n->next)
     //  optimize_stmt(n);
     return node;
-  case ND_COMMA: {
+  case ND_COMMA:
+  case ND_COMPLIT: {
     Node *new =  optimize_lr(node);
     new->lhs->retval_unused = true;
     return new;

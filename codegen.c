@@ -1016,6 +1016,7 @@ void gen_addr(Node *node)
     gen_expr(node->lhs);
     return;
   case ND_COMMA:
+  case ND_COMPLIT:
     gen_expr(node->lhs);
     gen_addr(node->rhs);
     return;
@@ -1795,6 +1796,7 @@ int gen_addr_x_sub(Node *node,bool test)
     }
     return -1;
   case ND_COMMA:
+  case ND_COMPLIT:
     return -1;
   case ND_MEMBER:
     if (!test_addr_x(lhs)) {
@@ -5268,6 +5270,7 @@ void gen_expr(Node *node)
     }
     return;
   case ND_COMMA:
+  case ND_COMPLIT:
     gen_expr(node->lhs);
     node->rhs->retval_unused = node->retval_unused;
     gen_expr(node->rhs);

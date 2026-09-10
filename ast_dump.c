@@ -170,6 +170,7 @@ static void ast_dump(Node *node)
     printout(")");
     return;
   case ND_COMMA:
+  case ND_COMPLIT:
     ast_dump_binary(node,",");
     return;
   case ND_MEMBER:
