@@ -1155,8 +1155,8 @@ void init_macros(void) {
   define_macro("__STDC__", "1");
   define_macro("__USER_LABEL_PREFIX__", "");
   define_macro("__alignof__", "_Alignof");
-  define_macro("__amd64", "0");
-  define_macro("__amd64__", "0");
+//define_macro("__amd64", "0");
+//define_macro("__amd64__", "0");
   define_macro("__const__", "const");
   define_macro("__gnu_linux__", "1");
   define_macro("__inline__", "inline");
@@ -1167,8 +1167,8 @@ void init_macros(void) {
   define_macro("__unix", "1");
   define_macro("__unix__", "1");
   define_macro("__volatile__", "volatile");
-  define_macro("__x86_64", "0");
-  define_macro("__x86_64__", "0");
+//define_macro("__x86_64", "0");
+//define_macro("__x86_64__", "0");
   define_macro("linux", "1");
   define_macro("unix", "1");
 
