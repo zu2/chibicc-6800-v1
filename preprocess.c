@@ -1146,7 +1146,7 @@ void init_macros(void) {
   define_macro("__SIZEOF_PTRDIFF_T__", "2");
   define_macro("__SIZEOF_SHORT__", "2");
   define_macro("__SIZEOF_SIZE_T__", "2");
-  define_macro("__SIZE_TYPE__", "unsigned long");
+  define_macro("__SIZE_TYPE__", "unsigned int");
   define_macro("__STDC_HOSTED__", "1");
   define_macro("__STDC_NO_COMPLEX__", "1");
   define_macro("__STDC_UTF_16__", "1");
