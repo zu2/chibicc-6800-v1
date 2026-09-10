@@ -92,30 +92,29 @@ __fmodf_zeros:
 __fmodf_02:                             ; Here, fabsf(@long)>fabsf(TOS)
 ;
 ;	@long = mx * 2^(ex-23), TOS = my * 2^(ey-23), mx and my are 24 bit
-;	@long % TOS = (mx * 2^(ex-ey) % my) * 2^(ey-23), and the shift and
-;	subtract below keeps every bit, so the result needs no rounding.
+;	@long % TOS = (mx * 2^(ex-ey) % my) * 2^(ey-23), exact
 ;
         tsx
         inx
         inx
         stx     __tos_p                 ; save TOS's address
         jsr     __adj_subnormal         ; do normalize,AccAB = unbiased exp
-        stab    __expnew+1              ; the remainder sits at TOS's exp
+        stab    __expnew+1
         staa    __expnew
 ;
         ldx     #long
         jsr     __adj_subnormal
         subb    __expnew+1
         sbca    __expnew                ; expdiff = long's exp - TOS's exp
-        staa    __expdiff               ; AccB keeps the low half, expdiff >= 0
+        staa    __expdiff
 ;
-        clr     @long                   ; r = mx, and r stays under 2^24
+        clr     @long
         ldx     __tos_p
-        incb                            ; the loop runs expdiff+1 times
+        incb
         inc     __expdiff
-        bra     __fmodf_cmp             ; the first pass reduces without a shift
+        bra     __fmodf_cmp
 ;
-;	r -= my if r >= my.  r < 2*my holds every time, so one subtract is enough.
+;	r < 2*my, r -= my if r >= my
 ;
 __fmodf_shift:
         asl     @long+3

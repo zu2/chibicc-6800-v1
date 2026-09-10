@@ -1,6 +1,5 @@
 ;
 ;       Compare a signed 16-bit value in AccAB with zero.
-;       No subtraction is assumed. Reads N (and Z) only, never V or C.
 ;
 	.export __eq16_zero
 	.export __ne16_zero

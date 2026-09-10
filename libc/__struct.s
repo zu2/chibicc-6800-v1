@@ -1,6 +1,5 @@
 ;
-;   Push AccA,B bytes from 0,x, from the last byte to the first,
-;   so the first byte lands at the lowest address.
+;   Push AccA,B bytes from 0,x, from the last byte to the first
 ;
 	.export __push_struct_x
 	.code

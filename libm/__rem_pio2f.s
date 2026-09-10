@@ -319,7 +319,7 @@ __rp_m3:
 	jne	__rp_m2
 	stab	__win+3
 ;
-;	AccA:__win+1..+3 >= 2^30, since __mm, __pio2m >= 2^31
+;	AccA:__win+1..+3 >= 2^30  (__mm, __pio2m >= 2^31)
 ;
 	ldab	__rp_exp
 	tsta

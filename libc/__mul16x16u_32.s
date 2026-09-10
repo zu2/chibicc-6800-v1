@@ -36,18 +36,11 @@ skip:
 	rorb
 	dec 0,x
 	bne loop
-	ror offset,x	; One bit remains in C; it is shifted in.
+	ror offset,x
 	dex
 	cpx #long-1
 	bne loop
 	stab @long+1
 	staa @long
         rts
-;
-; Note: Consider later.
-;
-; The routine has an 8-bit shift-and-add inner loop and a two-byte outer loop.
-; Unroll only the outer loop: dec 0,x → dex and ror 2,x → ror @long+n,
-;   saving 4 cycles/loop (≥64 cycles total).
-; Unrolling both loops would make the code too large.
 ;

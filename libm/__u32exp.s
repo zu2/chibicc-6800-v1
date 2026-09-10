@@ -101,7 +101,7 @@ next:
 	cmpa	#15
 	bne	loop
 ;
-	ldab	@long+3		; push z, which is below 2^16 after 14 steps
+	ldab	@long+3		; z < 2^16 after 14 steps
 	pshb
 	ldab	@long+2
 	pshb

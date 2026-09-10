@@ -28,7 +28,7 @@ _nearbyintf:
 	bcc	__nbintf_ge1		; exp>=127 (fabsf(@long)>=1.0f)
 	cmpb	#$FF			; exp==126? (0.5<=fabsf(@long)<1.0f)
 	bne	__nbintf_zeros
-	ldab	@long+1			; 0.5f is a tie, so only >0.5f gives 1.0f
+	ldab	@long+1			; 0.5f -> 0.0f, ties to even
 	orab	@long+2
 	orab	@long+3
 	beq	__nbintf_zeros

@@ -86,13 +86,13 @@ __ldexpf_07:
         oraa    #$80            ; set the hidden bit
         staa    @long+1
 ;
-        addb    #24             ; AccB = 24-k, the mask table index
+        addb    #24
         stab    __mbits
-        jsr     __fmsbmask      ; the bit below the new LSB
+        jsr     __fmsbmask
         jsr     __bit_fmask
         staa    __guard
         ldab    __mbits
-        jsr     __fracmask      ; everything under the guard bit
+        jsr     __fracmask
         jsr     __bit_fmask
         staa    __sticky
 ;
@@ -110,7 +110,7 @@ __ldexpf_04:
         ldaa    __sticky
         bne     __ldexpf_06
         ldaa    @long+3
-        lsra                    ; a tie goes to the even one
+        lsra
         bcc     __ldexpf_05
 __ldexpf_06:
         inc     @long+3
@@ -121,7 +121,7 @@ __ldexpf_06:
 ;
 __ldexpf_05:
         ldab    @long+1
-        aslb                    ; carry = bit 23, set only by the round up
+        aslb
         rolb
         andb    #1              ; new exp = 1 if the round up carried, else 0
         bra     __ldexpf_11

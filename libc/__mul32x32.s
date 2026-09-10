@@ -20,7 +20,7 @@
 ;  tmp3:       Multiplier (copy from 0-1,x)
 ;  tmp4:       Multiplier (copy from 2-3,x)
 ;
-;  IX is destroyed.  The loop counter lives in it.
+;  IX:         destroyed
 ;
 __mul32x32bx:
         clra

@@ -3,7 +3,6 @@
 ;
 ;       Compare a signed 8-bit value in AccB with zero.
 ;       Entry: N and Z reflect AccB (from tstb or ldab).
-;       Reads N and Z only, never V or C.
 ;
 	.export __eq8_zero
 	.export __ne8_zero

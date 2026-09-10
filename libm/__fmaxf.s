@@ -64,8 +64,6 @@ __fmaxmin_ret_tos:			; return TOS
 __fmaxmin_ret:
 	rts
 ;
-;	__cmpf32_x2 orders Inf like any other float, so Inf needs no special case.
-;
 __fmaxmin_not_NaN:
 	tsx				; __setup_zin leaves IX on long
 	ldaa	__max_or_min

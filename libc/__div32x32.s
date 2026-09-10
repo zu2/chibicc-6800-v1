@@ -133,8 +133,6 @@ __rem32x32sx_30:
 ;
 ;	@long = @long / TOS,  @long = @long % TOS
 ;
-;	The divisor stays on the stack.  __pullret removes it.
-;
 __rem32x32s:
 	tsx
 	inx
@@ -163,7 +161,7 @@ __div32x32u:
 	jsr __div32x32ux
 	bra __pullret
 ;
-;	__div32x32 leaves the divisor for the caller.
+;	__div32x32: caller pops TOS
 ;
 __div32x32:
 	tsx
