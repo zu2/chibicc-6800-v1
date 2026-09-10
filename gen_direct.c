@@ -500,6 +500,10 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
   &&  !is_int16_or_ptr(node->ty)) {
     return false;
   }
+  if (is_int8(node->ty)
+  &&  !node->ty->is_unsigned) {
+    return false;
+  }
 
   switch(node->kind){
   case ND_NUM:
@@ -509,7 +513,6 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       return false;
     }else{
       // global
-      if (is_int8(node->ty) && !node->ty->is_unsigned) return false;
       if (test) return true;
       if (is_int8(node->ty)) {
         println("\t%s _%s",opb,node->var->name);
@@ -537,7 +540,6 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
-        if (!node->ty->is_unsigned) return false;
         if (test) return true;
         if (off == 0) {
           println("\t%s _%s",opb,base->var->name);
@@ -665,7 +667,6 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     switch(node->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
-      if (!node->ty->is_unsigned) return false;
       if (test) return true;
       if (off == 0) {
         println("\t%s _%s",opb,base->var->name);
@@ -751,6 +752,10 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
   &&  !is_int16_or_ptr(node->ty)) {
     return false;
   }
+  if (is_int8(node->ty)
+  &&  !node->ty->is_unsigned) {
+    return false;
+  }
 
   switch(node->kind){
   case ND_NUM:
@@ -764,7 +769,6 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
     }
     if (!test_addr_x(node)) return false;
     if (is_int8(node->ty)) {
-      if (!node->ty->is_unsigned) return false;
       if (test) return true;
       int off = gen_addr_x(node);
       println("\t%s %d,x",opb,off);
@@ -816,7 +820,6 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
-        if (!node->ty->is_unsigned) return false;
         if (test) return true;
         int off = gen_addr_x(node);
         println("\t%s %d,x",opb,off);
