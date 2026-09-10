@@ -806,13 +806,13 @@ __addf32_1:			; neither @long nor TOS is 0.0
 	tst	__zin		; b7:signs differ
 	jmi	__f32retpZero	; x + (-x) is +0.0
 ;
-__addf32_3:			; @long already holds the bigger value
-	ldab	@long		; the result takes @long's sign
+__addf32_3:
+	ldab	@long
 	bra	__addf32_4
 ;
-__addf32_2:			; TOS is bigger, so swap the two
-	ldab	@long		; the result takes TOS's sign, which is
-	eorb	__zin		;   @long's sign xor __zin's b7
+__addf32_2:
+	ldab	@long
+	eorb	__zin
 	andb	#$80
 	stab	__sign
 	ldx	@long+2		; keep the smaller value
@@ -834,8 +834,6 @@ __addf32_4:
 __addf32_41:
 	jsr	__setup_long
 ;
-;	Unpack the smaller value into __fp_work and line it up with @long.
-;
 ;	IX:	the address of the smaller value
 ;
 ;	__fp_work layout:
@@ -843,7 +841,7 @@ __addf32_41:
 ;	  +4      guard byte. b7:G b6:R b5:S
 ;	  +5..+7  scratch
 ;
-	ldab	1,x		; the operand itself stays untouched
+	ldab	1,x
 	ldaa	0,x
 	aslb
 	rola
@@ -864,7 +862,7 @@ __setup_work_01:
 	bcs	__setup_work_30
 	cmpa	#26
 	bcs	__setup_work_40
-;				; the smaller value cannot change the result
+;	AccA >= 26: G = R = 0
 	ldaa	__lexp
 	jmp	__addf32_29
 ;
@@ -885,7 +883,7 @@ __setup_work_11:
 ;
 __setup_work_30:		; 16 to 23
 	stab	__fp_work+3
-	stx	__fp_work+4	; +5 takes the byte that falls off
+	stx	__fp_work+4
 	ldab	__fp_work+5
 	beq	__setup_work_31
 	ldab	#1		; sticky
@@ -894,7 +892,7 @@ __setup_work_31:
 	bra	__setup_work_43
 ;
 __setup_work_40:		; 24 to 25
-	cpx	#0		; the whole 16 bits fall off
+	cpx	#0
 	beq	__setup_work_42
 	orab	#1		; sticky
 __setup_work_42:
@@ -1007,8 +1005,6 @@ __addf32_30:
 	ora	__sign
 	staa	@long		; set exp
 	rts
-;
-;	@long holds the bigger value, so the result is @long - __fp_work
 ;
 __addf32_50:
 	neg	__fp_work+4	; C=1 when the guard byte borrows
@@ -1172,7 +1168,6 @@ __setup_zin_99:
 ;	  Put the exponent in __lexp (1 byte, biased)
 ;	    If the biased exponent is 00 (subnormal), it becomes 01.
 ;	  Set a hidden bit for normal number (without subnormal).
-;	  The mantissa stays at @long+1 to +3, and @long+0 takes the carry.
 ;
 ;	Special numbers ( Inf, NaN ) cannot be handled here.
 ;
@@ -1192,7 +1187,7 @@ __setup_long_1:
 	staa	__lexp
 	rts
 ;
-__fp_settos:			; sub flips the sign, so it needs its own copy
+__fp_settos:
 	ldab	0,x
 	stab	__fp_op
 	ldab	1,x
@@ -1298,7 +1293,7 @@ __mulf32tos03:
 __mulf32tos29:
         pshb
         ldab    #4
-        stab    @tmp2           ; loop count. the body runs twice per turn
+        stab    @tmp2           ; loop count. 4 * 2 = 8 bits
         pulb
 ;
         lsr     0,x             ; check LSbit
@@ -1414,7 +1409,7 @@ __mulf32tos707:
 __mulf32tos71:
 	ldab	__fp_work+3
 	bpl	__mulf32tos72	; G=0, do nothing
-	bitb	#$01		; b0 falls off the rorb below
+	bitb	#$01
 	beq	__mulf32tos721
 	orab	#$02
 __mulf32tos721:
@@ -1452,7 +1447,7 @@ __mulf32tos74:
 	ldab	__fp_work+2
 	orab	__fp_work+1
 	orab	__fp_work
-	jeq	__f32retZeros	; The mantissa is all 0, so the value is 0.
+	jeq	__f32retZeros
 __mulf32tos75:
 	ldab	__fp_work+2
 	stab	@long+3
@@ -1582,7 +1577,7 @@ __divf32tos06:
 ;
 ;					; round up check (subnormal)
 	bsr	__divf32_rup_check	; if C==1, need round up
-	ldab	#<-127			; subnormal's exp. ldab and ldaa keep C
+	ldab	#<-127			; subnormal's exp
 	ldaa	#>-127
 	bcc	__divf32_done
 ;
@@ -1682,10 +1677,10 @@ __fdiv32x32:
 	stab @long+1	; clear quotient
 	stab @long+2
 ;
-	incb		; sentinel. rol carries it out after 8 turns
+	incb
 	stab @long
 ;
-	ldab @long+3	; read it before the clear below
+	ldab @long+3
 	clr  @long+3
 ;
         bra  loop_begin
@@ -1696,11 +1691,10 @@ loop:
 	rol  @tmp1+1
         bcs loop_begin_1
         bmi loop_begin
-;                       ; C=0, so the quotient takes a 0 bit
         rol 0,x
         bcc loop
         bra nextbyte
-loop_begin_1:			; bit24 is set, so the divisor always fits
+loop_begin_1:			; rem >= 2^24 > divisor
 	subb @tmp4	; dividend - divisor
 	sbca @tmp3+1
 	pshb
@@ -1746,7 +1740,7 @@ next4:
 next8:
 ;
         pshb
-        ldab @long+3    ; only 2 bits are valid; move them to b7 G, b6 R
+        ldab @long+3    ; b7:G b6:R
         rorb
         rorb
         rorb
