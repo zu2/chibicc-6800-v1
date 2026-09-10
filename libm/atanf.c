@@ -9,7 +9,6 @@
 #define P5  -0x1.9f06c8p-5f
 
 // (atan(x) - atan(0.75))/(x - 0.75) = R(x - 0.75) on [0.5, 1], minimax fit
-// C0_HI holds the top 24 bits of atan(0.75), C0_LO the rest
 #define C0_HI  0x1.4978fap-1f
 #define C0_LO  0x1.934f70p-28f
 #define R0  0x1.47ae14p-1f
@@ -21,7 +20,6 @@
 #define R6  0x1.fce0f8p-8f
 #define R7  -0x1.3a0684p-6f
 
-// PI_2_HI holds the top 12 bits of pi/2, PI_2_LO the rest
 #define PI_2_HI  0x1.920000p+0f
 #define PI_2_LO  0x1.fb5444p-12f
 

@@ -1,6 +1,5 @@
 #include <math.h>
 
-// PI_2_HI holds the top 12 bits of pi/2, PI_2_LO the rest
 #define PI_2_HI  0x1.920000p+0f
 #define PI_2_LO  0x1.fb5444p-12f
 #define PI_HI    0x1.920000p+1f
@@ -11,7 +10,7 @@
 #define HIGH16(v) (*(unsigned int *)&(v))
 #define LOW16(v)  (*((unsigned int *)&(v) + 1))
 
-#define W_INF  0x7f80u   // NaN and infinity are at or above this
+#define W_INF  0x7f80u
 
 float atan2f(float y, float x)
 {
@@ -21,7 +20,6 @@ float atan2f(float y, float x)
   ax_w = HIGH16(x) & 0x7fffu;
   ay_w = HIGH16(y) & 0x7fffu;
 
-  // 0/0 and inf/inf both divide to a NaN, so the special values go here
   if ((ax_w == 0u || ax_w == W_INF) && ax_w == ay_w
   &&  LOW16(x) == 0u && LOW16(y) == 0u) {
     if (ax_w == 0u) {

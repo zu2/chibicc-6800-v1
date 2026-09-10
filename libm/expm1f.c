@@ -9,7 +9,6 @@
 //
 #include <math.h>
 
-// Cody-Waite: LN2_HI keeps 13 bits of ln2, LN2_LO the rest
 #define LN2_HI   0x1.62e000p-1f
 #define LN2_LO   0x1.0bfbe8p-15f
 #define INV_LN2  0x1.715476p+0f
@@ -66,7 +65,6 @@ float expm1f(float x)
   if (n >= 31)
     return ldexpf((float)y, n - 30);
 
-  // n <= 30 here, so 1 leaves in Q30. the subtraction is exact
   if (n >= 0)
     return ldexpf((float)(y - (QONE >> n)), n - 30);
 

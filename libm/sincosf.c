@@ -1,13 +1,10 @@
 #include <float.h>
 #include <math.h>
 
-// The band tests read the top 16 bits of x as an integer, so every
-// threshold sits on a 16 bit boundary. Each one is rounded down, which
-// only moves points onto the slower and more accurate path
 #define W_SIN_SMALL  0x3a12u   // 0x1.24p-11, sin(x) == x below this
 #define W_COS_SMALL  0x3980u   // 0x1.00p-12, cos(x) == 1 below this
 #define W_PI_4       0x3f80u   // 1.0
-#define W_INF        0x7f80u   // NaN and infinity are at or above this
+#define W_INF        0x7f80u
 
 
 // sin(r) = r + r*u*S(u) on |r| < 1, u = r*r, fpminimax fit over that range

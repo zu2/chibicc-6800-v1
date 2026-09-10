@@ -14,7 +14,7 @@ static const float LL[4] = {
 #define HIGH16(v) (*(unsigned int *)&(v))
 #define LOW16(v)  (*((unsigned int *)&(v) + 1))
 
-#define W_INF     0x7f80u   // NaN and infinity are at or above this
+#define W_INF     0x7f80u
 #define W_NORMAL  0x0080u   // smallest normal number
 #define W_SQRT2   0x3fb5u   // the split point, rounded down to a 16 bit boundary
 #define W_ONE     0x3f80u   // 1.0

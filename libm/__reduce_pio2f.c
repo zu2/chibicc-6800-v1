@@ -39,7 +39,6 @@ int __reduce_pio2f(float x, unsigned int w, float *rp)
       p += 3;
       n++;
     }
-    // the low half only decides the one bucket the top half cannot
     if (n != 1 && w == t[0] && *((unsigned int *)&x + 1) < t[1]) {
       p -= 3;
       n--;

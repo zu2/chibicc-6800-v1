@@ -39,8 +39,8 @@
 
 // LN2_HI has 12 mantissa bits. n_f * LN2_HI is exact
 // LN2_LO holds the rest of ln2
-#define LN2_HI  0x1.62e000p-1f // ln2 split in two: HI holds the top 12 bits
-#define LN2_LO  0x1.0bfbe0p-15f // HI + LO is ln2 to 1.6e-11, so n * ln2 stays exact
+#define LN2_HI  0x1.62e000p-1f
+#define LN2_LO  0x1.0bfbe0p-15f
 
 static const float CC[4] = { C3, C2, C1, C0 };
 

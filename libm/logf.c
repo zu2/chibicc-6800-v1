@@ -19,7 +19,7 @@ union fword {
 #define L1  0x1.996298p-2f
 #define L2  0x1.32bed2p-2f
 
-#define W_INF   0x7f80u   // NaN and infinity are at or above this
+#define W_INF   0x7f80u
 #define W_0_75  0x3f40u   // 0.75
 
 float logf(float x)

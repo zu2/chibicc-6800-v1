@@ -12,7 +12,6 @@ static const float QQ[5] = {
   Q4, Q3, Q2, Q1, Q0,
 };
 
-// PI_2_HI holds the top 12 bits of pi/2, PI_2_LO the rest
 #define PI_2_HI  0x1.920000p+0f
 #define PI_2_LO  0x1.fb5444p-12f
 #define PI_HI    0x1.920000p+1f
