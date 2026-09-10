@@ -397,7 +397,11 @@ static bool gen_direct_imm_sub(Node *node,char *opb, char *opa, bool test)
 {
   char *addr;
 
-  if (!is_store(opb) && (addr=is_addr_constant(node))) {
+  if (is_store(opb)) {
+    assert(0);
+  }
+
+  if ((addr=is_addr_constant(node))) {
     switch (node->ty->kind) {
     case TY_SHORT:
     case TY_INT:
