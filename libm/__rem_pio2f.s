@@ -1,27 +1,19 @@
 ;
 ;	int __rem_pio2f(float x, float *rp)
 ;
-;	The caller must keep |x| in the range sinf and friends use, from 1.0
-;	up to FLT_MAX. This is the same bound the callers apply with W_PH, and
-;	it is the lowest exponent, 127, that the table window covers: p is
-;	exponent minus 136, so p starts at minus nine. A smaller argument reads the
-;	table below its start and the answer is wrong, without any sign of it.
-;	Over that range the fraction is never zero: enumerating
-;	the best approximations from below for every exponent puts the closest
-;	approach at 2^-29.9, well above the 2^-46 the field resolves. The loop
-;	bound below still catches a zero, because a caller outside that range
-;	gets no such guarantee.
-;	Payne-Hanek reduction. @long holds x on entry, 2,x holds rp.
-;	The quadrant comes back in AccA:B and *rp gets the reduced value.
+;	Payne-Hanek reduction
+;
+;	entry:	@long = x, 127 <= exp(x) <= 254
+;		2,x = rp
+;	exit:	*rp = r, x = n * pi/2 + r
+;		AccAB = n & 3
 ;
 	.export	___rem_pio2f
 ;
 	.data
 ;
-; 2/pi in eight pre shifted copies, interleaved so that byte 8k+s holds
-; copy s at index k. A window starts at __ptab+p and its ten bytes sit
-; eight apart, so the address is one addition and no shift loop is needed.
-; The label sits seven bytes below the data because p never goes under seven.
+;	__pdat[8k+s] = frac byte k of 2/pi * 2^(s-25)
+;	__win[i] = __pdat[exp(x) - 127 + 8i]
 ;
 __ptab		.equ	__pdat+9
 __pbase		.equ	__ptab-9
@@ -51,31 +43,33 @@ __pdat:
 	.byte	$cc,$99,$32,$64,$c9,$93,$27,$4f
 	.byte	$9e,$3c,$78,$f1,$e2,$c4,$88,$10
 	.byte	$21,$43,$87,$0e,$1c,$39,$72,$e4
-; 200 bytes, reached through __ptab-9 to __ptab+190
-__pio2m:	.byte	$c9,$0f,$da,$a2	; pi over two, scaled by 2^31 and rounded
+; 25 * 8 = 200 bytes, exp(x) - 127 + 72 <= 199
+__pio2m:	.byte	$c9,$0f,$da,$a2	; round(pi/2 * 2^31)
 __rp_exp:	.byte	0
-__mc:		.byte	0,0,0,0		; one count per byte of the multiplier
-__mm:		.byte	0,0,0,0		; the multiplier, and ror 4,x needs exactly four
+__mc:		.byte	0,0,0,0		; __mc[i] = bits left in __mm[i]
+__mm:		.byte	0,0,0,0		; __mm - __mc = 4 (ror 4,x)
 ;
 __rp_ptr:	.byte	0,0
-__rp_ct:	.byte	7,8,8		; one count per byte of m, and asl 3,x needs exactly three
+__rp_ct:	.byte	7,8,8		; __rp_mant - __rp_ct = 3 (asl 3,x)
 __rp_mant:	.byte	0,0,0
 __rp_quad:	.byte	0
 __win:		.byte	0,0,0,0,0,0,0,0,0,0
 __acc:		.byte	0,0,0,0,0,0,0,0,0,0
-__frac		.equ	__acc		; the accumulator is spent once the product is out
+__frac		.equ	__acc		; __acc after __rp_mul
 ;
 	.code
 ;
 ___rem_pio2f:
+;	@long = seeeeeee emmmmmmm mmmmmmmm mmmmmmmm
+;	AccB  = eeeeeeee, AccA = mmmmmmm0
 	ldaa	@long+1
 	ldab	@long
-	asla				; the hidden bit leaves in the carry, which is fine:
-	rolb				; the primed accumulator covers it. AccB gets the exponent
+	asla
+	rolb
 	staa	__rp_mant
 	ldx	@long+2
 	stx	__rp_mant+1
-	subb	#127			; the base is nine below, so p never goes negative here
+	subb	#127			; exp(x) >= 127, no borrow
 	clra
 	addb	#<__pbase
 	adca	#>__pbase
@@ -111,16 +105,15 @@ ___rem_pio2f:
 	staa	__acc+8
 	ldaa	72,x
 	staa	__win+9
-	tab				; AccB is the accumulator's last byte
+	tab
 ;
-;
-					; the hidden bit makes the first add a copy, so W is
-					; already in the accumulator from the copy above
+;	__acc = AccA:__acc+1..+8:AccB
+;	__acc = __win * (2^23 + (__rp_mant >> 1)) mod 2^80
 	ldx	#$0708
 	stx	__rp_ct
 	ldaa	#8
 	staa	__rp_ct+2
-	ldaa	__acc+0			; AccA holds the top accumulator byte
+	ldaa	__acc+0
 	ldx	#__rp_ct
 __rp_mul:
 	aslb
@@ -133,9 +126,9 @@ __rp_mul:
 	rol	__acc+2
 	rol	__acc+1
 	rola
-	asl	3,x			; m is only read, so one byte at a time is enough
+	asl	3,x
 	bcc	__rp_skip
-	staa	__acc+0			; free AccA for the add below
+	staa	__acc+0
 	addb	__win+9
 	ldaa	__acc+8
 	adca	__win+8
@@ -162,7 +155,7 @@ __rp_mul:
 	adca	__win+1
 	staa	__acc+1
 	ldaa	__acc+0
-	adca	__win+0			; the top byte stays in AccA
+	adca	__win+0
 __rp_skip:
 	dec	0,x
 	jne	__rp_mul
@@ -171,14 +164,14 @@ __rp_skip:
 	jne	__rp_mul
 	staa	__acc+0
 ;
-;	quadrant is the top two bits of digit 4
+;	__frac+0 = qqffffff, q = quadrant, f = fraction
 ;
-	ldaa	__frac			; the multiply left the product here
-	rola				; a nine bit rotate three times brings bits 7 and 6
-	rola				; down to 1 and 0, and the mask drops what rode along
+	ldaa	__frac
+	rola
+	rola
 	rola
 	anda	#3
-	ldab	@long			; the argument sign is still in place, so fold it in now
+	ldab	@long
 	bpl	__rp_qpos
 	nega
 __rp_qpos:
@@ -186,13 +179,13 @@ __rp_qpos:
 ;
 	ldaa	__frac
 	anda	#$3f
-	staa	__frac			; AccA keeps it for the test below
+	staa	__frac
 ;
-;	a fraction of one half or more is folded into the next quadrant
+;	__frac >= 2^53: __frac = 2^54 - __frac, |n| = q + 1
 ;
 	bita	#$20
 	beq	__rp_nocomp
-	neg	__frac+6		; negate the lowest non zero byte, complement above it
+	neg	__frac+6
 	bne	__rp_c5
 	neg	__frac+5
 	bne	__rp_c4
@@ -207,7 +200,7 @@ __rp_qpos:
 	ldaa	__frac
 	nega
 	anda	#$3f
-	staa	__frac			; this path needs the mask too
+	staa	__frac
 	bra	__rp_c9
 __rp_c5:
 	com	__frac+5
@@ -221,7 +214,7 @@ __rp_c1:
 	com	__frac+1
 __rp_c0:
 	ldaa	__frac
-	eora	#$3f			; complement and drop the two bits above the fraction
+	eora	#$3f			; = ~A & $3f, b7:b6 = 0
 	staa	__frac
 __rp_c9:
 	ldab	@long
@@ -229,19 +222,20 @@ __rp_c9:
 	inc	__rp_quad
 	bra	__rp_cdone
 __rp_cneg:
-	dec	__rp_quad		; a negated quadrant counts the other way
+	dec	__rp_quad
 __rp_cdone:
-	com	@long			; folding the fraction flips the sign of the result
+	com	@long			; sign(r) = -sign(x)
 __rp_nocomp:
 ;
-	ldx	#56			; the field is 56 bits wide, so 55 shifts is the limit
-	ldaa	__frac			; AccA carries the top byte through every shift below
-	ldab	__frac+1		; AccB carries the second byte
+;	__frac = AccA:AccB:__frac+2..+6
+	ldx	#56			; X = 56 - shifts
+	ldaa	__frac
+	ldab	__frac+1
 __rp_bskip:
 	tsta
-	bne	__rp_norm		; the usual case leaves after this one test
-	pshb				; a whole zero byte goes eight bits at a time
-	ldab	__frac+2		; the new second byte, read before it is written over
+	bne	__rp_norm
+	pshb
+	ldab	__frac+2
 	ldaa	__frac+3
 	staa	__frac+2
 	ldaa	__frac+4
@@ -251,7 +245,7 @@ __rp_bskip:
 	ldaa	__frac+6
 	staa	__frac+5
 	clr	__frac+6
-	pula				; the new top byte
+	pula
 	dex
 	dex
 	dex
@@ -260,11 +254,11 @@ __rp_bskip:
 	dex
 	dex
 	dex
-	bne	__rp_bskip		; seven skips empty X, and only a zero gets that far
+	bne	__rp_bskip
 	jmp	__rp_zero
 __rp_norm:
 	tsta
-	bmi	__rp_ndone		; bit 47 up means the mantissa sits in AccA:B:__frac+2
+	bmi	__rp_ndone
 	asl	__frac+6
 	rol	__frac+5
 	rol	__frac+4
@@ -274,15 +268,11 @@ __rp_norm:
 	rola
 	dex
 	bne	__rp_norm
-	jmp	__rp_zero		; the 56th pass means the fraction was zero
+	jmp	__rp_zero
 __rp_ndone:
 ;
-;	*rp = frac * pi/2, as one fixed point multiply
-;
-;	The top 32 bits of the fraction go in whole, so no rounding step is
-;	needed here and the constant carries 32 bits of pi over two. The
-;	result is one rounding away from exact, where the float route took
-;	three.
+;	*rp = frac * pi/2
+;	__frac+4..+6 dropped
 ;
 	staa	__mm+0
 	stab	__mm+1
@@ -292,22 +282,23 @@ __rp_ndone:
 	staa	__mm+3
 	stx	__rp_ptr
 	ldab	__rp_ptr+1
-	addb	#72			; 127 - 55 + shifts, with the bias kept out of the loop
+	addb	#72			; __rp_exp = X + 72 = 128 - shifts
 	stab	__rp_exp
 ;
-	ldx	#0			; the accumulator starts empty
+;	AccA:__win+1:__win+2:AccB = __mm * __pio2m >> 32
+	ldx	#0
 	stx	__win+1
 	ldx	#$0808
 	stx	__mc+0
 	stx	__mc+2
 	ldx	#__mc+3
-	clra				; AccA holds the top accumulator byte
-	clrb				; AccB holds the low one
+	clra
+	clrb
 __rp_m2:
-	ror	4,x			; the multiplier is only read, so one byte at a time
+	ror	4,x
 	bcc	__rp_m3
 	addb	__pio2m+3
-	stab	__win+3			; free AccB for the add below
+	stab	__win+3
 	ldab	__win+2
 	adcb	__pio2m+2
 	stab	__win+2
@@ -315,7 +306,7 @@ __rp_m2:
 	adcb	__pio2m+1
 	stab	__win+1
 	adca	__pio2m+0
-	ldab	__win+3			; ldab keeps the carry
+	ldab	__win+3
 __rp_m3:
 	rora
 	ror	__win+1
@@ -328,12 +319,12 @@ __rp_m3:
 	jne	__rp_m2
 	stab	__win+3
 ;
-;	the product sits in AccA:__win+1:__win+2:__win+3, above 2^30
+;	AccA:__win+1..+3 >= 2^30, since __mm, __pio2m >= 2^31
 ;
 	ldab	__rp_exp
 	tsta
-	bmi	__rp_e1			; already above 2^31, so the exponent goes up one
-	asl	__win+3			; below 2^31, so one shift normalises it
+	bmi	__rp_e1
+	asl	__win+3
 	rol	__win+2
 	rol	__win+1
 	rola
@@ -341,11 +332,13 @@ __rp_m3:
 __rp_e1:
 	incb
 __rp_e0:
-	asla				; drop the hidden bit
-	lsrb				; the exponent's low bit rides the carry
-	rora				; and lands in bit 7, where the format wants it
+;	AccA  = 1mmmmmmm, AccB = eeeeeeee
+;	@long = seeeeeee emmmmmmm __win+1  __win+2
+	asla
+	lsrb
+	rora
 	staa	@long+1
-	ldaa	@long			; last read of the sign before the byte is rebuilt
+	ldaa	@long
 	anda	#$80
 	aba
 	staa	@long
@@ -355,7 +348,7 @@ __rp_e0:
 	staa	@long+3
 	ldaa	__win+3
 	bpl	__rp_nornd
-	inc	@long+3			; a carry out of the mantissa runs into the exponent
+	inc	@long+3			; mantissa overflow -> exponent + 1
 	bne	__rp_nornd
 	inc	@long+2
 	bne	__rp_nornd
@@ -375,7 +368,7 @@ __rp_out:
 	ldaa	@long
 	staa	0,x
 ;
-	ldab	__rp_quad		; the result comes back in AccA:B, so build it in B
+	ldab	__rp_quad
 	andb	#3
 	clra
 	rts

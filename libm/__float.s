@@ -380,7 +380,7 @@ __f32tou32:
 	ldaa	1,x
 	asla
 	rolb			; B = exp
-	cmpb	#$3f		; if exp<=$3e (x < 0.5) then return 0;
+	cmpb	#$3f		; if exp<=$3e (x < 2^64) then return 0;
 	jcs	__u32zero
 __f32tou32_1:
 ; Undefined behavior: out of the integer range. return ULONG_MAX
@@ -1922,5 +1922,5 @@ __cmpf32_x_s:
 __cmpf32_x_sret:
 	rts			; when @long>0 && TOS>0
 				; @long == TOS : C=0, Z=1
-				; @long <  TOS : C=0, Z=0
-				; @long >  TOS : C=1, Z=0
+				; @long <  TOS : C=1, Z=0
+				; @long >  TOS : C=0, Z=0

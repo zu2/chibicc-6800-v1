@@ -18,7 +18,7 @@ __mul16x16u_32:
 	ldx 2,x
 	stx @long+2	; multiplier
 ;
- __mul16x16u_sub:
+__mul16x16u_sub:
 	ldx #$0808	; loop count
 	stx @long
 ;

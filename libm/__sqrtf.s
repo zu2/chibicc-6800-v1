@@ -80,7 +80,7 @@ __sqrtf_10:
 	rorb
 	stab	__exp		; After a right shift, result fits in one byte
 ;
-	asl	@long+3		; mant <<= 2
+	asl	@long+3		; mant <<= 1
 	rol	@long+2
 	rol	@long+1
 	rol	@long
