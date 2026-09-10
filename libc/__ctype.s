@@ -112,7 +112,7 @@ __isspace_test:
         beq     __ret_c1
 	cmpb	#$09            ; \t
         bcs     __ret_c0
-	cmpb	#$0D+1          ; \r
+	cmpb	#$0D+1          ; \r+1
         rts
 __ret_c1:
         sec

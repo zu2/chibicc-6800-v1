@@ -13,7 +13,7 @@
 	.export __ge8u
 	.code
 ;
-;	if Z=0 then AccAB=1 else 0
+;	if Z=1 then AccAB=1 else 0
 ;
 __eq8:
 	beq	__true
@@ -21,7 +21,7 @@ __eq8:
 	clrb
 	rts
 ;
-;	if Z=1 then AccAB=0 else 1
+;	if Z=0 then AccAB=0 else 1
 ;
 __ne8:
 	beq	__false

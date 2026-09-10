@@ -1,5 +1,5 @@
 ;
-;	void setjmp(jmp_buf env)
+;	int  setjmp(jmp_buf env)
 ;	void longjmp(jmp_buf env, int val)
 ;
 ;	AccAB: env address

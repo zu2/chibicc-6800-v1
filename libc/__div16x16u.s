@@ -6,7 +6,7 @@
 	.export __div16x16u
 	.export __rem16x16u
 ;
-;	AccAB = TOS % AccAB
+;	AccAB = AccAB % TOS
 ;
 __rem16x16u:
 	tsx
@@ -23,7 +23,7 @@ __rem3:
 	ins
 	rts
 ;
-;	AccAB = TOS / AccAB
+;	AccAB = AccAB / TOS
 ;
 __div16x16u:
 	tsx

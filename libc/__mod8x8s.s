@@ -1,5 +1,5 @@
 ;
-;	AccB = AccB / 2,s
+;	AccB = AccB % 2,s
 ;
 	.export __mod8x8s
 	.code
