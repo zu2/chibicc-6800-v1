@@ -23,7 +23,7 @@ _strncpy:
 ;
 	tsx
 	ldx	6,x		; if n==0 then return d
-	beq	_strncpy_ret
+	beq	ret
 ;
 	tsx
 	addb	7,x
@@ -37,19 +37,29 @@ _strncpy:
 	tsx
 	ldx	0,x		; get d
 ;
-_strncpy_loop:
+loop:
 	stx	@tmp2
-	ldx	@tmp3           ; get s
+	ldx	@tmp3		; get s
 	ldab	0,x
 	inx
 	stx	@tmp3
 	ldx	@tmp2
 	stab	0,x
-	beq	_strncpy_ret
+	beq	fill
         inx
 	cpx	@tmp4
-	bne	_strncpy_loop
-_strncpy_ret:
+	bne	loop
+ret:
 	pula			; recover d into AccAB
+	pulb
+	rts
+;
+fill_loop:
+	stab	0,x
+fill:
+	inx
+	cpx	@tmp4
+	bne	fill_loop
+	pula
 	pulb
 	rts
