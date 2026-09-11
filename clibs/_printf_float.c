@@ -102,13 +102,13 @@ void _float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
   else if (add_plus) { *p++ = '+'; }
 
   frac_part = modff(val,&int_part);
-  if (int_part <= 4294967296.0f) {
+  if (int_part < 4294967296.0f) {
     // Simple 0.5 add; not full round-half-to-even
     val += get_round_add(precision);
 
     p = format_float_core(p, val, precision);
   }else{
-    _float_to_exp_str(val, precision, add_plus, p);
+    _float_to_exp_str(val, precision, false, p);
     return;
   }
   *p = '\0';
