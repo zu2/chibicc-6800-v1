@@ -10,6 +10,8 @@ static  uint8_t *out_buf; // NULL: to stdout, other: to buffer
 static  int     out_size;
 static  int     out_count;
 static  void    (*putchar_p)(uint8_t c);
+static  uint8_t zero_pos;
+static  int     zero_cnt;
 
 static  void  putchar_to_buffer(uint8_t c)
 {
@@ -35,7 +37,7 @@ static void putchar_rep(uint8_t c, int n)
 
 static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_pad, int width)
 {
-  int sp = width - len;
+  int sp = width - len - zero_cnt;
   uint8_t pad_char = zero_pad? '0': ' ';
   int sign_len = 0;
 
@@ -56,8 +58,14 @@ static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_p
     putchar_rep(pad_char,sp);
   }
   for (int i=sign_len; i<len; i++) {
+    if (i == zero_pos) {
+      putchar_rep('0', zero_cnt);
+    }
     putchar_p(*s);
     s++;
+  }
+  if (len == zero_pos) {
+    putchar_rep('0', zero_cnt);
   }
   if (left_justify && sp>0) {
     putchar_rep(' ',sp);
@@ -67,9 +75,9 @@ static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_p
 
 
 uint8_t *_check_nan(float val, uint8_t sign_char);
-void _float_to_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
-void _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
-void _float_to_hex_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
+uint8_t _float_to_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
+uint8_t _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
+uint8_t _float_to_hex_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
 
 // printf-like function (float only, no double, + and - flags as bool)
 static int vsnprintf_core(const uint8_t *fmt, va_list args)
@@ -191,21 +199,26 @@ end_flags:
         if (precision < 0){
           precision = 6;
         } else if (precision > 9){
+          zero_cnt = precision - 9;
           precision = 9;
         }
+      } else if (precision > 6) {
+        zero_cnt = precision - 6;
+        precision = 6;
       }
       switch(*fmt) {
       case 'f':
-        _float_to_str(val, precision, sign_char, buf);
+        zero_pos = _float_to_str(val, precision, sign_char, buf);
         break;
       case 'e':
-        _float_to_exp_str(val, precision, sign_char, buf);
+        zero_pos = _float_to_exp_str(val, precision, sign_char, buf);
         break;
       case 'a':
-        _float_to_hex_str(val, precision, sign_char, buf);
+        zero_pos = _float_to_hex_str(val, precision, sign_char, buf);
         break;
       }
       justify_mem(buf, strlen(buf), left_justify, zero_pad, width);
+      zero_cnt = 0;
       break;
     }
     case 's': {

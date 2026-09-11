@@ -61,7 +61,7 @@ static float get_round_add(int precision)
   return r;
 }
 
-void _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
+uint8_t _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
 {
   uint8_t *p = buf;
   if (my_signbit(val)) { *p++ = '-'; val = fabsf(val); }
@@ -75,6 +75,7 @@ void _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf
   if (val >= 10.0f) { val /= 10.0f; exp++; }
 
   p = format_float_core(p, val, precision);
+  uint8_t pos = p - buf;
 
   *p++ = 'e';
   if (exp < 0) { *p++ = '-'; exp = -exp; }
@@ -83,6 +84,7 @@ void _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf
     *p++ = '0';
   }
   uitoa((uint16_t)exp, (char *)p, 10);
+  return pos;
 }
 
 //
@@ -93,7 +95,7 @@ void _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf
 //
 // For exact printf-like rounding, a full Ryu/Dragon4-style algorithm is required.
 //
-void _float_to_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
+uint8_t _float_to_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
 {
   uint8_t *p = buf;
   float int_part, frac_part;
@@ -108,15 +110,15 @@ void _float_to_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
 
     p = format_float_core(p, val, precision);
   }else{
-    _float_to_exp_str(val, precision, 0, p);
-    return;
+    return (p - buf) + _float_to_exp_str(val, precision, 0, p);
   }
   *p = '\0';
+  return p - buf;
 }
 
 
 // Convert float to hex float string for %a (add sign if needed)
-void _float_to_hex_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
+uint8_t _float_to_hex_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
 {
   uint8_t *p = buf;
 
@@ -165,6 +167,7 @@ void _float_to_hex_str(float val, int precision, uint8_t sign_char, uint8_t *buf
     }
   }
 
+  uint8_t pos = p - buf;
   *p++ = 'p';
 
   if (exp < 0) {
@@ -174,4 +177,5 @@ void _float_to_hex_str(float val, int precision, uint8_t sign_char, uint8_t *buf
     *p++ = '+';
   }
   uitoa((uint16_t)exp, (char *)p, 10);
+  return pos;
 }
