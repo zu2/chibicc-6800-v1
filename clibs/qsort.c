@@ -3,11 +3,10 @@
 
 extern void _memswap(void *a, void *b, size_t size);
 
-static char *random_pivot(char *first, char *last, size_t size)
+static char *middle_pivot(char *first, char *last, size_t size)
 {
   size_t len = (last - first) / size + 1;
-  size_t idx = rand() % len;
-  return first + idx * size;
+  return first + (len / 2) * size;
 }
 
 static void qsort3(char *first, char *last, size_t size,
@@ -35,7 +34,7 @@ static void qsort3(char *first, char *last, size_t size,
       return;
     }
 
-    char *pivot = random_pivot(first, last, size);
+    char *pivot = middle_pivot(first, last, size);
     if (pivot != first) {
       _memswap(first, pivot, size);
       pivot = first;
@@ -61,14 +60,24 @@ static void qsort3(char *first, char *last, size_t size,
       _memswap(first, lt, size);
     }
 
-    if (lt - size >= first) {
-      qsort3(first, lt - size, size, compar);
-    }
-
-    if (gt + size < last) {
-      first = gt + size;
+    if ((size_t)(lt - first) < (size_t)(last - gt)) {
+      if (lt - size >= first) {
+        qsort3(first, lt - size, size, compar);
+      }
+      if (gt + size < last) {
+        first = gt + size;
+      } else {
+        break;
+      }
     } else {
-      break;
+      if (gt + size < last) {
+        qsort3(gt + size, last, size, compar);
+      }
+      if (first + size < lt) {
+        last = lt - size;
+      } else {
+        break;
+      }
     }
   }
 }
