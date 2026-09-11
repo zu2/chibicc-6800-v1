@@ -33,12 +33,12 @@ _setjmp:
 	stab	2,x
 	staa	1,x
 ;
-	sts	5,x		; SP
-;
 	pula
 	pulb
 	stab	4,x		; PC
 	staa	3,x
+;
+	sts	5,x		; SP
 	pshb
 	psha
 ;
