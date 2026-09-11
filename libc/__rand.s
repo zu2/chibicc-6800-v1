@@ -6,9 +6,9 @@
 ;
 
 	.data
-__seed:	.byte	$de
-	.byte	$ad
-	.byte	$be
+__seed:	.byte	$00
+	.byte	$01
+	.byte	$01
 	.code
 	.export	_rand
 	.export	_srand
