@@ -139,7 +139,7 @@ __ultoa_rev_loop:
 	ldaa __q
 	subb __p+1
 	sbca __p
-	bge __ultoa_ret_str
+	bcc __ultoa_ret_str
 	ldab 0,x
 	ldx __p
 	ldaa 0,x
