@@ -21,7 +21,7 @@ __eq8:
 	clrb
 	rts
 ;
-;	if Z=0 then AccAB=0 else 1
+;	if Z=0 then AccAB=1 else 0
 ;
 __ne8:
 	beq	__false

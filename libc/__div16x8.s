@@ -1,5 +1,5 @@
 ;
-;	AccAB = IX / 2,x
+;	AccAB = TOS / AccB
 ;
 	.export __div16x8
 	.export __mod16x8

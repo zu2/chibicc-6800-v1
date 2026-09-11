@@ -21,7 +21,7 @@ __eq8_zero:
 	sbcb #0
 	rts
 ;
-;	if AccB!=0 then AccAB=0 else 1
+;	if AccB!=0 then AccAB=1 else 0
 ;
 __ne8_zero:
 	clra

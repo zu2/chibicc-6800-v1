@@ -4,7 +4,7 @@
 ;	isspace: (c == ' '  || c == '\f' || c == '\n'
 ;	       || c == '\r' || c == '\t' || c == '\v')
 ;
-;    -> isspace: (c == ' ' || ('\t' <= c && c <= '\n'))
+;    -> isspace: (c == ' ' || ('\t' <= c && c <= '\r'))
 ;
 _isspace:
 	tsta
