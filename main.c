@@ -639,7 +639,7 @@ static void parse_args(int argc, char **argv) {
     num_input_files++;
   }
 
-  if (input_paths.len == 0)
+  if (num_input_files == 0)
     error("no input files");
 
   if (opt_o) {
@@ -1129,7 +1129,7 @@ int main(int argc, char **argv) {
   }
 
   if (num_input_files > 1 && opt_o && dont_link)
-    error("cannot specify '-o' with '-c,' '-S' or '-E' with multiple files");
+    error("cannot specify '-o' with '-c,' '-S', '-E' or '-M' with multiple files");
 
   StringArray ld_args = {};
 
