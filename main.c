@@ -22,6 +22,7 @@ static bool opt_MMD;
 static bool opt_MP;
 static bool opt_S;
 static bool opt_c;
+static bool dont_link;
 static bool opt_cc1;
 static bool opt_hash_hash_hash;
 static bool opt_static;
@@ -107,6 +108,7 @@ char *base_file;
 static char *output_file;
 
 static StringArray input_paths;
+static int num_input_files;
 static StringArray tmpfiles;
 
 static void usage(int status) {
@@ -229,6 +231,7 @@ static void parse_args(int argc, char **argv) {
 
     if (!strcmp(argv[i], "-S")) {
       opt_S = true;
+      dont_link = true;
       continue;
     }
 
@@ -303,11 +306,13 @@ static void parse_args(int argc, char **argv) {
 
     if (!strcmp(argv[i], "-c")) {
       opt_c = true;
+      dont_link = true;
       continue;
     }
 
     if (!strcmp(argv[i], "-E")) {
       opt_E = true;
+      dont_link = true;
       continue;
     }
 
@@ -399,11 +404,13 @@ static void parse_args(int argc, char **argv) {
 
     if (!strcmp(argv[i], "-M")) {
       opt_M = true;
+      dont_link = true;
       continue;
     }
 
     if (!strcmp(argv[i], "-MM")) {
       opt_M = opt_MMD = true;
+      dont_link = true;
       continue;
     }
 
@@ -629,6 +636,7 @@ static void parse_args(int argc, char **argv) {
       error("unknown argument: %s", argv[i]);
 
     strarray_push(&input_paths, argv[i]);
+    num_input_files++;
   }
 
   if (input_paths.len == 0)
@@ -1120,7 +1128,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  if (input_paths.len > 1 && opt_o && (opt_c || opt_S || opt_E))
+  if (num_input_files > 1 && opt_o && dont_link)
     error("cannot specify '-o' with '-c,' '-S' or '-E' with multiple files");
 
   StringArray ld_args = {};
@@ -1241,7 +1249,7 @@ int main(int argc, char **argv) {
     continue;
   }
 
-  if (ld_args.len > 0)
+  if (ld_args.len > 0 && !dont_link)
     run_linker(&ld_args, opt_o ? opt_o : "a.out");
   return 0;
 }
