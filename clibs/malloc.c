@@ -21,8 +21,15 @@ static void *heap_base(void)
 {
   asm("\tldab #<__bss");
   asm("\tldaa #>__bss");
-  asm("\taddb #__bss_size");
-  asm("\tadca #__bss_size");
+  asm("\taddb #<__bss_size");
+  asm("\tadca #>__bss_size");
+}
+
+static void *stack_pointer(void)
+{
+  asm("\tsts @tmp1");
+  asm("\tldab @tmp1+1");
+  asm("\tldaa @tmp1");
 }
 
 static void malloc_init(void) {
@@ -31,7 +38,7 @@ static void malloc_init(void) {
 }
 
 void *malloc(size_t size) {
-    if (size == 0) return NULL;
+    if (size == 0 || size > 0xFFFB) return NULL;
     if (!heap) malloc_init();
 
     size_t required_total = ALIGN_2BYTE(ALIGN_2BYTE(size) + sizeof(struct block));
@@ -45,6 +52,10 @@ void *malloc(size_t size) {
         }
         cur = (struct block *)((char *)cur + USER_SIZE(cur->size));
     }
+
+    size_t sp = (size_t)stack_pointer();
+    size_t limit = sp < 1024 ? 0 : sp - 1024;
+    if ((size_t)cur > limit || required_total > limit - (size_t)cur) return NULL;
 
     cur->size = required_total;
     struct block *sentinel = (struct block *)((char *)cur + required_total);
