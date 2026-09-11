@@ -66,10 +66,10 @@ static int justify_mem(const uint8_t *s, int len, bool left_justify, bool zero_p
 }
 
 
-uint8_t *_check_nan(float val, bool add_plus);
-void _float_to_str(float val, int precision, bool add_plus, uint8_t *buf);
-void _float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf);
-void _float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf);
+uint8_t *_check_nan(float val, uint8_t sign_char);
+void _float_to_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
+void _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
+void _float_to_hex_str(float val, int precision, uint8_t sign_char, uint8_t *buf);
 
 // printf-like function (float only, no double, + and - flags as bool)
 static int vsnprintf_core(const uint8_t *fmt, va_list args)
@@ -86,7 +86,7 @@ static int vsnprintf_core(const uint8_t *fmt, va_list args)
     int width = 0;
     int precision = -1;
     bool left_justify = false;
-    bool add_plus = false;
+    uint8_t sign_char = 0;
     bool zero_pad = false;
     bool is_long = false;
 
@@ -94,7 +94,12 @@ static int vsnprintf_core(const uint8_t *fmt, va_list args)
     while (*fmt) {
       switch(*fmt) {
       case '-': left_justify = true;  break;
-      case '+': add_plus = true;      break;
+      case '+': sign_char = '+';      break;
+      case ' ':
+        if (sign_char == 0) {
+          sign_char = ' ';
+        }
+        break;
       case '0': zero_pad = true;      break;
       default:
         goto end_flags;
@@ -140,8 +145,8 @@ end_flags:
         buf[0] = '-';
         ultoa((uint32_t)labs(val), (char *)(buf+1), 10);
       }else{
-        if (add_plus) {
-          buf[0] = '+';
+        if (sign_char) {
+          buf[0] = sign_char;
           ultoa((uint32_t)val, (char *)(buf+1), 10);
         }else{
           ultoa((uint32_t)val, (char *)(buf), 10);
@@ -178,7 +183,7 @@ end_flags:
     case 'a': {
       float val = (float)va_arg(args, float);
       uint8_t *p;
-      if ((p = _check_nan(val,add_plus)) != NULL) {
+      if ((p = _check_nan(val,sign_char)) != NULL) {
         justify_mem(p, strlen(p),left_justify, false, width);
         break;
       }
@@ -191,13 +196,13 @@ end_flags:
       }
       switch(*fmt) {
       case 'f':
-        _float_to_str(val, precision, add_plus, buf);
+        _float_to_str(val, precision, sign_char, buf);
         break;
       case 'e':
-        _float_to_exp_str(val, precision, add_plus, buf);
+        _float_to_exp_str(val, precision, sign_char, buf);
         break;
       case 'a':
-        _float_to_hex_str(val, precision, add_plus, buf);
+        _float_to_hex_str(val, precision, sign_char, buf);
         break;
       }
       justify_mem(buf, strlen(buf), left_justify, zero_pad, width);

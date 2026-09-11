@@ -7,20 +7,20 @@
 #define my_signbit(x) ((*(unsigned char *)&x)&0x80)
 
 // Check if float is NaN or Inf, print and return 1 if true
-uint8_t *_check_nan(float val,bool add_plus)
+uint8_t *_check_nan(float val,uint8_t sign_char)
 {
   if (isnan(val)) {
     if (my_signbit(val)) {
       return (uint8_t *)"-nan";
-    }else if (add_plus) {
-      return (uint8_t *)"+nan";
+    }else if (sign_char) {
+      return (uint8_t *)(sign_char == '+' ? "+nan" : " nan");
     }
     return (uint8_t *)"nan";
   } else if (isinf(val)) {
     if (my_signbit(val)) {
       return (uint8_t *)"-inf";
-    }else if (add_plus) {
-      return (uint8_t *)"+inf";
+    }else if (sign_char) {
+      return (uint8_t *)(sign_char == '+' ? "+inf" : " inf");
     }
     return (uint8_t *)"inf";
   }
@@ -61,11 +61,11 @@ static float get_round_add(int precision)
   return r;
 }
 
-void _float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf)
+void _float_to_exp_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
 {
   uint8_t *p = buf;
   if (my_signbit(val)) { *p++ = '-'; val = fabsf(val); }
-  else if (add_plus) { *p++ = '+'; }
+  else if (sign_char) { *p++ = sign_char; }
 
   int exp = 0;
   while (val >= 10.0f) { val /= 10.0f; exp++; }
@@ -93,13 +93,13 @@ void _float_to_exp_str(float val, int precision, bool add_plus, uint8_t *buf)
 //
 // For exact printf-like rounding, a full Ryu/Dragon4-style algorithm is required.
 //
-void _float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
+void _float_to_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
 {
   uint8_t *p = buf;
   float int_part, frac_part;
 
   if (my_signbit(val)) { *p++ = '-'; val = fabsf(val); }
-  else if (add_plus) { *p++ = '+'; }
+  else if (sign_char) { *p++ = sign_char; }
 
   frac_part = modff(val,&int_part);
   if (int_part < 4294967296.0f) {
@@ -108,7 +108,7 @@ void _float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
 
     p = format_float_core(p, val, precision);
   }else{
-    _float_to_exp_str(val, precision, false, p);
+    _float_to_exp_str(val, precision, 0, p);
     return;
   }
   *p = '\0';
@@ -116,15 +116,15 @@ void _float_to_str(float val, int precision, bool add_plus, uint8_t *buf)
 
 
 // Convert float to hex float string for %a (add sign if needed)
-void _float_to_hex_str(float val, int precision, bool add_plus, uint8_t *buf)
+void _float_to_hex_str(float val, int precision, uint8_t sign_char, uint8_t *buf)
 {
   uint8_t *p = buf;
 
   if (my_signbit(val)) {
     *p++ = '-';
     val = fabsf(val);
-  } else if (add_plus) {
-    *p++ = '+';
+  } else if (sign_char) {
+    *p++ = sign_char;
   }
   int exp = 0;
   uint32_t mant = 0;
