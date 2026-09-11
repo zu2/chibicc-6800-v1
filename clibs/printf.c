@@ -133,8 +133,11 @@ end_flags:
       }
     }
     // Handle long format specifiers (%ld, %lx, %lX)
-    if (*fmt == 'l') {
+    if (*fmt == 'l' || *fmt == 'j') {
       is_long = true;
+      fmt++;
+    }
+    while (*fmt == 'h' || *fmt == 'z' || *fmt == 't') {
       fmt++;
     }
     // Handle format specifier
