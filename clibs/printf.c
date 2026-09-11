@@ -25,7 +25,7 @@ static  void  putchar_to_console(uint8_t c)
   out_count++;
 }
 
-static void putchar_rep(uint8_t c, uint8_t  n)
+static void putchar_rep(uint8_t c, int n)
 {
   while (n) {
     putchar_p(c);
