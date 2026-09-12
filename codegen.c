@@ -4856,6 +4856,7 @@ void gen_expr(Node *node)
       return;
     }
     if (node->ty->size == 4
+    &&  is_numeric(node->ty)
     &&  (addr = is_var_addr_constant(node))) {
       if (opt('O','2')) {
         println("\tldx %s+2",addr);
@@ -5011,6 +5012,7 @@ void gen_expr(Node *node)
       assert(0);
     }
     if (node->ty->size == 4
+    &&  is_numeric(node->ty)
     &&  (addr = is_var_addr_constant(node))) {
       if (opt('O','2')) {
         println("\tldx %s+2",addr);
