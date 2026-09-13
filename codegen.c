@@ -4889,13 +4889,7 @@ void gen_expr(Node *node)
       }
       assert(0);
     }
-    if (can_load_x(node->ty) && test_addr_x(node)) {
-      off = gen_addr_x(node);
-      load_x(node->ty,off);
-    }else{
-      gen_addr(node);
-      load(node->ty);
-    }
+    load_var(node);
     return;
   }
   case ND_DEREF: {
