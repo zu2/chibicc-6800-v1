@@ -2023,12 +2023,7 @@ void load_x(Type *ty,int off) {
 
 void load_var(Node *node)
 {
-  switch (node->ty->kind) {
-  case TY_ARRAY:
-  case TY_STRUCT:
-  case TY_UNION:
-  case TY_FUNC:
-  case TY_VLA:
+  if (!is_scalar(node->ty)) {
     gen_addr(node);
     load(node->ty);
     return;
@@ -2045,23 +2040,11 @@ void load_var(Node *node)
     }
     assert(0);
   }
-  if (is_global_var(node)){
-    switch(node->ty->kind) {
-    case TY_BOOL:
-    case TY_CHAR:
-      println("\tldab _%s",  node->var->name);
-      break;
-    case TY_SHORT:
-    case TY_INT:
-    case TY_ENUM:
-    case TY_PTR:
-      println("\tldab _%s+1",node->var->name);
-      println("\tldaa _%s",  node->var->name);
-      break;
-    case TY_LONG:
-    case TY_FLOAT:
-    case TY_DOUBLE:
-    case TY_LDOUBLE:
+  if (is_global_var(node)) {
+    if (node->ty->kind == TY_LONG
+    ||  node->ty->kind == TY_FLOAT
+    ||  node->ty->kind == TY_DOUBLE
+    ||  node->ty->kind == TY_LDOUBLE) {
       if (opt('O','2')) {
         println("\tldx _%s+2",node->var->name);
         println("\tstx @long+2");
@@ -2072,11 +2055,8 @@ void load_var(Node *node)
         ldx_IMM_VAR(node->var->name);
         load32x(0);
       }
-      break;
-    default:
-      assert(0);
+      return;
     }
-    return;
   }
   if (can_load_x(node->ty) && test_addr_x(node)) {
     int off = gen_addr_x(node);
