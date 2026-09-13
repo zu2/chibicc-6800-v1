@@ -1985,11 +1985,10 @@ bool can_load_x(Type *ty)
   case TY_FUNC:
   case TY_VLA:
     return false;
-  case TY_DOUBLE:
-  case TY_LDOUBLE:
-    return false;
   case TY_PTR:
   case TY_FLOAT:
+  case TY_DOUBLE:
+  case TY_LDOUBLE:
     return true;
   }
   return is_integer(ty);
@@ -2067,7 +2066,7 @@ void load_var(Node *node)
     }
     return;
   }
-  if (test_addr_x(node)) {
+  if (can_load_x(node->ty) && test_addr_x(node)) {
     int off = gen_addr_x(node);
     load_x(node->ty,off);
     return;
