@@ -2033,6 +2033,18 @@ void load_var(Node *node)
     load(node->ty);
     return;
   }
+  if (is_int8(node->ty) && can_direct_8bit(node)) {
+    if (gen_direct_8bit(node,"ldab")) {
+      return;
+    }
+    assert(0);
+  }
+  if (is_int16_or_ptr(node->ty) && can_direct(node)) {
+    if (gen_direct(node,"ldab","ldaa")) {
+      return;
+    }
+    assert(0);
+  }
   if (is_global_var(node)){
     switch(node->ty->kind) {
     case TY_BOOL:
@@ -4876,18 +4888,6 @@ void gen_expr(Node *node)
         println("\tjsr __load32x");
         return;
       }
-    }
-    if (is_int8(node->ty) && can_direct_8bit(node)) {
-      if (gen_direct_8bit(node,"ldab")) {
-        return;
-      }
-      assert(0);
-    }
-    if (is_int16_or_ptr(node->ty) && can_direct(node)) {
-      if (gen_direct(node,"ldab","ldaa")) {
-        return;
-      }
-      assert(0);
     }
     load_var(node);
     return;
