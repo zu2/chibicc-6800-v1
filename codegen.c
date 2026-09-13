@@ -2035,15 +2035,22 @@ void load_var(Node *node)
     return;
   }
   if (is_global_var(node)){
-    switch(node->ty->size) {
-    case 1:
+    switch(node->ty->kind) {
+    case TY_BOOL:
+    case TY_CHAR:
       println("\tldab _%s",  node->var->name);
       break;
-    case 2:
+    case TY_SHORT:
+    case TY_INT:
+    case TY_ENUM:
+    case TY_PTR:
       println("\tldab _%s+1",node->var->name);
       println("\tldaa _%s",  node->var->name);
       break;
-    case 4:
+    case TY_LONG:
+    case TY_FLOAT:
+    case TY_DOUBLE:
+    case TY_LDOUBLE:
       if (opt('O','2')) {
         println("\tldx _%s+2",node->var->name);
         println("\tstx @long+2");
