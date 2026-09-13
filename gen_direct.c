@@ -520,8 +520,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       if (test) return true;
       if (is_int8(node->ty)) {
         println("\t%s _%s",opb,node->var->name);
-        if (!is_store(opb) && opa) {
-          println("\t%s #0",opa);
+        if (opa) {
+          if (strcmp(opa,"ldaa")==0) {
+            println("\tclra");
+          } else if (!is_store(opb)) {
+            println("\t%s #0",opa);
+          }
         }
    	    if (is_store(opb)) {
           invalidate_EXT(node);
@@ -550,8 +554,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
         } else {
           println("\t%s _%s+%ld",opb,base->var->name,off);
         }
-        if (!is_store(opb) && opa) {
-          println("\t%s #0",opa);
+        if (opa) {
+          if (strcmp(opa,"ldaa")==0) {
+            println("\tclra");
+          } else if (!is_store(opb)) {
+            println("\t%s #0",opa);
+          }
         }
         if (is_store(opb)) {
           invalidate_EXT(base);
@@ -586,8 +594,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       case TY_CHAR:
         if (test) return true;
         println("\t%s %ld",opb,node->lhs->val);
-        if (!is_store(opb) && opa) {
-          println("\t%s #0",opa);
+        if (opa) {
+          if (strcmp(opa,"ldaa")==0) {
+            println("\tclra");
+          } else if (!is_store(opb)) {
+            println("\t%s #0",opa);
+          }
         }
         return true;
       case TY_SHORT:
@@ -613,8 +625,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
         case TY_BOOL:
         case TY_CHAR:
           println("\t%s %ld",opb,node->lhs->lhs->val);
-          if (!is_store(opb) && opa) {
-            println("\t%s #0",opa);
+          if (opa) {
+            if (strcmp(opa,"ldaa")==0) {
+              println("\tclra");
+            } else if (!is_store(opb)) {
+              println("\t%s #0",opa);
+            }
           }
           return true;
         case TY_SHORT:
@@ -677,8 +693,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       } else {
         println("\t%s _%s+%ld",opb,base->var->name,off);
       }
-      if (!is_store(opb) && opa) {
-        println("\t%s #0",opa);
+      if (opa) {
+        if (strcmp(opa,"ldaa")==0) {
+          println("\tclra");
+        } else if (!is_store(opb)) {
+          println("\t%s #0",opa);
+        }
       }
       if (is_store(opb)) {
         invalidate_EXT(base);
@@ -776,8 +796,12 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
       if (test) return true;
       int off = gen_addr_x(node);
       println("\t%s %d,x",opb,off);
-      if (!is_store(opb) && opa) {
-        println("\t%s #0",opa);
+      if (opa) {
+        if (strcmp(opa,"ldaa")==0) {
+          println("\tclra");
+        } else if (!is_store(opb)) {
+          println("\t%s #0",opa);
+        }
       }
     }else{
       if (test) return true;
@@ -827,8 +851,12 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
         if (test) return true;
         int off = gen_addr_x(node);
         println("\t%s %d,x",opb,off);
-        if (!is_store(opb) && opa) {
-          println("\t%s #0",opa);
+        if (opa) {
+          if (strcmp(opa,"ldaa")==0) {
+            println("\tclra");
+          } else if (!is_store(opb)) {
+            println("\t%s #0",opa);
+          }
         }
         return true;
       case TY_INT:
