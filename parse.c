@@ -1794,10 +1794,15 @@ static Node *stmt(Token **rest, Token *tok) {
       case_label_type = case_label_type->is_unsigned? ty_uint: ty_int;
     }
     for (Node *n = node->case_next; n; n = n->case_next) {
-      if (n->begin < ty_min_value(case_label_type)
-      ||  n->end   > ty_max_value(case_label_type)) {
-        error_tok(n->tok, "case label value does not fit the promoted type");
+      if (n->begin != n->end) {
+        if (n->begin < ty_min_value(case_label_type)
+        ||  n->end   > ty_max_value(case_label_type)) {
+          error_tok(n->tok, "case label value does not fit the promoted type");
+        }
+        continue;
       }
+      n->begin = fit_to_type(n->begin, case_label_type);
+      n->end   = n->begin;
     }
 
     // All cases are registered by now, so compare every pair.
@@ -1816,8 +1821,8 @@ static Node *stmt(Token **rest, Token *tok) {
       error_tok(tok, "stray case");
 
     Node *node = new_node(ND_CASE, tok);
-    int begin = const_expr(&tok, tok->next);
-    int end;
+    int64_t begin = const_expr(&tok, tok->next);
+    int64_t end;
 
     if (equal(tok, "...")) {
       // [GNU] Case ranges, e.g. "case 1 ... 5:"

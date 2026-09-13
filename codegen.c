@@ -6889,9 +6889,26 @@ static void gen_stmt(Node *node)
         println("\tpulb");
         println("\tjcs %s", n->label);
         break;
-      case 4:
-        // TODO: case range
-        assert(0);
+      case 4: {
+        int c = count();
+        ldx_IMM_STR(long_literal_label(n->begin));
+        if (node->cond->ty->is_unsigned) {
+          println("\tjsr __ge32ux");
+        } else {
+          println("\tjsr __ge32sx");
+        }
+        println("\tjeq L_case_%d",c);
+        ldx_IMM_STR(long_literal_label(n->end));
+        if (node->cond->ty->is_unsigned) {
+          println("\tjsr __le32ux");
+        } else {
+          println("\tjsr __le32sx");
+        }
+        println("\tjne %s", n->label);
+        println("L_case_%d:",c);
+        IX_invalidate();
+        break;
+      }
       }
     }
 
