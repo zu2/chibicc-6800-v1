@@ -485,6 +485,8 @@ bool is_uchar_or_u8num(Node *node);
 bool is_schar_or_s8num(Node *node);
 bool is_char_or_8num(Node *node);
 int  exact_log2(int64_t val);
+int64_t ty_min_value(Type *ty);
+int64_t ty_max_value(Type *ty);
 
 Node *optimize_expr(Node *node);
 Node *optimize_condition(Node *node);

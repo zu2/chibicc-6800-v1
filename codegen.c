@@ -6866,6 +6866,11 @@ static void gen_stmt(Node *node)
         continue;
       }
       // [GNU] Case ranges
+      if (n->begin <= ty_min_value(node->cond->ty)
+      &&  n->end   >= ty_max_value(node->cond->ty)) {
+        println("\tjmp %s", n->label);
+        continue;
+      }
       switch (node->cond->ty->size) {
       case 1:
         println("\ttba");

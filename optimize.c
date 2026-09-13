@@ -170,7 +170,20 @@ static bool can_negate_compare(Node *node)
   return false;
 }
 
-static int64_t ty_max_value(Type *ty)
+int64_t ty_min_value(Type *ty)
+{
+  switch(ty->kind){
+  case TY_BOOL: return 0;
+  case TY_CHAR: return ty->is_unsigned? 0: INT8_MIN;
+  case TY_SHORT:
+  case TY_INT:
+  case TY_ENUM: return ty->is_unsigned? 0: INT16_MIN;
+  case TY_LONG: return ty->is_unsigned? 0: INT32_MIN;
+  }
+  return 0;
+}
+
+int64_t ty_max_value(Type *ty)
 {
   switch(ty->kind){
   case TY_BOOL: return 1;

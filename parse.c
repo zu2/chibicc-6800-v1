@@ -1787,6 +1787,19 @@ static Node *stmt(Token **rest, Token *tok) {
 
     node->then = stmt(rest, tok);
 
+    Type *case_label_type = node->cond->ty;
+    if (case_label_type->size < ty_int->size) {
+      case_label_type = ty_int;
+    } else if (case_label_type->kind == TY_SHORT) {
+      case_label_type = case_label_type->is_unsigned? ty_uint: ty_int;
+    }
+    for (Node *n = node->case_next; n; n = n->case_next) {
+      if (n->begin < ty_min_value(case_label_type)
+      ||  n->end   > ty_max_value(case_label_type)) {
+        error_tok(n->tok, "case label value does not fit the promoted type");
+      }
+    }
+
     // All cases are registered by now, so compare every pair.
     for (Node *n = node->case_next; n; n = n->case_next)
       for (Node *m = n->case_next; m; m = m->case_next)
