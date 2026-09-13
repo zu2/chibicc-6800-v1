@@ -5278,11 +5278,6 @@ void gen_expr(Node *node)
     gen_expr(node->rhs);
     return;
   case ND_CAST:
-    if ((addr=is_addr_constant(node))) {
-      println("\tldab #<%s",addr);
-      println("\tldaa #>%s",addr);
-      return;
-    }
     if (is_long_constant(node,&val)) {
       load32i(val);
       return;
@@ -5294,8 +5289,6 @@ void gen_expr(Node *node)
       assert(0);
     }
     if (is_int16_or_ptr(node->ty)
-    &&  is_integer(node->lhs->ty)
-    &&  node->ty->size < node->lhs->ty->size
     &&  can_direct(node)) {
       if (gen_direct(node,"ldab","ldaa")) {
         return;
