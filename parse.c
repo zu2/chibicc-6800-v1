@@ -1788,7 +1788,14 @@ static Node *stmt(Token **rest, Token *tok) {
     node->then = stmt(rest, tok);
 
     Type *case_label_type = node->cond->ty;
-    if (case_label_type->size < ty_int->size) {
+    int bit_width;
+    if (is_bitfield2(node->cond, &bit_width)) {
+      if (bit_width == 16 && case_label_type->is_unsigned) {
+        case_label_type = ty_uint;
+      } else if (bit_width <= 16) {
+        case_label_type = ty_int;
+      }
+    } else if (case_label_type->size < ty_int->size) {
       case_label_type = ty_int;
     } else if (case_label_type->kind == TY_SHORT) {
       case_label_type = case_label_type->is_unsigned? ty_uint: ty_int;

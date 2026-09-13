@@ -90,7 +90,7 @@ bool is_bitfield(Node *node) {
   return node->kind == ND_MEMBER && node->member->is_bitfield;
 }
 
-static bool is_bitfield2(Node *node, int *width) {
+bool is_bitfield2(Node *node, int *width) {
   switch (node->kind) {
   case ND_ASSIGN:
   case ND_POST_INCDEC:

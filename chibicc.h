@@ -451,6 +451,7 @@ bool is_scalar(Type *ty);
 bool is_scalar_after_decay(Type *ty);
 bool is_ptr_or_array(Type *ty);
 bool is_numeric(Type *ty);
+bool is_bitfield2(Node *node, int *width);
 bool is_null_ptr_constant(Node *node);
 void int_promotion(Node **node);
 bool is_redundant_cast(Node *expr, Type *ty);
