@@ -1163,7 +1163,7 @@ void init_macros(void) {
   define_macro("__STDC_UTF_32__", "1");
   define_macro("__STDC_VERSION__", "201112L");
   define_macro("__STDC__", "1");
-  define_macro("__USER_LABEL_PREFIX__", "");
+  define_macro("__USER_LABEL_PREFIX__", "_");
   define_macro("__alignof__", "_Alignof");
 //define_macro("__amd64", "0");
 //define_macro("__amd64__", "0");
