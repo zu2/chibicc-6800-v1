@@ -645,6 +645,8 @@ static void parse_args(int argc, char **argv) {
     struct stat st;
     if (stat(opt_o, &st) == 0 && S_ISDIR(st.st_mode))
       error("cannot open output file: %s: Is a directory", opt_o);
+    if (!strcmp(opt_o, "-") && (opt_c || !dont_link))
+      error("cannot write binary output to stdout: -o -");
   }
 
   // -E implies that the input is the C macro language.
@@ -1183,6 +1185,7 @@ int main(int argc, char **argv) {
 
     // Compile
     if (opt_S) {
+      char *sout = strcmp(output, "-") ? output : NULL;
       if (!opt('O','0') && can_copt()) {
         char *tmp = create_tmpfile();
         char *tmp3 = create_tmpfile();
@@ -1190,12 +1193,12 @@ int main(int argc, char **argv) {
         if (opt('O','3') && can_copt()) {
           run_copt(tmp, tmp3,  copt_rules);
           run_copt(tmp3,tmp  , copt_O2_rules);
-          run_copt(tmp, output,copt_O3_rules);
+          run_copt(tmp, sout,  copt_O3_rules);
         }else if (opt('O','2') && can_copt()) {
           run_copt(tmp, tmp3,  copt_rules);
-          run_copt(tmp3,output,copt_O2_rules);
+          run_copt(tmp3,sout,  copt_O2_rules);
         }else{
-          run_copt(tmp, output,copt_rules);
+          run_copt(tmp, sout,  copt_rules);
         }
       }else{
         run_cc1(argc, argv, input, output);
