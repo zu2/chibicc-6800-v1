@@ -56,7 +56,7 @@ _nextafterf_02:
         stx     @long+2
         ldx     #0
         stx     @long
-        ror     @long
+        ror     long
 ;
         rts
 ;

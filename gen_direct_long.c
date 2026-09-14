@@ -70,7 +70,7 @@ int gen_direct_shl_long(Node *node,int64_t val)
     println("\tstx @long");
     println("\tldab @long+3");
     println("\tstab @long+2");
-    println("\tclr @long+3");
+    println("\tclr long+3");
     IX_invalidate();
     return 1;
   }
@@ -87,7 +87,7 @@ int gen_direct_shr_long(Node *node,int64_t val)
   if ( val >= 32 ) {
     println("\tclra");
     if (!lhs->ty->is_unsigned) {
-      println("\tasl @long");
+      println("\tasl long");
       println("\tsbca #0");
     }
     println("\tstaa @long+3");
@@ -103,7 +103,7 @@ int gen_direct_shr_long(Node *node,int64_t val)
     println("\tclra");
     if (!lhs->ty->is_unsigned) {
       char *skip = new_jump_label();
-      println("\ttst @long");
+      println("\ttst long");
       println("\tbpl %s",skip);
       println("\tdeca");
       println("%s:",skip);
@@ -206,9 +206,9 @@ void gen_direct_long_bitop_imm(Node *node, int64_t val)
   }
 
   switch (node->kind) {
-  case ND_BITAND: opb="andb"; keep=0xFF; whole=0x00; fmt="\tclr @long+%d"; break;
+  case ND_BITAND: opb="andb"; keep=0xFF; whole=0x00; fmt="\tclr long+%d"; break;
   case ND_BITOR:  opb="orab"; keep=0x00; whole=0xFF; fmt="\tldab #$FF\n\tstab @long+%d"; break;
-  case ND_BITXOR: opb="eorb"; keep=0x00; whole=0xFF; fmt="\tcom @long+%d"; break;
+  case ND_BITXOR: opb="eorb"; keep=0x00; whole=0xFF; fmt="\tcom long+%d"; break;
   default: assert(0);
   }
 

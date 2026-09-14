@@ -47,9 +47,9 @@ __frexpf_01:			; @long is not NaN, Inf, 0.0
 __frexpf_10:
         subb    #1
         sbca    #0
-        asl     @long+3
-        rol     @long+2
-        rol     @long+1
+        asl     long+3
+        rol     long+2
+        rol     long+1
         bpl     __frexpf_10
 ;
 __frexpf_02:
@@ -60,8 +60,8 @@ __frexpf_02:
         stab    1,x             ; exp
         staa    0,x
 ;
-        asl     @long+1         ; drop hidden bit
-        lsr     @long+1
+        asl     long+1         ; drop hidden bit
+        lsr     long+1
 ;
         ldaa    @long
         anda    #$80

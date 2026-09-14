@@ -173,8 +173,8 @@ __i16tof32_06:                  ; Shift left until the MSB becomes 1
 	rorb
 	stab    @long+1
 	staa    @long
-	clr     @long+3
-	clr     @long+2
+	clr     long+3
+	clr     long+2
 	rts
 ;
 __i16tof32_10:                  ; i16 in ±256〜32768
@@ -954,9 +954,9 @@ __addf32_11:
 	adcb	__fp_work+1
 	stab	@long+1
 	bcc	__addf32_20	; over flow?
-        ror     @long+1
-        ror     @long+2
-        ror     @long+3
+        ror     long+1
+        ror     long+2
+        ror     long+3
         ldab	__fp_work+4	; sticky
 	rorb
 	bitb	#$3F
@@ -1331,7 +1331,7 @@ __mulf32tos34:
 	rora
 	rorb
         ror     0,x
-	dec     @tmp2
+	dec     tmp2
 	bne	__mulf32tos30
         dex
         cpx     #__fp_work+2
@@ -1681,14 +1681,14 @@ __fdiv32x32:
 	stab @long
 ;
 	ldab @long+3
-	clr  @long+3
+	clr  long+3
 ;
         bra  loop_begin
 ;
 loop:
 	aslb		; shift reminder
 	rola
-	rol  @tmp1+1
+	rol  tmp1+1
         bcs loop_begin_1
         bmi loop_begin
         rol 0,x

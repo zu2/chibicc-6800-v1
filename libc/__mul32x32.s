@@ -42,7 +42,7 @@ __mul32x32x:
 ;
 	ldx #8
 ;
-        lsr  @long+3
+        lsr  long+3
 loop_1:
         bcc  skip_1
         addb @tmp4+1

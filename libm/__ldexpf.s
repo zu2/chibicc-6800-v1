@@ -50,9 +50,9 @@ __ldexpf_01:			; @long is not NaN, Inf, 0.0
 __ldexpf_02:
         subb    #1
         sbca    #0
-        asl     @long+3
-        rol     @long+2
-        rol     @long+1
+        asl     long+3
+        rol     long+2
+        rol     long+1
         bpl     __ldexpf_02
 ;
 __ldexpf_03:
@@ -99,9 +99,9 @@ __ldexpf_07:
         ldab    __mbits
         subb    #24             ; AccB = -k
 __ldexpf_04:
-        lsr     @long+1
-        ror     @long+2
-        ror     @long+3
+        lsr     long+1
+        ror     long+2
+        ror     long+3
         incb
         bne     __ldexpf_04
 ;
@@ -113,11 +113,11 @@ __ldexpf_04:
         lsra
         bcc     __ldexpf_05
 __ldexpf_06:
-        inc     @long+3
+        inc     long+3
         bne     __ldexpf_05
-        inc     @long+2
+        inc     long+2
         bne     __ldexpf_05
-        inc     @long+1
+        inc     long+1
 ;
 __ldexpf_05:
         ldab    @long+1
@@ -131,9 +131,9 @@ __ldexpf_10:
         addb    #127            ; add bias
 ;
 __ldexpf_11:
-        asl     @long+1
+        asl     long+1
         asl     __sign
         rorb
-        ror     @long+1
+        ror     long+1
         stab    @long
         rts

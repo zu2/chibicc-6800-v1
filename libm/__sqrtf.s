@@ -52,9 +52,9 @@ __sqrtf_01:			; @long is not NaN and Inf
 __sqrtf_03:
 	subb	#1
 	sbca	#0
-        asl     @long+3
-        rol     @long+2
-        rol     @long+1         ; mant <<= 1
+        asl     long+3
+        rol     long+2
+        rol     long+1         ; mant <<= 1
 	bpl	__sqrtf_03	; loop until hidden bit==1
 ;
 __sqrtf_05:

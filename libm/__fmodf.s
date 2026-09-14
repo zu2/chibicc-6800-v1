@@ -108,7 +108,7 @@ __fmodf_02:                             ; Here, fabsf(@long)>fabsf(TOS)
         sbca    __expnew                ; expdiff = long's exp - TOS's exp
         staa    __expdiff
 ;
-        clr     @long
+        clr     long
         ldx     __tos_p
         incb
         inc     __expdiff
@@ -117,9 +117,9 @@ __fmodf_02:                             ; Here, fabsf(@long)>fabsf(TOS)
 ;	r < 2*my, r -= my if r >= my
 ;
 __fmodf_shift:
-        asl     @long+3
-        rol     @long+2
-        rol     @long+1
+        asl     long+3
+        rol     long+2
+        rol     long+1
         bcs     __fmodf_sub             ; r >= 2^24 > my
 __fmodf_cmp:
         ldaa    @long+1

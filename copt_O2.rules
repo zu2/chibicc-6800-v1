@@ -154,30 +154,30 @@
 
 	jsr __inc32
 =
-	inc @long+3
+	inc long+3
 	bne INC32_%M
-	inc @long+2
+	inc long+2
 	bne INC32_%M
-	inc @long+1
+	inc long+1
 	bne INC32_%M
-	inc @long
+	inc long
 INC32_%M:
 
 	jsr __dec32
 =
-	tst @long+3
+	tst long+3
 	bne DEC32_%M_3
-	tst @long+2
+	tst long+2
 	bne DEC32_%M_2
-	tst @long+1
+	tst long+1
 	bne DEC32_%M_1
-	dec @long
+	dec long
 DEC32_%M_1:
-	dec @long+1
+	dec long+1
 DEC32_%M_2:
-	dec @long+2
+	dec long+2
 DEC32_%M_3:
-	dec @long+3
+	dec long+3
 
 	jsr __add32i
 	.word %1

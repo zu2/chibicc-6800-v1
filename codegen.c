@@ -5430,10 +5430,10 @@ void gen_expr(Node *node)
       println("\tcoma");
       return;
     case 4:
-      println("\tcom @long+3");
-      println("\tcom @long+2");
-      println("\tcom @long+1");
-      println("\tcom @long");
+      println("\tcom long+3");
+      println("\tcom long+2");
+      println("\tcom long+1");
+      println("\tcom long");
       return;
     }
     assert(0);

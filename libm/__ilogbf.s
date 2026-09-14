@@ -49,9 +49,9 @@ ilogbf_2:
 	ldaa	#>-126
 ilogbf_3:
         decb                    ; exp range -126 to -149, AccA stays $FF
-        asl     @long+3
-        rol     @long+2
-        rol     @long+1
+        asl     long+3
+        rol     long+2
+        rol     long+1
         bpl     ilogbf_3
 	rts
 

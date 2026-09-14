@@ -11,10 +11,10 @@ plus1:
         tstb                    ; 2 1
         bpl     plus2           ; 4 2
         negb                    ; 2 1
-        com     @tmp2           ; 6 3
+        com     tmp2           ; 6 3
 plus2:
         jsr     __mul8x8u       ; 9 3
-        tst     @tmp2           ; 6 3
+        tst     tmp2           ; 6 3
         bpl     ret             ; 4 2
         nega                    ; 2 1
         negb                    ; 2 1
