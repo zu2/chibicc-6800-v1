@@ -3,17 +3,18 @@
 ;	AccAB = AccAB % TOS
 ;	AccAB = AccAB / TOS
 ;
-	.export __div16x16u
 	.export __rem16x16u
+	.export __div16x16u
 ;
 ;	AccAB = AccAB % TOS
+;	  0-1,x	return address
+;	  2-3,x	TOS
 ;
+	.code
 __rem16x16u:
 	tsx
 __rem1: pshb
 	psha
-	; 0-1,x return address
-	; 2-3,x	TOS
 	ldab 3,x	; TOS
 	ldaa 2,x
 __rem2:
@@ -24,6 +25,8 @@ __rem3:
 	rts
 ;
 ;	AccAB = AccAB / TOS
+;	  0-1,x	return address
+;	  2-3,x	TOS
 ;
 __div16x16u:
 	tsx
