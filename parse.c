@@ -503,13 +503,7 @@ static Type *declspec(Token **rest, Token *tok, VarAttr *attr) {
       continue;
 
     if (equal(tok, "_Atomic")) {
-      tok = tok->next;
-      if (equal(tok , "(")) {
-        ty = typename(&tok, tok->next);
-        tok = skip(tok, ")");
-      }
-      is_atomic = true;
-      continue;
+      error_tok(tok, "_Atomic is not supported");
     }
 
     if (equal(tok, "_Alignas")) {
