@@ -626,8 +626,8 @@ __s16zero:
 	rts
 ;
 __f32toi16_1:
-	cmpb	#$8e		; if exp>=$8e (|x| >= 32768)
-	bcs	__f32toi16_2
+	subb	#$8E		; if exp>=$8e (|x| >= 32768)
+	bcs	__f32toi16_4
 	ldaa	0,x
 	bmi	__s16_8000	; x <= -32768
 __s16_7fff:			; x > 32767, return 32767
@@ -639,15 +639,11 @@ __s16_8000:			; x <= -32768, return -32768
 	ldaa	#$80
 	rts
 ;
-__f32toi16_2:			; AccA:MSB, AccB:exp (biased)
-	subb	#$8E
-	beq	__f32toi16_ret
-__f32toi16_4:
+__f32toi16_4:			; AccA:MSB, AccB:exp-$8E
 	lsra
 	ror	2,x
 	incb
 	bne	__f32toi16_4
-__f32toi16_ret:
 	ldab	2,x
 ;	ldaa	1,x
 	tst	0,x
@@ -680,8 +676,8 @@ __s8zero:
 	rts
 ;
 __f32toi8_1:
-	cmpb	#$86		; if exp>=$86 (|x| >= 128)
-	bcs	__f32toi8_2
+	subb	#$86		; if exp>=$86 (|x| >= 128)
+	bcs	__f32toi8_4
 	ldaa	0,x		; check sign
 	bmi	__s8_80		; x <= -128
 __s8_7f:			; x > 127, return 127
@@ -693,14 +689,10 @@ __s8_80:			; x <= -128, return -128
 	ldaa	#$FF
 	rts
 ;
-__f32toi8_2:			; AccA:MSB, AccB:exp (biased)
-	subb	#$86
-	beq	__f32toi8_ret
-__f32toi8_4:
+__f32toi8_4:			; AccA:MSB, AccB:exp-$86
 	lsra
 	incb
 	bne	__f32toi8_4
-__f32toi8_ret:
 	tab
 	clra
 	tst	0,x
@@ -1401,7 +1393,7 @@ __mulf32tos707:
 ;    0  1 0 0   none    to the nearest even
 ;    0  1 0 1   +1 ULP
 ;    0  1 1 -   +1 ULP
-;    0  0 - -   none
+;    1  0 - -   none
 ;    1  1 0 0   +1 ULP  to the nearest even
 ;    1  1 0 1   +1 ULP
 ;    1  1 1 -   +1 ULP
@@ -1553,7 +1545,6 @@ __divf32_0301:
 	rol	long+2
 	rol	long+1
 	rol	long
-	bpl	__divf32tos20
 	stab	__expdiff+1
 	staa	__expdiff
 ;
