@@ -522,6 +522,7 @@ void cpx_EXT(Node *node);
 void stx_EXT(Node *node);
 void tfr_dx();
 bool is_decay_type(Type *ty);
+void op16_x(int off, char *opb, char *opa);
 void gen_expr_x(Node *node);
 int gen_decayed_x(Node *node);
 bool test_decayed_x(Node *node);

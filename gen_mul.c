@@ -459,8 +459,7 @@ gen_mul16(Node *node)
   }
   if (test_addr_x(lhs)) {
     off = gen_addr_x(lhs);
-    println("\tldab %d,x",off+1);
-    println("\tldaa %d,x",off);
+    op16_x(off,"ldab","ldaa");
     switch(rhs->kind){
     case ND_NUM:
       switch (rhs->ty->kind) {
@@ -492,8 +491,7 @@ gen_mul16(Node *node)
         case 3:
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          op16_x(off,"addb","adca");
           return true;
         case 4:
           println("\taslb");
@@ -506,14 +504,12 @@ gen_mul16(Node *node)
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          op16_x(off,"addb","adca");
           return true;
         case 6:
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          op16_x(off,"addb","adca");
           println("\taslb");
           println("\trola");
           return true;
@@ -524,8 +520,7 @@ gen_mul16(Node *node)
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\tsubb %d,x",off+1);
-          println("\tsbca %d,x",off);
+          op16_x(off,"subb","sbca");
           return true;
         case 8:
           println("\taslb");
@@ -540,8 +535,7 @@ gen_mul16(Node *node)
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\taddb %d,x",off+1);
-          println("\tadca %d,x",off);
+          op16_x(off,"addb","adca");
           println("\taslb");
           println("\trola");
           return true;
