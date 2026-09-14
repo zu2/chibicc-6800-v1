@@ -3598,6 +3598,15 @@ static void opeq(Node *node)
             if (base) {
               char *name = base->var->name;
               int n = exact_log2(val);
+              if (!node->retval_unused) {
+                if (!can_direct_ext(node->lhs)) {
+                  break;
+                }
+                gen_direct_ext(node->lhs,"ldab","ldaa");
+                gen_shr(node->lhs->ty,n);
+                gen_direct_store_ext(node->lhs,"stab","staa");
+                return;
+              }
               for (int i=0; i<n; i++) {
                 if (off == 0) {
                   println("\tlsr _%s",name);
@@ -3612,6 +3621,13 @@ static void opeq(Node *node)
             if (test_addr_x(node->lhs)) {
               int off = gen_addr_x(node->lhs);
               int n = exact_log2(val);
+              if (!node->retval_unused) {
+                load_x(node->lhs->ty,off);
+                gen_shr(node->lhs->ty,n);
+                store_x(node->lhs->ty,off);
+                IX_invalidate();
+                return;
+              }
               for (int i=0; i<n; i++) {
                 println("\tlsr %d,x",off);
                 println("\tror %d,x",off+1);
