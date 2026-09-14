@@ -37,8 +37,6 @@ __round_ret:
 	rts
 ;
 __round_ge1:				; fabsf(@long) >= 1.0f
-	ldab	__lexp
-	subb	#127
 	jsr	__fracmask		; make mantissa mask
 	ldaa	__lexp
 	jmp	__add_half_trunc	; +0.5, then truncate
