@@ -142,7 +142,7 @@ void free(void *p)
 
   // append next free block
   while (next->size & 1) {
-    bp->size = BLOCK_SIZE(bp->size) + BLOCK_SIZE(next->size);
+    bp->size = (BLOCK_SIZE(bp->size) + BLOCK_SIZE(next->size)) | 1;
     next = (struct block *)((char *)bp + BLOCK_SIZE(bp->size));
   }
 }
