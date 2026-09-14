@@ -47,7 +47,7 @@ _memcpy_loop:
 	ldx	@tmp3
 	decb
 	bne	_memcpy_loop
-	dec	@tmp1
+	dec	tmp1
 	bne	_memcpy_loop
 ;
 	pula

@@ -6,8 +6,8 @@
 	.code
 ;
 __not32:
-	com	@long+3
-	com	@long+2
-	com	@long+1
-	com	@long
+	com long+3
+	com long+2
+	com long+1
+	com long
 	rts

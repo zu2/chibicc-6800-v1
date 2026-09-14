@@ -28,12 +28,12 @@ nonneg:	stab @tmp1+1
 	sbca #0
 	stab @long+3
 	staa @long+2
-	com @tmp2	; flip sign
+	com tmp2	; flip sign
 ;
 nonneg_2:
 	jsr __mul16x16u_sub
 ;
-	tst @tmp2
+	tst tmp2
 	bpl nonneg_3
 	jsr __neg32
 ;

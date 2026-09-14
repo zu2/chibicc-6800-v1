@@ -20,7 +20,7 @@ __div16x16:
 	clra
 	clrb
 __div16x16_1:
-	rol @tmp2 	; shift dividend
+	rol tmp2 	; shift dividend
 	rolb
 	rola
 	subb @tmp1+1	; divisor
@@ -31,11 +31,11 @@ __div16x16_1:
 __div16x16_2:
         dex
 	bne __div16x16_1
-        rol @tmp2
+        rol tmp2
         ldx #8
 ;       clc
 __div16x16_3:
-	rol @tmp2+1 	; shift dividend
+	rol tmp2+1 	; shift dividend
 	rolb
 	rola
 	subb @tmp1+1	; divisor
@@ -46,7 +46,7 @@ __div16x16_3:
 __div16x16_4:
         dex
 	bne __div16x16_3
-        rol @tmp2+1
+        rol tmp2+1
 	rts
 ;
 ; Note:

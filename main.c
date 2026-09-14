@@ -1020,7 +1020,7 @@ static void run_linker(StringArray *inputs, char *output) {
     C = opt_C? opt_C:0x1000;
     Z = opt_Z? opt_Z:0xe3;
     break;
-  case T_JR200: // national JR-100
+  case T_JR200: // national JR-200
     C = opt_C? opt_C:0x1000;
     Z = opt_Z? opt_Z:0xc8;
     break;

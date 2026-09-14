@@ -47,7 +47,7 @@ __ltoa:
 	ldab 5,x		; check radix==10?
 	cmpb #10
         bne __ultoa_null_check
-        tst @long
+        tst long
         bpl __ultoa_null_check
         jsr __neg32
         tsx

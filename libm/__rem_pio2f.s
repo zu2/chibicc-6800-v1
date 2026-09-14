@@ -224,7 +224,7 @@ __rp_c9:
 __rp_cneg:
 	dec	__rp_quad
 __rp_cdone:
-	com	@long			; sign(r) = -sign(x)
+	com	long			; sign(r) = -sign(x)
 __rp_nocomp:
 ;
 ;	__frac = AccA:AccB:__frac+2..+6
@@ -348,13 +348,13 @@ __rp_e0:
 	staa	@long+3
 	ldaa	__win+3
 	bpl	__rp_nornd
-	inc	@long+3			; mantissa overflow -> exponent + 1
+	inc	long+3			; mantissa overflow -> exponent + 1
 	bne	__rp_nornd
-	inc	@long+2
+	inc	long+2
 	bne	__rp_nornd
-	inc	@long+1
+	inc	long+1
 	bne	__rp_nornd
-	inc	@long
+	inc	long
 __rp_nornd:
 __rp_out:
 	tsx

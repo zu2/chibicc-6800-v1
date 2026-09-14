@@ -29,7 +29,7 @@ __loop:
 	psha
 	decb
 	bne	__loop
-	dec	@tmp2
+	dec	tmp2
 	bne	__loop
 	ldx	@tmp1
 	jmp	0,x

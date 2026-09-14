@@ -164,16 +164,16 @@ __fmodf_rem:
 ;
 	ldab	__expnew+1
 	ldaa	__expnew
-	tst	@long
+	tst	long
 	bmi	__fmodf_04		; MSB==1 needn't shitft
 ;
 __fmodf32_0301:
 	subb	#1			; exp--
 	sbca	#0
-	asl	@long+3			; @long <<= 1
-	rol	@long+2
-	rol	@long+1
-	rol	@long
+	asl	long+3			; @long <<= 1
+	rol	long+2
+	rol	long+1
+	rol	long
 	bpl	__fmodf32_0301
 ;
 __fmodf_04:
@@ -186,9 +186,9 @@ __fmodf_04:
 ;
 	ldaa	@long+3
 __fmodf_05:
-	lsr	@long
-	ror	@long+1
-	ror	@long+2
+	lsr	long
+	ror	long+1
+	ror	long+2
 	rora
 	incb
 	bne	__fmodf_05

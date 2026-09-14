@@ -23,7 +23,7 @@ up8bit_nonzero:
         ldx #8
 	clrb
 	clra
-        lsr @tmp2+1
+        lsr tmp2+1
 loop_1:
         bcc skip_1              ; 4 2
 	addb @tmp1+1            ; 3 2
@@ -31,7 +31,7 @@ loop_1:
 skip_1:
         rora                    ; 2 1
         rorb                    ; 2 1
-        ror @tmp2+1             ; 6 3
+        ror tmp2+1             ; 6 3
         dex                     ; 4 1
 	bne loop_1              ; 4 2   ↑ 28cyc/loop
 ;

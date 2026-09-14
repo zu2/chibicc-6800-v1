@@ -72,7 +72,7 @@ loop_start:
 	bcc	num_loop
 num_end:
 	ldab	@tmp2+1
-	tst	@tmp1
+	tst	tmp1
 	bne	num_plus
 	nega
 	negb

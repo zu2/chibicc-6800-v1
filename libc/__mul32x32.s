@@ -35,7 +35,7 @@ __mul32x32x:
         stx @tmp4
 ;
         ldx #0
-        stx tmp2
+        stx @tmp2
 ;
         clrb
         clra
@@ -59,12 +59,12 @@ skip_1: ror tmp2
         ror tmp2+1
         rora
         rorb
-        ror @long+3
+        ror long+3
 	dex
 	bne loop_1
 ;
 	ldx #8
-	lsr @long+2
+	lsr long+2
 loop_2:
         bcc  skip_2
         addb @tmp4+1
@@ -77,19 +77,19 @@ loop_2:
 skip_2: ror tmp2+1
         rora
         rorb
-        ror @long+2
+        ror long+2
 	dex
 	bne loop_2
 ;
 	ldx #8
-	lsr @long+1
+	lsr long+1
 loop_3:
         bcc  skip_3
         addb @tmp4+1
         adca @tmp4
 skip_3: rora
         rorb
-        ror @long+1
+        ror long+1
 	dex
 	bne loop_3
 ;

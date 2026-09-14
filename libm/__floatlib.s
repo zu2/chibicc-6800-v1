@@ -25,8 +25,8 @@
 ;		parameter passed by @long
 ;
 _fabsf:
-	asl	@long		; sign bit = 0
-	lsr	@long
+	asl	long		; sign bit = 0
+	lsr	long
 	rts
 
 ;

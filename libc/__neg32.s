@@ -11,8 +11,8 @@
 ;	__neg32x	negate 32bit long (0-3,x)
 ;
 _labs:
-	tst	@long
-	jpl	__neg32x_ret
+	tst long
+	jpl __neg32x_ret
 __neg32:
         ldx #long
 __neg32x:

@@ -31,8 +31,8 @@ divide:
 	clra
 	clrb		; carry also cleared
 loop:
-	rol @tmp2+1	; shift dividend
-	rol @tmp2
+	rol tmp2+1	; shift dividend
+	rol tmp2
 	rolb
 	rola
 	subb @tmp1+1	; divisor
@@ -43,8 +43,8 @@ loop:
 skip:
 	dex		; quotient bit will be added to @tmp2+1 at next loop.
 	bne loop
-	rol @tmp2+1	; Shift to get the remaining quotient 1 bit
-	rol @tmp2
+	rol tmp2+1	; Shift to get the remaining quotient 1 bit
+	rol tmp2
 	rts
 ;
 ; Note:

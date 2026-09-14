@@ -35,7 +35,7 @@ _memchr:
 ;
 	ldab	@tmp2+1		; if lo(n)!=0, hi(n)++
 	beq	_memchr_1
-	inc	@tmp2
+	inc	tmp2
 ;
 _memchr_1:
 	ldx	@tmp1
@@ -46,7 +46,7 @@ _memchr_loop:
 	inx
 	decb
 	bne	_memchr_loop
-	dec	@tmp2
+	dec	tmp2
 	bne	_memchr_loop
 _memchr_null:
 	clrb

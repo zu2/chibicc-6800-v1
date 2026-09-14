@@ -185,8 +185,9 @@ __pullret:
 ;	__div32x32_main is for internal use.
 ;	@tmp1:AccAB = @long % @tmp3:@tmp4
 ;	@tmp2:loop counter (bit) 8→0
-;	@tmp2+1:loop counter (byte) 4→0
+;	@tmp2+1:AccB save area
 ;       @tmp3:tmp4: divisor
+;	IX: loop counter
 ;
 __div32x32_main:
         ldx #long
@@ -205,8 +206,8 @@ loop:
 	asl 0,x
 	rolb		; shift work area @tmp1:AccAB
 	rola
-	rol @tmp1+1
-	rol @tmp1
+	rol tmp1+1
+	rol tmp1
 	pshb
 	psha
 	subb @tmp4+1	; subtract the divisor
@@ -228,7 +229,7 @@ skip:
 	pula		; can't substract. pull it back.
 	pulb
 next:
-	dec @tmp2
+	dec tmp2
 	bne loop
         inx
         cpx #long+4

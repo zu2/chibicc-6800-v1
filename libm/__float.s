@@ -182,17 +182,17 @@ __i16tof32_10:                  ; i16 in ±256〜32768
 	ldab	#$8f		; exp ($8e+1), if i16>=32768 then exp=$8E
 __i16tof32_20:			; Shift left until the MSB becomes 1
 	decb
-	asl	@long+2
+	asl	long+2
 	rola
 	bcc	__i16tof32_20	; loop until C=1
 __i16tof32_21:
 	asl	__sign
 	rorb
 	rora
-	ror	@long+2		; shifted over 1bit, fix it.
+	ror	long+2		; shifted over 1bit, fix it.
 	staa	@long+1
 	stab	@long
-	clr	@long+3
+	clr	long+3
 	rts
 ;
 ;	uint16 to float32
@@ -208,16 +208,16 @@ __u16tof32_1:
 	ldab	#$8f
 __u16tof32_20:			; Shift left until most significant bit to 1
 	decb
-	asl	@long+2
+	asl	long+2
 	rola
 	bcc	__u16tof32_20	; loop until C=1 (hidden bit check)
 __u16tof32_21:
 	lsrb
 	rora			; shifted over 1bit, fix it.
-	ror	@long+2
+	ror	long+2
 	staa	@long+1
 	stab	@long
-	clr	@long+3
+	clr	long+3
 	rts
 ;
 ;
@@ -226,7 +226,7 @@ __f32minint:			; -2147483648 (0x8000 0000) = CF00 0000
 	ldx	#0
 	stx	@long+2
 	ldx	#$CF00
-	stx	long
+	stx	@long
 	rts
 ;
 ;	int32 to float32
@@ -978,30 +978,30 @@ __addf32_20:			; even number rounding
 	cmpb	#$40		; 0100:only G is 1?
 	beq	__addf32_29	;   Yes, do nothing
 ;
-	inc	@long+3		; round up
+	inc	long+3		; round up
 	bne	__addf32_29
-	inc	@long+2
+	inc	long+2
 	bne	__addf32_29
-	inc	@long+1
+	inc	long+1
 	bne	__addf32_29
 ;
 	inca
 	cmpa	#$FF
 	jeq	__f32retInfs
-	lsr	@long+1
-	ror	@long+2
-	ror	@long+3
+	lsr	long+1
+	ror	long+2
+	ror	long+3
 ;
 __addf32_29:
 	cmpa	#1		; sub normal number?
 	bne	__addf32_30
-	tst	@long+1		; check hiden bit, when 1 convert to normal
+	tst	long+1		; check hiden bit, when 1 convert to normal
 	bmi	__addf32_30
 	clra
 __addf32_30:
-	asl	@long+1		; exp's LSB set to @long+1
+	asl	long+1		; exp's LSB set to @long+1
 	lsra
-	ror	@long+1
+	ror	long+1
 	ora	__sign
 	staa	@long		; set exp
 	rts
@@ -1027,9 +1027,9 @@ __addf32_70:
 	ldab	__fp_work+4	; b4-b0 always 0, no sticky
 	aslb
 	stab	__fp_work+4
-	rol	@long+3
-	rol	@long+2
-	rol	@long+1
+	rol	long+3
+	rol	long+2
+	rol	long+1
 	jpl	__addf32_70	; hidden bit become 1 ?
 ;
 __addf32_80:
@@ -1043,24 +1043,24 @@ __addf32_80:
 	cmpb	#$40		; 0100:only G is 1?
 	beq	__addf32_90	;   Yes, do nothing
 ;
-	inc	@long+3		; round up
+	inc	long+3		; round up
 	bne	__addf32_90
-	inc	@long+2
+	inc	long+2
 	bne	__addf32_90
-	inc	@long+1
+	inc	long+1
 	bne	__addf32_90
 ;
 	inca
 	cmpa	#$FF
 	jeq	__f32retInfs
-	lsr	@long+1
-	ror	@long+2
-	ror	@long+3
+	lsr	long+1
+	ror	long+2
+	ror	long+3
 ;
 __addf32_90:
-	asl	@long+1		; exp's LSB into @long+1
+	asl	long+1		; exp's LSB into @long+1
 	lsra
-	ror	@long+1
+	ror	long+1
 	ora	__sign		; recover sign bit
 	staa	@long
 	rts
@@ -1174,7 +1174,7 @@ __setup_zin_99:
 __setup_long:			; @long's exp->AccA, set hidden bit of @long
 	ldab	@long+1		; get TOS's exp to a
 	ldaa	@long
-	clr	@long
+	clr	long
 	aslb
 	rola
 	sec			; set hidden bit of TOS
@@ -1543,16 +1543,16 @@ __divf32tos03:
 ____divf32_norem:
 	ldab	__expdiff+1
 	ldaa	__expdiff
-	tst	@long
+	tst	long
 	bmi	__divf32tos04		; if MSB==1 needn't shift
 ;
 __divf32_0301:
 	subb	#1			; exp--
 	sbca	#0
-	asl	@long+3
-	rol	@long+2
-	rol	@long+1
-	rol	@long
+	asl	long+3
+	rol	long+2
+	rol	long+1
+	rol	long
 	bpl	__divf32tos20
 	stab	__expdiff+1
 	staa	__expdiff
@@ -1563,10 +1563,10 @@ __divf32tos04:
 	jge	__divf32tos20		; no, it's normal number
 ;
 __divf32tos05:
-	lsr	@long
-	ror	@long+1
-	ror	@long+2
-	ror	@long+3
+	lsr	long
+	ror	long+1
+	ror	long+2
+	ror	long+3
 	bcc	__divf32tos06
 	ldaa	@long+3			; keep the bit shifted out as sticky
 	oraa	#$01
@@ -1581,11 +1581,11 @@ __divf32tos06:
 	ldaa	#>-127
 	bcc	__divf32_done
 ;
-	inc	@long+2
+	inc	long+2
 	bne	__divf32_done
-	inc	@long+1
+	inc	long+1
 	bne	__divf32_done
-	inc	@long
+	inc	long
 	bpl	__divf32_done		; Still subnormal
 ;
 ;	annoying thing here is:
@@ -1603,15 +1603,15 @@ __divf32tos20:				; round up check (normal)
 	jeq	__f32retInfs
 	ldab	__expdiff+1		; ldab and ldaa keep C
 	ldaa	__expdiff
-	tst	@long+3			; if normal numbers, only G needed
+	tst	long+3			; if normal numbers, only G needed
 	bpl	__divf32_done		; G==0, skip round up.
 ;
 __divf32_rup:
-	inc	@long+2
+	inc	long+2
 	bne	__divf32_done
-	inc	@long+1
+	inc	long+1
 	bne	__divf32_done
-	inc	@long			; here, @long not all 11..11
+	inc	long			; here, @long not all 11..11
 ;
 __divf32_done:
 	addb	#127

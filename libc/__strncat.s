@@ -37,7 +37,7 @@ _strncat:
 ;
 	ldaa	@tmp4+1		; loop counter setup
 	beq	skip2
-	inc	@tmp4
+	inc	tmp4
 skip2:
 ;
 	tsx
@@ -67,7 +67,7 @@ loop:				; do {
 ;
 	deca			; } while (--n);
 	bne	loop
-	dec	@tmp4
+	dec	tmp4
 	bne	loop
 ;
 end:

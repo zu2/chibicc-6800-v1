@@ -13,12 +13,12 @@ __plus1:
         ldaa 2,x
         bpl __plus2
         nega
-        com @tmp2
+        com tmp2
 __plus2:
         psha
         jsr __div8x8u
         ins
-        tst @tmp2
+        tst tmp2
         bpl __ret
         negb
 __ret:  rts

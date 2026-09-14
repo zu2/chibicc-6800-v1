@@ -27,7 +27,7 @@ __rem1: pshb
 	sbca #0
 __rem2:
 	jsr __div16x16	; AccAB = TOS % AccAB
-	tst @tmp4
+	tst tmp4
 	bpl __rem3
 	nega
 	negb
@@ -52,7 +52,7 @@ __div2:
 	ldab 3,x
 	ldaa 2,x
 	bpl __div3
-	com @tmp4
+	com tmp4
 	nega
 	negb
 	sbca #0
@@ -60,7 +60,7 @@ __div3:
 	jsr __div16x16	; @tmp2 = TOS / AccAB
 	ldab @tmp2+1    ; The div16x16a returns the bit-inverted quotient.
 	ldaa @tmp2
-	tst @tmp4
+	tst tmp4
 	bpl __div4
         addb #1
         adca #0

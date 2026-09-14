@@ -78,7 +78,7 @@ backward_loop:
 	ldx	@tmp3
 	decb
 	bne	backward_loop
-	dec	@tmp1
+	dec	tmp1
 	bne	backward_loop
 ret_d:
 	pula
@@ -100,7 +100,7 @@ forward_loop:
 	ldx	@tmp3
 	decb
 	bne	forward_loop
-	dec	@tmp1
+	dec	tmp1
 	bne	forward_loop
 ;
 	pula

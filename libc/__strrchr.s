@@ -24,8 +24,8 @@ _strrchr:
 	stab	@tmp1+1		; save s
 	staa	@tmp1
 ;
-	clr	@tmp2+1		; p = NULL
-	clr	@tmp2
+	clr	tmp2+1		; p = NULL
+	clr	tmp2
 ;
 	tsx
 	ldab	3,x		; get c

@@ -15,7 +15,7 @@ __mul16x8x:
 __mul16x8_50:
         aslb
         rola
-        rol @tmp2+1
+        rol tmp2+1
         bcc __mul16x8_90
 	addb @tmp1+1
 	adca @tmp1

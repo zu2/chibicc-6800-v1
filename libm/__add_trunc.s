@@ -81,12 +81,12 @@ __trunc_carry:					; the result is 2^(exp+1)
 		inca
 		ldab	#$80
 		stab	@long+1
-		clr	@long+2
-		clr	@long+3
+		clr	long+2
+		clr	long+3
 __trunc_build:
-		rol	@long+1
+		rol	long+1
 		asl	__sign
 		rora
-		ror	@long+1
+		ror	long+1
 		staa	@long
 		rts

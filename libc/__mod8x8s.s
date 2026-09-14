@@ -18,7 +18,7 @@ __plus2:
         jsr __div8x8u
         ins
 	tab
-        tst @tmp2
+        tst tmp2
         bpl __ret
         negb
 __ret:  rts

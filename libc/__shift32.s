@@ -22,8 +22,8 @@ __shl32x16:
 	staa @long+1
 	ldaa @long+2
 	staa @long
-	clr @long+3
-	clr @long+2
+	clr long+3
+	clr long+2
 	subb #16
 	rts
 __shl32x8:
@@ -33,7 +33,7 @@ __shl32x8:
 	staa @long+1
 	ldaa @long+3
 	staa @long+2
-	clr @long+3
+	clr long+3
 	subb #8
 	rts
 ;
@@ -53,10 +53,10 @@ __shl32:
 	bsr shl_check
 	beq ret		; the shift count is 0/8/16/24, done.
 shlloop:
-	lsl @long+3
-	rol @long+2
-	rol @long+1
-	rol @long
+	lsl long+3
+	rol long+2
+	rol long+1
+	rol long
 	decb
 	bne shlloop
 	rts
@@ -76,10 +76,10 @@ __shr32u:
 	bsr shru_check
 	beq ret		; the shift count is 0/8/16/24, done.
 shruloop:
-	lsr @long
-	ror @long+1
-	ror @long+2
-	ror @long+3
+	lsr long
+	ror long+1
+	ror long+2
+	ror long+3
 	decb
 	bne shruloop
 	rts
@@ -141,10 +141,10 @@ __shr32s:
 	bsr shrs_check
 	beq ret		; the shift count is 0/8/16/24, done.
 shrsloop:
-	asr @long
-	ror @long+1
-	ror @long+2
-	ror @long+3
+	asr long
+	ror long+1
+	ror long+2
+	ror long+3
 	decb
 	bne shrsloop
 	rts

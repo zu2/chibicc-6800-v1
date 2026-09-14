@@ -58,10 +58,10 @@ __sqrtf_03:
 	bpl	__sqrtf_03	; loop until hidden bit==1
 ;
 __sqrtf_05:
-	asl	@long+1		; mant |= 0x00800000
+	asl	long+1		; mant |= 0x00800000
 	sec			; Set the bit without corrupting Acc
-	ror	@long+1
-	clr	@long
+	ror	long+1
+	clr	long
 ;
 	subb	#127
 	sbca	#0
@@ -69,10 +69,10 @@ __sqrtf_05:
 __sqrtf_06:			; √(m*2^e) = √m * 2^(e/2) = √(m*2)* 2^((e-1)/2)
 	bitb	#1
 	beq	__sqrtf_10
-	asl	@long+3
-	rol	@long+2
-	rol	@long+1
-	rol	@long
+	asl	long+3
+	rol	long+2
+	rol	long+1
+	rol	long
 	subb	#1
 	sbca	#0
 __sqrtf_10:
@@ -80,10 +80,10 @@ __sqrtf_10:
 	rorb
 	stab	__exp		; After a right shift, result fits in one byte
 ;
-	asl	@long+3		; mant <<= 1
-	rol	@long+2
-	rol	@long+1
-	rol	@long
+	asl	long+3		; mant <<= 1
+	rol	long+2
+	rol	long+1
+	rol	long
 ;
 	ldx	#$0100
 	stx	__r
@@ -118,10 +118,10 @@ __sqrtf_12:
 	stab	__s
 ;
 __sqrtf_15:
-	asl	@long+3		; @long << 1
-	rol	@long+2
-	rol	@long+1
-	rol	@long
+	asl	long+3		; @long << 1
+	rol	long+2
+	rol	long+1
+	rol	long
 ;
 	lsr	__r		; __r>>1
 	ror	__r+1
@@ -187,10 +187,10 @@ __sqrtf_25:
 	ins
 ;
 __sqrtf_26:
-	asl	@long+3	
-	rol	@long+2
-	rol	@long+1
-	rol	@long
+	asl	long+3	
+	rol	long+2
+	rol	long+1
+	rol	long
 ;
 	lsr	__r+2
 	ror	__r+3
