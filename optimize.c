@@ -1126,7 +1126,7 @@ Node *optimize_expr(Node *node)
       Node *new = new_copy(node);
       new->kind = ND_SHR;
       new->rhs  = new_num(exact_log2(val),node->rhs->tok);
-      new->rhs->ty = node->rhs->ty;
+      new->rhs->ty = ty_uchar;
       return optimize_expr(new);
     }
     // unsigned x % 2**n -> x & (2**n -1)
@@ -1305,13 +1305,12 @@ Node *optimize_expr(Node *node)
   case ND_SHR: {
     int64_t val;
     node->lhs = optimize_expr(node->lhs);
-    node->rhs = optimize_expr(new_cast(node->rhs,ty_char));
+    node->rhs = optimize_expr(new_cast(node->rhs,ty_uchar));
 
     if (is_integer_constant(node->rhs,&val)) {
       if (val==0) {
         return node->lhs;
-      } else if (val<0
-      ||  val>=(node->ty->size)*8) { // TODO: bit field
+      } else if (val>=(node->ty->size)*8) { // TODO: bit field
 //      warn_tok(node->tok,"shift count negative or too big, undefined behavior");
         Node *new = new_num(0,node->tok);
         new->ty   = node->ty;
@@ -1366,7 +1365,7 @@ Node *optimize_expr(Node *node)
     if (is_integer_constant(node->rhs,&val)) {
       if (val==0) {
         return node->lhs;
-      } else if (val<0 || val >= (node->ty->size)*8) {
+      } else if (val >= (node->ty->size)*8) {
 //      warn_tok(node->tok,"shift count negative/too big, undefined behavior");
         Node *new = new_num(0,node->tok);
         new->ty   = node->ty;
