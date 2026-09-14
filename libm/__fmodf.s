@@ -150,17 +150,16 @@ __fmodf_keep:
         bne     __fmodf_shift
 ;
 __fmodf_rem:
-        ldaa    @long+1                 ; r == 0 ?
-        oraa    @long+2
-        oraa    @long+3
-        jeq     __fmodf_zeros           ; mod=0, return 0.0 with sign
+	ldab	@long+1
+	ldx	@long+2			; mod==0?
+	bne	__fmodf_ne
+	tstb
+	jeq	__fmodf_zeros           ; mod=0, return 0.0 with sign
 ;
-        ldab    __expnew+1              ; r is a 24 bit integer, while the tail
-        ldaa    __expnew                ; normalizes a 1.f from bit 31: 31-23
-        addb    #8
-        adca    #0
-        stab    __expnew+1
-        staa    __expnew
+__fmodf_ne:
+	stx	@long+1		; r <<= 8
+	stab	@long
+	clr	long+3
 ;
 	ldab	__expnew+1
 	ldaa	__expnew
