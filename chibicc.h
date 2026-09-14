@@ -101,10 +101,10 @@ bool equal(Token *tok, char *op);
 Token *skip(Token *tok, char *op);
 bool consume(Token **rest, Token *tok, char *str);
 void convert_pp_tokens(Token *tok);
-File **get_input_files(void);
-File *new_file(char *name, int file_no, char *contents);
 Token *tokenize_string_literal(Token *tok, Type *basety);
 Token *tokenize(File *file);
+File **get_input_files(void);
+File *new_file(char *name, int file_no, char *contents);
 Token *tokenize_file(char *filename);
 
 #define unreachable() \
@@ -115,23 +115,23 @@ Token *tokenize_file(char *filename);
 //
 
 char *search_include_paths(char *filename);
-void init_macros(void);
 void define_macro_cli(char *name, char *buf);
 void define_macro(char *name, char *buf);
 void undef_macro(char *name);
+void init_macros(void);
 Token *preprocess(Token *tok);
 
 //
 // parse.c
 //
-double eval_double(Node *node);
-int64_t fit_to_type(int64_t val, Type *ty);
-int64_t eval2(Node *node, char ***label);
-int64_t eval(Node *node);
 Node *new_copy(Node *node);
 Node *new_num(int64_t val, Token *tok);
-bool is_const_expr(Node *node);
 char *new_unique_name(void);
+int64_t eval(Node *node);
+int64_t fit_to_type(int64_t val, Type *ty);
+int64_t eval2(Node *node, char ***label);
+bool is_const_expr(Node *node);
+double eval_double(Node *node);
 
 // Variable or function
 typedef struct Obj Obj;
@@ -335,12 +335,12 @@ struct Node {
   size_t bulk_size;
 };
 
-Node *new_cast(Node *expr, Type *ty);
-int64_t const_expr(Token **rest, Token *tok);
-Obj *parse(Token *tok);
 Node *new_node(NodeKind kind, Token *tok);
 Node *new_binary(NodeKind kind, Node *lhs, Node *rhs, Token *tok);
 Node *new_unary(NodeKind kind, Node *expr, Token *tok);
+Node *new_cast(Node *expr, Type *ty);
+int64_t const_expr(Token **rest, Token *tok);
+Obj *parse(Token *tok);
 
 //
 // type.c
@@ -441,19 +441,17 @@ extern Type *ty_ldouble;
 
 bool is_integer(Type *ty);
 bool is_integer_or_ptr(Type *ty);
-Type *is_pointer_constant(Node *node, int64_t *val);
 bool is_int8(Type *ty);
 bool is_int16(Type *ty);
 bool is_int16_or_ptr(Type *ty);
 bool is_int16_or_ptr_or_array(Type *ty);
 bool is_flonum(Type *ty);
+bool is_numeric(Type *ty);
 bool is_scalar(Type *ty);
 bool is_scalar_after_decay(Type *ty);
 bool is_ptr_or_array(Type *ty);
-bool is_numeric(Type *ty);
-bool is_bitfield2(Node *node, int *width);
 bool is_null_ptr_constant(Node *node);
-void int_promotion(Node **node);
+bool is_bitfield2(Node *node, int *width);
 bool is_redundant_cast(Node *expr, Type *ty);
 bool is_compatible(Type *t1, Type *t2);
 Type *copy_type(Type *ty);
@@ -463,10 +461,11 @@ Type *array_of(Type *base, int size);
 Type *vla_of(Type *base, Node *expr);
 Type *enum_type(void);
 Type *struct_type(void);
+void int_promotion(Node **node);
 Type *get_common_type(Type *ty1, Type *ty2);
 void usual_arith_conv(Node **lhs, Node **rhs);
-void add_type(Node *node);
 bool is_modifiable_lvalue(Node *node);
+void add_type(Node *node);
 
 //
 // ast_dump.c
@@ -489,46 +488,95 @@ int  exact_log2(int64_t val);
 int64_t ty_min_value(Type *ty);
 int64_t ty_max_value(Type *ty);
 
+NodeKind swap_lr_condition_kind(NodeKind kind);
+Node *swap_lr_condition(Node *node);
+Node *swap_lr(Node *node);
 Node *optimize_expr(Node *node);
 Node *optimize_condition(Node *node);
 Obj *optimize(Obj *prog);
-Node *swap_lr_condition(Node *node);
-NodeKind swap_lr_condition_kind(NodeKind kind);
-Node *swap_lr(Node *node);
 
 //
 // codegen.c
 //
-bool opt(char op, char lv);
 __attribute__((format(printf, 1, 2)))
 void println(char *fmt, ...);
 __attribute__((format(printf, 1, 2)))
 void printout(char *fmt, ...);
-bool is_local_var(Node *node);
-bool is_local_array(Node *node);
-bool is_global_array(Node *node);
-bool is_global_var(Node *node);
-bool is_local_array_with_constant(Node *node);
-bool is_global_array_with_constant(Node *node);
-bool test_addr_x(Node *node);
+char *new_label(char *fmt);
+char *new_jump_label();
+void push1(void);
+void push(void);
+void pop1(void);
+void popa(void);
+void pop(void);
+void popx(void);
+void ins(int n);
+void sign_extend(void);
+void remove_args(int n);
+void ldab_i(int n);
+void ldd_i(int n);
+void andb_i(int n);
+void and_i(int n);
+void orab_i(int n);
+void ora_i(int n);
+void eorb_i(int n);
+void eor_i(int n);
+void pushl(void);
+void pushf(void);
+int align_to(int n, int align);
 void negd(void);
 void inx_dex(int n);
-void ldx_IMM_STR(char *s);
 void ldx_bp(void);
-void ldx_bp_nX(int off);
 void ldx_nX(int off);
+bool is_decay_type(Type *ty);
+void ldx_bp_nX(int off);
 void ldx_EXT(Node *node);
 void cpx_EXT(Node *node);
 void stx_EXT(Node *node);
+void invalidate_EXT(Node *node);
+void ldx_IMM_STR(char *s);
 void tfr_dx();
-bool is_decay_type(Type *ty);
+bool is_local_var(Node *node);
+bool is_local_array(Node *node);
+bool is_local_array_with_constant(Node *node);
+bool is_global_var(Node *node);
+bool is_global_array(Node *node);
+bool is_global_array_with_constant(Node *node);
+Type *is_integer_constant(Node *node, int64_t *val);
+Type *is_pointer_constant(Node *node, int64_t *val);
+Type *is_long_constant(Node *node, int64_t *val);
+Type *is_flonum_constant(Node *node, double *val);
+void gen_shl(Type *ty, uint64_t val);
+void gen_shr(Type *ty, uint64_t val);
+bool can_addsub_local_array_addr(Node *node);
+bool gen_addsub_local_array_addr(Node *node, char *opb, char *opa);
+void gen_addr(Node *node);
+Node *find_base_var(Node *node, int64_t *off);
+char *is_var_addr_constant(Node *node);
+char *is_addr_constant(Node *node);
 void op16_x(int off, char *opb, char *opa);
 void gen_expr_x(Node *node);
 int gen_decayed_x(Node *node);
 bool test_decayed_x(Node *node);
 bool test_expr_x(Node *node);
+int gen_addr_x(Node *node);
+bool test_addr_x(Node *node);
+void word32i(uint32_t val);
+void load(Type *ty);
+bool can_load_x(Type *ty);
+void load_x(Type *ty,int off);
+void load_var(Node *node);
+void store_x(Type *ty,int off);
+void cmp_zero(Type *ty);
+int is_empty_cast(Type *from, Type *to);
+Node *skip_empty_cast(Node *node);
+void gen_expr(Node *node);
+char *long_literal_label(int64_t val);
 void codegen(Obj *prog, FILE *out);
-int align_to(int n, int align);
+bool opt(char op, char lv);
+//
+// gen_direct.c
+//
 bool can_direct_8bit_imm(Node *rhs);
 bool gen_direct_8bit_imm(Node *rhs, char *opb);
 bool can_direct_8bit_ext(Node *rhs);
@@ -547,81 +595,45 @@ bool can_direct_8bit_store_ext_ix(Node *rhs);
 bool gen_direct_8bit_store_ext_ix(Node *rhs, char *opb);
 bool can_direct_8bit(Node *rhs);
 bool gen_direct_8bit(Node *rhs, char *opb);
+int gen_direct_lr_8bit(Node *node, char *opb);
 bool can_direct_imm(Node *rhs);
 bool gen_direct_imm(Node *rhs,char *opb, char *opa);
 bool can_direct_ext(Node *rhs);
+bool can_direct_store_ext(Node *rhs);
+bool gen_direct_store_ext(Node *rhs,char *opb, char *opa);
 bool gen_direct_ext(Node *rhs,char *opb, char *opa);
 bool can_direct_imm_ext(Node *rhs);
 bool gen_direct_imm_ext(Node *rhs,char *opb, char *opa);
-bool can_direct_ext_ix(Node *rhs);
-bool gen_direct_ext_ix(Node *rhs,char *opb, char *opa);
-bool can_direct_store_ext(Node *rhs);
-bool gen_direct_store_ext(Node *rhs,char *opb, char *opa);
 bool can_direct_store_ix(Node *rhs);
 bool gen_direct_store_ix(Node *rhs,char *opb, char *opa);
+bool can_direct_ext_ix(Node *rhs);
+bool gen_direct_ext_ix(Node *rhs,char *opb, char *opa);
 bool can_direct_store_ext_ix(Node *rhs);
 bool gen_direct_store_ext_ix(Node *rhs,char *opb, char *opa);
 bool can_direct(Node *rhs);
 bool gen_direct(Node *rhs,char *opb, char *opa);
-int gen_direct_lr_8bit(Node *node, char *opb);
 int gen_direct_lr(Node *node, char *opb, char *opa);
-int is_empty_cast(Type *from, Type *to);
-void andb_i(int n);
-void orab_i(int n);
-void ora_i(int n);
-void eorb_i(int n);
-void eor_i(int n);
-void invalidate_EXT(Node *node);
-Node *skip_empty_cast(Node *node);
-void word32i(uint32_t val);
-void gen_direct_long(Node *node);
-bool can_direct_long(Node *node);
-bool gen_direct_long2(Node *node);
-bool can_direct_long2(Node *node);
+//
+// gen_direct_long.c
+//
 int gen_direct_shl_long(Node *node,int64_t val);
 int gen_direct_shr_long(Node *node,int64_t val);
 void gen_direct_long_addsub_imm(Node *node, int64_t val);
 void gen_direct_long_bitop_imm(Node *node, int64_t val);
-void gen_expr(Node *node);
-void gen_expr_float(Node *node);
+void gen_direct_long(Node *node);
+bool can_direct_long(Node *node);
+bool gen_direct_long2(Node *node);
+bool can_direct_long2(Node *node);
+//
+// gen_float.c
+//
 char *float_literal_label(double fval);
-void cmpf32x(int off);
 void emit_float_literals(void);
-char *long_literal_label(int64_t val);
-Type *is_long_constant(Node *node, int64_t *val);
+void cmpf32x(int off);
+void gen_expr_float(Node *node);
 void gen_direct_pushl(int64_t val);
 void pushlx(int off);
-void pushl(void);
-void pushf(void);
-int gen_addr_x(Node *node);
-bool can_addsub_local_array_addr(Node *node);
-bool gen_addsub_local_array_addr(Node *node, char *opb, char *opa);
-void gen_addr(Node *node);
 int count(void);
-char *new_label(char *fmt);
-char *new_jump_label();
-void push(void);
-void push1(void);
-void pop(void);
-void pop1(void);
-void popa(void);
-void popx(void);
-void ins(int n);
-void sign_extend(void);
-void remove_args(int n);
-void ldab_i(int n);
-void ldd_i(int n);
-void and_i(int n);
-void load(Type *ty);
-bool can_load_x(Type *ty);
-void load_x(Type *ty,int off);
-void load_var(Node *node);
-void store_x(Type *ty,int off);
-void cmp_zero(Type *ty);
-Type *is_integer_constant(Node *node, int64_t *val);
-Type *is_flonum_constant(Node *node, double *val);
-void gen_shl(Type *ty, uint64_t val);
-void gen_shr(Type *ty, uint64_t val);
 
 
 extern int depth;
@@ -662,13 +674,10 @@ void     IX_restore(IX_State s);
 bool is_compare(Node *node);
 bool is_compare_or_not(Node *node);
 bool is_boolean_result(Node *node);
-char *is_addr_constant(Node *node);
-char *is_var_addr_constant(Node *node);
-Node *find_base_var(Node *node, int64_t *off);
+Type *is_byte(Node *node);
 Node *is_array_base(Node *node);
 bool gen_jump_if_false(Node *node,char *if_false);
 bool gen_jump_if_true(Node *node,char *if_true);
-Type *is_byte(Node *node);
 
 //
 // gen_mul.c
@@ -739,9 +748,15 @@ extern bool opt_fbuiltin_isinf;
 extern bool opt_fbuiltin_isfinite;
 extern bool opt_fbuiltin_fabsf;
 extern bool opt_fbuiltin_copysignf;
-bool builtin_memcpy(Node *node);
+//
+// gen_builtin.c
+//
 bool builtin_memset(Node *node);
+bool builtin_memcpy(Node *node);
 bool builtin_strcpy(Node *node);
+//
+// gen_builtin_float.c
+//
 bool builtin_signbit(Node *node);
 bool builtin_isnan(Node *node);
 bool builtin_isinf(Node *node);
