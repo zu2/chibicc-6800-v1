@@ -5,47 +5,31 @@
 ;	AccAB: env address
 ;
 ;	jmp_buf env
-;		0:CCR
-;		1:IX
-;		3:PC
-;		5:SP
-;		7:@bp
+;		0:PC
+;		2:SP
+;		4:@bp
 ;
 	.export _setjmp
 	.export _longjmp
 	.code
 _setjmp:
-	psha
-	tpa
-	staa	@tmp1		; CCR	(needed??)
-	pula
-;
 	stab	@tmp2+1
 	staa	@tmp2
-	stx	@tmp3
 	ldx	@tmp2		; env
-;
-	ldaa	@tmp1		; CCR
-	staa	0,x
-;
-	ldab	@tmp3+1		; IX
-	ldaa	@tmp3
-	stab	2,x
-	staa	1,x
 ;
 	pula
 	pulb
-	stab	4,x		; PC
-	staa	3,x
+	stab	1,x		; PC
+	staa	0,x
 ;
-	sts	5,x		; SP
+	sts	2,x		; SP
 	pshb
 	psha
 ;
 	ldab	@bp+1		; @bp
 	ldaa	@bp
-	stab	8,x
-	staa	7,x
+	stab	5,x
+	staa	4,x
 ;
 	clrb			; return 0
 	clra
@@ -58,37 +42,19 @@ _longjmp:
 	staa	@tmp2
 ;
 	tsx
-	ldx	2,x
-	bne	__longjmp_val_ok
-	inx
-__longjmp_val_ok:
-	stx	@tmp3		; val
+	ldaa	2,x
+	ldab	3,x
+	bne	val_ok
+	tsta
+	bne	val_ok
+	incb
+val_ok:
 ;
 	ldx	@tmp2		; env
+	ldx	4,x		; @bp
+	stx	@bp
 ;
-	ldab	8,x		; @bp
-	ldaa	7,x
-	stab	@bp+1
-	staa	@bp
-;
-	lds	5,x		; recover SP
-;
-	ldab	4,x		; PC
-	ldaa	3,x
-	pshb
-	psha
-;
-	ldab	2,x		; IX
-	ldaa	1,x
-	pshb
-	psha
-;
-	ldab	@tmp3+1		; AccA,B
-	ldaa	@tmp3
-	psha
-	pshb
-;
-	ldab	0,x		; CCR
-	pshb
-;
-	rti
+	ldx	@tmp2		; env
+	lds	2,x		; recover SP
+	ldx	0,x		; PC
+	jmp	0,x
