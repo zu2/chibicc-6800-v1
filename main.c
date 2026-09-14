@@ -236,8 +236,7 @@ static void parse_args(int argc, char **argv) {
     }
 
     if (!strcmp(argv[i], "-fcommon")) {
-      opt_fcommon = true;
-      continue;
+      error("-fcommon  not supported");
     }
 
     if (!strcmp(argv[i], "-fno-common")) {
