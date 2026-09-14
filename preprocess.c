@@ -300,6 +300,16 @@ static long eval_const_expr(Token **rest, Token *tok) {
   // Convert pp-numbers to regular numbers
   convert_pp_tokens(expr);
 
+  for (Token *t = expr; t->kind != TK_EOF; t = t->next) {
+    if (t->kind != TK_NUM || !is_integer(t->ty) || !isdigit(t->loc[0]))
+      continue;
+    bool u = false;
+    for (int i = 0; i < t->len; i++)
+      if (t->loc[i] == 'u' || t->loc[i] == 'U')
+        u = true;
+    t->ty = (u || (uint64_t)t->val > 0x7fffffff) ? ty_ulong : ty_long;
+  }
+
   Token *rest2;
   long val = const_expr(&rest2, expr);
   if (rest2->kind != TK_EOF)
