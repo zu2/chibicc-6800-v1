@@ -1139,11 +1139,11 @@ void init_macros(void) {
   // Define predefined macros
   define_macro("__CHIBICC__", "1");
   define_macro("__CHIBICC_6800__", "1");
-  define_macro("_LP32", "1");
+//define_macro("_LP32", "1");
 //define_macro("_LP64", "0");
   define_macro("__C99_MACRO_WITH_VA_ARGS", "1");
-  define_macro("__ELF__", "1");
-  define_macro("__LP32__", "1");
+//define_macro("__ELF__", "1");
+//define_macro("__LP32__", "1");
 //define_macro("__LP64__", "0");
   define_macro("__SIZEOF_DOUBLE__", "4");
   define_macro("__CHIBICC_6800_DOUBLE_AS_FLOAT__", "1");
@@ -1168,19 +1168,19 @@ void init_macros(void) {
 //define_macro("__amd64", "0");
 //define_macro("__amd64__", "0");
   define_macro("__const__", "const");
-  define_macro("__gnu_linux__", "1");
+//define_macro("__gnu_linux__", "1");
   define_macro("__inline__", "inline");
-  define_macro("__linux", "1");
-  define_macro("__linux__", "1");
+//define_macro("__linux", "1");
+//define_macro("__linux__", "1");
   define_macro("__signed__", "signed");
   define_macro("__typeof__", "typeof");
-  define_macro("__unix", "1");
-  define_macro("__unix__", "1");
+//define_macro("__unix", "1");
+//define_macro("__unix__", "1");
   define_macro("__volatile__", "volatile");
 //define_macro("__x86_64", "0");
 //define_macro("__x86_64__", "0");
-  define_macro("linux", "1");
-  define_macro("unix", "1");
+//define_macro("linux", "1");
+//define_macro("unix", "1");
 
   add_builtin("__FILE__", file_macro);
   add_builtin("__LINE__", line_macro);
