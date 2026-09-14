@@ -14,10 +14,9 @@
 ;
 	.export	_modff
 	.data
-__nexp:	.byte	0	; new exp
 __maskp:.word	0
-__mask:	.word	0
-	.word	0
+;__mask:.word	0
+;	.word	0
 __frac:	.word	0	; frac_part
 	.word	0
 __save:	.word	0
@@ -106,7 +105,7 @@ __modff_make_mask:
 	ldab	@long+3
 	stab	3,x
 ;
-__modff_need_norm:
+;__modff_need_norm:
 	ldaa	__lexp
 ;
 __modff_norm_loop:
@@ -116,17 +115,20 @@ __modff_norm_loop:
 	rol	__frac+1
 	bpl	__modff_norm_loop
 ;
-	cmpa	#127
-	bne	__modff_normal
+; At this point, 104 <= A <= 126
+; The following lines are no longer needed
+;
+;	cmpa	#127
+;	bne	__modff_normal
 ;
 ;	Handle denormalized numbers
 ;
-__modff_denormal_loop:
-	lsr	__frac+1
-	ror	__frac+2
-	ror	__frac+3
-	inca
-	bne	__modff_denormal_loop
+;__modff_denormal_loop:
+;	lsr	__frac+1
+;	ror	__frac+2
+;	ror	__frac+3
+;	inca
+;	bne	__modff_denormal_loop
 ;
 ;	Now, AccA is new exp (if denormal, AccA==0)
 ;
