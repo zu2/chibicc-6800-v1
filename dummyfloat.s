@@ -51,7 +51,6 @@
 ;	.export __f32isNaNorInfx
 	.export __fdiv32x32
 	.export	__setup_long
-	.export __f32retpZero
 	.export __setup_zin
 	.export __f32NaN
 	.export __f32NaNx
@@ -116,7 +115,6 @@ __f32isNaNorInf:
 __f32isNaNorInfx:
 __fdiv32x32:
 __setup_long:
-__f32retpZero:
 __setup_zin:
 __f32NaN:
 __f32NaNx:
