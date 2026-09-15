@@ -1,4 +1,4 @@
-	;
+;
 ;	A dummy minimal crt0.s for now
 ;
 	.zp

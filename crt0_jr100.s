@@ -16,10 +16,11 @@ tmp4:	.word	0
 long:	.word	0
 	.word	0
 ;
-	.export _putchar
-	.export _getchar
-	.export _exit
-	.export _abort
+	.export	_putchar
+	.export	_getchar
+	.export	_exit
+	.export	_abort
+	.export	_kbhit
 	.code
 start:
 	sts exitsp
@@ -59,29 +60,29 @@ doexit:
 	rts
 ;
 ;	minimal I/O routine
-;       cf. I/O 1982/5 pp.224-228
-;       cf. http://cmpslv3.stars.ne.jp/Jr100/EnrJr1.htm
+;	cf. I/O 1982/5 pp.224-228
+;	cf. http://cmpslv3.stars.ne.jp/Jr100/EnrJr1.htm
 ;
 _putchar:
-        tba
-        jmp $f661
+	tba
+	jmp $f661
 _getchar:
-        jsr $f7a9
-        tsta
-        beq _getchar
-        psha
+	jsr $f7a9
+	tsta
+	beq _getchar
+	psha
 __getchar_loop:
-        jsr $f7a9
-        tsta
-        bne __getchar_loop
-        tab
-        clra
-        rts
+	jsr $f7a9
+	tsta
+	bne __getchar_loop
+	pulb
+	clra
+	rts
 _kbhit:
-        jsr $f7a9
-        tab
-        clra
-        rts
+	jsr $f7a9
+	tab
+	clra
+	rts
 ;
         .data
 exitsp:

@@ -16,10 +16,11 @@ tmp4:	.word	0
 long:	.word	0
 	.word	0
 ;
-	.export _putchar
-	.export _getchar
-	.export _exit
-	.export _abort
+	.export	_putchar
+	.export	_getchar
+	.export	_exit
+	.export	_abort
+	.export	_kbhit
 	.code
 start:
 	sts exitsp
@@ -61,15 +62,15 @@ doexit:
 ;	minimal I/O routine
 ;
 _putchar:
-        tba
-        jmp $e1d1
+	tba
+	jmp $e1d1
 _getchar:
-        jsr $e1ac
-        tab
-        clra
-        rts
+	jsr $e1ac
+	tab
+	clra
+	rts
 _kbhit:
-        swi
+	swi
 ;
         .data
 exitsp:

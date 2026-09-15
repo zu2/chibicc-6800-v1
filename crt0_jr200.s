@@ -16,10 +16,11 @@ tmp4:	.word	0
 long:	.word	0
 	.word	0
 ;
-	.export _putchar
-	.export _getchar
-	.export _exit
-	.export _abort
+	.export	_putchar
+	.export	_getchar
+	.export	_exit
+	.export	_abort
+	.export	_kbhit
 	.code
 start:
 	sts exitsp
@@ -64,18 +65,18 @@ doexit:
 ;       cf. https://github.com/0cjs/sedoc/blob/main/8bit/jr-200/rom.md
 ;
 _putchar:
-        tba
-        jmp $ebe7
+	tba
+	jmp $ebe7
 _getchar:
-        jsr $e8fe
-        tab
-        clra
-        rts
+	jsr $e8fe
+	tab
+	clra
+	rts
 _kbhit:
-        jsr $e892
-        tab
-        clra
-        rts
+	jsr $e892
+	tab
+	clra
+	rts
 ;
         .data
 exitsp:

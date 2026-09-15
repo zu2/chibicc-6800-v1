@@ -16,10 +16,11 @@ tmp4:	.word	0
 long:	.word	0
 	.word	0
 ;
-	.export _putchar
-	.export _getchar
-	.export _exit
-	.export _abort
+	.export	_putchar
+	.export	_getchar
+	.export	_kbhit
+	.export	_exit
+	.export	_abort
 	.code
 start:
 	sts exitsp
