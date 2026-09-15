@@ -440,13 +440,10 @@ __i3280000000:
 	stx	@long
 	rts
 __f32Infs:
-__f32retInfs:
 	ldab	__sign
 __f32retInf:		; return signbit(AccB)? 7f80 0000: ff80 0000;
 	bmi	__f32mInf
 __f32pInf:
-__f32retpInf:
-__f327f800000:
 	ldx	#$7F80
 __f32Inf2:
 	stx	@long
@@ -454,8 +451,6 @@ __f32Inf2:
 	stx	@long+2
 	rts
 __f32mInf:
-__f32retmInf:
-__f32ff800000:
 	ldx	#$FF80
 	bra	__f32Inf2
 __f32ones:
@@ -474,7 +469,6 @@ __f32mOne:
 ;
 ;	load plus/minus qNaN into @long
 ;
-__f32retNaN:
 __f32NaN:
 	ldx	#long
 __f32NaNx:
@@ -742,7 +736,7 @@ __addf32_0:
 	tstb			; AccB is __zin. each sign are same?
 	bpl	__addf32_s05	; 
 __addf32_retNaN:
-	jmp	__f32retNaN	; No,  return NaN
+	jmp	__f32NaN	; No,  return NaN
 __addf32_s05:
 	ldab	@long		; Yes, return Inf. sign is the same as @long
 	jmp	__f32retInf
@@ -947,7 +941,7 @@ __addf32_12:
 	stab	__fp_work+4
 	inca			; exp++
 	cmpa	#$FF		; exp>254, Inf.
-	jeq	__f32retInfs
+	jeq	__f32Infs
 __addf32_20:			; even number rounding
 	ldab	@long+3
 	lsrb			; LSB -> Carry
@@ -968,7 +962,7 @@ __addf32_20:			; even number rounding
 ;
 	inca
 	cmpa	#$FF
-	jeq	__f32retInfs
+	jeq	__f32Infs
 	lsr	long+1
 	ror	long+2
 	ror	long+3
@@ -1033,7 +1027,7 @@ __addf32_80:
 ;
 	inca
 	cmpa	#$FF
-	jeq	__f32retInfs
+	jeq	__f32Infs
 	lsr	long+1
 	ror	long+2
 	ror	long+3
@@ -1206,12 +1200,12 @@ __mulf32x:
 	beq	__mulf32tos4	; No, normal calculation
 ;
 	bitb	#$03		; TOS or @long is NaN?
-	jne	__f32retNaN	; Yes: return NaN
+	jne	__f32NaN	; Yes: return NaN
 	bitb	#$0C		; TOS or @long is Inf?
 	beq	__mulf32_s10
 	andb	#$30		; TOS or @long is zero?
-	jeq	__f32retInfs	; No, Inf * (not zero) returns Inf with __sign.
-	jmp	__f32retNaN	; Inf*0.0 returns NaN
+	jeq	__f32Infs	; No, Inf * (not zero) returns Inf with __sign.
+	jmp	__f32NaN	; Inf*0.0 returns NaN
 ;
 __mulf32_s10:			; TOS and @long is not Inf,NaN
 ;	andb	#$30
@@ -1249,7 +1243,7 @@ __mulf32tos4_e:
 ;
 	subb	#<128		; sum of exp>127? (>=128)
 	sbca	#>128
-	jge	__f32retInfs	; Overflow, returns Inf with __sign.
+	jge	__f32Infs	; Overflow, returns Inf with __sign.
 ;
 ; Exponent sum(=150) appears to underflow,
 ; but mantissa multiplication carry can keep it subnormal.
@@ -1336,7 +1330,7 @@ __mulf32tos50:
         stx     __exp2
         cpx     #128
         bne     __mulf32tos705
-        jmp     __f32retInfs    ; Overflow, returns Inf with __sign.
+	jmp	__f32Infs	; Overflow, returns Inf with __sign.
 ;
 ; Already rounded to 32-bit, so 4-byte shift is sufficient.
 ;
@@ -1402,7 +1396,7 @@ __mulf32tos721:
 	inx
 	stx	__exp2
 	cpx	#128		; Recheck for overflow
-	jeq	__f32retInfs	; Overflow, returns Inf with __sign.
+	jeq	__f32Infs	; Overflow, returns Inf with __sign.
 	ldaa	#$80
 	staa	__fp_work+0
 ;
@@ -1451,25 +1445,25 @@ __divf32x:
 	beq	__divf32tos01	; No, normal calculation
 ;
 	bitb	#$03
-	jne	__f32retNaN	; TOS or @long is NaN, return NaN
+	jne	__f32NaN	; TOS or @long is NaN, return NaN
 ;
 	bitb	#$0C		; TOS or @long is Inf?
 	beq	__divf32_s20
 	bitb	#$08		; TOS is Inf?
 	beq	__divf32_s10	; No: @long is Inf, TOS is finite
 	bitb	#$04		; @long is Inf too?
-	jne	__f32retNaN	; Yes, Inf/Inf returns NaN
+	jne	__f32NaN	; Yes, Inf/Inf returns NaN
 	jmp	__f32retZeros	; num/Inf returns 0.0 with __sign
 ;
 __divf32_s10:			; @long is Inf, TOS is finite. 0.0 included
-	jmp	__f32retInfs	; Inf/num returns Inf with __sign
+	jmp	__f32Infs	; Inf/num returns Inf with __sign
 ;
 __divf32_s20:
 	bitb	#$20		; TOS == 0.0?
 	jeq	__f32retZeros	; No, 0.0/num returns 0.0 with __sign
 	bitb	#$10		; @long == 0.0 too?
-	jne	__f32retNaN	; Yes, 0.0/0.0 returns NaN
-	jmp	__f32retInfs	; num/0.0 returns Inf with __sign
+	jne	__f32NaN	; Yes, 0.0/0.0 returns NaN
+	jmp	__f32Infs	; num/0.0 returns Inf with __sign
 ;
 __divf32tos01:
 ;
@@ -1486,7 +1480,7 @@ __divf32tos01:
 ;
 	subb	#<129
 	sbca	#>129
-	jge	__f32retInfs	; overflow
+	jge	__f32Infs	; overflow
 ;
 	subb	#<-150-129	; expdiff < -150? AccAB still holds expdiff-129
 	sbca	#>-150-129
@@ -1559,7 +1553,7 @@ __divf32tos06:
 __divf32tos20:				; round up check (normal)
 	ldx	__expdiff
 	cpx	#128
-	jeq	__f32retInfs
+	jeq	__f32Infs
 	ldab	__expdiff+1		; ldab and ldaa keep C
 	ldaa	__expdiff
 	tst	long+3			; if normal numbers, only G needed
