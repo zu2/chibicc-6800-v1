@@ -378,7 +378,7 @@ __f32tou32:
 	ldaa	1,x
 	asla
 	rolb			; B = exp
-	cmpb	#$3f		; if exp<=$3e (x < 2^-64) then return 0;
+	cmpb	#$7f		; if exp<=$7e (x < 1.0) then return 0;
 	jcs	__u32zero
 __f32tou32_1:
 	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
@@ -583,7 +583,7 @@ __f32tou16_0:
 	rolb			; B = exp
 	sec
 	rora			; A = MSB
-	cmpb	#$3f		; if exp<=$3e (x < 2^-64) then return 0;
+	cmpb	#$7f		; if exp<=$7e (x < 1.0) then return 0;
 	bcc	__f32tou16_1
 __u16zero:
 	clrb
@@ -621,7 +621,7 @@ __f32toi16x:
 	rolb			; B = exp
 	sec			; set hidden bit
 	rora			; A = MSB
-	cmpb	#$3f		; if exp<=$3e (|x| < 2^-64) then return 0;
+	cmpb	#$7f		; if exp<=$7e (|x| < 1.0) then return 0;
 	bcc	__f32toi16_1
 __s16zero:
 	clrb
@@ -671,7 +671,7 @@ __f32toi8x:
 	rolb			; B = exp
 	sec			; set hidden bit
 	rora			; A = MSB
-	cmpb	#$3f		; if exp<=$3e (|x| < 2^-64) then return 0;
+	cmpb	#$7f		; if exp<=$7e (|x| < 1.0) then return 0;
 	bcc	__f32toi8_1
 __s8zero:
 	clrb
