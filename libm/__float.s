@@ -765,17 +765,15 @@ __addf32_s10:			; TOS is Inf, @long is not
 	jmp	__f32retInf	; return Inf, The sign is the same as TOS
 ;
 __addf32_s20:			; TOS and @long are not NaN,Inf.
-	andb	#$30		; TOS or @long == 0.0?
-;	beq	__addf32_1	; b5 or b4 always 1, don't jump
-	cmpb	#$30		; TOS and @long == 0.0?
-	jne	__addf32_s50
-	ldab	__zin		; Yes. same sign?
+	bitb	#$20		; TOS == 0.0?
+	beq	__addf32_s52	; No, @long == 0.0. copy TOS to @long
+	bitb	#$10		; @long == 0.0 too?
+	beq	__addf32_s51	; No, return @long (do nothing)
+	tstb			; Yes. same sign?
 	jmi	__f32retpZero	; Not same sign. return +0.0
 	jmp	__f32retZerol	; return 0.0, sign is same as @long
 ;
-__addf32_s50:			; TOS or @long == 0.0
-	cmpb	#$20		; TOS == 0.0?
-	beq	__addf32_s51	; Yes, return @long (do nothing)
+__addf32_s52:			; only @long is 0.0
 	ldab	@long		; TOS's sign = @long's sign xor __zin's b7
 	eorb	__zin
 	andb	#$80
