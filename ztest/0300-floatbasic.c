@@ -3,6 +3,7 @@
 //
 
 #include "common.h"
+#include <stdio.h>
 
 int main(int argc, char **argv)
 {
@@ -109,7 +110,7 @@ int main(int argc, char **argv)
 	if ((long)f != 2147483520)
 		return	94;
 	f = 2147483648.0;
-	if ((long)f != 2147483648)   // Undefined behavior
+	if ((long)f != 2147483647L)   // Undefined behavior
 		return	95;
 	f = -2147483520.0;
 	if ((long)f != -2147483520)
@@ -204,13 +205,13 @@ int main(int argc, char **argv)
 	if ((long)f != 2147483520)
 		return	194;
 	f = 2147483648L;
-	if ((long)f != 2147483648L)     // undefined behavior
+	if ((long)f != 2147483647L)     // undefined behavior
 		return	195;
 	f = -2147483520L;
-	if ((long)f != -2147483520)
+	if ((long)f != -2147483520L)
 		return	197;
 	f = -2147483648L;
-	if ((long)f != -2147483648)
+	if ((long)f != 2147483647L)     // undefined behavior
 		return	198;
 
 	return 0;

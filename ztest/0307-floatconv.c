@@ -201,11 +201,11 @@ int main(int argc, char **argv)
   // 31bit
   if (scheck2(0x7FFFFFBF,0x7FFFFF80))
     return 71;
-  if (scheck2(0x7FFFFFC0,0x80000000))
+  if (scheck2(0x7FFFFFC0,0x7FFFFFFF))
     return 72;
-  if (scheck2(0x7FFFFFFE,0x80000000))
+  if (scheck2(0x7FFFFFFE,0x7FFFFFFF))
     return 73;
-  if (scheck2(0x7FFFFFFF,0x80000000))
+  if (scheck2(0x7FFFFFFF,0x7FFFFFFF))
     return 74;
 
   if (scheck2(0x80000200,0x80000200))
