@@ -5,7 +5,7 @@
 ;
 ;	https://github.com/zu2/chibicc-6800-v1?tab=License-1-ov-file#readme
 ;
-
+;
 ;	+, -, *, / are correctly rounded to nearest, ties to even.
 ;	Inf, NaN, +0.0, -0.0, and subnormals are handled correctly.
 ;
@@ -381,10 +381,9 @@ __f32tou32:
 	cmpb	#$3f		; if exp<=$3e (x < 2^-64) then return 0;
 	jcs	__u32zero
 __f32tou32_1:
-; Undefined behavior: out of the integer range. return ULONG_MAX
 	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
 	bcs	__f32tou32_2
-	jmp	__u32ffffffff	; return 4,294,967,295
+	jmp	__u32ffffffff	; UB. return 4,294,967,295
 __f32tou32_2:
 	ldaa	1,x		; recover hidden bit
 	oraa	#$80
@@ -550,9 +549,15 @@ __f32toi32:
 	stab	@long
 	jsr	__f32tou32
 	pulb
+	ldaa	@long
+	bmi	__f32toi32_1
 	tstb
 	jmi	__neg32
 	rts
+__f32toi32_1:			; UB
+	tstb
+	jmi	__i3280000000
+	jmp	__i327fffffff
 ;
 ;	float to unsigned char
 ;		@long -> AccB, clear AccA
@@ -955,7 +960,7 @@ __addf32_11:
 __addf32_12:
 	stab	__fp_work+4
 	inca			; exp++
-	cmpa	#$FF		; biased exponent exceeds 254, so it is Inf.
+	cmpa	#$FF		; exp>254, Inf.
 	jeq	__f32retInfs
 __addf32_20:			; even number rounding
 	ldab	@long+3
@@ -985,7 +990,7 @@ __addf32_20:			; even number rounding
 __addf32_29:
 	cmpa	#1		; sub normal number?
 	bne	__addf32_30
-	tst	long+1		; check hiden bit, when 1 convert to normal
+	tst	long+1		; check hiden bit, if 1 convert to normal
 	bmi	__addf32_30
 	clra
 __addf32_30:
@@ -1103,10 +1108,11 @@ __setup_zin_x:			; X is 0 based
 	tab
 	eorb	@long
 	andb	#$80
-	stab	__sign		; First, determine the sign
+	stab	__sign
 ;
-	anda	#$7F		; exp 2-253 is normal. exp 0,1,254,255 need the full test
-	deca			; (exp>>1)-1 is $00-$7D when normal, $FF or $7E otherwise
+	anda	#$7F		; exp 2-253 is normal
+	deca			; (exp>>1)-1 -> $00-$7D: normal
+				;		$FF,$7E otherwise
 	cmpa	#$7E
 	bcc	__setup_zin_05
 	ldaa	@long
@@ -1154,12 +1160,10 @@ __setup_zin_99:
 	stab	__zin
 	rts
 ;
-;	Change @long floating point number for easier calculations.
-;	  Put the exponent in __lexp (1 byte, biased)
-;	    If the biased exponent is 00 (subnormal), it becomes 01.
-;	  Set a hidden bit for normal number (without subnormal).
-;
-;	Special numbers ( Inf, NaN ) cannot be handled here.
+;	@long fp to easier calculation form.
+;	  __lexp: exponent (biased)
+;		: 01 (when subnormal:$00), not set hidden bit
+;		: other normal number, set hidden hit
 ;
 __setup_long:			; @long's exp->AccA, set hidden bit of @long
 	ldab	@long+1		; get TOS's exp to a
@@ -1202,8 +1206,6 @@ __pullret:
 	jmp	0,x
 ;
 ;	@long = @long * TOS
-;
-;	No arithmetic is required when multiplying by 1, but simply multiply it now.
 ;
 __mulf32bx:
 	clra
@@ -1341,10 +1343,6 @@ __mulf32tos34:
         orab    #$10            ; set sticky
         stab    __fp_work+3
 __mulf32tos50:
-;
-; When highest bit is set, add 1 to the exponent.
-; Exponent can be up to 127; overflow if incremented to 128.
-;
 	ldab	__fp_work		; carryover of the MSB bit?
 	bpl	__mulf32tos70
         ldx     __exp2
@@ -1362,9 +1360,7 @@ __mulf32tos70:
 	rol	__fp_work+1
 	rol     __fp_work
 ;
-; Denormalize before rounding, otherwise the rounding position is wrong.
-;
-__mulf32tos705:
+__mulf32tos705:			; Denormalize before rounding
 	ldab	__exp2+1
 	ldaa	__exp2
 	subb	#<-126
@@ -1416,10 +1412,10 @@ __mulf32tos721:
 	inc	__fp_work+0
 	bne	__mulf32tos72
 ;
-        ldx     __exp2          ; Rounding changed exponent
-        inx
-        stx     __exp2
-        cpx     #128            ; Recheck for overflow
+	ldx	__exp2		; Rounding changed exponent
+	inx
+	stx	__exp2
+	cpx	#128		; Recheck for overflow
 	jeq	__f32retInfs	; Overflow, returns Inf with __sign.
 	ldaa	#$80
 	staa	__fp_work+0
@@ -1428,7 +1424,7 @@ __mulf32tos72:
 	ldab	__exp2+1
 	cmpb	#<-127		; subnormal ?
 	bne	__mulf32tos75
-	tst	__fp_work		; round up carried into the hidden bit
+	tst	__fp_work	; round up carried into the hidden bit
 	bpl	__mulf32tos74
 	ldab	#<-126
 	stab	__exp2+1
@@ -1509,17 +1505,11 @@ __divf32tos01:
 	sbca	#>129
 	jge	__f32retInfs	; overflow
 ;
-; Exponent diff(=-150) appears to underflow,
-; but the round up can still make it subnormal.
-;
 	subb	#<-150-129	; expdiff < -150? AccAB still holds expdiff-129
 	sbca	#>-150-129
 	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
 ;
 	ldx	__fp_ix
-;
-;	Since division 24bit is done in 32-bit,
-;	  the result will never be 0 (Dividend 0 is already excluded)
 ;
 __divf32tos03:
 	jsr	__fdiv32x32		; @long = @long / TOS, @tmp1+1:AB = rem
@@ -1577,9 +1567,6 @@ __divf32tos06:
 	inc	long
 	bpl	__divf32_done		; Still subnormal
 ;
-;	annoying thing here is:
-;	  round up carry from the subnormal results in a normal number.
-;
 	ldab	#<-126
 	ldaa	#>-126
 	stab	__expdiff+1
@@ -1618,9 +1605,7 @@ __divf32_done:
 	staa	@long
 	rts
 ;
-;	round up check, @tmp4 and @tmp4+1
-;
-__divf32_rup_check:
+__divf32_rup_check:			; round up check, @tmp4 and @tmp4+1
 	ldab	@long+3
 	bpl	__divf32_rup_none	; G==0, no round up
 	andb	#$7F
@@ -1683,7 +1668,7 @@ loop:
         rol 0,x
         bcc loop
         bra nextbyte
-loop_begin_1:			; rem >= 2^24 > divisor
+loop_begin_1:		; rem >= 2^24 > divisor
 	subb @tmp4	; dividend - divisor
 	sbca @tmp3+1
 	pshb
@@ -1739,7 +1724,7 @@ next8:
 ret:
 	rts
 ;
-;	if float is subnormal, mantissa into normal form.
+;	change subnormal mantissa into normal form.
 ;	unbiased exp is returned in AccAB.
 ;	bit 23 turn on (| 0x00800000)
 ;	parameter:
