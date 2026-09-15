@@ -27,9 +27,8 @@ _roundf:
 	bcc	__round_ret		; return @long
 	subb	#127
 	bcc	__round_ge1		; exp>126? (fabsf(@long)>=1.0f)
-	ldab	__lexp
-	cmpb	#126			; fabsf(@long)>=0.5f?
-	bcs	__round_zero
+	cmpb	#$FF			; exp==126? (0.5<=fabsf(@long)<1.0f)
+	bne	__round_zero
 	jmp	__f32ones		; return +-1.0f
 __round_zero:
 	jmp	__f32zeros		; return +-0.0f, keeps the sign

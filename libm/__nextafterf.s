@@ -50,7 +50,6 @@ _nextafterf_02:
 ;
         beq     _nextafterf_10
 ;                                       ; if @long==0
-        tsx
         asl     2,x                     ;   @long=copysign(FLT_TRUE_MIN,TOS)
         ldx     #1                      ; 
         stx     @long+2

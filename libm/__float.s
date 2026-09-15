@@ -440,9 +440,12 @@ __i3280000000:
 	stx	@long
 	rts
 __f32Infs:
+__f32retInfs:
 	ldab	__sign
+__f32retInf:		; return signbit(AccB)? 7f80 0000: ff80 0000;
 	bmi	__f32mInf
 __f32pInf:
+__f32retpInf:
 __f327f800000:
 	ldx	#$7F80
 __f32Inf2:
@@ -451,6 +454,7 @@ __f32Inf2:
 	stx	@long+2
 	rts
 __f32mInf:
+__f32retmInf:
 __f32ff800000:
 	ldx	#$FF80
 	bra	__f32Inf2
@@ -468,25 +472,9 @@ __f32mOne:
 	ldx	#$BF80
 	bra	__f32One_2
 ;
-;	load plus/minus Inf into @long
-;
-__f32retInfs:
-	ldab	__sign
-__f32retInf:		; return signbit(AccB)? 7f80 0000: ff80 0000;
-	tstb
-	bmi	__f32retmInf
-__f32retpInf:		; 7f80 0000
-	bsr	__f327f800000
-	rts
-__f32retmInf:		; ff80 0000
-	bsr	__f32ff800000
-	rts
-;
 ;	load plus/minus qNaN into @long
 ;
 __f32retNaN:
-	bsr	__f32NaN
-	rts
 __f32NaN:
 	ldx	#long
 __f32NaNx:

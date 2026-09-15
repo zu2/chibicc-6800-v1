@@ -71,9 +71,9 @@ __fmaxmin_not_NaN:
 __fmax_comp:
 	jsr	__cmpf32_x2		; compare @long and TOS
 	bmi	__fmaxmin_ret_tos	; @long < TOS (N=1)
-	bra	__fmaxmin_ret
+	rts
 __fmin_comp:
 	jsr	__cmpf32_x2
 ;	bcs	XXX?			; C==1 if NaN; shouldn't occur
 	bpl	__fmaxmin_ret_tos	; @long >= TOS (N=0)
-	bra	__fmaxmin_ret
+	rts
