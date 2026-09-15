@@ -8,6 +8,8 @@
 ;
 	.zp
 	.data
+;
+	.code
 	.export	__i16tof32
 	.export	__u16tof32
 	.export	__i32tof32
