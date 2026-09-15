@@ -15,8 +15,6 @@
 ;
         .export	_floorf
         .data
-__fracmask_p:
-	.word	0
 ;
         .code
 ;
