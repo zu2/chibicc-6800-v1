@@ -29,7 +29,7 @@
 ;
 	.data
 ;__zin:	.blkb	1	; TOS & @long are Zero? Inf? NaN?
-__exp:  .blkb   1
+;__exp:  .blkb   1
 __expdiff:.blkb	1	; high half of @long's exp - TOS's exp
 __expnew:.word	2	; new exp
 ;

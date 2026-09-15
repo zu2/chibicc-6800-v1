@@ -230,7 +230,6 @@ __f32minint:			; -2147483648 (0x8000 0000) = CF00 0000
 	rts
 ;
 ;	int32 to float32
-;		TODO: round up/down
 ;
 __i32tof32:
 	ldx	#long
@@ -303,7 +302,6 @@ __i32tof32_left2:
 	bra	__i32tof32_done
 ;
 ;	uint32 to float32
-;		TODO: round up/down
 ;
 __u32tof32:
 	ldx	#long
@@ -393,7 +391,7 @@ __f32tou32_2:
 	staa	1,x
 	clr	0,x
 ;
-	subb	#$96		; TODO:
+	subb	#$96
 	beq	__f32tou32_ret
 	jcc	__shl32
 __f32tou32_4:
