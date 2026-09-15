@@ -766,7 +766,7 @@ __addf32_s10:			; TOS is Inf, @long is not
 ;
 __addf32_s20:			; TOS and @long are not NaN,Inf.
 	andb	#$30		; TOS or @long == 0.0?
-	beq	__addf32_1	; No
+;	beq	__addf32_1	; b5 or b4 always 1, don't jump
 	cmpb	#$30		; TOS and @long == 0.0?
 	jne	__addf32_s50
 	ldab	__zin		; Yes. same sign?
@@ -1228,8 +1228,8 @@ __mulf32x:
 	jmp	__f32retNaN	; Inf*0.0 returns NaN
 ;
 __mulf32_s10:			; TOS and @long is not Inf,NaN
-	andb	#$30
-	jne	__f32retZeros	; TOS or @long is zero
+;	andb	#$30
+	jmp	__f32retZeros	; b5 or b4 is always 1. TOS or @long must be zero
 __mulf32tos4_s:
 	jsr	__fp_settos
 	jsr	__adj_subnormal
@@ -1479,14 +1479,11 @@ __divf32_s10:			; @long is Inf, TOS is finite. 0.0 included
 	jmp	__f32retInfs	; Inf/num returns Inf with __sign
 ;
 __divf32_s20:
-	andb	#$30
-	beq	__divf32tos01
-	cmpb	#$30		; 0.0/0.0?
-	jeq	__f32retNaN
-	cmpb	#$20		; num/0.0?
-	jeq     __f32retInfs	; Yes, returns Inf with __sign
-	cmpb	#$10		; 0.0/num?
-	jeq	__f32retZeros	; Yes, returns 0.0 with __sign
+	bitb	#$20		; TOS == 0.0?
+	jeq	__f32retZeros	; No, 0.0/num returns 0.0 with __sign
+	bitb	#$10		; @long == 0.0 too?
+	jne	__f32retNaN	; Yes, 0.0/0.0 returns NaN
+	jmp	__f32retInfs	; num/0.0 returns Inf with __sign
 ;
 __divf32tos01:
 ;
