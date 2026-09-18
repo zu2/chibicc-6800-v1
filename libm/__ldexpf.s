@@ -21,7 +21,7 @@ __sticky:	.byte	0
 ;
 	.code
 ;
-;	@long = ldexpf(float value,int exp)
+;	@long = ldexpf(float value,int n)
 ;
 ;
 _ldexpf:
@@ -36,37 +36,35 @@ _ldexpf:
 	addb	3,x
 	ldaa	2,x
 	adca	#0		; AccAB = exp + 1 + n
-	bne	__ldexpf_slow	; new exp < -1 (subnormal, 0) or > 254 (Inf)
+	bne	__ldexpf_01	; new exp < -1 (subnormal, 0) or > 254 (Inf)
 	subb	#1
-	bls	__ldexpf_slow	; new exp is -1 or 0 (subnormal)
+	bls	__ldexpf_01	; new exp is -1 or 0 (subnormal)
 	asl	long+1		; make new exp
 	asl	long
 	rorb
 	ror	long+1
 	stab	@long
+__ldexpf_ret:                   ; return @long
 	rts
 __ldexpf_slow:
-	jsr	__f32isNaNorInf	; @long is NaN or Inf?
-	bls	__ldexpf_ret	; yes, return it (C+Z=1)
+	tstb
+	beq	__ldexpf_ret	; exp+1==0 (exp==255), return @long
 	jsr	__f32iszero	; @long == 0.0?
-	bne	__ldexpf_01
-__ldexpf_ret:                   ; return @long
-        rts
+	beq	__ldexpf_ret
+	tsx
+	ldx	2,x
+	beq	__ldexpf_ret	; n==0, return @long
 ;
 __ldexpf_01:			; @long is not NaN, Inf, 0.0
-        tsx
-        ldx     2,x
-        beq     __ldexpf_ret
+	ldaa	@long+1
+	ldab	@long
+	stab	__sign		; save sign
+	anda	#$80
+	asla			; shift out b7 and AccA=0
+	rolb
 ;
-        ldaa    @long+1
-        ldab    @long
-        stab    __sign          ; save sign
-        anda    #$80
-        asla                    ; shift out b7 and AccA=0
-        rolb
-;
-        bne     __ldexpf_03
-;                               ; sub normal
+	bne     __ldexpf_03
+;				; sub normal
         incb
 __ldexpf_02:
         subb    #1
@@ -85,23 +83,17 @@ __ldexpf_03:
         bvc     __ldexpf_07
         coma
 __ldexpf_07:
-        stab    @tmp2+1         ; save old exp (unbiased)
-        staa    @tmp2
-        subb    #128            ; exp>128 ?
+        subb    #128            ; exp >= 128 ?
         sbca    #0
         jge     __f32Infs       ; return ±INF
-        ldab    @tmp2+1
-        ldaa    @tmp2
-        subb    #<-150          ; exp < -150 ?
-        sbca    #>-150
-        jlt     __f32zeros      ; Underflow, return ±0.0
+        subb    #<-150-128      ; exp < -150 ?
+        sbca    #>-150-128
+        jmi     __f32zeros      ; Underflow, return ±0.0
 ;
-        ldab    @tmp2+1
-        ldaa    @tmp2
-        subb    #<-126          ; normal ?
-        sbca    #>-126
-        jge     __ldexpf_10     ; yes
-;                               ; no, sub notmal
+        subb    #24             ; normal ?
+        sbca    #0
+        jpl     __ldexpf_10     ; yes
+;                               ; no, subnormal
 ;                               ; AccB = -k, k is the right shift count
         ldaa    @long+1
         oraa    #$80            ; set the hidden bit
@@ -148,8 +140,7 @@ __ldexpf_05:
         bra     __ldexpf_11
 ;
 __ldexpf_10:
-        ldab    @tmp2+1
-        addb    #127            ; add bias
+        incb                    ; AccB = e + 127
 ;
 __ldexpf_11:
         asl     long+1
