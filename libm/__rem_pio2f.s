@@ -228,7 +228,8 @@ __rp_cdone:
 __rp_nocomp:
 ;
 ;	__frac = AccA:AccB:__frac+2..+6
-	ldx	#56			; X = 56 - shifts
+	ldab	#128
+	stab	__rp_exp
 	ldaa	__frac
 	ldab	__frac+1
 __rp_bskip:
@@ -236,24 +237,16 @@ __rp_bskip:
 	bne	__rp_norm
 	pshb
 	ldab	__frac+2
-	ldaa	__frac+3
-	staa	__frac+2
-	ldaa	__frac+4
-	staa	__frac+3
-	ldaa	__frac+5
-	staa	__frac+4
-	ldaa	__frac+6
-	staa	__frac+5
+	ldx	__frac+3
+	stx	__frac+2
+	ldx	__frac+5
+	stx	__frac+4
 	clr	__frac+6
+	ldaa	__rp_exp
+	suba	#8
+	staa	__rp_exp
+	cmpa	#72
 	pula
-	dex
-	dex
-	dex
-	dex
-	dex
-	dex
-	dex
-	dex
 	bne	__rp_bskip
 	jmp	__rp_zero
 __rp_norm:
@@ -266,7 +259,7 @@ __rp_norm:
 	rol	__frac+2
 	rolb
 	rola
-	dex
+	dec	__rp_exp
 	bne	__rp_norm
 	jmp	__rp_zero
 __rp_ndone:
@@ -280,10 +273,6 @@ __rp_ndone:
 	staa	__mm+2
 	ldaa	__frac+3
 	staa	__mm+3
-	stx	__rp_ptr
-	ldab	__rp_ptr+1
-	addb	#72			; __rp_exp = X + 72 = 128 - shifts
-	stab	__rp_exp
 ;
 ;	AccA:__win+1:__win+2:AccB = __mm * __pio2m >> 32
 	ldx	#0
