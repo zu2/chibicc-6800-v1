@@ -412,13 +412,6 @@ __f32zerol:
 __f32mZero:
 	ldab	#$80
 	bra	__f32zeros_3
-__f32pZero:
-	clrb
-	stab	@long
-	stab	@long+1
-	stab	@long+2
-	stab	@long+3
-	rts
 __f32zeros:
 	ldab	__sign
 __f32zeros_2:
@@ -430,6 +423,14 @@ __f32zeros_3:
 	stab	@long+2
 	stab	@long+1
 	rts
+;__f32pZero:
+;	clrb
+;	stab	@long
+;	stab	@long+1
+;	stab	@long+2
+;	stab	@long+3
+;	rts
+__f32pZero:
 __f32zero:
 __i32zero:
 __u32zero:
