@@ -25,6 +25,27 @@ __sticky:	.byte	0
 ;
 ;
 _ldexpf:
+	ldab	@long+1
+	aslb
+	ldab	@long
+	rolb			; get exp in AccB
+	incb
+	cmpb	#2
+	bcs	__ldexpf_slow	; if exp==0 or 255, jump slow path
+	tsx
+	addb	3,x
+	ldaa	2,x
+	adca	#0		; AccAB = exp + 1 + n
+	bne	__ldexpf_slow	; new exp < -1 (subnormal, 0) or > 254 (Inf)
+	subb	#1
+	bls	__ldexpf_slow	; new exp is -1 or 0 (subnormal)
+	asl	long+1		; make new exp
+	asl	long
+	rorb
+	ror	long+1
+	stab	@long
+	rts
+__ldexpf_slow:
 	jsr	__f32isNaNorInf	; @long is NaN or Inf?
 	bls	__ldexpf_ret	; yes, return it (C+Z=1)
 	jsr	__f32iszero	; @long == 0.0?
