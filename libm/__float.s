@@ -553,6 +553,7 @@ __f32tou16_1:
 __f32tou16_3:
 	lsra
 	ror	2,x
+;	ror	3,x
 	incb
 	bne	__f32tou16_3
 __f32tou16_ret:
@@ -1766,6 +1767,17 @@ __cmpf32bx:
 __cmpf32dx:
 	jsr	__adx
 __cmpf32x:
+	ldaa	0,x
+	anda	#$7F
+	cmpa	#$7F
+	beq	__cmpf32x_slow
+	ldab	@long
+	andb	#$7F
+	cmpb	#$7F
+	beq	__cmpf32x_slow
+	aba
+	bne	__cmpf32_x
+__cmpf32x_slow:
 	stx	__fp_ix		;  __f32isNaNorInf destroys IX.
 	jsr	__f32isNaNorInf	; if @long is NaN, C=1
 	bcs	__cmpf32x_ret
