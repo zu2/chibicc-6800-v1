@@ -245,10 +245,8 @@ __rp_bskip:
 	ldaa	__rp_exp
 	suba	#8
 	staa	__rp_exp
-	cmpa	#72
 	pula
-	bne	__rp_bskip
-	jmp	__rp_zero
+	bra	__rp_bskip
 __rp_norm:
 	tsta
 	bmi	__rp_ndone
@@ -260,8 +258,7 @@ __rp_norm:
 	rolb
 	rola
 	dec	__rp_exp
-	bne	__rp_norm
-	jmp	__rp_zero
+	bra	__rp_norm
 __rp_ndone:
 ;
 ;	*rp = frac * pi/2
@@ -345,7 +342,6 @@ __rp_e0:
 	bne	__rp_nornd
 	inc	long
 __rp_nornd:
-__rp_out:
 	tsx
 	ldx	2,x
 	ldaa	@long+3
@@ -362,8 +358,3 @@ __rp_out:
 	clra
 	rts
 ;
-__rp_zero:
-	ldx	#0
-	stx	@long+2
-	stx	@long
-	bra	__rp_out
