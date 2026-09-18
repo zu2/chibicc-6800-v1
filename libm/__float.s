@@ -41,7 +41,6 @@
 	.export __f32isNaNorInf
 	.export __fdiv32x32
 	.export	__setup_long
-	.export __f32retpZero
 	.export __setup_zin
 	.export __f32NaN
 	.export __f32NaNx
@@ -441,18 +440,18 @@ __i3280000000:
 	rts
 __f32Infs:
 	ldab	__sign
-__f32retInf:		; return signbit(AccB)? 7f80 0000: ff80 0000;
+__f32Inf:		; return signbit(AccB)? 7f80 0000: ff80 0000;
 	bmi	__f32mInf
 __f32pInf:
 	ldx	#$7F80
-__f32Inf2:
+__f32Inf_2:
 	stx	@long
 	ldx	#$0000
 	stx	@long+2
 	rts
 __f32mInf:
 	ldx	#$FF80
-	bra	__f32Inf2
+	bra	__f32Inf_2
 __f32ones:
 	tst	__sign
 	bmi	__f32mOne
@@ -484,13 +483,13 @@ __f32NaNx:
 __f32retZerox:
 	ldab	2,x
 	bra	__f32retZero
-__f32retZerol:
+__f32Zerol:
 	ldab	@long
 	bra	__f32retZero
-__f32retmZero:
+__f32mZero:
 	ldab	#$80
 	bra	__f32retZero
-__f32retpZero:
+__f32pZero:
 	clrb
 	bra	__f32retZero
 __f32retZeros:
@@ -506,7 +505,7 @@ __f32retZero:
 ;
 ;	pull TOS into @long, and return
 ;
-__f32retTOS:
+__f32TOS:
 	tsx
 	ldx	0,x
 	ins
@@ -739,12 +738,12 @@ __addf32_retNaN:
 	jmp	__f32NaN	; No,  return NaN
 __addf32_s05:
 	ldab	@long		; Yes, return Inf. sign is the same as @long
-	jmp	__f32retInf
+	jmp	__f32Inf
 	;
 __addf32_s10:			; TOS is Inf, @long is not
 	ldab	@long		; TOS's sign = @long's sign xor __zin's b7
 	eorb	__zin
-	jmp	__f32retInf	; return Inf, The sign is the same as TOS
+	jmp	__f32Inf	; return Inf, The sign is the same as TOS
 ;
 __addf32_s20:			; TOS and @long are not NaN,Inf.
 	bitb	#$20		; TOS == 0.0?
@@ -752,8 +751,8 @@ __addf32_s20:			; TOS and @long are not NaN,Inf.
 	bitb	#$10		; @long == 0.0 too?
 	beq	__addf32_s51	; No, return @long (do nothing)
 	tstb			; Yes. same sign?
-	jmi	__f32retpZero	; Not same sign. return +0.0
-	jmp	__f32retZerol	; return 0.0, sign is same as @long
+	jmi	__f32pZero	; Not same sign. return +0.0
+	jmp	__f32Zerol	; return 0.0, sign is same as @long
 ;
 __addf32_s52:			; only @long is 0.0
 	ldab	@long		; TOS's sign = @long's sign xor __zin's b7
@@ -779,7 +778,7 @@ __addf32_1:			; neither @long nor TOS is 0.0
 	bhi	__addf32_2	; abs(TOS) > abs(@long), swap @long <-> TOS
 	bne	__addf32_3
 	tst	__zin		; b7:signs differ
-	jmi	__f32retpZero	; x + (-x) is +0.0
+	jmi	__f32pZero	; x + (-x) is +0.0
 ;
 __addf32_3:
 	ldab	@long
