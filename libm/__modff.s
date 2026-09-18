@@ -33,7 +33,6 @@ _modff:
 	jsr	__f32isNaNorInf		; Handle NaN/Inf cases, mess IX
 	bcs	__modff_NaN		; if NaN, int_part=@long, return @long
 ;
-__modff_10:
 	jsr	__get_lexp_sign		; __lexp = @long's exp, __sign = sign
 	subb	#127			; exp < 0 ?  ( x<1.0 ?)
 	bcc	__modff_mask
@@ -56,7 +55,7 @@ __modff_ret_long:			; int_part = @long, return +0.0 or -0.0
 	ldx	2,x
 	jsr	__store32x		; (0-3,x) = @long
 ;
-__modff_ret_zero:
+;__modff_ret_zero:
 	jmp	__f32zeros		; return +0.0 or -0.0
 ;
 __modff_make_mask:
@@ -134,7 +133,7 @@ __modff_norm_loop:
 ;
 ;	Reconstruct fractional float
 ;
-__modff_normal:
+;__modff_normal:
 	ldab	__frac+3
 	stab	@long+3
 	ldab	__frac+2

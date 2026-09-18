@@ -14,14 +14,6 @@
 ;	Inf, NaN, +0.0, -0.0, and subnormals are handled correctly.
 ;	IEEE 754 exceptions are not handled.
 ;
-
-;
-;	TODO:
-;		more test
-;		refactoring
-;		Exception handling
-;
-
 	.export	_fmaxf
 	.export	_fminf
 ;
@@ -68,7 +60,7 @@ __fmaxmin_not_NaN:
 	tsx				; __setup_zin leaves IX on long
 	ldaa	__max_or_min
 	bmi	__fmin_comp
-__fmax_comp:
+;__fmax_comp:
 	jsr	__cmpf32_x2		; compare @long and TOS
 	bmi	__fmaxmin_ret_tos	; @long < TOS (N=1)
 	rts

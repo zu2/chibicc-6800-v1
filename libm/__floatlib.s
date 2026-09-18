@@ -38,12 +38,11 @@ _isinf:
         bcs     __isinf_not_inf ; NaN: return 0
 	bne	__isinf_not_inf ; not Inf: return 0
 	ldaa	@long
-	bpl	____isinf_pInf
+	bpl	__isinf_pInf
 	ldab	#$FF		; if -Inf, return -1
 	tba
 	rts
 __isinf_not_inf:
-__isnan_not_nan:
 __isfinite_non:
 	clrb
 	clra
@@ -67,8 +66,7 @@ _isnan:
 _isfinite:
 	jsr	__f32isNaNorInf ; NaN: C=1, Inf: Z=1
 	bls	__isfinite_non  ; C=1 or Z=1
-____isinf_pInf:			; if +Inf, return 1
-__isfinite_yes:
+__isinf_pInf:			; if +Inf, return 1
 	clra
 	ldab	#1
 	rts

@@ -14,15 +14,6 @@
 ;	Inf, NaN, +0.0, -0.0, and subnormals are handled correctly.
 ;	IEEE 754 exceptions are not handled.
 ;
-
-;
-;	TODO:
-;
-;		more test
-;		refactoring
-;		Exception handling
-;
-
 	.zp
 	.data
 	.export _fmodf
@@ -80,7 +71,7 @@ __fmodf_01:
 	beq	__fmodf_zeros		; return 0.0, sign: same as the @long
 	tstb				; @long < TOS? (b=$FF?)
 	bpl	__fmodf_02
-__fmodf_retlong:
+;
 	ldab	__sign			; Yes, return x (@long) it self
 	orab	@long
 	stab	@long
@@ -149,7 +140,7 @@ __fmodf_keep:
         dec     __expdiff
         bne     __fmodf_shift
 ;
-__fmodf_rem:
+;__fmodf_rem:
 	ldab	@long+1
 	ldx	@long+2			; mod==0?
 	bne	__fmodf_ne

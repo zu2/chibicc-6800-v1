@@ -66,7 +66,7 @@ __sqrtf_05:
 	subb	#127
 	sbca	#0
 ;
-__sqrtf_06:			; √(m*2^e) = √m * 2^(e/2) = √(m*2)* 2^((e-1)/2)
+;__sqrtf_06:			; √(m*2^e) = √m * 2^(e/2) = √(m*2)* 2^((e-1)/2)
 	bitb	#1
 	beq	__sqrtf_10
 	asl	long+3
@@ -198,8 +198,7 @@ __sqrtf_26:
 	dex
 	bne	__sqrtf_20
 ;
-__sqrtf_29:
-;
+;__sqrtf_29:
 	ldab	__s+3
 	ldaa	__s+2
 ;

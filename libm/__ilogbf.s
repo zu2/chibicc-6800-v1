@@ -34,7 +34,7 @@ _ilogbf:
 ilogbf_0:
 	jsr	__f32iszero	; @long == 0.0?
 	bne	ilogbf_2	; No, subnormal
-ret_zero:	                ; ilobgf(0.0) or ilobgf(-0.0)
+;		                ; ilobgf(0.0) or ilobgf(-0.0)
 	ldab	#<-32768	; return FP_ILOGB0 (INT_MIN)
 	ldaa	#>-32768
         rts
