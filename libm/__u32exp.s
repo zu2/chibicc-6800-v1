@@ -150,17 +150,8 @@ next:
 ;
 shift:
 	psha
-	bita	#8
-	bne	shbig
-	ldab	__y+1
-	stab	__tmp+1
-	ldab	__y+2
-	stab	__tmp+2
-	ldab	__y+3
-	stab	__tmp+3
-	ldab	__y
-	bra	shloop
-shbig:
+	cmpa	#5
+	bcs	shsmall
 	ldab	__y
 	stab	__tmp+1
 	ldab	__y+1
@@ -170,6 +161,27 @@ shbig:
 	clrb
 	suba	#8
 	beq	shdone
+	bpl	shloop
+	ldab	__y+3
+	stab	__tmp
+	clrb
+shleft:
+	asl	__tmp
+	rol	__tmp+3
+	rol	__tmp+2
+	rol	__tmp+1
+	rolb
+	inca
+	bne	shleft
+	bra	shdone
+shsmall:
+	ldab	__y+1
+	stab	__tmp+1
+	ldab	__y+2
+	stab	__tmp+2
+	ldab	__y+3
+	stab	__tmp+3
+	ldab	__y
 shloop:
 	lsrb
 	ror	__tmp+1
