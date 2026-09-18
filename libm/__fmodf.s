@@ -42,8 +42,8 @@ _fmodf:
 ;
 	bitb	#$04			; @long is Inf ?
 	bne	__fmodf_NaN		; Yes, Inf%any returns NaN
-	bitb	#$08			; TOS is Inf?
-	bne	__fmodf32_s15		; Yes, return num(@long) it self.
+;	bitb	#$08			; TOS is Inf?
+;	bne	__fmodf32_s15		; Yes, return num(@long) it self.
 ;
 	bitb	#$20			; TOS is 0.0 ?
 	bne	__fmodf_NaN		; Yes, any/0.0 return NaN
@@ -186,14 +186,12 @@ __fmodf_05:
 	staa	@long+3
 ;
 	ldab	#<-127			; subnormal's exp
-	ldaa	#>-127
 	bra	__fmodf32_done
 ;
 __fmodf_20:
 	ldab	__expnew+1
-	ldaa	__expnew
 ;
-__fmodf32_done:				; here, AccAB = expnew-shift(normalized)
+__fmodf32_done:				; here, AccB = expnew-shift(normalized)
 	addb	#127			; add bias
 	tba
 	ldab	@long+2			; @long >> 8
