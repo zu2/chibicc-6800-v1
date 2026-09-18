@@ -382,7 +382,7 @@ __f32tou32:
 __f32tou32_1:
 	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
 	bcs	__f32tou32_2
-	jmp	__u32ffffffff	; UB. return 4,294,967,295
+	jmp	__u32_ffffffff	; UB. return 4,294,967,295
 __f32tou32_2:
 	ldaa	1,x		; recover hidden bit
 	oraa	#$80
@@ -421,18 +421,18 @@ __f32stx:
 	stx	@long
 	stx	@long+2
 	rts
-__f32ffffffff:
-__i32ffffffff:
-__u32ffffffff:
+__f32_ffffffff:
+__i32_ffffffff:
+__u32_ffffffff:
 	ldx	#$ffff
 	bra	__f32stx
-__i327fffffff:
+__i32_7fffffff:
 	ldx	#$7fff
 	stx	@long
 	ldx	#$ffff
 	stx	@long+2
 	rts
-__i3280000000:
+__i32_80000000:
 	ldx	#0
 	stx	@long+2
 	ldx	#$8000
@@ -537,8 +537,8 @@ __f32toi32:
 	rts
 __f32toi32_1:			; UB
 	tstb
-	jmi	__i3280000000
-	jmp	__i327fffffff
+	jmi	__i32_80000000
+	jmp	__i32_7fffffff
 ;
 ;	float to unsigned char
 ;		@long -> AccB, clear AccA
@@ -573,7 +573,7 @@ __u16zero:
 ;
 __f32tou16_1:
 	subb	#$8f		; if exp>=$8f (x >= 65536)
-	jcc	__u16ffff	; return 65535
+	jcc	__u16_ffff	; return 65535
 ;
 	incb			; exp==$8e ?
 	beq	__f32tou16_ret
@@ -688,7 +688,7 @@ __f32toi8_ret2:
 ;
 ;
 ;
-__u16ffff:
+__u16_ffff:
 	ldab	#$FF
 	tba
 	rts
