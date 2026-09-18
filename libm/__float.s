@@ -493,22 +493,6 @@ __f32NaNx:
 	stab	3,x
 	rts
 ;
-;	pull TOS into @long, and return
-;
-__f32TOS:
-	tsx
-	ldx	0,x
-	ins
-	ins
-	pulb
-	stab	@long
-	pulb
-	stab	@long+1
-	pulb
-	stab	@long+2
-	pulb
-	stab	@long+3
-	jmp	0,x
 ;
 ;	float to signed long
 ;		@long -> @long
