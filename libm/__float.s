@@ -406,7 +406,7 @@ __f32zerox:
 	stab	3,x
 __f32tou32_ret:
 	rts
-__f32Zerol:
+__f32zerol:
 	ldab	@long
 	bra	__f32zeros_2
 __f32mZero:
@@ -471,17 +471,17 @@ __f32mInf:
 	bra	__f32Inf_2
 __f32ones:
 	tst	__sign
-	bmi	__f32mOne
+	bpl	__f32pOne
+__f32mOne:
+	ldx	#$BF80
+	bra	__f32pOne_2
 __f32pOne:
 	ldx	#$3F80
-__f32One_2:
+__f32pOne_2:
 	stx	@long
 	ldx	#$0000
 	stx	@long+2
 	rts
-__f32mOne:
-	ldx	#$BF80
-	bra	__f32One_2
 ;
 ;	load plus/minus qNaN into @long
 ;
@@ -746,7 +746,7 @@ __addf32_s20:			; TOS and @long are not NaN,Inf.
 	beq	__addf32_s51	; No, return @long (do nothing)
 	tstb			; Yes. same sign?
 	jmi	__f32pZero	; Not same sign. return +0.0
-	jmp	__f32Zerol	; return 0.0, sign is same as @long
+	jmp	__f32zerol	; return 0.0, sign is same as @long
 ;
 __addf32_s52:			; only @long is 0.0
 	ldab	@long		; TOS's sign = @long's sign xor __zin's b7
