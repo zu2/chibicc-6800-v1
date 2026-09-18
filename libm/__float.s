@@ -406,12 +406,29 @@ __f32zerox:
 	stab	3,x
 __f32tou32_ret:
 	rts
-__f32zeros:
-	bsr	__f32zero
-	ldab	__sign
-	andb	#$80
-	orab	@long
+__f32Zerol:
+	ldab	@long
+	bra	__f32zeros_2
+__f32mZero:
+	ldab	#$80
+	bra	__f32zeros_3
+__f32pZero:
+	clrb
 	stab	@long
+	stab	@long+1
+	stab	@long+2
+	stab	@long+3
+	rts
+__f32zeros:
+	ldab	__sign
+__f32zeros_2:
+	andb	#$80
+__f32zeros_3:
+	stab	@long
+	clrb
+	stab	@long+3
+	stab	@long+2
+	stab	@long+1
 	rts
 __f32zero:
 __i32zero:
@@ -478,29 +495,6 @@ __f32NaNx:
 	clrb
 	stab	2,x
 	stab	3,x
-	rts
-;
-__f32retZerox:
-	ldab	2,x
-	bra	__f32retZero
-__f32Zerol:
-	ldab	@long
-	bra	__f32retZero
-__f32mZero:
-	ldab	#$80
-	bra	__f32retZero
-__f32pZero:
-	clrb
-	bra	__f32retZero
-__f32retZeros:
-	ldab	__sign
-__f32retZero:
-	andb	#$80
-	stab	@long
-	clrb
-	stab	@long+1
-	stab	@long+2
-	stab	@long+3
 	rts
 ;
 ;	pull TOS into @long, and return
@@ -1208,7 +1202,7 @@ __mulf32x:
 ;
 __mulf32_s10:			; TOS and @long is not Inf,NaN
 ;	andb	#$30
-	jmp	__f32retZeros	; b5 or b4 is always 1. TOS or @long must be zero
+	jmp	__f32zeros	; b5 or b4 is always 1. TOS or @long must be zero
 __mulf32tos4_s:
 	jsr	__fp_settos
 	jsr	__adj_subnormal
@@ -1249,7 +1243,7 @@ __mulf32tos4_e:
 ;
 	subb	#<-151-128	; sum of exp < -151? AccAB still holds exp-128
 	sbca	#>-151-128
-	jlt	__f32retZeros	; Underflow, return zero with __sign.
+	jlt	__f32zeros	; Underflow, return zero with __sign.
 ;
 __mulf32tos03:
 ;                       	; setup working area 48bit
@@ -1412,7 +1406,7 @@ __mulf32tos74:
 	ldab	__fp_work+2
 	orab	__fp_work+1
 	orab	__fp_work
-	jeq	__f32retZeros
+	jeq	__f32zeros
 __mulf32tos75:
 	ldab	__fp_work+2
 	stab	@long+3
@@ -1452,14 +1446,14 @@ __divf32x:
 	beq	__divf32_s10	; No: @long is Inf, TOS is finite
 	bitb	#$04		; @long is Inf too?
 	jne	__f32NaN	; Yes, Inf/Inf returns NaN
-	jmp	__f32retZeros	; num/Inf returns 0.0 with __sign
+	jmp	__f32zeros	; num/Inf returns 0.0 with __sign
 ;
 __divf32_s10:			; @long is Inf, TOS is finite. 0.0 included
 	jmp	__f32Infs	; Inf/num returns Inf with __sign
 ;
 __divf32_s20:
 	bitb	#$20		; TOS == 0.0?
-	jeq	__f32retZeros	; No, 0.0/num returns 0.0 with __sign
+	jeq	__f32zeros	; No, 0.0/num returns 0.0 with __sign
 	bitb	#$10		; @long == 0.0 too?
 	jne	__f32NaN	; Yes, 0.0/0.0 returns NaN
 	jmp	__f32Infs	; num/0.0 returns Inf with __sign
@@ -1483,7 +1477,7 @@ __divf32tos01:
 ;
 	subb	#<-150-129	; expdiff < -150? AccAB still holds expdiff-129
 	sbca	#>-150-129
-	jlt	__f32retZeros	; underflow (can't expressed even in subnormal)
+	jlt	__f32zeros	; underflow (can't expressed even in subnormal)
 ;
 	ldx	__fp_ix
 ;
