@@ -553,7 +553,6 @@ __f32tou16_1:
 __f32tou16_3:
 	lsra
 	ror	2,x
-	ror	3,x
 	incb
 	bne	__f32tou16_3
 __f32tou16_ret:
