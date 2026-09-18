@@ -219,14 +219,12 @@ __u16tof32_21:
 	clr	long+3
 	rts
 ;
-;
-;
-__f32minint:			; -2147483648 (0x8000 0000) = CF00 0000
-	ldx	#0
-	stx	@long+2
-	ldx	#$CF00
-	stx	@long
-	rts
+;__f32LONG_MIN:			; -2147483648 (0x8000 0000) = CF00 0000
+;	ldx	#0
+;	stx	@long+2
+;	ldx	#$CF00
+;	stx	@long
+;	rts
 ;
 ;	int32 to float32
 ;
@@ -406,15 +404,11 @@ __f32zerox:
 	stab	3,x
 __f32tou32_ret:
 	rts
-__f32zerol:
-	ldab	@long
-	bra	__f32zeros_2
 __f32mZero:
 	ldab	#$80
 	bra	__f32zeros_3
 __f32zeros:
 	ldab	__sign
-__f32zeros_2:
 	andb	#$80
 __f32zeros_3:
 	stab	@long
@@ -435,20 +429,21 @@ __f32zero:
 __i32zero:
 __u32zero:
 	ldx	#0
-__f32stx:
-	stx	@long
 	stx	@long+2
+	stx	@long
 	rts
 __f32_ffffffff:
 __i32_ffffffff:
 __u32_ffffffff:
 	ldx	#$ffff
-	bra	__f32stx
-__i32_7fffffff:
-	ldx	#$7fff
+	stx	@long+2
 	stx	@long
+	rts
+__i32_7fffffff:
 	ldx	#$ffff
 	stx	@long+2
+	ldx	#$7fff
+	stx	@long
 	rts
 __i32_80000000:
 	ldx	#0
@@ -732,8 +727,10 @@ __addf32_0:
 __addf32_retNaN:
 	jmp	__f32NaN	; No,  return NaN
 __addf32_s05:
-	ldab	@long		; Yes, return Inf. sign is the same as @long
-	jmp	__f32Inf
+;	ldab	@long		; Yes, return Inf. sign is the same as @long
+;	jmp	__f32Inf
+__addf32_0_ret:
+	rts
 	;
 __addf32_s10:			; TOS is Inf, @long is not
 	ldab	@long		; TOS's sign = @long's sign xor __zin's b7
@@ -746,8 +743,8 @@ __addf32_s20:			; TOS and @long are not NaN,Inf.
 	bitb	#$10		; @long == 0.0 too?
 	beq	__addf32_s51	; No, return @long (do nothing)
 	tstb			; Yes. same sign?
-	jmi	__f32pZero	; Not same sign. return +0.0
-	jmp	__f32zerol	; return 0.0, sign is same as @long
+	bpl	__addf32_0_ret
+	jmp	__f32pZero	; Not same sign. return +0.0
 ;
 __addf32_s52:			; only @long is 0.0
 	ldab	@long		; TOS's sign = @long's sign xor __zin's b7
