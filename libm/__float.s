@@ -49,7 +49,6 @@
 	.export __f32ones
 	.export	__f32Infs
 	.export __adj_subnormal
-        .export __f32NaN
 	.export __sign
 	.export __fp_work
 	.export __lexp
@@ -184,7 +183,7 @@ __i16tof32_20:			; Shift left until the MSB becomes 1
 	asl	long+2
 	rola
 	bcc	__i16tof32_20	; loop until C=1
-__i16tof32_21:
+;__i16tof32_21:
 	asl	__sign
 	rorb
 	rora
@@ -210,7 +209,7 @@ __u16tof32_20:			; Shift left until most significant bit to 1
 	asl	long+2
 	rola
 	bcc	__u16tof32_20	; loop until C=1 (hidden bit check)
-__u16tof32_21:
+;__u16tof32_21:
 	lsrb
 	rora			; shifted over 1bit, fix it.
 	ror	long+2
@@ -236,7 +235,7 @@ __i32tof32x:
 	orab	2,x
 	orab	3,x
 	jeq	__f32zero	;   return +0.0
-__i32tof32_1:
+;__i32tof32_1:
 	ldab	0,x
 	andb	#$80
 	stab	__sign		; b7:sign bit
@@ -377,7 +376,7 @@ __f32tou32:
 	rolb			; B = exp
 	cmpb	#$7f		; if exp<=$7e (x < 1.0) then return 0;
 	jcs	__u32zero
-__f32tou32_1:
+;__f32tou32_1:
 	cmpb	#$9f		; if exp>=$9f (x >= 4,294,967,295)
 	bcs	__f32tou32_2
 	jmp	__u32_ffffffff	; UB. return 4,294,967,295
@@ -390,7 +389,7 @@ __f32tou32_2:
 	subb	#$96
 	beq	__f32tou32_ret
 	jcc	__shl32
-__f32tou32_4:
+;__f32tou32_4:
 	negb
 	jmp	__shr32u
 ;
@@ -530,7 +529,7 @@ __f32tou16:
 __f32tou16x:
 	jsr	__f32iszerox
 	beq	__u16zero
-__f32tou16_0:
+;__f32tou16_0:
 	ldab	0,x
 	bmi	__u16zero	; if x<0 then return 0
 	ldaa	1,x
@@ -889,11 +888,11 @@ __setup_work_60:
 __setup_work_61:
 	andb	#$e0
 	stab	__fp_work+4
-__addf32_5:
+;__addf32_5:
 	ldaa	__lexp
 	tst	__zin		; the signs differ?
 	jmi	__addf32_50
-__addf32_11:
+;__addf32_11:
 	ldab	@long+3		; @long = @long + __fp_work , 24bit version
 	addb	__fp_work+3
 	stab	@long+3
@@ -968,7 +967,7 @@ __addf32_50:
 	sbcb	__fp_work+1
 	stab	@long+1
 	;
-__addf32_60:
+;__addf32_60:
 	bmi	__addf32_80	; hidden bit on?
 	;
 __addf32_70:
@@ -1227,7 +1226,7 @@ __mulf32tos4_e:
 	sbca	#>-151-128
 	jlt	__f32zeros	; Underflow, return zero with __sign.
 ;
-__mulf32tos03:
+;__mulf32tos03:
 ;                       	; setup working area 48bit
 ;	clr	__fp_work+2     ; use AccB
 ;	clr	__fp_work+1     ; use AccA
@@ -1463,7 +1462,7 @@ __divf32tos01:
 ;
 	ldx	__fp_ix
 ;
-__divf32tos03:
+;__divf32tos03:
 	jsr	__fdiv32x32		; @long = @long / TOS, @tmp1+1:AB = rem
 	orab	@tmp1+1                 ; Set sticky bit if any remainder.
 	staa	@tmp1
@@ -1478,7 +1477,7 @@ ____divf32_norem:
 	tst	long
 	bmi	__divf32tos04		; if MSB==1 needn't shift
 ;
-__divf32_0301:
+;__divf32_0301:
 	subb	#1			; exp--
 	sbca	#0
 	asl	long+3
