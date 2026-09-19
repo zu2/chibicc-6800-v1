@@ -6198,6 +6198,24 @@ void gen_expr(Node *node)
       println("\tsbca #0");
       return;
     }
+    if (node->lhs->kind     == ND_CAST
+    &&  is_int16(node->lhs->ty)
+    &&  !node->lhs->ty->is_unsigned
+    &&  is_int8(node->lhs->lhs->ty)
+    &&  !node->lhs->lhs->ty->is_unsigned
+    &&  test_addr_x(node->lhs->lhs)) {
+      gen_expr(node->rhs);
+      negd();
+      off = gen_addr_x(node->lhs->lhs);
+      char *label = new_jump_label();
+      println("\ttst %d,x",off);
+      println("\tbpl %s",label);
+      println("\tdeca");
+      println("%s:",label);
+      println("\taddb %d,x",off);
+      println("\tadca #0");
+      return;
+    }
     gen_expr(node->rhs);		// TODO: lhs to rhs
     cast(node->rhs->ty, node->ty);
     push();
