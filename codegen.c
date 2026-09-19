@@ -5939,7 +5939,26 @@ void gen_expr(Node *node)
         println("\tbge %s",label);
         println("\tdeca");
         println("%s:",label);
-        IX_invalidate();
+        return;
+      }
+      if (can_direct_8bit_ext_ix(node->rhs->lhs)) {
+        gen_expr(node->lhs->lhs);
+        println("\tclra");
+        gen_direct_8bit_ext_ix(node->rhs->lhs,"addb");
+        char *label = new_jump_label();
+        println("\tbge %s",label);
+        println("\tdeca");
+        println("%s:",label);
+        return;
+      }
+      if (can_direct_8bit_ext_ix(node->lhs->lhs)) {
+        gen_expr(node->rhs->lhs);
+        println("\tclra");
+        gen_direct_8bit_ext_ix(node->lhs->lhs,"addb");
+        char *label = new_jump_label();
+        println("\tbge %s",label);
+        println("\tdeca");
+        println("%s:",label);
         return;
       }
       char *label = new_jump_label();
@@ -6006,11 +6025,10 @@ void gen_expr(Node *node)
     push();
     gen_expr(node->rhs);
     println("\ttsx");
-    IX_invalidate();
     println("\taddb 1,x");
     println("\tadca 0,x");
-    IX_invalidate();
     ins(2);
+    IX_invalidate();
     return;
   } // ND_ADD
   case ND_SUB:
@@ -6118,7 +6136,16 @@ void gen_expr(Node *node)
         println("\tbge %s",label);
         println("\tdeca");
         println("%s:",label);
-        IX_invalidate();
+        return;
+      }
+      if (can_direct_8bit_ext_ix(node->rhs->lhs)) {
+        gen_expr(node->lhs->lhs);
+        println("\tclra");
+        gen_direct_8bit_ext_ix(node->rhs->lhs,"subb");
+        char *label = new_jump_label();
+        println("\tbge %s",label);
+        println("\tdeca");
+        println("%s:",label);
         return;
       }
       gen_expr(node->lhs->lhs);
