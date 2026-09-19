@@ -5930,17 +5930,6 @@ void gen_expr(Node *node)
     &&  is_int16(node->rhs->ty)
     &&  is_int8(node->rhs->lhs->ty)
     &&  !node->rhs->lhs->ty->is_unsigned ) {
-      if (can_direct_8bit_ext_ix(node->lhs->lhs)
-      &&  can_direct_8bit_ext_ix(node->rhs->lhs)) {
-        println("\tclra");
-        gen_direct_8bit_ext_ix(node->lhs->lhs,"ldab");
-        gen_direct_8bit_ext_ix(node->rhs->lhs,"addb");
-        char *label = new_jump_label();
-        println("\tbge %s",label);
-        println("\tdeca");
-        println("%s:",label);
-        return;
-      }
       if (can_direct_8bit_ext_ix(node->rhs->lhs)) {
         gen_expr(node->lhs->lhs);
         println("\tclra");
@@ -6127,17 +6116,6 @@ void gen_expr(Node *node)
     &&  node->rhs->ty->kind == TY_INT
     &&  node->rhs->lhs->ty->kind == TY_CHAR
     &&  !node->rhs->lhs->ty->is_unsigned ) {
-      if (can_direct_8bit_ext_ix(node->lhs->lhs)
-      &&  can_direct_8bit_ext_ix(node->rhs->lhs)) {
-        println("\tclra");
-        gen_direct_8bit_ext_ix(node->lhs->lhs,"ldab");
-        gen_direct_8bit_ext_ix(node->rhs->lhs,"subb");
-        char *label = new_jump_label();
-        println("\tbge %s",label);
-        println("\tdeca");
-        println("%s:",label);
-        return;
-      }
       if (can_direct_8bit_ext_ix(node->rhs->lhs)) {
         gen_expr(node->lhs->lhs);
         println("\tclra");
