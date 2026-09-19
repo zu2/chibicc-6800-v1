@@ -1104,6 +1104,16 @@ Node *optimize_expr(Node *node)
       new->rhs->ty = node->ty;
       return optimize_const_expr(new);
     }
+    if (is_integer(node->ty)
+    &&  is_integer_constant(node->rhs,&val)
+    &&  exact_log2(val) > 0
+    &&  (node->ty->size == 4 || val >= 128)) {
+      Node *new = new_copy(node);
+      new->kind = ND_SHL;
+      new->rhs  = new_num(exact_log2(val),node->rhs->tok);
+      new->rhs->ty = ty_uchar;
+      return optimize_expr(new);
+    }
 
     return node;
   } // ND_MUL
@@ -1118,9 +1128,7 @@ Node *optimize_expr(Node *node)
     }
     // unsigned x / 2**n -> x >> n
     if (node->kind == ND_DIV
-    &&  is_int16(node->ty)
-    &&  (node->ty->is_unsigned
-      || skip_byte_to_int(node->lhs)->ty->is_unsigned)
+    &&  node->lhs->ty->is_unsigned
     &&  is_integer_constant(node->rhs,&val)
     &&  exact_log2(val) > 0) {
       Node *new = new_copy(node);
