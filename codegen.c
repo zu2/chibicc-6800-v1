@@ -6146,6 +6146,17 @@ void gen_expr(Node *node)
         println("%s:",label);
         return;
       }
+      if (can_direct_8bit_ext_ix(node->lhs->lhs)) {
+        gen_expr(node->rhs->lhs);
+        println("\teorb #$80");
+        gen_direct_8bit_ext_ix(node->lhs->lhs,"ldaa");
+        println("\teora #$80");
+        println("\tsba");
+        println("\ttab");
+        println("\tldaa #0");
+        println("\tsbca #0");
+        return;
+      }
       gen_expr(node->lhs->lhs);
       println("\teorb #$80");
       push1();
