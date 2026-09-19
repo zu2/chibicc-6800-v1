@@ -1,14 +1,12 @@
 ;
-;	@long = AccAB*TOS
+;	@long = AccAB * TOS
+;
+;	0-1,x return address
+;	2-3,x TOS
 ;
 	.export __mul16x16u_32
 	.export __mul16x16u_sub
 	.code
-;
-; 0-1,x return address
-; 2-3,x TOS
-;
-offset	.equ 2		; long+1(loop counter) to long+3 offset
 ;
 __mul16x16u_32:
 	stab @tmp1+1	; multiplicand
@@ -19,27 +17,37 @@ __mul16x16u_32:
 	stx @long+2	; multiplier
 ;
 __mul16x16u_sub:
-	ldx #$0808	; loop count
-	stx @long
-;
-	ldx #long+1
+	ldx #8
 	clra
-	clrb
+	clrb		; clear Carry
 ;
-loop:
-	ror offset,x
-	bcc skip
+loop1:
+	ror long+3
+	bcc skip1
 	addb @tmp1+1
 	adca @tmp1
-skip:
+skip1:
 	rora
 	rorb
-	dec 0,x
-	bne loop
-	ror offset,x
 	dex
-	cpx #long-1
-	bne loop
+	bne loop1
+;
+	ror long+3
+;
+	ldx #8
+loop2:
+	ror long+2
+	bcc skip2
+	addb @tmp1+1
+	adca @tmp1
+skip2:
+	rora
+	rorb
+	dex
+	bne loop2
+;
+	ror long+2
+;
 	stab @long+1
 	staa @long
         rts
