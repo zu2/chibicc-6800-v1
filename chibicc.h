@@ -624,6 +624,8 @@ void gen_direct_long(Node *node);
 bool can_direct_long(Node *node);
 bool gen_direct_long2(Node *node);
 bool can_direct_long2(Node *node);
+void gen_direct_long_rsub(Node *node);
+bool can_direct_long_rsub(Node *node);
 //
 // gen_float.c
 //

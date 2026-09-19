@@ -5565,6 +5565,26 @@ void gen_expr(Node *node)
         op32x("sub", gen_addr_x(rhs));
         return;
       }
+      if (is_long_constant(lhs,&val)) {
+        gen_expr(rhs);
+        if (!opt('O','s') && can_direct_long_rsub(node)) {
+          gen_direct_long_rsub(node);
+        }else{
+          println("\tjsr __rsub32i");
+          word32i(val);
+          IX_invalidate();
+        }
+        return;
+      }
+      if (test_addr_x(lhs)) {
+        gen_expr(rhs);
+        if (opt('O','2') && can_direct_long_rsub(node)) {
+          gen_direct_long_rsub(node);
+        }else{
+          op32x("rsub", gen_addr_x(lhs));
+        }
+        return;
+      }
       gen_long_tos(node);
       return;
     case ND_MUL:
@@ -6138,6 +6158,18 @@ void gen_expr(Node *node)
       println("\tsbca #0");
       return;
     }
+    if (node->rhs->kind == ND_MUL
+    &&  is_int16(node->rhs->ty)
+    &&  is_integer_constant(node->rhs->rhs, &val)
+    &&  val==2
+    &&  is_int16(node->rhs->lhs->ty)
+    &&  test_addr_x(node->rhs->lhs)) {
+      gen_expr(node->lhs);
+      off = gen_addr_x(node->rhs->lhs);
+      op16_x(off,"subb","sbca");
+      op16_x(off,"subb","sbca");
+      return;
+    }
     if (node->rhs->kind     == ND_CAST
     &&  is_int16(node->rhs->ty)
     &&  !node->rhs->ty->is_unsigned
@@ -6464,6 +6496,13 @@ void gen_expr(Node *node)
         if(!gen_direct_8bit(node->rhs,"ldaa")) {
           assert(0);
         }
+      }else if (can_direct_8bit(node->lhs)) {
+        gen_expr(node->rhs);
+        println("\ttba");
+        if(!gen_direct_8bit(node->lhs,"ldab")) {
+          assert(0);
+        }
+        println("\ttsta");
       }else{
         gen_expr(node->lhs);
         push1();
@@ -6540,6 +6579,13 @@ void gen_expr(Node *node)
         if(!gen_direct_8bit(node->rhs,"ldaa")) {
           assert(0);
         }
+      }else if (can_direct_8bit(node->lhs)) {
+        gen_expr(node->rhs);
+        println("\ttba");
+        if(!gen_direct_8bit(node->lhs,"ldab")) {
+          assert(0);
+        }
+        println("\ttsta");
       }else{
         gen_expr(node->lhs);
         push1();

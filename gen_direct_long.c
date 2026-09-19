@@ -350,3 +350,41 @@ bool can_direct_long2(Node *node)
 
   return false;
 }
+
+
+void gen_direct_long_rsub(Node *node)
+{
+  Node *lhs = skip_empty_cast(node->lhs);
+  int L = long_location_type(lhs);
+  int loff = 0;
+  char *laddr = NULL;
+  int64_t lv = 0;
+
+  assert(node->kind == ND_SUB);
+
+  if (L == 1) is_long_constant(lhs,&lv);
+  if (L==2 || L==4) loff = gen_addr_x(lhs);
+  if (L==3)         laddr = is_var_addr_constant(lhs);
+
+  for (int i = 3; i >= 0; i--) {
+    char *ld = (i==3) ? "ldab" : "ldaa";
+    char *st = (i==3) ? "stab" : "staa";
+    char *op = (i==3) ? "subb" : "sbca";
+    int   sh = (3-i)*8;
+
+    switch (L) {
+    case 1: println("\t%s #%d",    ld, (int)((lv >> sh) & 0xFF)); break;
+    case 2: // THRU
+    case 4: println("\t%s %d,x",   ld, loff+i);                   break;
+    case 3: println("\t%s %s+%d",  ld, laddr, i);                 break;
+    default: assert(0);
+    }
+    println("\t%s @long+%d", op, i);
+    println("\t%s @long+%d", st, i);
+  }
+}
+
+bool can_direct_long_rsub(Node *node)
+{
+  return long_location_type(skip_empty_cast(node->lhs)) != 0;
+}
