@@ -6088,6 +6088,17 @@ void gen_expr(Node *node)
     if (node->lhs->kind == ND_VAR
     &&  node->lhs->var->ty->kind == TY_VLA
     &&  node->lhs->var->offset <= 254){
+      if (node->rhs->kind == ND_CAST
+      &&  is_int16(node->rhs->ty)
+      &&  node->rhs->lhs->ty->kind == TY_CHAR
+      && !node->rhs->lhs->ty->is_unsigned) {
+        gen_expr(node->rhs);
+        negd();
+        ldx_bp();
+        println("\taddb %d+1,x",node->lhs->var->offset);
+        println("\tadca %d,x",node->lhs->var->offset);
+        return;
+      }
       gen_expr(node->rhs);
       println("\tcomb");
       println("\tcoma");
@@ -6100,8 +6111,9 @@ void gen_expr(Node *node)
     if (can_addsub_local_array_addr(node->lhs)) {
       gen_expr(node->rhs);
       negd();
-      if (gen_addsub_local_array_addr(node->lhs,"addb","adca"))
+      if (gen_addsub_local_array_addr(node->lhs,"addb","adca")) {
         return;
+      }
       assert(0);
     }
     if (node->lhs->kind == ND_NUM
@@ -6110,17 +6122,31 @@ void gen_expr(Node *node)
     &&  node->rhs->lhs->ty->kind == TY_CHAR
     && !node->rhs->lhs->ty->is_unsigned) {
       gen_expr(node->rhs->lhs);
+      println("\tclra");
       println("\teorb #$7f");
-      println("\tldaa #$ff");
-      println("\taddb #<%u", (uint16_t)(node->lhs->val + 0x81));
-      println("\tadca #>%u", (uint16_t)(node->lhs->val + 0x81));
+      println("\taddb #<$ff81+%u", (uint16_t)node->lhs->val);
+      println("\tadca #>$ff81+%u", (uint16_t)node->lhs->val);
       return;
+    }
+    if (node->rhs->kind == ND_CAST
+    &&  is_int16(node->rhs->ty)
+    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    && !node->rhs->lhs->ty->is_unsigned
+    &&  can_direct_imm_ext(node->lhs)) {
+      gen_expr(node->rhs);
+      negd();
+      if (gen_direct_imm_ext(node->lhs,"addb","adca")) {
+        return;
+      }
+      assert(0);
     }
     if (can_direct_imm_ext(node->lhs)) {
       gen_expr(node->rhs);
       println("\tcomb");
       println("\tcoma");
-      if (gen_direct_imm_ext(node->lhs,"adcb","adca")) return;
+      if (gen_direct_imm_ext(node->lhs,"adcb","adca")) {
+        return;
+      }
       assert(0);
     }
     if (can_direct(node->lhs)){
