@@ -1023,6 +1023,7 @@ Node *optimize_expr(Node *node)
       return optimize_const_expr(node);
     }
     if (is_integer(node->ty)
+    &&  node->ty->kind != TY_LONG
     &&  is_integer_constant(node->lhs,&val)
     &&  val == 0) {
       new = new_copy(node);
