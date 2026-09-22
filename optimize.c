@@ -1022,6 +1022,15 @@ Node *optimize_expr(Node *node)
     &&  is_integer_constant(node->rhs,&val2)) {
       return optimize_const_expr(node);
     }
+    if (is_integer(node->ty)
+    &&  is_integer_constant(node->lhs,&val)
+    &&  val == 0) {
+      new = new_copy(node);
+      new->kind = ND_NEG;
+      new->lhs = node->rhs;
+      new->rhs = NULL;
+      return new;
+    }
     if (is_integer_constant(node->rhs,&val)) {
       if (node->lhs->kind == ND_ADD
       &&  is_integer_constant(node->lhs->rhs,&val2)) {
