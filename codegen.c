@@ -6104,6 +6104,18 @@ void gen_expr(Node *node)
         return;
       assert(0);
     }
+    if (node->lhs->kind == ND_NUM
+    &&  node->rhs->kind == ND_CAST
+    &&  is_int16(node->rhs->ty)
+    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    && !node->rhs->lhs->ty->is_unsigned) {
+      gen_expr(node->rhs->lhs);
+      println("\teorb #$7f");
+      println("\tldaa #$ff");
+      println("\taddb #<%u", (uint16_t)(node->lhs->val + 0x81));
+      println("\tadca #>%u", (uint16_t)(node->lhs->val + 0x81));
+      return;
+    }
     if (can_direct_imm_ext(node->lhs)) {
       gen_expr(node->rhs);
       println("\tcomb");
