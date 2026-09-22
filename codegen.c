@@ -2049,16 +2049,11 @@ void load_var(Node *node)
     ||  node->ty->kind == TY_FLOAT
     ||  node->ty->kind == TY_DOUBLE
     ||  node->ty->kind == TY_LDOUBLE) {
-      if (opt('O','2')) {
-        println("\tldx _%s+2",node->var->name);
-        println("\tstx @long+2");
-        println("\tldx _%s",  node->var->name);
-        println("\tstx @long");
-        IX_invalidate();
-      }else{
-        ldx_IMM_VAR(node->var->name);
-        load32x(0);
-      }
+      println("\tldx _%s+2",node->var->name);
+      println("\tstx @long+2");
+      println("\tldx _%s",  node->var->name);
+      println("\tstx @long");
+      IX_invalidate();
       return;
     }
   }
@@ -5070,6 +5065,34 @@ void gen_expr(Node *node)
     ||  node->ty->kind == TY_FLOAT
     ||  node->ty->kind == TY_DOUBLE
     ||  node->ty->kind == TY_LDOUBLE) {
+      if ((addr = is_var_addr_constant(node->lhs))) {
+        if (node->retval_unused
+        &&  node->ty->kind == TY_LONG
+        &&  is_long_constant(node->rhs,&val)) {
+          println("\tldx #%u",(uint16_t)val);
+          println("\tstx %s+2",addr);
+          println("\tldx #%u",(uint16_t)(val>>16));
+          println("\tstx %s",addr);
+          IX_invalidate();
+          return;
+        }
+        if (node->retval_unused
+        &&  is_var_addr_constant(node->rhs)) {
+          println("\tldx %s+2",is_var_addr_constant(node->rhs));
+          println("\tstx %s+2",addr);
+          println("\tldx %s",is_var_addr_constant(node->rhs));
+          println("\tstx %s",addr);
+          IX_invalidate();
+          return;
+        }
+        gen_expr(node->rhs);
+        println("\tldx @long+2");
+        println("\tstx %s+2",addr);
+        println("\tldx @long");
+        println("\tstx %s",addr);
+        IX_invalidate();
+        return;
+      }
       if (test_addr_x(node->lhs)) {
         gen_expr(node->rhs);
         off = gen_addr_x(node->lhs);
