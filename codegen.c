@@ -1116,6 +1116,16 @@ Node *find_base_var(Node *node, int64_t *off)
   return node;
 }
 
+static bool same_base_var(Node *lhs, Node *rhs)
+{
+  int64_t loff = 0, roff = 0;
+
+  Node *l = find_base_var(lhs, &loff);
+  Node *r = find_base_var(rhs, &roff);
+
+  return l && r && l->var == r->var;
+}
+
 char *is_var_addr_constant(Node *node)
 {
   int64_t off = 0;
@@ -5077,7 +5087,8 @@ void gen_expr(Node *node)
           return;
         }
         if (node->retval_unused
-        &&  is_var_addr_constant(node->rhs)) {
+        &&  is_var_addr_constant(node->rhs)
+        && !same_base_var(node->lhs, node->rhs)) {
           println("\tldx %s+2",is_var_addr_constant(node->rhs));
           println("\tstx %s+2",addr);
           println("\tldx %s",is_var_addr_constant(node->rhs));
