@@ -6171,14 +6171,15 @@ void gen_expr(Node *node)
     &&  !node->lhs->lhs->ty->is_unsigned
     &&  test_addr_x(node->lhs->lhs)) {
       gen_expr(node->rhs);
-      negd();
       off = gen_addr_x(node->lhs->lhs);
       char *label = new_jump_label();
       println("\ttst %d,x",off);
       println("\tbpl %s",label);
-      println("\tdeca");
+      println("\tinca");        // -1 after com
       println("%s:",label);
-      println("\taddb %d,x",off);
+      println("\tcomb");        // -D = ~D + 1, com makes C=1
+      println("\tcoma");
+      println("\tadcb %d,x",off);
       println("\tadca #0");
       return;
     }
