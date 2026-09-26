@@ -2054,18 +2054,21 @@ void load_var(Node *node)
     }
     assert(0);
   }
-  if (is_global_var(node)) {
-    if (node->ty->kind == TY_LONG
-    ||  node->ty->kind == TY_FLOAT
-    ||  node->ty->kind == TY_DOUBLE
-    ||  node->ty->kind == TY_LDOUBLE) {
-      println("\tldx _%s+2",node->var->name);
+  char *addr;
+  if (node->ty->size == 4
+  &&  is_numeric(node->ty)
+  &&  (addr = is_var_addr_constant(node))) {
+    if (opt('O','2')) {
+      println("\tldx %s+2",addr);
       println("\tstx @long+2");
-      println("\tldx _%s",  node->var->name);
+      println("\tldx %s",  addr);
       println("\tstx @long");
       IX_invalidate();
-      return;
+    } else {
+      ldx_IMM_STR(addr);
+      println("\tjsr __load32x");
     }
+    return;
   }
   if (can_load_x(node->ty) && test_addr_x(node)) {
     int off = gen_addr_x(node);
@@ -4818,22 +4821,6 @@ void gen_expr(Node *node)
     if (mem->is_bitfield) {
       load_bitfield(node);
       return;
-    }
-    if (node->ty->size == 4
-    &&  is_numeric(node->ty)
-    &&  (addr = is_var_addr_constant(node))) {
-      if (opt('O','2')) {
-        println("\tldx %s+2",addr);
-        println("\tstx @long+2");
-        println("\tldx %s",  addr);
-        println("\tstx @long");
-        IX_invalidate();
-        return;
-      } else {
-        ldx_IMM_STR(addr);
-        println("\tjsr __load32x");
-        return;
-      }
     }
     load_var(node);
     return;
