@@ -5364,6 +5364,7 @@ void gen_expr(Node *node)
     if (!is_int8(node->ty)) {
       println("\tclra");
     }
+    IX_invalidate();
     return;
   }
   case ND_BITNOT:
