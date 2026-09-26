@@ -751,6 +751,16 @@ Node *optimize_expr(Node *node)
       node->lhs->ty = node->ty;
       return optimize_expr(node->lhs);
     }
+    if (node->ty->kind == TY_CHAR
+    &&  node->lhs->kind == ND_DIV
+    &&  is_integral_promotion(node->lhs->lhs)
+    &&  is_integral_promotion(node->lhs->rhs)
+    &&  node->lhs->lhs->lhs->ty->is_unsigned == node->lhs->rhs->lhs->ty->is_unsigned) {
+      node->lhs->lhs = node->lhs->lhs->lhs;
+      node->lhs->rhs = node->lhs->rhs->lhs;
+      node->lhs->ty  = node->lhs->lhs->ty;
+      return node;
+    }
     // (ND_CAST TY_CHAR(2) (|&^ TY_INT(4) (int) (int)))
     if (node->ty->kind == TY_CHAR) {
       switch(node->lhs->kind) {

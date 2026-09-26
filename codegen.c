@@ -6338,11 +6338,15 @@ void gen_expr(Node *node)
         }
       }
     }
-    if (node->ty->kind == TY_CHAR && node->ty->is_unsigned) {
+    if (node->ty->kind == TY_CHAR) {
       gen_expr(node->rhs);
       push1();
       gen_expr(node->lhs);
-      println("\tjsr __div8x8u");
+      if (node->ty->is_unsigned) {
+        println("\tjsr __div8x8u");
+      }else{
+        println("\tjsr __div8x8s");
+      }
       IX_invalidate();
       ins(1);
       return;
