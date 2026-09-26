@@ -231,7 +231,7 @@ void gen_direct_long_bitop_imm(Node *node, int64_t val)
 void gen_direct_long(Node *node)
 {
   Node *rhs = skip_empty_cast(node->rhs);
-  char *opb, *opa;
+  char *opb, *opa, *op;
   int R = long_location_type(rhs);
   int roff = 0;
   char *raddr = NULL;
@@ -239,36 +239,43 @@ void gen_direct_long(Node *node)
   assert(R == 2 || R == 3 || R == 4);
 
   switch (node->kind) {
-  case ND_ADD:    opb="addb"; opa="adca"; break;
-  case ND_SUB:    opb="subb"; opa="sbca"; break;
-  case ND_BITAND: opb="andb"; opa="anda"; break;
-  case ND_BITOR:  opb="orab"; opa="oraa"; break;
-  case ND_BITXOR: opb="eorb"; opa="eora"; break;
+  case ND_ADD:    opb="addb"; opa="adca"; op="add"; break;
+  case ND_SUB:    opb="subb"; opa="sbca"; op="sub"; break;
+  case ND_BITAND: opb="andb"; opa="anda"; op="and"; break;
+  case ND_BITOR:  opb="orab"; opa="oraa"; op="or";  break;
+  case ND_BITXOR: opb="eorb"; opa="eora"; op="xor"; break;
   default: assert(0);
   }
 
-  if (R==2 || R==4) {
-    roff = gen_addr_x(rhs);
-  }
-  if (R==3) {
-    raddr = is_var_addr_constant(rhs);
-  }
-
-  println("\tldab @long+3");
   if (R == 3) {
+    raddr = is_var_addr_constant(rhs);
+    if (opt('O','s')) {
+      ldx_IMM_STR(raddr);
+      op32x(op, 0);
+      return;
+    }
+    println("\tldab @long+3");
     println("\t%s %s+3", opb, raddr);
-  } else {
-    println("\t%s %d,x",  opb, roff+3);
+    println("\tstab @long+3");
+    for (int nth = 2; nth >= 0; nth--) {
+      println("\tldaa @long+%d", nth);
+      println("\t%s %s+%d", opa, raddr, nth);
+      println("\tstaa @long+%d", nth);
+    }
+    return;
   }
-  println("\tstab @long+3");
 
+  roff = gen_addr_x(rhs);
+  if (opt('O','s')) {
+    op32x(op, roff);
+    return;
+  }
+  println("\tldab @long+3");
+  println("\t%s %d,x", opb, roff+3);
+  println("\tstab @long+3");
   for (int nth = 2; nth >= 0; nth--) {
     println("\tldaa @long+%d", nth);
-    if (R == 3) {
-      println("\t%s %s+%d", opa, raddr, nth);
-    } else {
-      println("\t%s %d,x",   opa, roff+nth);
-    }
+    println("\t%s %d,x", opa, roff+nth);
     println("\tstaa @long+%d", nth);
   }
 }

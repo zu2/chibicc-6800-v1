@@ -535,6 +535,7 @@ void cpx_EXT(Node *node);
 void stx_EXT(Node *node);
 void invalidate_EXT(Node *node);
 void ldx_IMM_STR(char *s);
+void op32x(char *op, int off);
 void tfr_dx();
 bool is_local_var(Node *node);
 bool is_local_array(Node *node);

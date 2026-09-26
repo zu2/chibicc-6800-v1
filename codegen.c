@@ -2782,7 +2782,7 @@ static void gen_opeq32_bitop(NodeKind kind, int off, int64_t val)
   }
 }
 
-static void op32x(char *op, int off)
+void op32x(char *op, int off)
 {
   if (off == 0) {
     println("\tjsr __%s32x", op);      // __op32x does not touch IX
@@ -5478,16 +5478,9 @@ void gen_expr(Node *node)
         gen_direct_long2(node);
         return;
       }
-      if (!opt('O','s')) {
-        if (can_direct_long(node)){
-          gen_expr(lhs);
-          gen_direct_long(node);
-          return;
-        }
-      }
-      if (test_addr_x(rhs)) {
+      if (can_direct_long(node)) {
         gen_expr(lhs);
-        op32x("add", gen_addr_x(rhs));
+        gen_direct_long(node);
         return;
       }
       gen_long_tos(node);
@@ -5502,16 +5495,9 @@ void gen_expr(Node *node)
         gen_direct_long2(node);
         return;
       }
-      if (!opt('O','s')) {
-        if (can_direct_long(node)){
-          gen_expr(lhs);
-          gen_direct_long(node);
-          return;
-        }
-      }
-      if (test_addr_x(rhs)) {
+      if (can_direct_long(node)) {
         gen_expr(lhs);
-        op32x("sub", gen_addr_x(rhs));
+        gen_direct_long(node);
         return;
       }
       if (is_long_constant(lhs,&val)) {
@@ -5731,24 +5717,9 @@ void gen_expr(Node *node)
         gen_direct_long2(node);
         return;
       }
-      if (!opt('O','s')) {
-        if (can_direct_long(node)){
-          gen_expr(lhs);
-          gen_direct_long(node);
-          return;
-        }
-      }
-      if (test_addr_x(rhs)) {
-        char *op;
-
-        switch (node->kind) {
-        case ND_BITAND: op="and"; break;
-        case ND_BITOR:  op="or";  break;
-        case ND_BITXOR: op="xor"; break;
-        default: assert(0);
-        }
+      if (can_direct_long(node)) {
         gen_expr(lhs);
-        op32x(op, gen_addr_x(rhs));
+        gen_direct_long(node);
         return;
       }
       gen_long_tos(node);
