@@ -4736,36 +4736,22 @@ void gen_expr(Node *node)
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
     case TY_CHAR:
-      if (node->retval_unused) {
-        switch(val){
-        case 1:
-          println("\tinc %d,x",off);
-          break;
-        case -1:
-          println("\tdec %d,x",off);
-          break;
-        default:
+      switch(val){
+      case 1:
+        println("\tinc %d,x",off);
+        if (!node->retval_unused)
           println("\tldab %d,x",off);
-          println("\taddb #%d",val);
-          println("\tstab %d,x",off);
-          break;
-        }
-      }else{
-        switch(val){
-        case 1:
-          println("\tinc %d,x",off);
+        break;
+      case -1:
+        println("\tdec %d,x",off);
+        if (!node->retval_unused)
           println("\tldab %d,x",off);
-          break;
-        case -1:
-          println("\tdec %d,x",off);
-          println("\tldab %d,x",off);
-          break;
-        default:
-          println("\tldab %d,x",off);
-          println("\taddb #%d",val);
-          println("\tstab %d,x",off);
-          break;
-        }
+        break;
+      default:
+        println("\tldab %d,x",off);
+        println("\taddb #%d",val);
+        println("\tstab %d,x",off);
+        break;
       }
       break;
     case TY_SHORT:
