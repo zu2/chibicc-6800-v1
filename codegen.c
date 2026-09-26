@@ -4932,49 +4932,7 @@ void gen_expr(Node *node)
         return;
       }
     }
-    if (is_int8(node->ty) && can_direct_8bit(node)) {
-      if (gen_direct_8bit(node,"ldab")) {
-        return;
-      }
-      assert(0);
-    }
-    if (is_int16_or_ptr(node->ty) && can_direct(node)) {
-      if (gen_direct(node,"ldab","ldaa")) {
-        return;
-      }
-      assert(0);
-    }
-    if (node->ty->size == 4
-    &&  is_numeric(node->ty)
-    &&  (addr = is_var_addr_constant(node))) {
-      if (opt('O','2')) {
-        println("\tldx %s+2",addr);
-        println("\tstx @long+2");
-        println("\tldx %s",  addr);
-        println("\tstx @long");
-        IX_invalidate();
-        return;
-      } else {
-        ldx_IMM_STR(addr);
-        println("\tjsr __load32x");
-        return;
-      }
-    }
-    if (can_load_x(node->ty) && test_decayed_x(lhs)){
-      load_x(node->ty,gen_decayed_x(lhs));
-      return;
-    }
-    if (can_load_x(node->ty) && test_expr_x(lhs)){
-      gen_expr_x(lhs);
-      load_x(node->ty,0);
-      return;
-    }
-    if (can_load_x(node->ty) && test_addr_x(node)) {
-      load_x(node->ty,gen_addr_x(node));
-      return;
-    }
-    gen_expr(lhs);
-    load(node->ty);
+    load_var(node);
     return;
   } // ND_DEREF:
   case ND_ADDR:
