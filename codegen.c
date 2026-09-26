@@ -6340,6 +6340,19 @@ void gen_expr(Node *node)
     ins(2);
     return;
   case ND_MOD:
+    if (node->ty->kind == TY_CHAR) {
+      gen_expr(node->rhs);
+      push1();
+      gen_expr(node->lhs);
+      if (node->ty->is_unsigned) {
+        println("\tjsr __mod8x8u");
+      }else{
+        println("\tjsr __mod8x8s");
+      }
+      IX_invalidate();
+      ins(1);
+      return;
+    }
     gen_expr(node->rhs);
     push();
     gen_expr(node->lhs);
