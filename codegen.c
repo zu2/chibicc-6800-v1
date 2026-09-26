@@ -4052,6 +4052,24 @@ static void opeq(Node *node)
         println("\tstab %d,x",off);
         return;
       }
+      if (can_direct_8bit_imm_ext(node->rhs)) {
+        gen_addr(node->lhs);
+        tfr_dx();
+        println("\tldab 0,x");
+        switch (node->kind) {
+        case ND_ANDEQ:
+          gen_direct_8bit_imm_ext(node->rhs,"andb");
+          break;
+        case ND_OREQ:
+          gen_direct_8bit_imm_ext(node->rhs,"orab");
+          break;
+        case ND_XOREQ:
+          gen_direct_8bit_imm_ext(node->rhs,"eorb");
+          break;
+        }
+        println("\tstab 0,x");
+        return;
+      }
       gen_addr(node->lhs);
       push();
       gen_expr(node->rhs);
