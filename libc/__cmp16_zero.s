@@ -13,22 +13,20 @@
 ;
 __eq16_zero:
 	aba
-	adca #0
-	nega
+	adca #$FF
 	ldaa #0
-	ldab #1
-	sbcb #0
+	tab
+	sbcb #$FF
 	rts
 ;
 ;	if AccAB!=0 then AccAB=1 else 0
 ;
 __ne16_zero:
 	aba
-	adca #0
-	nega
+	adca #$FF
 	ldaa #0
 	tab
-	adcb #0
+	rolb
 	rts
 ;
 ;	AccAB < 0 ?
