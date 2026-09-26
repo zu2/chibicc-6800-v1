@@ -2332,10 +2332,9 @@ static void cast(Type *from, Type *to) {
       return;
     }
     if (is_int16_or_ptr(from)) {
-      cmp_zero(from);
-      println("\tclrb");
-      println("\tnega");
-      println("\ttba");
+      println("\taba");
+      println("\tadca #$FF");
+      println("\tldab #0");
       println("\trolb");
       return;
     }
@@ -5428,11 +5427,10 @@ void gen_expr(Node *node)
     if (is_int16_or_ptr(node->lhs->ty)) {
       gen_expr(node->lhs);
       println("\taba");
-      println("\tadca #0");
-      println("\tnega");
+      println("\tadca #$FF");
       println("\tldaa #0");
-      println("\tldab #1");
-      println("\tsbcb #0");
+      println("\ttab");
+      println("\tsbcb #$FF");
       return;
     }
     int c = count();
