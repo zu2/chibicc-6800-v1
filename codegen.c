@@ -2339,9 +2339,8 @@ static void cast(Type *from, Type *to) {
       return;
     }
     cmp_zero(from);         // if zero, Z=1 AccB=0 else Z=0 AccB!=0
-    println("\tclra");
     println("\tnegb");      // if AccB==0 then C=0 else C=1
-    println("\ttab");
+    println("\tldab #0");
     println("\trolb");
     return;
   }
