@@ -6149,7 +6149,7 @@ void gen_expr(Node *node)
     }
     if (node->rhs->kind     == ND_CAST
     &&  is_int16(node->rhs->ty)
-    &&  !node->rhs->ty->is_unsigned
+//  &&  !node->rhs->ty->is_unsigned
     &&  is_int8(node->rhs->lhs->ty)
     &&  !node->rhs->lhs->ty->is_unsigned
     &&  test_addr_x(node->rhs->lhs)) {
@@ -6166,7 +6166,7 @@ void gen_expr(Node *node)
     }
     if (node->lhs->kind     == ND_CAST
     &&  is_int16(node->lhs->ty)
-    &&  !node->lhs->ty->is_unsigned
+//  &&  !node->lhs->ty->is_unsigned
     &&  is_int8(node->lhs->lhs->ty)
     &&  !node->lhs->lhs->ty->is_unsigned
     &&  test_addr_x(node->lhs->lhs)) {
