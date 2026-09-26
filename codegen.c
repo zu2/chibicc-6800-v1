@@ -4488,26 +4488,22 @@ void gen_expr(Node *node)
         break;
       case TY_LONG:
         ldx_IMM_VAR(var);
-        if (node->retval_unused) {
+        if (val==1 || val==-1) {
           invalidate_EXT(node->lhs);
+          if (!node->retval_unused) {
+            load32x(0);
+          }
           if (val==1) {
             println("\tjsr __inc32x");
-            return;
-          }else if (val==-1) {
+          }else{
             println("\tjsr __dec32x");
-            return;
           }
+          return;
         }
         load32x(0);
-        if (val==1) {
-          println("\tjsr __inc32");
-        }else if (val==-1) {
-          println("\tjsr __dec32");
-        }else{
-          println("\tjsr __add32i");
-          word32i(val);
-          IX_invalidate();
-        }
+        println("\tjsr __add32i");
+        word32i(val);
+        IX_invalidate();
         ldx_IMM_VAR(var);
         store32x(0);
         invalidate_EXT(node->lhs);
@@ -4695,15 +4691,17 @@ void gen_expr(Node *node)
         break;
        case TY_LONG:
          ldx_IMM_VAR(var);
-         if (node->retval_unused) {
+         if (val==1 || val==-1) {
            invalidate_EXT(node->lhs);
            if (val==1) {
              println("\tjsr __inc32x");
-             return;
-           }else if (val==-1) {
+           }else{
              println("\tjsr __dec32x");
-             return;
            }
+           if (!node->retval_unused) {
+             load32x(0);
+           }
+           return;
          }
          load32x(0);
          println("\tjsr __add32i");
