@@ -3533,7 +3533,8 @@ static void opeq(Node *node)
     case TY_SHORT:
     case TY_INT:
     case TY_ENUM:
-      if (node->lhs->ty->is_unsigned) {
+      if (node->lhs->ty->is_unsigned
+      || (is_int16(rhs->ty) && rhs->ty->is_unsigned)) {
         if (is_integer_constant(node->rhs, &val)){
           int64_t off = 0;
           Node *base;
@@ -3551,7 +3552,7 @@ static void opeq(Node *node)
                   break;
                 }
                 gen_direct_ext(node->lhs,"ldab","ldaa");
-                gen_shr(node->lhs->ty,n);
+                gen_shr(ty_uint,n);
                 gen_direct_store_ext(node->lhs,"stab","staa");
                 return;
               }
@@ -3571,7 +3572,7 @@ static void opeq(Node *node)
               int n = exact_log2(val);
               if (!node->retval_unused) {
                 load_x(node->lhs->ty,off);
-                gen_shr(node->lhs->ty,n);
+                gen_shr(ty_uint,n);
                 store_x(node->lhs->ty,off);
                 IX_invalidate();
                 return;
@@ -3586,7 +3587,8 @@ static void opeq(Node *node)
             break;
           }
         }
-      }else if (is_integer_constant(node->rhs, &val)){
+      }else if (!rhs->ty->is_unsigned
+            &&  is_integer_constant(node->rhs, &val)){
         int64_t off = 0;
         Node *base;
         switch(val){
