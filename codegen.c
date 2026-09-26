@@ -3164,14 +3164,22 @@ static void opeq(Node *node)
     case TY_CHAR: {
       if (can_direct_8bit_ext(lhs)) {
         gen_expr(rhs);
-        cast(rhs->ty,ty_int);
+        if (is_integer(rhs->ty)) {
+          cast(rhs->ty,ty_uchar);
+        } else {
+          cast(rhs->ty,ty_int);
+        }
         gen_direct_8bit_ext(lhs,"addb");
         gen_direct_8bit_store_ext(lhs,"stab");
         return;
       }
       if (test_addr_x(lhs)) {
         gen_expr(rhs);
-        cast(rhs->ty,ty_int);
+        if (is_integer(rhs->ty)) {
+          cast(rhs->ty,ty_uchar);
+        } else {
+          cast(rhs->ty,ty_int);
+        }
         int off = gen_addr_x(lhs);
         println("\taddb %d,x",off);
         println("\tstab %d,x",off);
@@ -3188,7 +3196,11 @@ static void opeq(Node *node)
       gen_addr(lhs);
       push();
       gen_expr(rhs);
-      cast(rhs->ty,ty_int);
+      if (is_integer(rhs->ty)) {
+        cast(rhs->ty,ty_uchar);
+      } else {
+        cast(rhs->ty,ty_int);
+      }
       popx();
       println("\taddb 0,x");
       println("\tstab 0,x");
@@ -3317,7 +3329,11 @@ static void opeq(Node *node)
             return;
           }
           gen_expr(rhs);
-          cast(rhs->ty,ty_int);
+          if (is_integer(rhs->ty)) {
+            cast(rhs->ty,ty_uchar);
+          } else {
+            cast(rhs->ty,ty_int);
+          }
           println("\tnegb");
           gen_direct_8bit_ext(lhs,"addb");
           gen_direct_8bit_store_ext(lhs,"stab");
@@ -3352,7 +3368,11 @@ static void opeq(Node *node)
             return;
           }
           gen_expr(rhs);
-          cast(rhs->ty,ty_int);
+          if (is_integer(rhs->ty)) {
+            cast(rhs->ty,ty_uchar);
+          } else {
+            cast(rhs->ty,ty_int);
+          }
           println("\tnegb");
           off = gen_addr_x(lhs);
           println("\taddb %d,x",off);
@@ -3370,7 +3390,11 @@ static void opeq(Node *node)
         gen_addr(lhs);
         push();
         gen_expr(rhs);
-        cast(rhs->ty,ty_int);
+        if (is_integer(rhs->ty)) {
+          cast(rhs->ty,ty_uchar);
+        } else {
+          cast(rhs->ty,ty_int);
+        }
         println("\tnegb");
         popx();
         println("\taddb 0,x");
