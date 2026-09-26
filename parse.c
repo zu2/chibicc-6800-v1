@@ -2539,19 +2539,10 @@ static bool opeq_ok(Type *lty,Type *rty)
   case TY_ENUM:
   case TY_LONG:
   case TY_PTR:
+    return is_integer(rty);
   case TY_FLOAT:
   case TY_DOUBLE:
-    switch(rty->kind) {
-    case TY_CHAR:
-    case TY_SHORT:
-    case TY_INT:
-    case TY_ENUM:
-    case TY_BOOL:
-    case TY_LONG:
-    case TY_FLOAT:
-    case TY_DOUBLE:
-      return true;
-    }
+    return is_numeric(rty);
   }
   return false;
 }
@@ -2581,8 +2572,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_add(node,rhs,tok),tok);
     }
-    if (!opeq_ok(node->ty,rhs->ty)
-    &&   node->ty->kind != TY_CHAR) {
+    if (!opeq_ok(node->ty,rhs->ty)) {
       return to_assign(new_add(node, rhs, tok));
     }
     if (node->ty->kind == TY_PTR
@@ -2603,8 +2593,7 @@ static Node *assign(Token **rest, Token *tok) {
     if (node->ty->kind != TY_LONG && is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_sub(node,rhs,tok),tok);
     }
-    if (!opeq_ok(node->ty,rhs->ty)
-    &&   node->ty->kind != TY_CHAR) {
+    if (!opeq_ok(node->ty,rhs->ty)) {
       return to_assign(new_sub(node, rhs, tok));
     }
     if (node->ty->kind == TY_PTR
