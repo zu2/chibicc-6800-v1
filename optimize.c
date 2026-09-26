@@ -1377,6 +1377,13 @@ Node *optimize_expr(Node *node)
     return optimize_const_expr(node);
   case ND_DIVEQ:
   case ND_MODEQ:
+    node = optimize_lr(node);
+    if (node->lhs->ty->kind == TY_CHAR
+    &&  is_integral_promotion(node->rhs)
+    &&  node->rhs->lhs->ty->is_unsigned == node->lhs->ty->is_unsigned) {
+      node->rhs = node->rhs->lhs;
+    }
+    return optimize_const_expr(node);
   case ND_ANDEQ:
     node = optimize_lr(node);
     return optimize_const_expr(node);
