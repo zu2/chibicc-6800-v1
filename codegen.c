@@ -5415,12 +5415,15 @@ void gen_expr(Node *node)
   case ND_NOT: {
     if (is_int8(node->lhs->ty)) {
       gen_expr(node->lhs);
-      println("\tnegb");
-      println("\tldab #1");
-      println("\tsbcb #0");
       if (!is_int8(node->ty)) {
         println("\tclra");
+        println("\tnegb");
+        println("\ttab");
+      } else {
+        println("\tnegb");
+        println("\tldab #0");
       }
+      println("\tsbcb #$FF");
       return;
     }
     if (is_int16_or_ptr(node->lhs->ty)) {
