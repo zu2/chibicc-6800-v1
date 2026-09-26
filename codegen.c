@@ -3177,6 +3177,14 @@ static void opeq(Node *node)
         println("\tstab %d,x",off);
         return;
       }
+      if (can_direct_8bit_imm_ext(rhs)) {
+        gen_addr(lhs);
+        tfr_dx();
+        println("\tldab 0,x");
+        gen_direct_8bit_imm_ext(rhs,"addb");
+        println("\tstab 0,x");
+        return;
+      }
       gen_addr(lhs);
       push();
       gen_expr(rhs);
@@ -3349,6 +3357,14 @@ static void opeq(Node *node)
           off = gen_addr_x(lhs);
           println("\taddb %d,x",off);
           println("\tstab %d,x",off);
+          return;
+        }
+        if (can_direct_8bit_imm_ext(rhs)) {
+          gen_addr(lhs);
+          tfr_dx();
+          println("\tldab 0,x");
+          gen_direct_8bit_imm_ext(rhs,"subb");
+          println("\tstab 0,x");
           return;
         }
         gen_addr(lhs);
