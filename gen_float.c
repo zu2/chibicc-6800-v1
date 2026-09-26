@@ -272,12 +272,11 @@ void gen_expr_float(Node *node)
       IX_invalidate();
       println("\tclra");
       println("\tnegb");		// C=1 if AccB!=0
+      println("\ttab");
       if (node->kind == ND_EQ) {
-        println("\tldab #1");
-        println("\tsbcb #0");
+        println("\tsbcb #$FF");
       } else {
         println("\trolb");
-        println("\tandb #1");
       }
       return;
     }
