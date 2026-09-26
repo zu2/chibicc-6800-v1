@@ -1369,10 +1369,23 @@ Node *optimize_expr(Node *node)
     node = optimize_lr(node);
     return optimize_const_expr(node);
   case ND_MULEQ:
+    if (node->ty->kind == TY_BOOL) {
+      node->kind = ND_ANDEQ;
+      node->rhs = new_cast(node->rhs, ty_bool);
+    }
+    node = optimize_lr(node);
+    return optimize_const_expr(node);
   case ND_DIVEQ:
   case ND_MODEQ:
   case ND_ANDEQ:
+    node = optimize_lr(node);
+    return optimize_const_expr(node);
   case ND_OREQ:
+    if (node->ty->kind == TY_BOOL) {
+      node->rhs = new_cast(node->rhs, ty_bool);
+    }
+    node = optimize_lr(node);
+    return optimize_const_expr(node);
   case ND_XOREQ:
     node = optimize_lr(node);
     return optimize_const_expr(node);

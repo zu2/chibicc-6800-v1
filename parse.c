@@ -2614,7 +2614,8 @@ static Node *assign(Token **rest, Token *tok) {
     if (is_simple_var(node)) {
       return new_binary(ND_ASSIGN,node,new_binary(ND_MUL,node,rhs,tok),tok);
     }
-    if (opeq_ok(node->ty,rhs->ty)) {
+    if (opeq_ok(node->ty,rhs->ty)
+    ||  node->ty->kind == TY_BOOL) {
       return new_binary(ND_MULEQ, node, rhs, tok);
     }
     return to_assign(new_binary(ND_MUL, node, rhs, tok));

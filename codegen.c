@@ -3461,7 +3461,12 @@ static void opeq(Node *node)
       IX_invalidate();
       push();
       gen_expr(rhs);
-      cast(rhs->ty,ty_int);
+      if (node->ty->kind==TY_BOOL) {
+        cast(rhs->ty,ty_bool);
+        cast(ty_bool,ty_int);
+      } else {
+        cast(rhs->ty,ty_int);
+      }
       println("\tjsr __mul16x16");
       ins(2);
       IX_invalidate();
