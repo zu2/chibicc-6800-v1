@@ -258,8 +258,7 @@ bool builtin_isfinite(Node *node)
       }
       println("\taslb");
       println("\trola");
-      println("\tinca");
-      println("\tnega");
+      println("\tcmpa #$FF");
       println("\tldab #0");
       println("\trolb");
       println("\tclra");
@@ -271,8 +270,7 @@ bool builtin_isfinite(Node *node)
       println("\tldaa %d,x", off);
       println("\taslb");
       println("\trola");
-      println("\tinca");
-      println("\tnega");
+      println("\tcmpa #$FF");
       println("\tldab #0");
       println("\trolb");
       println("\tclra");
@@ -283,8 +281,7 @@ bool builtin_isfinite(Node *node)
       println("\tldaa @long");
       println("\taslb");
       println("\trola");
-      println("\tinca");
-      println("\tnega");
+      println("\tcmpa #$FF");
       println("\tldab #0");
       println("\trolb");
       println("\tclra");
