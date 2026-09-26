@@ -17,8 +17,8 @@
 __eq8_zero:
 	clra
 	negb
-	ldab #1
-	sbcb #0
+	tab
+	sbcb #$FF
 	rts
 ;
 ;	if AccB!=0 then AccAB=1 else 0
@@ -27,7 +27,7 @@ __ne8_zero:
 	clra
 	negb
 	tab
-	adcb #0
+	rolb
 	rts
 ;
 __lt8s_zero:
