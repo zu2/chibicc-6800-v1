@@ -3631,6 +3631,16 @@ static void opeq(Node *node)
       switch (rhs->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
+        node->rhs = new_cast(node->rhs,node->ty);
+        rhs = node->rhs;
+        opeq_setup_operands(node);
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __div16x16u");
+        }else{
+          println("\tjsr __div16x16s");
+        }
+        opeq_cleanup_operands(node);
+        break;
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
@@ -3771,6 +3781,16 @@ static void opeq(Node *node)
       switch (rhs->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
+        node->rhs = new_cast(node->rhs,node->ty);
+        rhs = node->rhs;
+        opeq_setup_operands(node);
+        if (rhs->ty->is_unsigned) {
+          println("\tjsr __rem16x16u");
+        }else{
+          println("\tjsr __rem16x16s");
+        }
+        opeq_cleanup_operands(node);
+        break;
       case TY_SHORT:
       case TY_INT:
       case TY_ENUM:
