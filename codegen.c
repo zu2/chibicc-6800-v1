@@ -1240,55 +1240,31 @@ static int addr_x_offset(Node *node);
 //
 Node *find_base_var(Node *node, int64_t *off)
 {
-  int64_t val;
-
   if (node->kind == ND_MEMBER
-  &&  !node->member->is_bitfield) {
-    *off += node->member->offset;
-    return find_base_var(node->lhs,off);
-  }
-  if (node->kind == ND_DEREF
-  &&  (node->lhs->ty->kind == TY_ARRAY
-    || (node->lhs->kind == ND_ADD && is_decay_type(node->lhs->lhs->ty)))) {
-    return find_base_var(node->lhs,off);
-  }
-  if (node->kind == ND_DEREF) {
-    Node *addr = node->lhs;
-    if (addr->kind == ND_CAST
-    &&  addr->ty->kind == TY_PTR) {
-      addr = addr->lhs;
-    }
-    if (addr->kind == ND_ADDR) {
-      return find_base_var(addr->lhs,off);
-    }
-    if (addr->kind == ND_ADD
-    &&  is_integer_constant(addr->rhs,&val)) {
-      Node *base = addr->lhs;
-      if (base->kind == ND_CAST
-      &&  base->ty->kind == TY_PTR) {
-        base = base->lhs;
-      }
-      if (base->kind == ND_ADDR) {
-        *off += val;
-        return find_base_var(base->lhs,off);
-      }
-    }
-  }
-  if (node->kind == ND_ADD
-  &&  is_decay_type(node->lhs->ty)
-  &&  is_integer_constant(node->rhs,&val)) {
-    *off += val;
-    return find_base_var(node->lhs,off);
-  }
-  if (node->kind != ND_VAR)
+  &&  node->member->is_bitfield) {
     return NULL;
-  if (node->var->ty->kind == TY_VLA)
+  }
+
+  int base_off = 0;
+  Node *base = find_addr_off(node, &base_off, NULL);
+  if (base == NULL) {
     return NULL;
-  if (node->var->is_local)
+  }
+  if (base->kind != ND_ADDR) {
     return NULL;
-  if (node->ty->kind == TY_FUNC)
+  }
+
+  Node *var = base->lhs;
+  if (var->kind != ND_VAR)
     return NULL;
-  return node;
+  if (var->var->ty->kind == TY_VLA)
+    return NULL;
+  if (var->var->is_local)
+    return NULL;
+  if (var->ty->kind == TY_FUNC)
+    return NULL;
+  *off += base_off;
+  return var;
 }
 
 static bool same_base_var(Node *lhs, Node *rhs)
@@ -1321,26 +1297,21 @@ char *is_var_addr_constant(Node *node)
 
 static Node *find_base_addr(Node *node, int64_t *off)
 {
-  int64_t val;
+  int base_off = 0;
+  Node *base = find_expr_off(node, &base_off, NULL);
+  if (base == NULL) {
+    return NULL;
+  }
+  if (base->kind != ND_ADDR) {
+    return NULL;
+  }
 
-  if (node->kind == ND_ADDR)
-    return find_base_var(node->lhs,off);
-  if (node->kind == ND_ADD
-  &&  node->ty->kind == TY_PTR
-  &&  is_integer_constant(node->rhs,&val)) {
-    *off += val;
-    return find_base_addr(node->lhs,off);
+  Node *var = find_base_var(base->lhs, off);
+  if (var == NULL) {
+    return NULL;
   }
-  if (node->kind == ND_SUB
-  &&  node->ty->kind == TY_PTR
-  &&  is_integer_constant(node->rhs,&val)) {
-    *off -= val;
-    return find_base_addr(node->lhs,off);
-  }
-  if (node->ty
-  &&  node->ty->kind == TY_ARRAY)
-    return find_base_var(node,off);
-  return NULL;
+  *off += base_off;
+  return var;
 }
 
 // (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
