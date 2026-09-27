@@ -289,14 +289,14 @@ gen_mul16(Node *node)
   Node *rhs = node->rhs;
 
   Node   *base;
-  int64_t boff = 0;
+  int boff;
 
   if ((base = find_base_var(lhs,&boff))) {
-    println("\tldab _%s+%ld",base->var->name,boff+1);
+    println("\tldab _%s+%d",base->var->name,boff+1);
     if (boff == 0) {
       println("\tldaa _%s",base->var->name);
     } else {
-      println("\tldaa _%s+%ld",base->var->name,boff);
+      println("\tldaa _%s+%d",base->var->name,boff);
     }
     switch(rhs->kind){
     case ND_NUM:
@@ -329,11 +329,11 @@ gen_mul16(Node *node)
         case 3:
           println("\taslb");
           println("\trola");
-          println("\taddb _%s+%ld",base->var->name,boff+1);
+          println("\taddb _%s+%d",base->var->name,boff+1);
           if (boff == 0) {
             println("\tadca _%s",base->var->name);
           } else {
-            println("\tadca _%s+%ld",base->var->name,boff);
+            println("\tadca _%s+%d",base->var->name,boff);
           }
           return true;
         case 4:
@@ -347,21 +347,21 @@ gen_mul16(Node *node)
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\taddb _%s+%ld",base->var->name,boff+1);
+          println("\taddb _%s+%d",base->var->name,boff+1);
           if (boff == 0) {
             println("\tadca _%s",base->var->name);
           } else {
-            println("\tadca _%s+%ld",base->var->name,boff);
+            println("\tadca _%s+%d",base->var->name,boff);
           }
           return true;
         case 6:
           println("\taslb");
           println("\trola");
-          println("\taddb _%s+%ld",base->var->name,boff+1);
+          println("\taddb _%s+%d",base->var->name,boff+1);
           if (boff == 0) {
             println("\tadca _%s",base->var->name);
           } else {
-            println("\tadca _%s+%ld",base->var->name,boff);
+            println("\tadca _%s+%d",base->var->name,boff);
           }
           println("\taslb");
           println("\trola");
@@ -373,11 +373,11 @@ gen_mul16(Node *node)
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\tsubb _%s+%ld",base->var->name,boff+1);
+          println("\tsubb _%s+%d",base->var->name,boff+1);
           if (boff == 0) {
             println("\tsbca _%s",base->var->name);
           } else {
-            println("\tsbca _%s+%ld",base->var->name,boff);
+            println("\tsbca _%s+%d",base->var->name,boff);
           }
           return true;
         case 8:
@@ -393,11 +393,11 @@ gen_mul16(Node *node)
           println("\trola");
           println("\taslb");
           println("\trola");
-          println("\taddb _%s+%ld",base->var->name,boff+1);
+          println("\taddb _%s+%d",base->var->name,boff+1);
           if (boff == 0) {
             println("\tadca _%s",base->var->name);
           } else {
-            println("\tadca _%s+%ld",base->var->name,boff);
+            println("\tadca _%s+%d",base->var->name,boff);
           }
           println("\taslb");
           println("\trola");

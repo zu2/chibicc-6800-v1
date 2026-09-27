@@ -2513,7 +2513,7 @@ static bool is_bitfield_member(Node *node)
 //
 static bool is_simple_var(Node *node)
 {
-  int64_t off = 0;
+  int off;
 
   if (is_local_var(node)
   ||  is_global_var(node)

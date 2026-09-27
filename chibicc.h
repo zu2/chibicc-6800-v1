@@ -552,7 +552,7 @@ void gen_shr(Type *ty, uint64_t val);
 bool can_addsub_local_array_addr(Node *node);
 bool gen_addsub_local_array_addr(Node *node, char *opb, char *opa);
 void gen_addr(Node *node);
-Node *find_base_var(Node *node, int64_t *off);
+Node *find_base_var(Node *node, int *off);
 char *is_var_addr_constant(Node *node);
 char *is_addr_constant(Node *node);
 void op16_x(int off, char *opb, char *opa);

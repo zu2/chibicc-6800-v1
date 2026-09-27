@@ -1029,7 +1029,9 @@ static bool gen_base(Node *base, int *off, char *opb, char *opa)
   return gen_base_sub(base, off, opb, opa, false);
 }
 
+
 static Node *find_expr_off(Node *node, int *off, Node **index);
+
 
 static Node *find_addr_off(Node *node, int *off, Node **index)
 {
@@ -1051,6 +1053,7 @@ static Node *find_addr_off(Node *node, int *off, Node **index)
 
   return addr;
 }
+
 
 static Node *find_expr_off(Node *node, int *off, Node **index)
 {
@@ -1105,6 +1108,7 @@ static Node *find_expr_off(Node *node, int *off, Node **index)
       return find_addr_off(node, off, index);
     }
   }
+
   return node;
 }
 
@@ -1146,6 +1150,7 @@ static int gen_base_off(Node *base, Node *index, int off)
   return off;
 }
 
+
 static int gen_addr_off(Node *node)
 {
   int off = 0;
@@ -1154,6 +1159,7 @@ static int gen_addr_off(Node *node)
 
   return gen_base_off(base, index, off);
 }
+
 
 void gen_addr(Node *node)
 {
@@ -1237,15 +1243,70 @@ bool test_expr_x(Node *node);
 // &gd.in.arr[1] -> IX=&gd; off = 0 + 4 + 2
 // (ND_ADD (ND_MEMBER arr:4 (ND_MEMBER in:0 (ND_VAR gd))) 2)
 //
-Node *find_base_var(Node *node, int64_t *off)
+Node *find_base_var(Node *node, int *off)
 {
+  *off = 0;
+
   if (node->kind == ND_MEMBER
   &&  node->member->is_bitfield) {
     return NULL;
   }
 
-  int base_off = 0;
-  Node *base = find_addr_off(node, &base_off, NULL);
+  Node *base = find_addr_off(node, off, NULL);
+
+  if (base == NULL) {
+    return NULL;
+  }
+
+  if (base->kind != ND_ADDR) {
+    return NULL;
+  }
+
+  if (!is_global_var(base->lhs)
+  &&  !is_global_array(base->lhs)) {
+    return NULL;
+  }
+
+  return base->lhs;
+}
+
+
+static bool same_base_var(Node *lhs, Node *rhs)
+{
+  int loff, roff;
+
+  Node *l = find_base_var(lhs, &loff);
+  Node *r = find_base_var(rhs, &roff);
+
+  return l && r && l->var == r->var;
+}
+
+
+char *is_var_addr_constant(Node *node)
+{
+  int off;
+  Node *base = find_base_var(node,&off);
+
+  if (base) {
+    Obj *var = base->var;
+    char *p = calloc(1,strlen(var->name)+32);
+
+    if (off==0) {
+      sprintf(p,"_%s",var->name);
+    }else{
+      sprintf(p,"_%s%+d",var->name,off);
+    }
+    return p;
+  }
+
+  return NULL;
+}
+
+static Node *find_base_addr(Node *node, int *off)
+{
+  *off = 0;
+  Node *base = find_expr_off(node, off, NULL);
+
   if (base == NULL) {
     return NULL;
   }
@@ -1254,62 +1315,12 @@ Node *find_base_var(Node *node, int64_t *off)
   }
 
   Node *var = base->lhs;
-  if (var->kind != ND_VAR)
-    return NULL;
-  if (var->var->ty->kind == TY_VLA)
-    return NULL;
-  if (var->var->is_local)
-    return NULL;
-  if (var->ty->kind == TY_FUNC)
-    return NULL;
-  *off += base_off;
-  return var;
-}
 
-static bool same_base_var(Node *lhs, Node *rhs)
-{
-  int64_t loff = 0, roff = 0;
-
-  Node *l = find_base_var(lhs, &loff);
-  Node *r = find_base_var(rhs, &roff);
-
-  return l && r && l->var == r->var;
-}
-
-char *is_var_addr_constant(Node *node)
-{
-  int64_t off = 0;
-  Node *base = find_base_var(node,&off);
-
-  if (base) {
-    Obj *var = base->var;
-    char *p = calloc(1,strlen(var->name)+32);
-    if (off==0) {
-      sprintf(p,"_%s",var->name);
-    }else{
-      sprintf(p,"_%s%+ld",var->name,off);
-    }
-    return p;
-  }
-  return NULL;
-}
-
-static Node *find_base_addr(Node *node, int64_t *off)
-{
-  int base_off = 0;
-  Node *base = find_expr_off(node, &base_off, NULL);
-  if (base == NULL) {
-    return NULL;
-  }
-  if (base->kind != ND_ADDR) {
+  if (!is_global_var(var)
+  &&  !is_global_array(var)) {
     return NULL;
   }
 
-  Node *var = find_base_var(base->lhs, off);
-  if (var == NULL) {
-    return NULL;
-  }
-  *off += base_off;
   return var;
 }
 
@@ -1318,7 +1329,7 @@ static Node *find_base_addr(Node *node, int64_t *off)
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 char *is_addr_constant(Node *node)
 {
-  int64_t off = 0;
+  int off;
   Node *base = NULL;
 
   if (node->kind == ND_CAST
@@ -1345,7 +1356,7 @@ char *is_addr_constant(Node *node)
     if (off==0) {
       sprintf(p,"_%s",var->name);
     }else{
-      sprintf(p,"_%s%+ld",var->name,off);
+      sprintf(p,"_%s%+d",var->name,off);
     }
     return p;
   }
@@ -3516,13 +3527,12 @@ static void opeq(Node *node)
       if (node->lhs->ty->is_unsigned
       || (is_int16(rhs->ty) && rhs->ty->is_unsigned)) {
         if (is_integer_constant(node->rhs, &val)){
-          int64_t off = 0;
+          int off;
           Node *base;
           switch(val) {
           case 8:
           case 4:
           case 2:
-            off = 0;
             base = find_base_var(node->lhs,&off);
             if (base) {
               char *name = base->var->name;
@@ -3540,9 +3550,9 @@ static void opeq(Node *node)
                 if (off == 0) {
                   println("\tlsr _%s",name);
                 } else {
-                  println("\tlsr _%s+%ld",name,off);
+                  println("\tlsr _%s+%d",name,off);
                 }
-                println("\tror _%s+%ld",name,off+1);
+                println("\tror _%s+%d",name,off+1);
               }
               invalidate_EXT(base);
               return;
@@ -3569,19 +3579,18 @@ static void opeq(Node *node)
         }
       }else if (!rhs->ty->is_unsigned
             &&  is_integer_constant(node->rhs, &val)){
-        int64_t off = 0;
+        int off;
         Node *base;
         switch(val){
         case 2:
-          off = 0;
           base = find_base_var(node->lhs,&off);
           if (base) {
             char *name = base->var->name;
-            println("\tldab _%s+%ld",name,off+1);
+            println("\tldab _%s+%d",name,off+1);
             if (off == 0) {
               println("\tldaa _%s",name);
             } else {
-              println("\tldaa _%s+%ld",name,off);
+              println("\tldaa _%s+%d",name,off);
             }
             println("\tasra");
             println("\trola");
@@ -3589,11 +3598,11 @@ static void opeq(Node *node)
             println("\tadca #0");
             println("\tasra");
             println("\trorb");
-            println("\tstab _%s+%ld",name,off+1);
+            println("\tstab _%s+%d",name,off+1);
             if (off == 0) {
               println("\tstaa _%s",name);
             } else {
-              println("\tstaa _%s+%ld",name,off);
+              println("\tstaa _%s+%d",name,off);
             }
             invalidate_EXT(base);
             return;

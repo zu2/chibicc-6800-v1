@@ -76,7 +76,7 @@ bool gen_direct_8bit_imm(Node *rhs, char *opb)
 static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
 {
   Node   *base;
-  int64_t off = 0;
+  int off;
 
   if (is_store(opb) && !is_int8(node->ty)) {
     assert(0);
@@ -118,7 +118,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
     if (off == 0) {
       println("\t%s _%s",opb,base->var->name);
     } else {
-      println("\t%s _%s+%ld",opb,base->var->name,off);
+      println("\t%s _%s+%d",opb,base->var->name,off);
     }
     if (is_store(opb)) {
       invalidate_EXT(base);
@@ -154,7 +154,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
       if (off == 0) {
         println("\t%s _%s",opb,base->var->name);
       } else {
-        println("\t%s _%s+%ld",opb,base->var->name,off);
+        println("\t%s _%s+%d",opb,base->var->name,off);
       }
 
       if (is_store(opb)) {
@@ -497,7 +497,7 @@ bool gen_direct_imm(Node *node,char *opb, char *opa)
 static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
 {
   Node   *base;
-  int64_t off = 0;
+  int off;
   char *addr;
 
   if (!is_int8(node->ty)
@@ -552,7 +552,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
         if (off == 0) {
           println("\t%s _%s",opb,base->var->name);
         } else {
-          println("\t%s _%s+%ld",opb,base->var->name,off);
+          println("\t%s _%s+%d",opb,base->var->name,off);
         }
         if (opa) {
           if (strcmp(opa,"ldaa")==0) {
@@ -570,12 +570,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       case TY_ENUM:
       case TY_PTR:
         if (test) return true;
-        println("\t%s _%s+%ld",opb,base->var->name,off+1);
+        println("\t%s _%s+%d",opb,base->var->name,off+1);
         if (opa) {
           if (off == 0) {
             println("\t%s _%s",opa,base->var->name);
           } else {
-            println("\t%s _%s+%ld",opa,base->var->name,off);
+            println("\t%s _%s+%d",opa,base->var->name,off);
           }
         }
         if (is_store(opb)) {
@@ -691,7 +691,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
       if (off == 0) {
         println("\t%s _%s",opb,base->var->name);
       } else {
-        println("\t%s _%s+%ld",opb,base->var->name,off);
+        println("\t%s _%s+%d",opb,base->var->name,off);
       }
       if (opa) {
         if (strcmp(opa,"ldaa")==0) {
@@ -709,12 +709,12 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     case TY_ENUM:
     case TY_PTR:
       if (test) return true;
-      println("\t%s _%s+%ld",opb,base->var->name,off+1);
+      println("\t%s _%s+%d",opb,base->var->name,off+1);
       if (opa) {
         if (off == 0) {
           println("\t%s _%s",opa,base->var->name);
         } else {
-          println("\t%s _%s+%ld",opa,base->var->name,off);
+          println("\t%s _%s+%d",opa,base->var->name,off);
         }
       }
       if (is_store(opb)) {
