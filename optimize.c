@@ -755,6 +755,7 @@ Node *optimize_expr(Node *node)
     &&  is_integer(node->lhs->ty)
     &&  (node->lhs->kind == ND_ADD
       || node->lhs->kind == ND_SUB
+      || node->lhs->kind == ND_MUL
       || node->lhs->kind == ND_BITAND
       || node->lhs->kind == ND_BITOR
       || node->lhs->kind == ND_BITXOR)) {
