@@ -979,6 +979,182 @@ bool gen_addsub_local_array_addr(Node *node, char *opb, char *opa)
   return gen_addsub_local_array_addr_sub(node, opb, opa, false);
 }
 
+static bool gen_base_sub(Node *base, int *off, char *opb, char *opa, bool test)
+{
+  if (base->kind == ND_ADDR) {
+    if (is_global_var(base->lhs)
+    ||  is_global_array(base->lhs)) {
+
+      if (test) return true;
+
+      if (*off == 0) {
+        println("\t%s #<_%s", opb, base->lhs->var->name);
+        println("\t%s #>_%s", opa, base->lhs->var->name);
+      } else {
+        println("\t%s #<_%s%+d", opb, base->lhs->var->name, *off);
+        println("\t%s #>_%s%+d", opa, base->lhs->var->name, *off);
+        *off = 0;
+      }
+
+      return true;
+    }
+
+    if (is_local_var(base->lhs)
+    ||  is_local_array(base->lhs)) {
+
+      if (test) return true;
+
+      *off += base->lhs->var->offset;
+      println("\t%s @bp+1", opb);
+      println("\t%s @bp", opa);
+
+      return true;
+    }
+  }
+  if (can_direct(base)) {
+    if (test) return true;
+    return gen_direct(base, opb, opa);
+  }
+  return false;
+}
+
+static bool can_base(Node *base, char *opb, char *opa)
+{
+  int off = 0;
+  return gen_base_sub(base, &off, opb, opa, true);
+}
+
+static bool gen_base(Node *base, int *off, char *opb, char *opa)
+{
+  return gen_base_sub(base, off, opb, opa, false);
+}
+
+static Node *find_expr_off(Node *node, int *off, Node **index);
+
+static Node *find_addr_off(Node *node, int *off, Node **index)
+{
+  if (node->kind == ND_MEMBER) {
+    *off += node->member->offset;
+    return find_addr_off(node->lhs, off, index);
+  }
+
+  if (node->kind == ND_DEREF) {
+    return find_expr_off(node->lhs, off, index);
+  }
+
+  // TODO: need more check?
+  Node *addr = new_copy(node);
+  addr->kind = ND_ADDR;
+  addr->lhs = node;
+  addr->rhs = NULL;
+  addr->ty = pointer_to(node->ty);
+
+  return addr;
+}
+
+static Node *find_expr_off(Node *node, int *off, Node **index)
+{
+  int64_t val;
+
+  if (!is_int16_or_ptr(node->ty)
+  &&  !is_decay_type(node->ty)) {
+    return NULL;
+  }
+
+  if (node->kind == ND_ADD
+  &&  is_integer_constant(node->rhs,&val)) {
+    *off += val;
+    return find_expr_off(node->lhs, off, index);
+  }
+
+  if (node->kind == ND_SUB
+  &&  is_integer_constant(node->rhs,&val)) {
+    *off -= val;
+    return find_expr_off(node->lhs, off, index);
+  }
+
+  if (node->kind == ND_ADD
+  &&  index != NULL
+  &&  *index == NULL
+  &&  (node->ty->kind == TY_PTR || node->ty->kind == TY_ARRAY)) {
+
+    if (is_int16(node->lhs->ty)) {
+      *index = find_expr_off(node->lhs, off, NULL);
+      return find_expr_off(node->rhs, off, index);
+    }
+
+    if (is_int16(node->rhs->ty)) {
+      *index = find_expr_off(node->rhs, off, NULL);
+      return find_expr_off(node->lhs, off, index);
+    }
+  }
+
+  if (node->kind == ND_CAST
+  &&  is_empty_cast(node->lhs->ty, node->ty)) {
+    return find_expr_off(node->lhs, off, index);
+  }
+
+  if (node->kind == ND_ADDR) {
+    return find_addr_off(node->lhs, off, index);
+  }
+
+  if (node->ty->kind == TY_ARRAY) {
+    if (node->kind == ND_VAR
+    ||  node->kind == ND_MEMBER
+    ||  node->kind == ND_DEREF) {
+      return find_addr_off(node, off, index);
+    }
+  }
+  return node;
+}
+
+static int gen_base_off(Node *base, Node *index, int off)
+{
+  if (index == NULL) {
+    if (!gen_base(base, &off, "ldab", "ldaa")) {
+      gen_expr(base);
+    }
+    return off;
+  }
+
+  if (can_base(base, "addb", "adca")) {
+    gen_expr(index);
+    if (gen_base(base, &off, "addb", "adca")) {
+      return off;
+    }
+    assert(0);
+  }
+
+  if (can_direct(index)) {
+    gen_expr(base);
+    if (gen_direct(index, "addb", "adca")) {
+      return off;
+    }
+    assert(0);
+  }
+
+  gen_expr(index);
+
+  push();
+  gen_expr(base);
+  println("\ttsx");
+  println("\taddb 1,x");
+  println("\tadca 0,x");
+  ins(2);
+  IX_invalidate();
+
+  return off;
+}
+
+static int gen_addr_off(Node *node)
+{
+  int off = 0;
+  Node *index = NULL;
+  Node *base = find_addr_off(node, &off, &index);
+
+  return gen_base_off(base, index, off);
+}
+
 void gen_addr(Node *node)
 {
   switch (node->kind) {
@@ -1013,19 +1189,18 @@ void gen_addr(Node *node)
     println("\tldaa #>_%s", node->var->name);
     return;
   case ND_DEREF:
-    gen_expr(node->lhs);
+  case ND_MEMBER: {
+    int off = gen_addr_off(node);
+    if (off) {
+      println("\taddb #<%d",off);
+      println("\tadca #>%d",off);
+    }
     return;
+  }
   case ND_COMMA:
   case ND_COMPLIT:
     gen_expr(node->lhs);
     gen_addr(node->rhs);
-    return;
-  case ND_MEMBER:
-    gen_addr(node->lhs);
-    if (node->member->offset) {
-      println("\taddb #<%d",node->member->offset);
-      println("\tadca #>%d",node->member->offset);
-    }
     return;
   case ND_FUNCALL:
     if (node->ret_buffer) {
