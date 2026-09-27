@@ -470,7 +470,7 @@ static bool gen_direct_imm_sub(Node *node,char *opb, char *opa, bool test)
     &&  gen_direct_imm_sub(node->lhs, opb, opa, test))
       return true;
     if (is_int16(node->ty)
-    &&  node->lhs->ty->kind == TY_CHAR
+    &&  is_int8(node->lhs->ty)
     &&  node->lhs->ty->is_unsigned
     &&  gen_direct_imm_sub(node->lhs, opb, opa, test)) {
       return true;
@@ -667,7 +667,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     &&  gen_direct_ext_sub(node->lhs, opb, opa, test))
       return true;
     if (is_int16(node->ty)
-    &&  node->lhs->ty->kind == TY_CHAR
+    &&  is_int8(node->lhs->ty)
     &&  node->lhs->ty->is_unsigned
     &&  gen_direct_ext_sub(node->lhs, opb, opa, test)) {
       return true;
@@ -833,7 +833,7 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
     &&  gen_direct_ix_sub(node->lhs, opb, opa, test))
       return true;
     if (is_int16(node->ty)
-    &&  node->lhs->ty->kind == TY_CHAR
+    &&  is_int8(node->lhs->ty)
     &&  node->lhs->ty->is_unsigned
     &&  gen_direct_ix_sub(node->lhs, opb, opa, test)) {
       return true;
