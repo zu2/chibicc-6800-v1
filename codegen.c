@@ -1232,7 +1232,6 @@ void gen_expr_x(Node *node);
 int gen_decayed_x(Node *node);
 bool test_decayed_x(Node *node);
 bool test_expr_x(Node *node);
-static int addr_x_offset(Node *node);
 
 //
 // &gd.in.arr[1] -> IX=&gd; off = 0 + 4 + 2
@@ -1702,55 +1701,81 @@ void gen_expr_x(Node *node)
   gen_expr_x_sub(node,false);
 }
 
-int gen_decayed_x_sub(Node *node,bool test)
+static int gen_base_x_sub(Node *base, int off, bool test)
 {
-  Node *lhs = node->lhs;
-  Node *rhs = node->rhs;
-  int off;
-  int64_t val;
   char *addr;
 
-  if (!is_decay_type(node->ty)
-  &&  !(node->kind == ND_ADD && is_decay_type(lhs->ty))) {
+  if (off < 0) {
     return -1;
   }
-  switch (node->kind) {
-  case ND_VAR:
-  case ND_MEMBER:
-    if (!test_addr_x(node)) {
-      return -1;
-    }
+  if (base->kind == ND_ADDR
+  &&  (is_global_var(base->lhs) || is_global_array(base->lhs))) {
     if (test) return 0;
-    return gen_addr_x(node);
-  case ND_DEREF:
-    if (is_decay_type(lhs->ty)) {
-      return gen_decayed_x_sub(lhs,test);
+    if (off == 0) {
+      ldx_IMM_VAR(base->lhs->var->name);
+    } else {
+      ldx_IMM_STR(format("_%s%+d",base->lhs->var->name,off));
     }
-    if (!test_expr_x(lhs)) {
-      return -1;
-    }
-    if (test) return 0;
-    gen_expr_x(lhs);
     return 0;
-  case ND_ADD:
-    //(+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +0 ) 6)
-    if (lhs->ty->kind == TY_ARRAY
-    &&  is_integer_constant(rhs,&val)
-    &&  test_addr_x(lhs)) {
-      off = addr_x_offset(lhs);
-      if (0 <= off && 0 <= val && off + val <= 252) {
-        if (test) return 0;
-        return gen_addr_x(lhs) + val;
-      }
-    }
-    break;
   }
-  if ((addr=is_addr_constant(node))) {
-    if (test) return 0;
+  if (base->kind == ND_ADDR
+  &&  (is_local_var(base->lhs) || is_local_array(base->lhs))) {
+    if (base->lhs->var->offset + off > 252) {
+      return -1;
+    }
+    if (test) return base->lhs->var->offset + off;
+    ldx_bp();
+    return base->lhs->var->offset + off;
+  }
+  if (base->kind == ND_ADDR
+  &&  base->lhs->kind == ND_VAR
+  &&  base->lhs->var->ty->kind == TY_VLA) {
+    if (base->lhs->var->offset > 252 || off > 252) {
+      return -1;
+    }
+    if (test) return off;
+    ldx_bp_nX(base->lhs->var->offset);
+    return off;
+  }
+  if ((addr=is_addr_constant(base))) {
+    if (off > 252) {
+      return -1;
+    }
+    if (test) return off;
     ldx_IMM_STR(addr);
-    return 0;
+    return off;
+  }
+  if (is_int16_or_ptr(base->ty)
+  &&  can_load_x(base->ty)
+  &&  test_expr_x(base)) {
+    if (off > 252) {
+      return -1;
+    }
+    if (test) return off;
+    gen_expr_x(base);
+    return off;
   }
   return -1;
+}
+
+int gen_decayed_x_sub(Node *node,bool test)
+{
+  int off = 0;
+  Node *index = NULL;
+  Node *base;
+
+  if (!is_decay_type(node->ty)
+  &&  !(node->kind == ND_ADD && is_decay_type(node->lhs->ty))) {
+    return -1;
+  }
+  base = find_expr_off(node, &off, &index);
+  if (base == NULL) {
+    return -1;
+  }
+  if (index != NULL) {
+    return -1;
+  }
+  return gen_base_x_sub(base, off, test);
 }
 
 int gen_decayed_x(Node *node)
@@ -1769,66 +1794,40 @@ bool test_expr_x(Node *node)
 }
 
 
-static int addr_x_offset(Node *node)
-{
-  int64_t val;
-  int off;
-
-  if (node->kind == ND_MEMBER
-  &&  node->member->is_bitfield) {
-    return -1;
-  }
-  if (node->kind == ND_VAR
-  &&  node->var->ty->kind == TY_VLA
-  &&  node->var->offset <= 252) {
-    return 0;
-  }
-  if (is_global_var(node) || is_global_array(node)) {
-    return 0;
-  }
-  if (is_local_var(node) || is_local_array(node)) {
-    return node->var->offset;
-  }
-  if (node->kind == ND_MEMBER) {
-    off = addr_x_offset(node->lhs);
-    return (off < 0) ? -1 : off + node->member->offset;
-  }
-  if (node->kind == ND_DEREF) {
-    if (node->lhs->kind == ND_ADD
-    &&  is_integer_constant(node->lhs->rhs,&val)
-    &&  (0<=val && val<=252)) {
-      if (node->lhs->ty->kind == TY_PTR
-      &&  node->lhs->lhs->ty->kind == TY_PTR
-      &&  is_local_var(node->lhs->lhs)
-      &&  node->lhs->lhs->var->offset<=252) {
-        return val;
-      }
-      if (is_decay_type(node->lhs->lhs->ty)) {
-        if (is_global_array(node->lhs->lhs)) {
-          return 0;
-        }
-        off = addr_x_offset(node->lhs->lhs);
-        return (off < 0) ? -1 : off + val;
-      }
-    }
-    if (can_load_x(node->lhs->ty) && test_expr_x(node->lhs)) {
-      return 0;
-    }
-  }
-  return -1;
-}
-
 int gen_addr_x_sub(Node *node,bool test)
 {
-  Node *lhs = node->lhs;
 //Node *rhs = node->rhs;
-  Node *addr;
-  int off;
   int64_t val;
 
   if (node->kind == ND_MEMBER
   &&  node->member->is_bitfield) {
     return -1;
+  }
+  // (ND_DEREF ty_uchar (ND_POST_INCDEC (ND_VAR TY_PTR(10) src +8 ) 1))
+  if (node->kind == ND_DEREF
+  &&  node->lhs->kind == ND_POST_INCDEC
+  &&  (is_int8(node->ty) || is_int16_or_ptr(node->ty))
+  &&  test_addr_x(node->lhs->lhs)
+  &&  node->lhs->lhs->ty->kind == TY_PTR
+  &&  is_integer_constant(node->lhs->rhs,&val)
+  &&  val==1 ){
+    if (test) return 0;
+    if (is_global_var(node->lhs->lhs)) {
+      ldx_EXT(node->lhs->lhs);
+      println("\tinx");
+      stx_EXT(node->lhs->lhs);
+    }else{
+      int off = gen_addr_x(node->lhs->lhs);
+      char *label = new_jump_label();
+      println("\tinc %d,x",off+1);
+      println("\tbne %s",label);
+      println("\tinc %d,x",off);
+      println("%s:",label);
+      println("\tldx %d,x",off);
+    }
+    println("\tdex");
+    IX_invalidate();
+    return 0;
   }
   switch (node->kind) {
   case ND_VAR:
@@ -1856,132 +1855,22 @@ int gen_addr_x_sub(Node *node,bool test)
     ldx_IMM_VAR(node->var->name);
     return 0;
   case ND_DEREF:
-    // (ND_DEREF ty_uint (ND_CAST TY_PTR(10):u (ND_ADDR (ND_VAR TY_FLOAT y +0 ))))
-    addr = skip_empty_cast(node->lhs);
-    if (addr->kind == ND_ADDR) {
-      return gen_addr_x_sub(addr->lhs,test);
+  case ND_MEMBER: {
+    int off = 0;
+    Node *index = NULL;
+    Node *base = find_addr_off(node, &off, &index);
+
+    if (base == NULL) {
+      return -1;
     }
-    // (ND_DEREF ty_uint (+ TY_PTR(10):u (ND_CAST TY_PTR(10):u (ND_ADDR (ND_VAR TY_FLOAT y +0 ))) 2))
-    if (node->lhs->kind == ND_ADD
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->lhs->rhs,&val)) {
-      addr = skip_empty_cast(node->lhs->lhs);
-      if (addr->kind == ND_ADDR) {
-        off = addr_x_offset(addr->lhs);
-        if ((0 <= off) && (off + val <= 252)) {
-          return gen_addr_x_sub(addr->lhs,test) + val;
-        }
-        return -1;
-      }
+    if (index != NULL) {
+      return -1;
     }
-    // (ND_DEREF ty_uchar (ND_POST_INCDEC (ND_VAR TY_PTR(10) src +8 ) 1))
-    if (node->lhs->kind == ND_POST_INCDEC
-    &&  (is_int8(node->ty) || is_int16_or_ptr(node->ty))
-    &&  test_addr_x(node->lhs->lhs)
-    &&  node->lhs->lhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->lhs->rhs,&val)
-    &&  val==1 ){
-      if (test) return 0;
-      if (is_global_var(node->lhs->lhs)) {
-        ldx_EXT(node->lhs->lhs);
-        println("\tinx");
-        stx_EXT(node->lhs->lhs);
-      }else{
-        int off = gen_addr_x(node->lhs->lhs);
-        char *label = new_jump_label();
-        println("\tinc %d,x",off+1);
-        println("\tbne %s",label);
-        println("\tinc %d,x",off);
-        println("%s:",label);
-        println("\tldx %d,x",off);
-      }
-      println("\tdex");
-      IX_invalidate();
-      return 0;
-    }
-    if (node->lhs->kind == ND_ADD) {
-      int64_t val;
-         
-      if ((node->lhs->ty->kind == TY_PTR)
-      &&  (node->lhs->lhs->kind == ND_VAR)
-      &&  (node->lhs->lhs->ty->kind == TY_PTR)
-      &&   is_local_var(node->lhs->lhs)
-      &&  (node->lhs->lhs->var->offset<=252)
-      &&  is_integer_constant(node->lhs->rhs,&val)
-      &&  (0<=val && val<=252)) {
-        if (test) return 0;
-        ldx_bp_nX(node->lhs->lhs->var->offset);
-        return val;
-      }
-      if ((node->lhs->ty->kind == TY_PTR)
-      &&  (node->lhs->lhs->kind == ND_VAR)
-      &&   is_global_var(node->lhs->lhs)
-      &&  is_integer_constant(node->lhs->rhs,&val)
-      &&  (0<=val && val<=252)) {
-        if (test) return 0;
-        ldx_EXT(node->lhs->lhs);
-        return val;
-      }
-      // (ND_DEREF ty_int (+ TY_ARRAY(12) ...  n))
-      if (is_decay_type(node->lhs->lhs->ty)
-      &&  is_integer_constant(node->lhs->rhs,&val)
-      &&  (0<=val && val<=252)
-      &&  test_addr_x(node->lhs->lhs)) {
-        if (test) {
-          if (is_global_array(node->lhs->lhs)) {
-            return 0;
-          }
-          off = addr_x_offset(node->lhs->lhs);
-          return ((0 <= off) && (off + val <= 252)) ? 0 : -1;
-        }
-        if (is_global_array(node->lhs->lhs)) {
-          println("\tldx #_%s+%ld",node->lhs->lhs->var->name,val);
-          IX_invalidate();
-          return 0;
-        }
-        off = gen_addr_x(node->lhs->lhs);
-        if (off+val <= 252) {
-          return  off + val;
-        }
-        assert(0);
-      }
-    }
-    if (test_decayed_x(node->lhs)) {
-      if (test) return 0;
-      return gen_decayed_x(node->lhs);
-    }
-    if (test_expr_x(node->lhs)) {
-      if (test) return 0;
-      gen_expr_x(node->lhs);
-      return 0;
-    }
-    return -1;
+    return gen_base_x_sub(base, off, test);
+  }
   case ND_COMMA:
   case ND_COMPLIT:
     return -1;
-  case ND_MEMBER:
-    if (!test_addr_x(lhs)) {
-      return -1;
-    }
-    if (test) {
-      int off;
-      if (is_global_var(lhs)) {
-        return 0;
-      }
-      off = addr_x_offset(lhs);
-      return ((0 <= off) && (off + node->member->offset <= 252)) ? 0 : -1;
-    }
-    if (is_global_var(node->lhs)
-    &&  node->member->offset > 252) {
-      println("\tldx #_%s+%d",node->lhs->var->name,node->member->offset);
-      IX_invalidate();
-      return 0;
-    }
-    off = gen_addr_x(node->lhs) + node->member->offset;
-    if (off<=252) {
-      return off;
-    }
-    assert(0); // off>252
   case ND_FUNCALL:
     return -1;
   case ND_ASSIGN:
