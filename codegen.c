@@ -5050,36 +5050,24 @@ void gen_expr(Node *node)
       }
     }
     if (is_int8(lhs->ty)) {
-      if (is_integer_constant(rhs, &val)) {
-        if (val==0) {
-          if (node->retval_unused) {
-            if (can_direct_8bit_store_ext_ix(lhs)) {
-              gen_direct_8bit_store_ext_ix(lhs,"clr");
-              return;
-            }
-          }
-        }else{ // val!=0
-          if (lhs->ty->kind == TY_BOOL) {
-            val = !!val;
-          }
-          if (can_direct_8bit_store_ext_ix(lhs)) {
+      if ((ty = is_integer_constant(node->rhs,&val))
+      &&  (is_int8(ty) || is_int16_or_ptr(ty))) {
+        if (lhs->ty->kind == TY_BOOL) {
+          val = !!val;
+        }
+        if (can_direct_8bit_store_ext_ix(node->lhs)) {
+          if (node->retval_unused && val==0) {
+            gen_direct_8bit_store_ext_ix(node->lhs,"clr");
+          }else{
             ldab_i(val);
             gen_direct_8bit_store_ext_ix(node->lhs,"stab");
-            return;
           }
-        }
-      }
-      if ((ty = is_integer_constant(node->rhs,&val))
-      &&  ty->size <= 2) {
-        if (can_direct_8bit_store_ext_ix(node->lhs)) {
-          ldab_i(val);
-          gen_direct_8bit_store_ext_ix(node->lhs,"stab");
         }else if (test_addr_array(node->lhs)) {
           int off = gen_addr_array(node->lhs);
           if (node->retval_unused && val==0) {
             clr_x(node->ty,off);
           }else{
-            gen_expr(node->rhs);
+            ldab_i(val);
             store_x(node->ty,off);
           }
         }else{
