@@ -2038,64 +2038,17 @@ bool test_addr_x(Node *node)
   return 0 <= gen_addr_x_sub(node,true);
 }
 
-int gen_addr_array_sub(Node *node,bool test)
-{
-  int64_t val;
-
-// (ND_DEREF ty_uchar (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) ua +16 ) (ND_VAR ty_int i +0 )))
-  if (node->kind == ND_DEREF
-  &&  node->lhs->kind == ND_ADD
-  &&  is_local_array(node->lhs->lhs)
-  &&  node->lhs->lhs->var->offset <=252
-  &&  is_local_var(node->lhs->rhs)
-  &&  node->lhs->rhs->var->offset <=254) {
-    if (is_int16(node->lhs->rhs->ty)) {
-      if (test) return true;
-      ldx_bp();
-      println("\tldab %d,x",node->lhs->rhs->var->offset+1);
-      println("\tldaa %d,x",node->lhs->rhs->var->offset);
-      println("\taddb @bp+1");
-      println("\tadca @bp");
-      tfr_dx();
-      return node->lhs->lhs->var->offset;
-    }
-  }
-  // (ND_DEREF ty_int (+ TY_ARRAY(12) (* ty_int (ND_VAR ty_int l +16 ) 2) (ND_VAR TY_ARRAY(12) m +2 )))
-  if (node->kind == ND_DEREF
-  &&  node->lhs->kind == ND_ADD
-  &&  is_local_array(node->lhs->rhs)
-  &&  node->lhs->rhs->var->offset <=252
-  &&  node->lhs->lhs->kind == ND_MUL
-  &&  is_int16(node->lhs->lhs->ty)
-  &&  is_integer_constant(node->lhs->lhs->rhs,&val)
-  &&  val==2
-  &&  is_local_var(node->lhs->lhs->lhs)
-  &&  node->lhs->lhs->lhs->var->offset <=254) {
-    if (is_int16(node->lhs->lhs->lhs->ty)) {
-      if (test) return true;
-      ldx_bp();
-      println("\tldab %d,x",node->lhs->lhs->lhs->var->offset+1);
-      println("\tldaa %d,x",node->lhs->lhs->lhs->var->offset);
-      println("\taslb");
-      println("\trola");
-      println("\taddb @bp+1");
-      println("\tadca @bp");
-      tfr_dx();
-      return node->lhs->rhs->var->offset;
-    }
-  }
-
-  return false;
-}
-
-bool test_addr_array(Node *node)
-{
-  return gen_addr_array_sub(node,true);
-}
-
 int gen_addr_array(Node *node)
 {
-  return gen_addr_array_sub(node,false);
+  int off = gen_addr_off(node);
+
+  if (off < 0 || off + node->ty->size - 1 > 255) {
+    println("\taddb #<%d",off);
+    println("\tadca #>%d",off);
+    off = 0;
+  }
+  tfr_dx();
+  return off;
 }
 
 void word32i(uint32_t val)
@@ -3316,11 +3269,10 @@ static void opeq(Node *node)
         return;
       }
       if (can_direct_8bit_imm_ext(rhs)) {
-        gen_addr(lhs);
-        tfr_dx();
-        println("\tldab 0,x");
+        int off = gen_addr_array(lhs);
+        println("\tldab %d,x",off);
         gen_direct_8bit_imm_ext(rhs,"addb");
-        println("\tstab 0,x");
+        println("\tstab %d,x",off);
         return;
       }
       gen_addr(lhs);
@@ -3352,13 +3304,10 @@ static void opeq(Node *node)
         return;
       }
       if (can_direct_imm_ext(rhs)) {
-        gen_addr(lhs);
-        tfr_dx();
-        println("\tldab 1,x");
-        println("\tldaa 0,x");
+        int off = gen_addr_array(lhs);
+        op16_x(off,"ldab","ldaa");
         gen_direct_imm_ext(rhs,"addb","adca");
-        println("\tstab 1,x");
-        println("\tstaa 0,x");
+        op16_x(off,"stab","staa");
         return;
       }
       gen_addr(lhs);
@@ -3464,11 +3413,10 @@ static void opeq(Node *node)
           return;
         }
         if (can_direct_8bit_imm_ext(rhs)) {
-          gen_addr(lhs);
-          tfr_dx();
-          println("\tldab 0,x");
+          int off = gen_addr_array(lhs);
+          println("\tldab %d,x",off);
           gen_direct_8bit_imm_ext(rhs,"subb");
-          println("\tstab 0,x");
+          println("\tstab %d,x",off);
           return;
         }
         gen_addr(lhs);
@@ -3517,13 +3465,10 @@ static void opeq(Node *node)
         return;
       }
       if (can_direct_imm_ext(rhs)) {
-        gen_addr(lhs);
-        tfr_dx();
-        println("\tldab 1,x");
-        println("\tldaa 0,x");
+        int off = gen_addr_array(lhs);
+        op16_x(off,"ldab","ldaa");
         gen_direct_imm_ext(rhs,"subb","sbca");
-        println("\tstab 1,x");
-        println("\tstaa 0,x");
+        op16_x(off,"stab","staa");
         return;
       }
       gen_addr(lhs);
@@ -4182,9 +4127,8 @@ static void opeq(Node *node)
         return;
       }
       if (can_direct_8bit_imm_ext(node->rhs)) {
-        gen_addr(node->lhs);
-        tfr_dx();
-        println("\tldab 0,x");
+        int off = gen_addr_array(node->lhs);
+        println("\tldab %d,x",off);
         switch (node->kind) {
         case ND_ANDEQ:
           gen_direct_8bit_imm_ext(node->rhs,"andb");
@@ -4196,7 +4140,7 @@ static void opeq(Node *node)
           gen_direct_8bit_imm_ext(node->rhs,"eorb");
           break;
         }
-        println("\tstab 0,x");
+        println("\tstab %d,x",off);
         return;
       }
       gen_addr(node->lhs);
@@ -4713,9 +4657,7 @@ void gen_expr(Node *node)
     if (test_addr_x(node->lhs)){
       off = gen_addr_x(node->lhs);
     }else{
-      off = 0;
-      gen_addr(node->lhs);
-      tfr_dx();
+      off = gen_addr_array(node->lhs);
     }
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
@@ -4907,9 +4849,7 @@ void gen_expr(Node *node)
     if (test_addr_x(node->lhs)){
       off = gen_addr_x(node->lhs);
     }else{
-      off = 0;
-      gen_addr(node->lhs);
-      tfr_dx();
+      off = gen_addr_array(node->lhs);
     }
     switch (node->lhs->ty->kind) {
     case TY_BOOL:
@@ -5237,22 +5177,13 @@ void gen_expr(Node *node)
             ldab_i(val);
             gen_direct_8bit_store_ext_ix(node->lhs,"stab");
           }
-        }else if (test_addr_array(node->lhs)) {
+        }else{
           int off = gen_addr_array(node->lhs);
           if (node->retval_unused && val==0) {
             clr_x(node->ty,off);
           }else{
             ldab_i(val);
             store_x(node->ty,off);
-          }
-        }else{
-          gen_addr(node->lhs);
-          tfr_dx();
-          if (node->retval_unused && val==0) {
-            clr_x(node->ty,0);
-          }else{
-            ldab_i(val);
-            store_x(node->ty,0);
           }
         }
         return;
@@ -5263,18 +5194,16 @@ void gen_expr(Node *node)
         return;
       }
       if (can_direct_8bit_imm_ext(node->rhs)) {
-        gen_addr(node->lhs);
-        tfr_dx();
+        int off = gen_addr_array(node->lhs);
         gen_direct_8bit_imm_ext(node->rhs,"ldab");
-        store_x(node->ty,0);
+        store_x(node->ty,off);
         return;
       }
       gen_expr(node->rhs);
       push1();
-      gen_addr(node->lhs);
-      tfr_dx();
+      int off = gen_addr_array(node->lhs);
       pop1();
-      println("\tstab 0,x");
+      println("\tstab %d,x",off);
       return;
     }
 
@@ -5292,40 +5221,26 @@ void gen_expr(Node *node)
       }
       if ((ty = is_integer_constant(node->rhs,&val))
       &&  ty->size <= 2) {
-        if (test_addr_array(node->lhs)) {
-          int off = gen_addr_array(node->lhs);
-          if (node->retval_unused && val==0) {
-            clr_x(node->ty,off);
-          }else{
-            gen_expr(node->rhs);
-            store_x(node->ty,off);
-          }
+        int off = gen_addr_array(node->lhs);
+        if (node->retval_unused && val==0) {
+          clr_x(node->ty,off);
         }else{
-          gen_addr(node->lhs);
-          tfr_dx();
-          if (node->retval_unused && val==0) {
-            clr_x(node->ty,0);
-          }else{
-            ldd_i(val);
-            store_x(node->ty,0);
-          }
+          ldd_i(val);
+          store_x(node->ty,off);
         }
         return;
       }
       if (can_direct_imm_ext(node->rhs)) {
-        gen_addr(node->lhs);
-        tfr_dx();
+        int off = gen_addr_array(node->lhs);
         gen_direct_imm_ext(node->rhs,"ldab","ldaa");
-        store_x(node->ty,0);
+        store_x(node->ty,off);
         return;
       }
       gen_expr(node->rhs);
       push();
-      gen_addr(node->lhs);
-      tfr_dx();
+      int off = gen_addr_array(node->lhs);
       pop();
-      println("\tstab 1,x");
-      println("\tstaa 0,x");
+      op16_x(off,"stab","staa");
       return;
     }
 
