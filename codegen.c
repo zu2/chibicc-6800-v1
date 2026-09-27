@@ -6077,12 +6077,12 @@ void gen_expr(Node *node)
       assert(0);
     }
     if (node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_INT
-    &&  node->lhs->lhs->ty->kind == TY_CHAR
+    &&  is_int16(node->lhs->ty)
+    &&  is_int8(node->lhs->lhs->ty)
     &&  node->lhs->lhs->ty->is_unsigned
     &&  node->rhs->kind == ND_CAST
-    &&  node->rhs->ty->kind == TY_INT
-    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  is_int16(node->rhs->ty)
+    &&  is_int8(node->rhs->lhs->ty)
     &&  node->rhs->lhs->ty->is_unsigned ) {
       gen_expr(node->lhs->lhs);
       push1();
@@ -6095,12 +6095,12 @@ void gen_expr(Node *node)
       return;
     }
     if (node->lhs->kind == ND_CAST
-    &&  node->lhs->ty->kind == TY_INT
-    &&  node->lhs->lhs->ty->kind == TY_CHAR
+    &&  is_int16(node->lhs->ty)
+    &&  is_int8(node->lhs->lhs->ty)
     &&  !node->lhs->lhs->ty->is_unsigned
     &&  node->rhs->kind == ND_CAST
-    &&  node->rhs->ty->kind == TY_INT
-    &&  node->rhs->lhs->ty->kind == TY_CHAR
+    &&  is_int16(node->rhs->ty)
+    &&  is_int8(node->rhs->lhs->ty)
     &&  !node->rhs->lhs->ty->is_unsigned ) {
       if (can_direct_8bit_ext_ix(node->rhs->lhs)) {
         gen_expr(node->lhs->lhs);
