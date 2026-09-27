@@ -5867,7 +5867,8 @@ void gen_expr(Node *node)
 
   switch (node->kind) {
   case ND_ADD: {
-    if (node->ty->kind == TY_PTR || node->ty->kind == TY_ARRAY) {
+    if ((node->ty->kind == TY_PTR || node->ty->kind == TY_ARRAY)
+    &&  (is_int16(node->lhs->ty) || is_int16(node->rhs->ty))) {
       int off = 0;
       Node *index = NULL;
       Node *base = find_expr_off(node, &off, &index);
