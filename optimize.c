@@ -752,6 +752,26 @@ Node *optimize_expr(Node *node)
       return optimize_expr(node->lhs);
     }
     if (node->ty->kind == TY_CHAR
+    &&  is_integer(node->lhs->ty)
+    &&  (node->lhs->kind == ND_ADD
+      || node->lhs->kind == ND_SUB
+      || node->lhs->kind == ND_BITAND
+      || node->lhs->kind == ND_BITOR
+      || node->lhs->kind == ND_BITXOR)) {
+      if (is_integral_promotion_or_char(node->lhs->lhs)) {
+        node->lhs->lhs = skip_integral_promotion(node->lhs->lhs);
+      }else{
+        node->lhs->lhs = new_cast(node->lhs->lhs,node->ty);
+      }
+      if (is_integral_promotion_or_char(node->lhs->rhs)) {
+        node->lhs->rhs = skip_integral_promotion(node->lhs->rhs);
+      }else{
+        node->lhs->rhs = new_cast(node->lhs->rhs,node->ty);
+      }
+      node->lhs->ty = node->ty;
+      return optimize_expr(node->lhs);
+    }
+    if (node->ty->kind == TY_CHAR
     &&  node->lhs->kind == ND_DIV
     &&  is_integral_promotion(node->lhs->lhs)
     &&  is_integral_promotion(node->lhs->rhs)
