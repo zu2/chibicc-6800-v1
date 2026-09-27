@@ -5981,6 +5981,17 @@ void gen_expr(Node *node)
 
   switch (node->kind) {
   case ND_ADD: {
+    if (node->ty->kind == TY_PTR || node->ty->kind == TY_ARRAY) {
+      int off = 0;
+      Node *index = NULL;
+      Node *base = find_expr_off(node, &off, &index);
+      off = gen_base_off(base, index, off);
+      if (off) {
+        println("\taddb #<%d",off);
+        println("\tadca #>%d",off);
+      }
+      return;
+    }
     if (is_int8(node->ty)) {
       if (gen_direct_lr_8bit(node,"addb"))
         return;
