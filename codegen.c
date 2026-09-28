@@ -1101,7 +1101,8 @@ static Node *find_expr_off(Node *node, int *off, Node **index)
     return find_addr_off(node->lhs, off, index);
   }
 
-  if (node->ty->kind == TY_ARRAY) {
+  if (node->ty->kind == TY_ARRAY
+  ||  node->ty->kind == TY_FUNC) {
     if (node->kind == ND_VAR
     ||  node->kind == ND_MEMBER
     ||  node->kind == ND_DEREF) {
@@ -1302,65 +1303,38 @@ char *is_var_addr_constant(Node *node)
   return NULL;
 }
 
-static Node *find_base_addr(Node *node, int *off)
-{
-  *off = 0;
-  Node *base = find_expr_off(node, off, NULL);
-
-  if (base == NULL) {
-    return NULL;
-  }
-  if (base->kind != ND_ADDR) {
-    return NULL;
-  }
-
-  Node *var = base->lhs;
-
-  if (!is_global_var(var)
-  &&  !is_global_array(var)) {
-    return NULL;
-  }
-
-  return var;
-}
-
 // (!= ty_int (ND_CAST TY_PTR(10):u (ND_VAR TY_ARRAY(12) arr global)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 0)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 // (!= ty_int (ND_CAST TY_PTR(10):u (+ TY_ARRAY(12) (ND_VAR TY_ARRAY(12) arr global) 100)) (ND_CAST TY_PTR(10):u (ND_VAR TY_PTR(10) _L_5 global)))
 char *is_addr_constant(Node *node)
 {
-  int off;
+  int off = 0;
   Node *base = NULL;
 
-  if (node->kind == ND_CAST
-  &&  node->ty->kind == TY_PTR) {
-    node = node->lhs;
+  base = find_expr_off(node, &off, NULL);
+
+  if (base == NULL) {
+    return NULL;
   }
-  if (node->kind == ND_VAR
-  &&  node->ty->kind == TY_FUNC) {
-    char *p = calloc(1,strlen(node->var->name)+2);
-    sprintf(p,"_%s",node->var->name);
-    return p;
+
+  if (base->kind != ND_ADDR) {
+    return NULL;
   }
-  if (node->kind == ND_ADDR
-  &&  node->lhs->kind == ND_VAR
-  &&  node->lhs->ty->kind == TY_FUNC) {
-    char *p = calloc(1,strlen(node->lhs->var->name)+2);
-    sprintf(p,"_%s",node->lhs->var->name);
-    return p;
+
+  if (!is_global_var(base->lhs)
+  &&  !is_global_array(base->lhs)
+  &&  !(base->lhs->kind == ND_VAR && base->lhs->ty->kind == TY_FUNC)) {
+    return NULL;
   }
-  base = find_base_addr(node,&off);
-  if (base) {
-    Obj *var = base->var;
-    char *p = calloc(1,strlen(var->name)+32);
-    if (off==0) {
-      sprintf(p,"_%s",var->name);
-    }else{
-      sprintf(p,"_%s%+d",var->name,off);
-    }
-    return p;
+
+  Obj *var = base->lhs->var;
+  char *p = calloc(1,strlen(var->name)+32);
+  if (off==0) {
+    sprintf(p,"_%s",var->name);
+  }else{
+    sprintf(p,"_%s%+d",var->name,off);
   }
-  return NULL;
+  return p;
 }
 
 void op16_x(int off, char *opb, char *opa)
