@@ -27,7 +27,7 @@ bool builtin_signbit(Node *node)
     Node   *base;
     int off;
 
-    if ((base = find_base_var(node->args,&off))) {
+    if ((base = find_addr_var(node->args,&off))) {
       println("\tclra");
       if (off == 0) {
         println("\tldab _%s",base->var->name);
@@ -37,8 +37,8 @@ bool builtin_signbit(Node *node)
       println("\tandb #$80");
       return true;
     }
-    if (test_addr_x(node->args)) {
-      int off = gen_addr_x(node->args);
+    if (test_addr_x_off(node->args)) {
+      int off = gen_addr_x_off(node->args);
       println("\tclra");
       println("\tldab %d,x",off);
       println("\tandb #$80");
@@ -79,7 +79,7 @@ bool builtin_isnan(Node *node)
     Node   *base;
     int off;
 
-    if ((base = find_base_var(node->args,&off))) {
+    if ((base = find_addr_var(node->args,&off))) {
       println("\tldab _%s+%d", base->var->name, off+1);
       if (off == 0) {
         println("\tldaa _%s", base->var->name);
@@ -100,8 +100,8 @@ bool builtin_isnan(Node *node)
       println("\tclra");
       return true;
     }
-    if (test_addr_x(node->args)) {
-      int off = gen_addr_x(node->args);
+    if (test_addr_x_off(node->args)) {
+      int off = gen_addr_x_off(node->args);
       println("\tldab %d,x", off + 1);
       println("\tldaa %d,x", off);
       println("\taslb");
@@ -164,7 +164,7 @@ bool builtin_isinf(Node *node)
     Node   *base;
     int off;
 
-    if ((base = find_base_var(node->args,&off))) {
+    if ((base = find_addr_var(node->args,&off))) {
       println("\tldab _%s+%d", base->var->name, off+1);
       if (off == 0) {
         println("\tldaa _%s", base->var->name);
@@ -185,8 +185,8 @@ bool builtin_isinf(Node *node)
       println("\tclra");
       return true;
     }
-    if (test_addr_x(node->args)) {
-      int off = gen_addr_x(node->args);
+    if (test_addr_x_off(node->args)) {
+      int off = gen_addr_x_off(node->args);
       println("\tldab %d,x", off + 1);
       println("\tldaa %d,x", off);
       println("\taslb");
@@ -249,7 +249,7 @@ bool builtin_isfinite(Node *node)
     Node   *base;
     int off;
 
-    if ((base = find_base_var(node->args,&off))) {
+    if ((base = find_addr_var(node->args,&off))) {
       println("\tldab _%s+%d", base->var->name, off+1);
       if (off == 0) {
         println("\tldaa _%s", base->var->name);
@@ -264,8 +264,8 @@ bool builtin_isfinite(Node *node)
       println("\tclra");
       return true;
     }
-    if (test_addr_x(node->args)) {
-      int off = gen_addr_x(node->args);
+    if (test_addr_x_off(node->args)) {
+      int off = gen_addr_x_off(node->args);
       println("\tldab %d,x", off + 1);
       println("\tldaa %d,x", off);
       println("\taslb");
@@ -329,7 +329,7 @@ bool builtin_copysignf(Node *node)
     Node   *base;
     int off;
 
-    if ((base = find_base_var(node->args->next,&off))) {
+    if ((base = find_addr_var(node->args->next,&off))) {
       gen_expr(node->args);
       if (off == 0) {
         println("\tldab _%s", base->var->name);
@@ -343,9 +343,9 @@ bool builtin_copysignf(Node *node)
       println("\tstaa @long");
       return true;
     }
-    if (test_addr_x(node->args->next)) {
+    if (test_addr_x_off(node->args->next)) {
       gen_expr(node->args);
-      int off = gen_addr_x(node->args->next);
+      int off = gen_addr_x_off(node->args->next);
       println("\tldab %d,x", off);
       println("\tldaa @long");
       println("\tasla");

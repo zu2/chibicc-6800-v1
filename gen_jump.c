@@ -257,7 +257,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
       Node   *base;
       int off;
 
-      if ((base = find_base_var(arg,&off))) {
+      if ((base = find_addr_var(arg,&off))) {
         if (off == 0) {
           println("\tldaa _%s", base->var->name);
         } else {
@@ -273,8 +273,8 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
         println("\tjeq %s", if_false);
         return true;
       }
-      if (test_addr_x(arg)) {
-        int off = gen_addr_x(arg);
+      if (test_addr_x_off(arg)) {
+        int off = gen_addr_x_off(arg);
         println("\tldaa %d,x", off);
         println("\tldab %d,x", off + 1);
         println("\taslb");
@@ -317,7 +317,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
       Node   *base;
       int off;
 
-      if ((base = find_base_var(arg,&off))) {
+      if ((base = find_addr_var(arg,&off))) {
         if (off == 0) {
           println("\tldaa _%s", base->var->name);
         } else {
@@ -333,8 +333,8 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
         println("\tjne %s", if_false);
         return true;
       }
-      if (test_addr_x(arg)) {
-        int off = gen_addr_x(arg);
+      if (test_addr_x_off(arg)) {
+        int off = gen_addr_x_off(arg);
         println("\tldaa %d,x", off);
         println("\tldab %d,x", off + 1);
         println("\taslb");
@@ -377,7 +377,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
       Node   *base;
       int off;
 
-      if ((base = find_base_var(arg,&off))) {
+      if ((base = find_addr_var(arg,&off))) {
         if (off == 0) {
           println("\tldaa _%s", base->var->name);
         } else {
@@ -390,8 +390,8 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
         println("\tjeq %s", if_false);
         return true;
       }
-      if (test_addr_x(arg)) {
-        int off = gen_addr_x(arg);
+      if (test_addr_x_off(arg)) {
+        int off = gen_addr_x_off(arg);
         println("\tldaa %d,x", off);
         println("\tldab %d,x", off + 1);
         println("\taslb");
@@ -428,7 +428,7 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
       Node   *base;
       int off;
 
-      if ((base = find_base_var(arg,&off))) {
+      if ((base = find_addr_var(arg,&off))) {
         if (off == 0) {
           println("\tldab _%s", base->var->name);
         } else {
@@ -437,8 +437,8 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
         println("\tjpl %s", if_false);
         return true;
       }
-      if (test_addr_x(arg)) {
-        int off = gen_addr_x(arg);
+      if (test_addr_x_off(arg)) {
+        int off = gen_addr_x_off(arg);
         println("\tldab %d,x", off);
         println("\tjpl %s", if_false);
         return true;
@@ -472,9 +472,9 @@ static bool gen_jump_if_false_float(Node *node, char *if_false)
       gen_expr(node->lhs);
       ldx_IMM_STR(addr);
       println("\tjsr __cmpf32x");
-    }else if (test_addr_x(node->rhs)) {
+    }else if (test_addr_x_off(node->rhs)) {
       gen_expr(node->lhs);
-      cmpf32x(gen_addr_x(node->rhs));
+      cmpf32x(gen_addr_x_off(node->rhs));
     }else{
       gen_expr(node->rhs);
       pushf();
@@ -535,7 +535,7 @@ static bool gen_jump_if_false_long(Node *node, char *if_false)
     case ND_LT:
       if (v->ty->is_unsigned) {
         println("; ulong < 0 is always false");
-        if (!test_addr_x(v)) {
+        if (!test_addr_x_off(v)) {
           gen_expr(v);
         }
         println("\tjmp %s", if_false);
@@ -545,15 +545,15 @@ static bool gen_jump_if_false_long(Node *node, char *if_false)
     case ND_GE:
       if (v->ty->is_unsigned) {
         println("; ulong >= 0 is always true");
-        if (!test_addr_x(v)) {
+        if (!test_addr_x_off(v)) {
           gen_expr(v);
         }
         return true;
       }
       break;
     }
-    if ((kind == ND_LT || kind == ND_GE) && test_addr_x(v)) {
-      println("\tldab %d,x", gen_addr_x(v));
+    if ((kind == ND_LT || kind == ND_GE) && test_addr_x_off(v)) {
+      println("\tldab %d,x", gen_addr_x_off(v));
       println("\t%s %s", (kind == ND_LT)? "jpl": "jmi", if_false);
       return true;
     }
@@ -608,9 +608,9 @@ static bool gen_jump_if_false_long(Node *node, char *if_false)
     if (node->kind == ND_EQ || node->kind == ND_NE) {
       IX_invalidate();
     }
-  }else if (test_addr_x(rhs)) {
+  }else if (test_addr_x_off(rhs)) {
     gen_expr(lhs);
-    int off = gen_addr_x(rhs);
+    int off = gen_addr_x_off(rhs);
     if (off == 0) {
       println("\tjsr __%s32%sx",op,sc);
       if (node->kind == ND_EQ || node->kind == ND_NE) {
@@ -678,8 +678,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
       println("\tjeq %s", if_false);
       return true;
     }
-    if (test_addr_x(node)) {
-      int off = gen_addr_x(node);
+    if (test_addr_x_off(node)) {
+      int off = gen_addr_x_off(node);
       ldx_nX(off);
       println("\tcpx #0");
       println("\tjeq %s", if_false);
@@ -852,8 +852,8 @@ bool gen_jump_if_false(Node *node, char *if_false)
       }
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
-         && (test_addr_x(lhs))) {
-      int off = gen_addr_x(lhs);
+         && (test_addr_x_off(lhs))) {
+      int off = gen_addr_x_off(lhs);
       ldx_nX(off);
       println("\tcpx #%ld",val);
       switch(node->kind) {
@@ -1148,7 +1148,7 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
       Node   *base;
       int off;
 
-      if ((base = find_base_var(arg,&off))) {
+      if ((base = find_addr_var(arg,&off))) {
         char *thru = new_label("L_thru_%d");
         if (off == 0) {
           println("\tldaa _%s", base->var->name);
@@ -1166,8 +1166,8 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
         println("%s:", thru);
         return true;
       }
-      if (test_addr_x(arg)) {
-        int off = gen_addr_x(arg);
+      if (test_addr_x_off(arg)) {
+        int off = gen_addr_x_off(arg);
         char *thru = new_label("L_thru_%d");
         println("\tldaa %d,x", off);
         println("\tldab %d,x", off + 1);
@@ -1214,7 +1214,7 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
       Node   *base;
       int off;
 
-      if ((base = find_base_var(arg,&off))) {
+      if ((base = find_addr_var(arg,&off))) {
         char *thru = new_label("L_thru_%d");
         if (off == 0) {
           println("\tldaa _%s", base->var->name);
@@ -1232,8 +1232,8 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
         println("%s:", thru);
         return true;
       }
-      if (test_addr_x(arg)) {
-        int off = gen_addr_x(arg);
+      if (test_addr_x_off(arg)) {
+        int off = gen_addr_x_off(arg);
         char *thru = new_label("L_thru_%d");
         println("\tldaa %d,x", off);
         println("\tldab %d,x", off + 1);
@@ -1280,7 +1280,7 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
       Node   *base;
       int off;
 
-      if ((base = find_base_var(arg,&off))) {
+      if ((base = find_addr_var(arg,&off))) {
         if (off == 0) {
           println("\tldaa _%s", base->var->name);
         } else {
@@ -1293,8 +1293,8 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
         println("\tjne %s", if_true);
         return true;
       }
-      if (test_addr_x(arg)) {
-        int off = gen_addr_x(arg);
+      if (test_addr_x_off(arg)) {
+        int off = gen_addr_x_off(arg);
         println("\tldaa %d,x", off);
         println("\tldab %d,x", off + 1);
         println("\taslb");
@@ -1331,7 +1331,7 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
       Node   *base;
       int off;
 
-      if ((base = find_base_var(arg,&off))) {
+      if ((base = find_addr_var(arg,&off))) {
         if (off == 0) {
           println("\tldab _%s", base->var->name);
         } else {
@@ -1340,8 +1340,8 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
         println("\tjmi %s", if_true);
         return true;
       }
-      if (test_addr_x(arg)) {
-        int off = gen_addr_x(arg);
+      if (test_addr_x_off(arg)) {
+        int off = gen_addr_x_off(arg);
         println("\tldab %d,x", off);
         println("\tjmi %s", if_true);
         return true;
@@ -1375,9 +1375,9 @@ static bool gen_jump_if_true_float(Node *node, char *if_true)
       gen_expr(node->lhs);
       ldx_IMM_STR(addr);
       println("\tjsr __cmpf32x");
-    }else if (test_addr_x(node->rhs)) {
+    }else if (test_addr_x_off(node->rhs)) {
       gen_expr(node->lhs);
-      cmpf32x(gen_addr_x(node->rhs));
+      cmpf32x(gen_addr_x_off(node->rhs));
     }else{
       gen_expr(node->rhs);
       pushf();
@@ -1438,7 +1438,7 @@ static bool gen_jump_if_true_long(Node *node, char *if_true)
     case ND_LT:
       if (v->ty->is_unsigned) {
         println("; ulong < 0 is always false");
-        if (!test_addr_x(v)) {
+        if (!test_addr_x_off(v)) {
           gen_expr(v);
         }
         return true;
@@ -1447,7 +1447,7 @@ static bool gen_jump_if_true_long(Node *node, char *if_true)
     case ND_GE:
       if (v->ty->is_unsigned) {
         println("; ulong >= 0 is always true");
-        if (!test_addr_x(v)) {
+        if (!test_addr_x_off(v)) {
           gen_expr(v);
         }
         println("\tjmp %s", if_true);
@@ -1455,8 +1455,8 @@ static bool gen_jump_if_true_long(Node *node, char *if_true)
       }
       break;
     }
-    if ((kind == ND_LT || kind == ND_GE) && test_addr_x(v)) {
-      println("\tldab %d,x", gen_addr_x(v));
+    if ((kind == ND_LT || kind == ND_GE) && test_addr_x_off(v)) {
+      println("\tldab %d,x", gen_addr_x_off(v));
       println("\t%s %s", (kind == ND_LT)? "jmi": "jpl", if_true);
       return true;
     }
@@ -1511,9 +1511,9 @@ static bool gen_jump_if_true_long(Node *node, char *if_true)
     if (node->kind == ND_EQ || node->kind == ND_NE) {
       IX_invalidate();
     }
-  }else if (test_addr_x(rhs)) {
+  }else if (test_addr_x_off(rhs)) {
     gen_expr(lhs);
-    int off = gen_addr_x(rhs);
+    int off = gen_addr_x_off(rhs);
     if (off == 0) {
       println("\tjsr __%s32%sx",op,sc);
       if (node->kind == ND_EQ || node->kind == ND_NE) {
@@ -1581,8 +1581,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
       println("\tjne %s", if_true);
       return true;
     }
-    if (test_addr_x(node)) {
-      int off = gen_addr_x(node);
+    if (test_addr_x_off(node)) {
+      int off = gen_addr_x_off(node);
       ldx_nX(off);
       println("\tcpx #0");
       println("\tjne %s", if_true);
@@ -1756,8 +1756,8 @@ bool gen_jump_if_true(Node *node, char *if_true)
       }
   } else if (is_integer_constant(rhs,&val)
          && (node->kind==ND_EQ || node->kind==ND_NE)
-         && (test_addr_x(lhs))) {
-      int off = gen_addr_x(lhs);
+         && (test_addr_x_off(lhs))) {
+      int off = gen_addr_x_off(lhs);
       ldx_nX(off);
       println("\tcpx #%ld",val);
       switch(node->kind) {

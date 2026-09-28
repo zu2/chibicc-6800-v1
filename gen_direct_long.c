@@ -7,7 +7,7 @@
 // 1: integer constant (#imm)
 // 2: local frame (off,x)
 // 3: global label (_name)
-// 4: other, test_addr_x() holds (takes IX)
+// 4: other, test_addr_x_off() holds (takes IX)
 //
 static int long_location_type(Node *node)
 {
@@ -18,7 +18,7 @@ static int long_location_type(Node *node)
   if (node->kind == ND_VAR) {
     if (node->var->ty->kind == TY_VLA)
       return 0;
-    if (node->var->is_local && test_addr_x(node))
+    if (node->var->is_local && test_addr_x_off(node))
       return 2;
     if (is_global_var(node))
       return 3;
@@ -27,7 +27,7 @@ static int long_location_type(Node *node)
   if (is_var_addr_constant(node)) {
     return 3;
   }
-  if (test_addr_x(node)) {
+  if (test_addr_x_off(node)) {
     return 4;
   }
   return 0;
@@ -265,7 +265,7 @@ void gen_direct_long(Node *node)
     return;
   }
 
-  roff = gen_addr_x(rhs);
+  roff = gen_addr_x_off(rhs);
   if (opt('O','s')) {
     op32x(op, roff);
     return;
@@ -311,8 +311,8 @@ bool gen_direct_long2(Node *node)
   if (L == 1) is_long_constant(lhs,&lv);
   if (R == 1) is_long_constant(rhs,&rv);
 
-  if (L==2 || L==4) loff = gen_addr_x(lhs);
-  if (R==2 || R==4) roff = gen_addr_x(rhs);
+  if (L==2 || L==4) loff = gen_addr_x_off(lhs);
+  if (R==2 || R==4) roff = gen_addr_x_off(rhs);
   if (L==3)         laddr = is_var_addr_constant(lhs);
   if (R==3)         raddr = is_var_addr_constant(rhs);
 
@@ -370,7 +370,7 @@ void gen_direct_long_rsub(Node *node)
   assert(node->kind == ND_SUB);
 
   if (L == 1) is_long_constant(lhs,&lv);
-  if (L==2 || L==4) loff = gen_addr_x(lhs);
+  if (L==2 || L==4) loff = gen_addr_x_off(lhs);
   if (L==3)         laddr = is_var_addr_constant(lhs);
 
   for (int i = 3; i >= 0; i--) {

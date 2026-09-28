@@ -90,9 +90,9 @@ void gen_expr_float(Node *node)
       println("\tjsr __addf32x");
       IX_invalidate();
       return;
-    }else if (test_addr_x(node->rhs)) {
+    }else if (test_addr_x_off(node->rhs)) {
       gen_expr(node->lhs);
-      int off = gen_addr_x(node->rhs);
+      int off = gen_addr_x_off(node->rhs);
       if (off==0) {
         println("\tjsr __addf32x");
       }else if (1<=off && off<=255) {
@@ -126,9 +126,9 @@ void gen_expr_float(Node *node)
       println("\tjsr __subf32x");
       IX_invalidate();
       return;
-    }else if (test_addr_x(node->rhs)) {
+    }else if (test_addr_x_off(node->rhs)) {
       gen_expr(node->lhs);
-      int off = gen_addr_x(node->rhs);
+      int off = gen_addr_x_off(node->rhs);
       if (off==0) {
         println("\tjsr __subf32x");
       }else if (1<=off && off<=255) {
@@ -183,9 +183,9 @@ void gen_expr_float(Node *node)
       println("\tjsr __mulf32x");
       IX_invalidate();
       return;
-    }else if (test_addr_x(node->rhs)) {
+    }else if (test_addr_x_off(node->rhs)) {
       gen_expr(node->lhs);
-      int off = gen_addr_x(node->rhs);
+      int off = gen_addr_x_off(node->rhs);
       if (off==0) {
         println("\tjsr __mulf32x");
       }else if (1<=off && off<=255) {
@@ -240,9 +240,9 @@ void gen_expr_float(Node *node)
       println("\tjsr __divf32x");
       IX_invalidate();
       return;
-    }else if (test_addr_x(node->rhs)) {
+    }else if (test_addr_x_off(node->rhs)) {
       gen_expr(node->lhs);
-      int off = gen_addr_x(node->rhs);
+      int off = gen_addr_x_off(node->rhs);
       if (off==0) {
         println("\tjsr __divf32x");
       }else if (1<=off && off<=255) {
@@ -293,9 +293,9 @@ void gen_expr_float(Node *node)
       gen_expr(node->lhs);
       ldx_IMM_STR(addr);
       println("\tjsr __cmpf32x");
-    }else if (test_addr_x(node->rhs)) {
+    }else if (test_addr_x_off(node->rhs)) {
       gen_expr(node->lhs);
-      cmpf32x(gen_addr_x(node->rhs));
+      cmpf32x(gen_addr_x_off(node->rhs));
     }else{
       gen_expr(node->rhs);	// xmm1
       pushf();

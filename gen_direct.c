@@ -108,7 +108,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
     if (node->member->is_bitfield) {
       return false;
     }
-    if (!(base = find_base_var(node,&off))) {
+    if (!(base = find_addr_var(node,&off))) {
       return false;
     }
 
@@ -147,7 +147,7 @@ static bool gen_direct_8bit_ext_sub(Node *node, char *opb, bool test)
       return true;
     }
 
-    if ((base = find_base_var(node,&off))) {
+    if ((base = find_addr_var(node,&off))) {
       if (test) return true;
 
       off += node->ty->size-1;
@@ -244,13 +244,13 @@ static bool gen_direct_8bit_ix_sub(Node *node, char *opb, bool test)
     if (!is_local_var(node)) {
       return false;
     }
-    if (!test_addr_x(node)) {
+    if (!test_addr_x_off(node)) {
       return false;
     }
 
     if (test) return true;
 
-    int off = gen_addr_x(node);
+    int off = gen_addr_x_off(node);
     println("\t%s %d,x",opb,off+node->ty->size-1);
 
     return true;
@@ -272,11 +272,11 @@ static bool gen_direct_8bit_ix_sub(Node *node, char *opb, bool test)
     return false;
 
   default:
-    if (test_addr_x(node)) {
+    if (test_addr_x_off(node)) {
 
       if (test) return true;
 
-      int off = gen_addr_x(node);
+      int off = gen_addr_x_off(node);
       println("\t%s %d,x",opb,off+node->ty->size-1);
 
       return true;
@@ -544,7 +544,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     return false;
   } // ND_VAR
   case ND_DEREF:
-    if ((base = find_base_var(node,&off))) {
+    if ((base = find_addr_var(node,&off))) {
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
@@ -681,7 +681,7 @@ static bool gen_direct_ext_sub(Node *node,char *opb, char *opa, bool test)
     if (node->member->is_bitfield) {
       return false;
     }
-    if (!(base = find_base_var(node,&off))) {
+    if (!(base = find_addr_var(node,&off))) {
       return false;
     }
     switch(node->ty->kind) {
@@ -791,10 +791,10 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
     if (node->ty->kind==TY_ARRAY) {
       return false;
     }
-    if (!test_addr_x(node)) return false;
+    if (!test_addr_x_off(node)) return false;
     if (is_int8(node->ty)) {
       if (test) return true;
-      int off = gen_addr_x(node);
+      int off = gen_addr_x_off(node);
       println("\t%s %d,x",opb,off);
       if (opa) {
         if (strcmp(opa,"ldaa")==0) {
@@ -805,7 +805,7 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
       }
     }else{
       if (test) return true;
-      int off = gen_addr_x(node);
+      int off = gen_addr_x_off(node);
       println("\t%s %d,x",opb,off+1);
       if (opa) {
         println("\t%s %d,x",opa,off);
@@ -816,9 +816,9 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
   case ND_CAST:
     if (is_int16(node->ty)
     &&  node->lhs->ty->kind == TY_LONG
-    &&  test_addr_x(node->lhs)) {
+    &&  test_addr_x_off(node->lhs)) {
       if (test) return true;
-      int off = gen_addr_x(node->lhs);
+      int off = gen_addr_x_off(node->lhs);
       println("\t%s %d,x",opb,off+node->lhs->ty->size-1);
       if (opa) {
         println("\t%s %d,x",opa,off+node->lhs->ty->size-2);
@@ -844,12 +844,12 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
       return true;
     return false;
   default:
-    if (test_addr_x(node)) {
+    if (test_addr_x_off(node)) {
       switch(node->ty->kind) {
       case TY_BOOL:
       case TY_CHAR:
         if (test) return true;
-        int off = gen_addr_x(node);
+        int off = gen_addr_x_off(node);
         println("\t%s %d,x",opb,off);
         if (opa) {
           if (strcmp(opa,"ldaa")==0) {
@@ -864,7 +864,7 @@ static bool gen_direct_ix_sub(Node *node,char *opb, char *opa, bool test)
       case TY_ENUM:
       case TY_PTR:
         if (test) return true;
-        off = gen_addr_x(node);
+        off = gen_addr_x_off(node);
         println("\t%s %d,x",opb,off+1);
         if (opa) {
           println("\t%s %d,x",opa,off);

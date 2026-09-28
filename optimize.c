@@ -295,7 +295,7 @@ static int node_cost(Node *node)
     return 180+sign;
   }else if (can_direct(node)) {
     return 200+sign;
-  }else if (test_addr_x(node)) {
+  }else if (test_addr_x_off(node)) {
     return 250+sign;
   }else if (node->kind==ND_VAR) {
     return 300+sign
@@ -1376,7 +1376,7 @@ Node *optimize_expr(Node *node)
     if (node->kind == ND_LE || node->kind == ND_GT) {
       if (node->lhs->ty->kind != TY_CHAR
       && ( node_cost(node->lhs) == node_cost(node->rhs)
-      ||   test_addr_x(node->lhs)
+      ||   test_addr_x_off(node->lhs)
       || (is_addr_constant(node->lhs)!=NULL))) {
         node = swap_lr_condition(swap_lr(node));
       }

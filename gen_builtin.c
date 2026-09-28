@@ -152,8 +152,8 @@ bool builtin_strcpy(Node *node)
           ||  (opt('O','2') && size<=32)){
       IX_invalidate();
       int off = 0;
-      if (test_ptr_x_off(arg1)) {
-        off = gen_ptr_x_off(arg1);
+      if (test_expr_x_off(arg1)) {
+        off = gen_expr_x_off(arg1);
       }else{
         gen_expr(arg1);
         tfr_dx();

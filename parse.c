@@ -2519,7 +2519,7 @@ static bool is_simple_var(Node *node)
   ||  is_global_var(node)
   ||  is_local_array_with_constant(node)
   ||  is_global_array_with_constant(node)
-  ||  find_base_var(node,&off)) {
+  ||  find_addr_var(node,&off)) {
     return true;
   }
 

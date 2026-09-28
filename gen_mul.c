@@ -291,7 +291,7 @@ gen_mul16(Node *node)
   Node   *base;
   int boff;
 
-  if ((base = find_base_var(lhs,&boff))) {
+  if ((base = find_addr_var(lhs,&boff))) {
     println("\tldab _%s+%d",base->var->name,boff+1);
     if (boff == 0) {
       println("\tldaa _%s",base->var->name);
@@ -457,8 +457,8 @@ gen_mul16(Node *node)
     ins(2);
     return true;
   }
-  if (test_addr_x(lhs)) {
-    off = gen_addr_x(lhs);
+  if (test_addr_x_off(lhs)) {
+    off = gen_addr_x_off(lhs);
     op16_x(off,"ldab","ldaa");
     switch(rhs->kind){
     case ND_NUM:
