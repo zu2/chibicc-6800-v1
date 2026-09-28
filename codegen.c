@@ -1154,16 +1154,6 @@ static int gen_base_off(Node *base, Node *index, int off)
 
 static int gen_addr_off(Node *node)
 {
-  int off = 0;
-  Node *index = NULL;
-  Node *base = find_addr_off(node, &off, &index);
-
-  return gen_base_off(base, index, off);
-}
-
-
-void gen_addr(Node *node)
-{
   switch (node->kind) {
   case ND_VAR:
     // Variable-length array, which is always local.
@@ -1177,62 +1167,63 @@ void gen_addr(Node *node)
       tfr_dx();
       println("\tldab 1,x");
       println("\tldaa 0,x");
-      return;
+      return 0;
     }
 
     // Local variable
     if (node->var->is_local) {
       println("\tldab @bp+1");
       println("\tldaa @bp");
-      if (node->var->offset) {
-        println("\taddb #<%d",node->var->offset);
-        println("\tadca #>%d",node->var->offset);
-      }
-      return;
+      return node->var->offset;
     }
 
     // Function and Global variable
     println("\tldab #<_%s", node->var->name);
     println("\tldaa #>_%s", node->var->name);
-    return;
+    return 0;
   case ND_DEREF:
   case ND_MEMBER: {
-    int off = gen_addr_off(node);
-    if (off) {
-      println("\taddb #<%d",off);
-      println("\tadca #>%d",off);
-    }
-    return;
+    int off = 0;
+    Node *index = NULL;
+    Node *base = find_addr_off(node, &off, &index);
+
+    return gen_base_off(base, index, off);
   }
   case ND_COMMA:
   case ND_COMPLIT:
     gen_expr(node->lhs);
-    gen_addr(node->rhs);
-    return;
+    return gen_addr_off(node->rhs);
   case ND_FUNCALL:
     if (node->ret_buffer) {
       gen_expr(node);
-      return;
+      return 0;
     }
     break;
   case ND_ASSIGN:
   case ND_COND:
     if (node->ty->kind == TY_STRUCT || node->ty->kind == TY_UNION) {
       gen_expr(node);
-      return;
+      return 0;
     }
     break;
   case ND_VLA_PTR:
     println("\tldab @bp+1");
     println("\tldaa @bp");
-    if (node->var->offset) {
-      println("\taddb #<%d",node->var->offset);
-      println("\tadca #>%d",node->var->offset);
-    }
-    return;
+    return node->var->offset;
   }
 
   error_tok(node->tok, "not an lvalue");
+}
+
+
+void gen_addr(Node *node)
+{
+  int off = gen_addr_off(node);
+
+  if (off) {
+    println("\taddb #<%d",off);
+    println("\tadca #>%d",off);
+  }
 }
 
 void gen_expr_x(Node *node);
