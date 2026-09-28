@@ -1236,8 +1236,8 @@ void gen_addr(Node *node)
 }
 
 void gen_expr_x(Node *node);
-int gen_decayed_x(Node *node);
-bool test_decayed_x(Node *node);
+int gen_ptr_x_off(Node *node);
+bool test_ptr_x_off(Node *node);
 bool test_expr_x(Node *node);
 
 //
@@ -1427,44 +1427,15 @@ bool gen_expr_x_sub(Node *node,bool test)
     return false;
   }; // ND_MEMBER:
   case ND_DEREF: {
-  //(ND_DEREF TY_PTR(10) (+ TY_PTR(10) (ND_VAR TY_PTR(10) p +0 ) 4))
-    if (node->lhs->kind == ND_ADD       // XXX
-    &&  node->lhs->ty->kind == TY_PTR
-    &&  node->lhs->lhs->kind == ND_VAR
-    &&  node->lhs->lhs->ty->kind == TY_PTR
-    &&  is_integer_constant(node->lhs->rhs,&val)) {
-      if (is_local_var(node->lhs->lhs)
-      &&  (0 <= node->lhs->lhs->var->offset && node->lhs->lhs->var->offset<256)
-      &&  (0 <= val && val<256)) {
-        if (test) return true;
-        ldx_bp();
-        ldx_nX(node->lhs->lhs->var->offset);
-        ldx_nX(val);
-        return false;
-      }
-      if (is_global_var(node->lhs->lhs)
-      &&  (0 <= val && val<256)) {
-        if (test) return true;
-        ldx_EXT(node->lhs->lhs);
-        ldx_nX(val);
-        return false;
-      }
-    }
     if ((addr=is_addr_constant(lhs))) {
       if (test) return true;
       println("\tldx %s",addr);
       IX_invalidate();
       return false;
     }
-    if (test_decayed_x(lhs)) {
+    if (test_ptr_x_off(lhs)) {
       if (test) return true;
-      ldx_nX(gen_decayed_x(lhs));
-      return false;
-    }
-    if (test_expr_x(lhs)) {
-      if (test) return true;
-      gen_expr_x(lhs);
-      ldx_nX(0);
+      ldx_nX(gen_ptr_x_off(lhs));
       return false;
     }
     return false;
@@ -1743,34 +1714,34 @@ static int gen_base_x_sub(Node *base, int off, bool test)
   return -1;
 }
 
-int gen_decayed_x_sub(Node *node,bool test)
+int gen_ptr_x_off_sub(Node *node,bool test)
 {
   int off = 0;
   Node *index = NULL;
-  Node *base;
+  Node *base = find_expr_off(node, &off, &index);
 
-  if (!is_decay_type(node->ty)
-  &&  !(node->kind == ND_ADD && is_decay_type(node->lhs->ty))) {
+  if (base != NULL
+  &&  index == NULL
+  &&  gen_base_x_sub(base, off, true) >= 0) {
+    return gen_base_x_sub(base, off, test);
+  }
+
+  if (!test_expr_x(node)) {
     return -1;
   }
-  base = find_expr_off(node, &off, &index);
-  if (base == NULL) {
-    return -1;
-  }
-  if (index != NULL) {
-    return -1;
-  }
-  return gen_base_x_sub(base, off, test);
+  if (test) return 0;
+  gen_expr_x(node);
+  return 0;
 }
 
-int gen_decayed_x(Node *node)
+int gen_ptr_x_off(Node *node)
 {
-  return gen_decayed_x_sub(node,false);
+  return gen_ptr_x_off_sub(node,false);
 }
 
-bool test_decayed_x(Node *node)
+bool test_ptr_x_off(Node *node)
 {
-  return 0 <= gen_decayed_x_sub(node,true);
+  return 0 <= gen_ptr_x_off_sub(node,true);
 }
 
 bool test_expr_x(Node *node)
@@ -1816,29 +1787,6 @@ int gen_addr_x_sub(Node *node,bool test)
   }
   switch (node->kind) {
   case ND_VAR:
-    // Variable-length array, which is always local.
-    if (node->var->ty->kind == TY_VLA){
-      if (node->var->offset<=252) {
-        if (test) return 0;
-        println("; gen_addr_x():TY_LDA,%d ",node->var->offset);
-        ldx_bp_nX(node->var->offset);
-        return 0;
-      }
-      goto fallback;
-    }
-    // Local variable
-    if (node->var->is_local) {
-      if (node->var->offset <= 252){
-        if (test) return 0;
-        ldx_bp();
-        return node->var->offset;
-      }
-      goto fallback;
-    }
-    // Function and Global variable
-    if (test) return 0;
-    ldx_IMM_VAR(node->var->name);
-    return 0;
   case ND_DEREF:
   case ND_MEMBER: {
     int off = 0;
@@ -1866,10 +1814,6 @@ int gen_addr_x_sub(Node *node,bool test)
   }
   if (test) return -1;
   error_tok(node->tok, "not an lvalue at gen_addr_x, node->kind %d",node->kind);
-  // fallback to gen_addr()
-fallback:
-  if (test) return -1;
-  assert(0); // test_addr_x() must have returned false
 }
 
 int gen_addr_x(Node *node)
@@ -2908,11 +2852,8 @@ static void gen_funcall(Node *node)
 
   if (node->lhs->kind == ND_VAR && node->lhs->ty->kind == TY_FUNC){
     println("\tjsr _%s",node->lhs->var->name);
-  }else if (test_decayed_x(node->lhs)) {
-    println("\tjsr %d,x",gen_decayed_x(node->lhs));
-  }else if (test_expr_x(node->lhs)) {
-    gen_expr_x(node->lhs);
-    println("\tjsr 0,x");
+  }else if (test_ptr_x_off(node->lhs)) {
+    println("\tjsr %d,x",gen_ptr_x_off(node->lhs));
   }else{
     if (node->args && !node->args->pass_by_stack) {
       switch (node->args->ty->kind) {
