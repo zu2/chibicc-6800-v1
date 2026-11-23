@@ -99,6 +99,128 @@ Node *skip_redundant_ptr_cast(Node *node)
 
 static int isVAR(Node *node) { return node->kind == ND_VAR; }
 
+//
+// check range jump's operand
+//
+static bool range_operand_8bit(Node *node)
+{
+  Node *lhs = skip_integral_promotion(node->lhs);
+  Node *rhs = node->rhs;
+
+  if (lhs->kind != ND_VAR)
+    return false;
+
+  if (lhs->ty->kind != TY_CHAR)
+    return false;
+
+  if (!is_integer_constant(rhs, NULL))
+    return false;
+
+  if (!is_compatible(node->lhs->ty, rhs->ty))
+    return false;
+
+  if (rhs->val < ty_min_value(lhs->ty))
+    return false;
+
+  if (rhs->val > ty_max_value(lhs->ty))
+    return false;
+
+  return true;
+}
+
+//
+// generate range jump
+//
+// example:
+//    if (x>=1 && x<=9) ...
+//    if (x<1 || x>9) ...
+//
+static bool gen_range_jump_8bit(Node *node, char *label, bool jump_if_true)
+{
+  Node *lhs = node->lhs;
+  Node *rhs = node->rhs;
+
+  if (node->kind != ND_LOGAND
+  &&  node->kind != ND_LOGOR) {
+    return false;
+  }
+  if (!is_compare(lhs)) return false;
+  if (!is_compare(rhs)) return false;
+  if (!range_operand_8bit(lhs)) return false;
+  if (!range_operand_8bit(rhs)) return false;
+
+  Node *lhs_var = skip_integral_promotion(lhs->lhs);
+  Node *rhs_var = skip_integral_promotion(rhs->lhs);
+
+  if (lhs_var->var != rhs_var->var)
+    return false;
+
+  int low, high;
+
+  if (node->kind == ND_LOGAND) {
+    if (lhs->kind == ND_GT) {
+      low = lhs->rhs->val + 1;
+    }else if (lhs->kind == ND_GE) {
+      low = lhs->rhs->val;
+    }else{
+      return false;
+    }
+    if (rhs->kind == ND_LT) {
+      high = rhs->rhs->val - 1;
+    }else if (rhs->kind == ND_LE) {
+      high = rhs->rhs->val;
+    }else{
+      return false;
+    }
+  }
+  if (node->kind == ND_LOGOR) {
+    if (lhs->kind == ND_LT) {
+      low = lhs->rhs->val;
+    }else if (lhs->kind == ND_LE) {
+      low = lhs->rhs->val + 1;
+    }else{
+      return false;
+    }
+    if (rhs->kind == ND_GT) {
+      high = rhs->rhs->val;
+    }else if (rhs->kind == ND_GE) {
+      high = rhs->rhs->val - 1;
+    }else{
+      return false;
+    }
+  }
+
+  if (low == ty_min_value(lhs_var->ty)) {
+    if (jump_if_true) {
+      return gen_jump_if_true(rhs, label);
+    }else{
+      return gen_jump_if_false(rhs, label);
+    }
+  }
+  if (high == ty_max_value(lhs_var->ty)) {
+    if (jump_if_true) {
+      return gen_jump_if_true(lhs, label);
+    }else{
+      return gen_jump_if_false(lhs, label);
+    }
+  }
+
+  if (low > high) return false;
+
+  int width = high - low + 1;
+
+  gen_expr(lhs_var);
+  println("\tsubb #%d", low & 255);
+  println("\tsubb #%d", width);
+  if ((node->kind == ND_LOGAND) == jump_if_true) {
+    println("\tjcs %s", label);
+  } else {
+    println("\tjcc %s", label);
+  }
+
+  return true;
+}
+
 static bool gen_jump_if_false_8bit(Node *node, char *if_false)
 {
   Node *lhs = node->lhs;
@@ -686,6 +808,9 @@ bool gen_jump_if_false(Node *node, char *if_false)
       return true;
     }
   }
+
+  if (gen_range_jump_8bit(node, if_false, false))
+    return true;
 
   if (node->kind == ND_LOGOR) {
     if (!gen_jump_if_true(lhs, if_thru)) {
@@ -1589,6 +1714,9 @@ bool gen_jump_if_true(Node *node, char *if_true)
       return true;
     }
   }
+
+  if (gen_range_jump_8bit(node, if_true, true))
+    return true;
 
   if (node->kind == ND_LOGOR) {
     if (!gen_jump_if_true(lhs, if_true)) {
